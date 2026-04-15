@@ -660,10 +660,11 @@
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
       GOOGLE_CLOUD_PROJECT: '435784295430',
-      GEMINI_MODEL: 'gemini-2.5-flash',
+      GEMINI_MODEL: 'gemini-3-flash-preview',
+      GEMINI_THINKING_LEVEL: 'minimal',
       SYSTEM_PROMPT: 'You are the inhouse assistant. Be concise, practical, and clear. Keep answers structured when useful.',
       MAX_OUTPUT_TOKENS: 2048,
-      TEMPERATURE: 0.7,
+      TEMPERATURE: 1.0,
       TOP_P: 0.95
     };
 
@@ -751,6 +752,43 @@
 
     function activeModelName() {
       return APP_CONFIG.GEMINI_MODEL;
+    }
+
+    function isGemini3Model() {
+      return activeModelName().startsWith('gemini-3');
+    }
+
+    function currentThinkingLevel() {
+      const rawLevel = String(APP_CONFIG.GEMINI_THINKING_LEVEL || '').trim().toLowerCase();
+      if (!isGemini3Model() || !rawLevel) {
+        return '';
+      }
+
+      const isFlashFamily = activeModelName().includes('flash');
+      const allowedLevels = isFlashFamily
+        ? ['minimal', 'low', 'medium', 'high']
+        : ['low', 'high'];
+
+      if (allowedLevels.includes(rawLevel)) {
+        return rawLevel;
+      }
+
+      return isFlashFamily ? 'minimal' : 'high';
+    }
+
+    function cloneParts(parts) {
+      return JSON.parse(JSON.stringify(Array.isArray(parts) ? parts : []));
+    }
+
+    function extractVisibleTextFromParts(parts) {
+      if (!Array.isArray(parts)) {
+        return '';
+      }
+      return parts
+        .filter((part) => part && part.text && !part.thought)
+        .map((part) => part.text)
+        .join('')
+        .trim();
     }
 
     function ensureOauthConfig() {
@@ -1026,7 +1064,7 @@
       const scopes = [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/generative-language'
+        'https://www.googleapis.com/auth/generative-language.retriever'
       ];
 
       const tokenResponse = await new Promise((resolve, reject) => {
@@ -1069,24 +1107,42 @@
 
     function buildContents(messages) {
       return messages
-        .filter((message) => !message.pending && message.content && message.content.trim())
+        .filter((message) => {
+          if (message.pending) {
+            return false;
+          }
+          if (Array.isArray(message.parts) && message.parts.length) {
+            return true;
+          }
+          return !!(message.content && message.content.trim());
+        })
         .map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: message.content }]
+          parts: Array.isArray(message.parts) && message.parts.length
+            ? cloneParts(message.parts)
+            : [{ text: message.content }]
         }));
     }
 
     function buildRequestBody(messages) {
+      const generationConfig = {
+        temperature: APP_CONFIG.TEMPERATURE,
+        topP: APP_CONFIG.TOP_P,
+        maxOutputTokens: APP_CONFIG.MAX_OUTPUT_TOKENS
+      };
+      const thinkingLevel = currentThinkingLevel();
+      if (thinkingLevel) {
+        generationConfig.thinkingConfig = {
+          thinkingLevel
+        };
+      }
+
       return {
         systemInstruction: {
           parts: [{ text: APP_CONFIG.SYSTEM_PROMPT }]
         },
         contents: buildContents(messages),
-        generationConfig: {
-          temperature: APP_CONFIG.TEMPERATURE,
-          topP: APP_CONFIG.TOP_P,
-          maxOutputTokens: APP_CONFIG.MAX_OUTPUT_TOKENS
-        }
+        generationConfig
       };
     }
 
@@ -1111,7 +1167,7 @@
     function extractTextFromResponse(data) {
       const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
       if (Array.isArray(parts)) {
-        const text = parts.map((part) => part && part.text ? part.text : '').join('').trim();
+        const text = extractVisibleTextFromParts(parts);
         if (text) {
           return text;
         }
@@ -1120,6 +1176,11 @@
         return 'La respuesta fue bloqueada: ' + data.promptFeedback.blockReason;
       }
       return 'No llego texto util desde Gemini.';
+    }
+
+    function extractModelParts(data) {
+      const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      return Array.isArray(parts) ? cloneParts(parts) : [];
     }
 
     async function callGemini(messages, signal) {
@@ -1170,6 +1231,7 @@
         id: uid('msg'),
         role,
         content: content || '',
+        parts: content ? [{ text: content }] : [],
         pending: !!pending,
         createdAt: nowIso()
       };
@@ -1355,7 +1417,7 @@
       const scopes = [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/generative-language',
+        'https://www.googleapis.com/auth/generative-language.retriever',
         'https://www.googleapis.com/auth/cloud-platform'
       ];
 
@@ -1441,7 +1503,10 @@
         throw new Error(message);
       }
 
-      return extractTextFromResponse(data);
+      return {
+        text: extractTextFromResponse(data),
+        parts: extractModelParts(data)
+      };
     }
 
     async function handleSend() {
@@ -1485,7 +1550,8 @@
       try {
         const reply = await callGemini(chat.messages, appState.activeController.signal);
         assistantMessage.pending = false;
-        assistantMessage.content = reply;
+        assistantMessage.content = reply.text;
+        assistantMessage.parts = reply.parts;
         touchChat(chat);
         setComposerStatus('Respuesta lista.');
       } catch (error) {
@@ -1495,6 +1561,7 @@
         } else {
           assistantMessage.pending = false;
           assistantMessage.content = 'Error: ' + error.message;
+          assistantMessage.parts = [{ text: assistantMessage.content }];
           touchChat(chat);
           setComposerStatus('Hubo un error.');
           showToast('Error de Gemini', error.message);
