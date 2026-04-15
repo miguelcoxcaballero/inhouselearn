@@ -1505,13 +1505,7 @@
     }
 
     function showToast(title, message) {
-      const node = document.createElement('div');
-      node.className = 'toast';
-      node.innerHTML = '<strong>' + escapeHtml(title) + '</strong><div>' + escapeHtml(message) + '</div>';
-      elements.toastWrap.appendChild(node);
-      window.setTimeout(() => {
-        node.remove();
-      }, 4200);
+      // disabled
     }
 
     function scrollThreadToBottom() {
@@ -2402,6 +2396,11 @@
       if (idx < 0) return;
       var msg = chat.messages[idx];
       if (msg.role !== 'assistant') return;
+
+      if (!appState.accessToken) {
+        try { await loginWithGoogle(); } catch (e) { setComposerStatus('Falta iniciar sesion.'); return; }
+      }
+
       var currentContent = getVisibleContent(msg);
       if (!msg.alternatives) msg.alternatives = [];
       if (currentContent && !msg.pending) {
@@ -2413,13 +2412,14 @@
       touchChat(chat);
       appState.busy = true;
       appState.activeController = new AbortController();
-      setComposerStatus('Regenerando con ' + activeModelName() + '...');
+      setComposerStatus('Regenerando con ' + activeModelLabel(chat) + '...');
       updateSendUi();
       renderThread();
       try {
-        var reply = await callGemini(chat.messages, appState.activeController.signal);
+        var reply = await callGemini(chat, appState.activeController.signal);
         msg.pending = false;
-        msg.content = reply;
+        msg.content = reply.text;
+        msg.parts = reply.parts;
         msg.activeAlternative = 0;
         touchChat(chat);
         setComposerStatus('');
@@ -2433,8 +2433,8 @@
           setComposerStatus('Regeneracion cancelada.');
         } else {
           msg.content = 'Error: ' + error.message;
+          msg.parts = [{ text: msg.content }];
           setComposerStatus('Error al regenerar.');
-          showToast('Error', error.message);
         }
         touchChat(chat);
       } finally {
