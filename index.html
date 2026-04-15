@@ -2908,7 +2908,7 @@
         ':generateContent';
     }
 
-    async function callGemini(chat, signal, allowRetry) {
+    async function callGemini(chat, signal, allowRetry, retryCount) {
       ensureOauthConfig();
       if (!appState.accessToken) {
         throw new Error('Inicia sesion con Google para usar Gemini.');
@@ -2918,8 +2918,7 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken,
-          'x-goog-user-project': googleProjectRef()
+          Authorization: 'Bearer ' + appState.accessToken
         },
         body: JSON.stringify(buildRequestBody(chat.messages, chat)),
         signal
@@ -2933,17 +2932,21 @@
             toast: false,
             skipDriveBootstrap: true
           });
-          return callGemini(chat, signal, false);
+          return callGemini(chat, signal, false, retryCount);
         }
 
         if (response.status === 429) {
+          var attempts = Number(retryCount) || 0;
+          if (attempts >= 2) {
+            throw new Error('Sin usos disponibles. Espera un momento e intentalo de nuevo.');
+          }
           var retryMatch = data && data.error && data.error.message
             ? data.error.message.match(/retry in ([\d.]+)s/i)
             : null;
-          var waitSec = retryMatch ? Math.min(parseFloat(retryMatch[1]), 60) : 10;
+          var waitSec = retryMatch ? Math.min(parseFloat(retryMatch[1]), 45) : 8;
           setComposerStatus('Limite de tasa. Reintentando en ' + Math.ceil(waitSec) + 's...');
           await new Promise(function(r) { setTimeout(r, waitSec * 1000); });
-          return callGemini(chat, signal, false);
+          return callGemini(chat, signal, false, attempts + 1);
         }
 
         const message = data && data.error && data.error.message
