@@ -587,7 +587,7 @@
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           </svg>
         </button>
-        <button class="btn btn-secondary" id="login-btn">Sign in</button>
+        <button class="btn btn-secondary" id="login-btn">Entrar con Google</button>
         <button class="profile-avatar-btn hidden" id="logout-btn" title="Cerrar sesión">
           <img class="avatar-mini" id="profile-avatar" alt="Avatar">
         </button>
@@ -658,14 +658,9 @@
   <div class="toast-wrap" id="toast-wrap"></div>
   <script>
     const APP_CONFIG = {
-      // The provided snippet included this OAuth client ID, not a Gemini API key.
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
-      USE_VERTEX_OAUTH: true,
-      VERTEX_PROJECT_ID: 'YOUR_GOOGLE_CLOUD_PROJECT_ID',
-      VERTEX_LOCATION: 'global',
-      VERTEX_MODEL: 'gemini-2.5-flash',
-      GEMINI_API_KEY: 'PASTE_YOUR_GEMINI_API_KEY_HERE',
-      GEMINI_API_MODEL: 'gemini-2.5-flash',
+      GOOGLE_CLOUD_PROJECT: '435784295430',
+      GEMINI_MODEL: 'gemini-2.5-flash',
       SYSTEM_PROMPT: 'You are the inhouse assistant. Be concise, practical, and clear. Keep answers structured when useful.',
       MAX_OUTPUT_TOKENS: 2048,
       TEMPERATURE: 0.7,
@@ -738,16 +733,33 @@
       return !!value && !String(value).includes('YOUR_') && !String(value).includes('PASTE_');
     }
 
-    function prefersVertex() {
-      return APP_CONFIG.USE_VERTEX_OAUTH && isConfigured(APP_CONFIG.VERTEX_PROJECT_ID);
+    function inferredGoogleProject() {
+      const match = String(APP_CONFIG.GOOGLE_CLIENT_ID || '').match(/^(\d+)-/);
+      return match ? match[1] : '';
     }
 
-    function hasApiKey() {
-      return isConfigured(APP_CONFIG.GEMINI_API_KEY);
+    function googleProjectRef() {
+      if (isConfigured(APP_CONFIG.GOOGLE_CLOUD_PROJECT)) {
+        return String(APP_CONFIG.GOOGLE_CLOUD_PROJECT).trim();
+      }
+      return inferredGoogleProject();
+    }
+
+    function hasOauthConfig() {
+      return isConfigured(APP_CONFIG.GOOGLE_CLIENT_ID) && !!googleProjectRef();
     }
 
     function activeModelName() {
-      return prefersVertex() ? APP_CONFIG.VERTEX_MODEL : APP_CONFIG.GEMINI_API_MODEL;
+      return APP_CONFIG.GEMINI_MODEL;
+    }
+
+    function ensureOauthConfig() {
+      if (!isConfigured(APP_CONFIG.GOOGLE_CLIENT_ID)) {
+        throw new Error('Falta configurar GOOGLE_CLIENT_ID para el login con Google.');
+      }
+      if (!googleProjectRef()) {
+        throw new Error('Falta configurar GOOGLE_CLOUD_PROJECT para poder usar Gemini con OAuth.');
+      }
     }
 
     function createChat(title) {
@@ -840,23 +852,14 @@
     }
 
     function updateConfigUi() {
-      const usingVertex = prefersVertex();
-      const usingApiKey = !usingVertex && hasApiKey();
-      let label = 'Sin configurar';
-      let copy = 'Configura VERTEX_PROJECT_ID o GEMINI_API_KEY dentro del HTML.';
-      if (usingVertex) {
-        label = 'Vertex AI OAuth';
-        copy = 'Proyecto: ' + APP_CONFIG.VERTEX_PROJECT_ID + ' | region: ' + APP_CONFIG.VERTEX_LOCATION;
-      } else if (usingApiKey) {
-        label = 'Gemini API key';
-        copy = 'Modo directo con API key en navegador. Util solo para demos o pruebas.';
+      let label = 'Inicia sesión';
+      if (appState.accessToken) {
+        label = 'Gemini OAuth';
+      } else if (hasApiKey()) {
+        label = 'API key';
       }
       elements.transportLabel.textContent = label;
       elements.modelBadge.textContent = activeModelName();
-      elements.configCopy.textContent = copy;
-      elements.originCopy.textContent = location.protocol === 'file:'
-        ? 'Atencion: Google OAuth no funciona bien desde file://. Sirvelo por localhost.'
-        : 'Origen actual: ' + location.origin;
     }
 
     function updateAuthUi() {
@@ -1022,11 +1025,9 @@
       await waitForGoogle();
       const scopes = [
         'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile'
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/generative-language'
       ];
-      if (prefersVertex()) {
-        scopes.push('https://www.googleapis.com/auth/cloud-platform');
-      }
 
       const tokenResponse = await new Promise((resolve, reject) => {
         const tokenClient = google.accounts.oauth2.initTokenClient({
@@ -1051,6 +1052,7 @@
       appState.accessToken = tokenResponse.access_token;
       appState.profile = await fetchProfile(appState.accessToken);
       updateAuthUi();
+      updateConfigUi();
       showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
     }
 
@@ -1061,6 +1063,7 @@
       appState.accessToken = '';
       appState.profile = null;
       updateAuthUi();
+      updateConfigUi();
       showToast('Sesion cerrada', 'Se elimino el token local del navegador.');
     }
 
@@ -1126,17 +1129,14 @@
         'Content-Type': 'application/json'
       };
 
-      if (prefersVertex()) {
-        if (!appState.accessToken) {
-          throw new Error('Necesitas iniciar sesion para usar Vertex AI.');
-        }
-        endpoint = buildVertexEndpoint();
+      if (appState.accessToken) {
+        endpoint = buildApiKeyEndpoint();
         headers.Authorization = 'Bearer ' + appState.accessToken;
       } else if (hasApiKey()) {
         endpoint = buildApiKeyEndpoint();
         headers['x-goog-api-key'] = APP_CONFIG.GEMINI_API_KEY;
       } else {
-        throw new Error('No hay ni VERTEX_PROJECT_ID ni GEMINI_API_KEY configurados.');
+        throw new Error('Inicia sesion con Google para usar Gemini.');
       }
 
       const response = await fetch(endpoint, {
@@ -1306,6 +1306,221 @@
       setComposerStatus('Listo.');
 
       if (location.protocol === 'file:' && prefersVertex()) {
+        showToast('Atencion', 'Sirve este HTML por http://localhost para que Google OAuth funcione correctamente.');
+      }
+    }
+
+    function updateConfigUi() {
+      let label = 'Login requerido';
+      if (!hasOauthConfig()) {
+        label = 'Falta configuracion';
+      }
+      if (appState.accessToken) {
+        label = 'Gemini OAuth';
+      }
+      elements.transportLabel.textContent = label;
+      elements.modelBadge.textContent = activeModelName();
+      elements.configCopy.style.display = hasOauthConfig() ? 'none' : 'block';
+      elements.configCopy.textContent = hasOauthConfig()
+        ? ''
+        : 'Configura GOOGLE_CLIENT_ID y GOOGLE_CLOUD_PROJECT en el HTML.';
+      elements.originCopy.style.display = appState.accessToken ? 'block' : 'none';
+      elements.originCopy.textContent = appState.accessToken
+        ? 'Proyecto OAuth: ' + googleProjectRef()
+        : '';
+    }
+
+    function updateAuthUi() {
+      const signedIn = !!appState.profile;
+      elements.profileCard.classList.toggle('hidden', !signedIn);
+      elements.logoutBtn.classList.toggle('hidden', !signedIn);
+      elements.loginBtn.classList.toggle('hidden', signedIn);
+      if (signedIn) {
+        elements.profileAvatar.src = appState.profile.picture || '';
+        const sidebarAvatar = document.getElementById('profile-avatar-sidebar');
+        if (sidebarAvatar) sidebarAvatar.src = appState.profile.picture || '';
+        elements.profileName.textContent = appState.profile.name || 'Cuenta Google';
+        elements.profileEmail.textContent = appState.profile.email || '';
+        elements.authCopy.textContent = 'Sesion lista. Gemini usara el token OAuth de esta cuenta.';
+      } else {
+        elements.authCopy.textContent = hasOauthConfig()
+          ? 'Inicia sesion y ya puedes usar Gemini. No hace falta meter API keys en el navegador.'
+          : 'Falta terminar la configuracion OAuth del sitio.';
+      }
+    }
+
+    async function requestGoogleAccessToken(promptMode) {
+      ensureOauthConfig();
+      await waitForGoogle();
+      const scopes = [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/generative-language',
+        'https://www.googleapis.com/auth/cloud-platform'
+      ];
+
+      return new Promise((resolve, reject) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
+          scope: scopes.join(' '),
+          callback: (response) => {
+            if (response && response.access_token) {
+              resolve(response);
+              return;
+            }
+            reject(new Error('No se recibio access token.'));
+          },
+          error_callback: (error) => {
+            reject(new Error(error && error.message ? error.message : 'OAuth cancelado.'));
+          }
+        });
+        tokenClient.requestAccessToken({
+          prompt: promptMode
+        });
+      });
+    }
+
+    async function syncGoogleSession(tokenResponse, options) {
+      appState.accessToken = tokenResponse.access_token;
+      appState.profile = await fetchProfile(appState.accessToken);
+      updateAuthUi();
+      updateConfigUi();
+      if (!options || options.toast !== false) {
+        showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
+      }
+    }
+
+    async function loginWithGoogle(options) {
+      const settings = Object.assign({
+        interactive: true,
+        toast: true
+      }, options);
+      const promptMode = settings.interactive
+        ? (appState.accessToken ? '' : 'consent')
+        : '';
+      const tokenResponse = await requestGoogleAccessToken(promptMode);
+      await syncGoogleSession(tokenResponse, settings);
+    }
+
+    function buildGeminiEndpoint() {
+      return 'https://generativelanguage.googleapis.com/v1beta/models/' +
+        encodeURIComponent(APP_CONFIG.GEMINI_MODEL) +
+        ':generateContent';
+    }
+
+    async function callGemini(messages, signal, allowRetry) {
+      ensureOauthConfig();
+      if (!appState.accessToken) {
+        throw new Error('Inicia sesion con Google para usar Gemini.');
+      }
+
+      const response = await fetch(buildGeminiEndpoint(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + appState.accessToken,
+          'x-goog-user-project': googleProjectRef()
+        },
+        body: JSON.stringify(buildRequestBody(messages)),
+        signal
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401 && allowRetry !== false) {
+          await loginWithGoogle({
+            interactive: false,
+            toast: false
+          });
+          return callGemini(messages, signal, false);
+        }
+
+        const message = data && data.error && data.error.message
+          ? data.error.message
+          : 'Error HTTP ' + response.status;
+        throw new Error(message);
+      }
+
+      return extractTextFromResponse(data);
+    }
+
+    async function handleSend() {
+      if (appState.busy) {
+        if (appState.activeController) {
+          appState.activeController.abort();
+        }
+        return;
+      }
+
+      const prompt = elements.composer.value.trim();
+      if (!prompt) {
+        return;
+      }
+
+      if (!appState.accessToken) {
+        try {
+          await loginWithGoogle();
+        } catch (error) {
+          showToast('OAuth', error.message);
+          setComposerStatus('Falta iniciar sesion.');
+          return;
+        }
+      }
+
+      const chat = getActiveChat();
+      const userMessage = createMessage('user', prompt, false);
+      const assistantMessage = createMessage('assistant', '', true);
+
+      chat.messages.push(userMessage, assistantMessage);
+      touchChat(chat);
+      elements.composer.value = '';
+      autoResizeComposer();
+      appState.busy = true;
+      appState.activeController = new AbortController();
+      setComposerStatus('Consultando ' + activeModelName() + '...');
+      updateSendUi();
+      renderHistory();
+      renderThread();
+
+      try {
+        const reply = await callGemini(chat.messages, appState.activeController.signal);
+        assistantMessage.pending = false;
+        assistantMessage.content = reply;
+        touchChat(chat);
+        setComposerStatus('Respuesta lista.');
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id);
+          setComposerStatus('Solicitud cancelada.');
+        } else {
+          assistantMessage.pending = false;
+          assistantMessage.content = 'Error: ' + error.message;
+          touchChat(chat);
+          setComposerStatus('Hubo un error.');
+          showToast('Error de Gemini', error.message);
+        }
+      } finally {
+        appState.busy = false;
+        appState.activeController = null;
+        saveState();
+        updateSendUi();
+        renderHistory();
+        renderThread();
+      }
+    }
+
+    function boot() {
+      loadState();
+      updateConfigUi();
+      updateAuthUi();
+      renderHistory();
+      renderThread();
+      autoResizeComposer();
+      updateSendUi();
+      bindEvents();
+      setComposerStatus('Listo.');
+
+      if (location.protocol === 'file:') {
         showToast('Atencion', 'Sirve este HTML por http://localhost para que Google OAuth funcione correctamente.');
       }
     }
