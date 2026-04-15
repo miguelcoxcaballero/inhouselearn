@@ -335,6 +335,25 @@
       border-color: var(--orange-border);
       box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow);
     }
+    .composer-shell.drag-active {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow);
+      background: rgba(224, 122, 60, 0.04);
+    }
+    .composer-shell.drag-active::after {
+      content: "Suelta archivos aqui";
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: inherit;
+      background: rgba(245, 245, 240, 0.82);
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      pointer-events: none;
+    }
     .composer-attachments {
       display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 8px 6px;
     }
@@ -651,12 +670,12 @@
                   <path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                 </svg>
               </button>
-              <button class="usage-btn" id="usage-btn" aria-label="Uso de API" title="Ver uso de API">
+              <button class="usage-btn" id="usage-btn" aria-label="Actividad de API" title="Ver actividad de API">
                 <svg id="usage-donut" viewBox="0 0 36 36"></svg>
               </button>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
-              <div class="usage-popup-title">Uso de API hoy</div>
+              <div class="usage-popup-title">Actividad local</div>
               <div id="usage-popup-content"></div>
             </div>
             <div class="composer-status-row">
@@ -771,6 +790,7 @@
       activeChatId: null,
       busy: false,
       attachmentBusy: false,
+      composerDragDepth: 0,
       accessToken: '',
       accessTokenExpiresAt: 0,
       profile: null,
@@ -787,6 +807,7 @@
     const elements = {
       chatList: document.getElementById('chat-list'),
       thread: document.getElementById('thread'),
+      composerShell: document.querySelector('.composer-shell'),
       composer: document.getElementById('composer'),
       attachBtn: document.getElementById('attach-btn'),
       fileInput: document.getElementById('file-input'),
@@ -1134,6 +1155,51 @@
       renderComposerAttachments();
     }
 
+    function setComposerDragActive(active) {
+      if (!elements.composerShell) {
+        return;
+      }
+      elements.composerShell.classList.toggle('drag-active', !!active);
+    }
+
+    function extractFilesFromList(listLike) {
+      return Array.from(listLike || []).filter((file) => file && typeof file.name === 'string');
+    }
+
+    function extractFilesFromClipboardEvent(event) {
+      const clipboardData = event && event.clipboardData;
+      if (!clipboardData) {
+        return [];
+      }
+      const itemFiles = Array.from(clipboardData.items || [])
+        .filter((item) => item && item.kind === 'file')
+        .map((item) => item.getAsFile())
+        .filter(Boolean);
+      return itemFiles.length ? itemFiles : extractFilesFromList(clipboardData.files);
+    }
+
+    function transferHasFiles(dataTransfer) {
+      if (!dataTransfer) {
+        return false;
+      }
+      const types = Array.from(dataTransfer.types || []);
+      if (types.includes('Files')) {
+        return true;
+      }
+      return Array.from(dataTransfer.items || []).some((item) => item && item.kind === 'file');
+    }
+
+    function extractFilesFromDataTransfer(dataTransfer) {
+      if (!dataTransfer) {
+        return [];
+      }
+      const itemFiles = Array.from(dataTransfer.items || [])
+        .filter((item) => item && item.kind === 'file')
+        .map((item) => item.getAsFile())
+        .filter(Boolean);
+      return itemFiles.length ? itemFiles : extractFilesFromList(dataTransfer.files);
+    }
+
     function arrayBufferToBase64(buffer) {
       let binary = '';
       const bytes = new Uint8Array(buffer);
@@ -1305,7 +1371,7 @@
       if (!attachment || typeof attachment !== 'object') {
         return null;
       }
-      return {
+      var out = {
         id: typeof attachment.id === 'string' ? attachment.id : uid('att'),
         name: typeof attachment.name === 'string' ? attachment.name : 'Archivo',
         size: Number(attachment.size || 0),
@@ -1313,6 +1379,10 @@
         kind: typeof attachment.kind === 'string' ? attachment.kind : 'binary',
         source: typeof attachment.source === 'string' ? attachment.source : 'text'
       };
+      if (typeof attachment.extractedText === 'string' && attachment.extractedText) {
+        out.extractedText = attachment.extractedText;
+      }
+      return out;
     }
 
     function serializePartForStorage(part, attachmentList) {
@@ -1648,9 +1718,24 @@
         return fallbackRenderMarkdown(text);
       }
 
-      const rawHtml = window.marked.parse(text, {
+      // Protect LaTeX from Markdown parser
+      var mathBlocks = [];
+      var protected_ = text
+        .replace(/\$\$([\s\S]+?)\$\$/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:true,c:c}); return '\x00MATH'+i+'\x00'; })
+        .replace(/\\\[([\s\S]+?)\\\]/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:true,c:c}); return '\x00MATH'+i+'\x00'; })
+        .replace(/\\\((.+?)\\\)/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:false,c:c}); return '\x00MATH'+i+'\x00'; })
+        .replace(/(?<!\\)\$([^\$\n]+?)\$/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:false,c:c}); return '\x00MATH'+i+'\x00'; });
+
+      var rawHtml = window.marked.parse(protected_, {
         gfm: true,
         breaks: true
+      });
+
+      // Restore math blocks
+      rawHtml = rawHtml.replace(/\x00MATH(\d+)\x00/g, function(m, idx) {
+        var block = mathBlocks[Number(idx)];
+        if (!block) return m;
+        return block.d ? '$$' + block.c + '$$' : '$' + block.c + '$';
       });
 
       return window.DOMPurify.sanitize(rawHtml);
@@ -2525,40 +2610,63 @@
       var body = document.getElementById('preview-body');
       title.textContent = att.name || 'Preview';
       body.innerHTML = '';
-      var part = (msg.parts || []).find(function(p) {
-        return p.inlineData && p.inlineData.mimeType && (
-          (att.mimeType && p.inlineData.mimeType === att.mimeType) ||
-          (att.kind === 'image')
+
+      // 1) Try inline image data (in-memory only, stripped after save)
+      var inlinePart = (msg.parts || []).find(function(p) {
+        return p.inlineData && p.inlineData.data && (
+          (att.mimeType && p.inlineData.mimeType === att.mimeType) || att.kind === 'image'
         );
       });
-      if (att.kind === 'image' && part && part.inlineData && part.inlineData.data) {
+      if (att.kind === 'image' && inlinePart) {
         var img = document.createElement('img');
-        img.src = 'data:' + part.inlineData.mimeType + ';base64,' + part.inlineData.data;
+        img.src = 'data:' + inlinePart.inlineData.mimeType + ';base64,' + inlinePart.inlineData.data;
         img.alt = att.name || 'Imagen';
         body.appendChild(img);
-      } else {
-        var textPart = (msg.parts || []).find(function(p) {
-          return typeof p.text === 'string' && p.text.includes(att.name);
-        });
-        var extractedText = '';
-        if (att.source === 'text') {
-          for (var i = 0; i < msg.parts.length; i++) {
-            if (typeof msg.parts[i].text === 'string' && msg.parts[i].text !== msg.content) {
-              extractedText = msg.parts[i].text;
-              break;
-            }
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      // 2) Try extractedText stored on the attachment itself
+      if (att.extractedText) {
+        var pre = document.createElement('pre');
+        pre.textContent = att.extractedText.slice(0, 30000);
+        body.appendChild(pre);
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      // 3) Search parts for text matching the attachment name
+      var fileName = att.name || '';
+      var textContent = '';
+      for (var i = 0; i < (msg.parts || []).length; i++) {
+        var p = msg.parts[i];
+        if (typeof p.text !== 'string') continue;
+        if (p.text === msg.content) continue;
+        if (p.text.indexOf(fileName) !== -1 || p.text.indexOf('Archivo adjunto:') !== -1) {
+          textContent = p.text;
+          break;
+        }
+      }
+      // 4) Fallback: any non-content text part
+      if (!textContent) {
+        for (var j = 0; j < (msg.parts || []).length; j++) {
+          var q = msg.parts[j];
+          if (typeof q.text === 'string' && q.text !== msg.content && q.text.length > 50) {
+            textContent = q.text;
+            break;
           }
         }
-        if (extractedText) {
-          var pre = document.createElement('pre');
-          pre.textContent = extractedText.slice(0, 20000);
-          body.appendChild(pre);
-        } else {
-          var p = document.createElement('p');
-          p.style.cssText = 'color:#fff;opacity:0.7;font-size:0.9rem;';
-          p.textContent = 'Preview no disponible para este archivo. El contenido fue procesado al enviarlo.';
-          body.appendChild(p);
-        }
+      }
+
+      if (textContent) {
+        var pre2 = document.createElement('pre');
+        pre2.textContent = textContent.slice(0, 30000);
+        body.appendChild(pre2);
+      } else {
+        var notice = document.createElement('p');
+        notice.style.cssText = 'color:#fff;opacity:0.7;font-size:0.9rem;';
+        notice.textContent = 'Preview no disponible. Recarga la pagina y vuelve a adjuntar el archivo para verlo.';
+        body.appendChild(notice);
       }
       overlay.classList.remove('hidden');
     }
@@ -2613,18 +2721,19 @@
     /* ─── API USAGE TRACKING ─────────────────────────── */
 
     var USAGE_KEY = STORAGE_KEY + '::dailyUsage';
-    var USAGE_RPD_LIMIT = 1500;
+    var USAGE_SOFT_LIMIT = 1500;
 
     function getUsageData() {
       try {
         var raw = localStorage.getItem(USAGE_KEY);
         var data = raw ? JSON.parse(raw) : null;
         if (!data || data.date !== new Date().toISOString().slice(0, 10)) {
-          return { date: new Date().toISOString().slice(0, 10), total: 0, models: {} };
+          return { date: new Date().toISOString().slice(0, 10), total: 0, models: {}, lastBackendError: null };
         }
+        if (!data.models) data.models = {};
         return data;
       } catch (e) {
-        return { date: new Date().toISOString().slice(0, 10), total: 0, models: {} };
+        return { date: new Date().toISOString().slice(0, 10), total: 0, models: {}, lastBackendError: null };
       }
     }
 
@@ -2638,6 +2747,19 @@
       data.total = (data.total || 0) + 1;
       if (!data.models) data.models = {};
       data.models[model] = (data.models[model] || 0) + 1;
+      data.lastBackendError = null;
+      saveUsageData(data);
+      renderUsageDonut();
+    }
+
+    function trackBackendLimit(status, message, model) {
+      var data = getUsageData();
+      data.lastBackendError = {
+        at: nowIso(),
+        status: String(status || ''),
+        model: String(model || activeModelName() || ''),
+        message: String(message || '')
+      };
       saveUsageData(data);
       renderUsageDonut();
     }
@@ -2645,8 +2767,11 @@
     function renderUsageDonut() {
       var data = getUsageData();
       var used = data.total || 0;
-      var pct = Math.min(used / USAGE_RPD_LIMIT, 1);
+      var pct = Math.min(used / USAGE_SOFT_LIMIT, 1);
       var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
+      if (data.lastBackendError) {
+        color = '#ef4444';
+      }
       var radius = 15.915;
       var circ = 2 * Math.PI * radius;
       var filled = circ * pct;
@@ -2665,19 +2790,29 @@
     function renderUsagePopup() {
       var data = getUsageData();
       var used = data.total || 0;
-      var remaining = Math.max(0, USAGE_RPD_LIMIT - used);
-      var pct = Math.min(used / USAGE_RPD_LIMIT, 1);
+      var estimatedRemaining = Math.max(0, USAGE_SOFT_LIMIT - used);
+      var pct = Math.min(used / USAGE_SOFT_LIMIT, 1);
       var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
       var models = data.models || {};
       var modelRows = Object.keys(models).map(function(m) {
         return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(m) + '</span><span class="usage-row-value">' + models[m] + '</span></div>';
       }).join('');
+      var backend = data.lastBackendError;
+      var backendBlock = backend
+        ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">' +
+          '<div style="font-size:0.68rem;font-weight:700;color:#ef4444;margin-bottom:4px">ULTIMO BLOQUEO BACKEND</div>' +
+          '<div class="usage-row"><span class="usage-row-label">Modelo</span><span class="usage-row-value">' + escapeHtml(backend.model || '-') + '</span></div>' +
+          '<div class="usage-row"><span class="usage-row-label">Estado</span><span class="usage-row-value" style="color:#ef4444">' + escapeHtml(backend.status || '-') + '</span></div>' +
+          '<div style="font-size:0.72rem;line-height:1.45;color:var(--text);margin-top:6px">' + escapeHtml(backend.message || '') + '</div>' +
+          '</div>'
+        : '<div style="font-size:0.72rem;line-height:1.45;color:var(--muted);margin-top:8px">Este panel refleja actividad local correcta en este navegador. No muestra la cuota real restante de Google.</div>';
       var content = document.getElementById('usage-popup-content');
       content.innerHTML = [
-        '<div class="usage-row"><span class="usage-row-label">Peticiones</span><span class="usage-row-value">' + used + ' / ' + USAGE_RPD_LIMIT + '</span></div>',
+        '<div class="usage-row"><span class="usage-row-label">Peticiones correctas</span><span class="usage-row-value">' + used + '</span></div>',
         '<div class="usage-row-bar"><div class="usage-row-bar-fill" style="width:' + (pct * 100).toFixed(1) + '%;background:' + color + '"></div></div>',
-        '<div class="usage-row" style="margin-top:6px"><span class="usage-row-label">Restantes</span><span class="usage-row-value" style="color:' + color + '">' + remaining + '</span></div>',
-        modelRows ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">POR MODELO</div>' + modelRows + '</div>' : ''
+        '<div class="usage-row" style="margin-top:6px"><span class="usage-row-label">Margen local</span><span class="usage-row-value" style="color:' + color + '">' + estimatedRemaining + ' est.</span></div>',
+        modelRows ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">CORRECTAS POR MODELO</div>' + modelRows + '</div>' : '',
+        backendBlock
       ].join('');
     }
 
@@ -2700,6 +2835,14 @@
           handleSend();
         }
       });
+      elements.composer.addEventListener('paste', async (event) => {
+        const files = extractFilesFromClipboardEvent(event);
+        if (!files.length) {
+          return;
+        }
+        event.preventDefault();
+        await addFilesToComposer(files);
+      });
 
       elements.attachBtn.addEventListener('click', () => {
         if (!appState.busy && !appState.attachmentBusy) {
@@ -2709,6 +2852,45 @@
       elements.fileInput.addEventListener('change', async () => {
         await addFilesToComposer(elements.fileInput.files);
         elements.fileInput.value = '';
+      });
+      elements.composerShell.addEventListener('dragenter', (event) => {
+        if (!transferHasFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        appState.composerDragDepth += 1;
+        setComposerDragActive(true);
+      });
+      elements.composerShell.addEventListener('dragover', (event) => {
+        if (!transferHasFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = 'copy';
+        }
+        setComposerDragActive(true);
+      });
+      elements.composerShell.addEventListener('dragleave', (event) => {
+        if (!transferHasFiles(event.dataTransfer)) {
+          return;
+        }
+        event.preventDefault();
+        appState.composerDragDepth = Math.max(0, appState.composerDragDepth - 1);
+        if (!appState.composerDragDepth || !elements.composerShell.contains(event.relatedTarget)) {
+          appState.composerDragDepth = 0;
+          setComposerDragActive(false);
+        }
+      });
+      elements.composerShell.addEventListener('drop', async (event) => {
+        const files = extractFilesFromDataTransfer(event.dataTransfer);
+        if (!files.length) {
+          return;
+        }
+        event.preventDefault();
+        appState.composerDragDepth = 0;
+        setComposerDragActive(false);
+        await addFilesToComposer(files);
       });
       elements.sendBtn.addEventListener('click', handleSend);
       elements.newChatBtn.addEventListener('click', newChat);
@@ -2918,7 +3100,8 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken
+          Authorization: 'Bearer ' + appState.accessToken,
+          'x-goog-user-project': googleProjectRef()
         },
         body: JSON.stringify(buildRequestBody(chat.messages, chat)),
         signal
@@ -2937,11 +3120,15 @@
 
         if (response.status === 429) {
           var attempts = Number(retryCount) || 0;
+          var backendMessage = data && data.error && data.error.message
+            ? data.error.message
+            : 'Google ha limitado temporalmente este modelo o esta cuenta.';
           if (attempts >= 2) {
-            throw new Error('Sin usos disponibles. Espera un momento e intentalo de nuevo.');
+            trackBackendLimit('429', backendMessage, activeModelName(chat));
+            throw new Error('Google esta limitando temporalmente ' + activeModelLabel(chat) + '. Prueba otra vez en un momento o cambia a Gemini 2.5 Flash.');
           }
-          var retryMatch = data && data.error && data.error.message
-            ? data.error.message.match(/retry in ([\d.]+)s/i)
+          var retryMatch = backendMessage
+            ? backendMessage.match(/retry in ([\d.]+)s/i)
             : null;
           var waitSec = retryMatch ? Math.min(parseFloat(retryMatch[1]), 45) : 8;
           setComposerStatus('Limite de tasa. Reintentando en ' + Math.ceil(waitSec) + 's...');
