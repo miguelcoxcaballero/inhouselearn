@@ -324,6 +324,7 @@
       border-top: none;
     }
     .composer-shell {
+      position: relative;
       max-width: 700px; margin: 0 auto;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r-xl); padding: 6px 7px 6px 4px;
@@ -532,6 +533,29 @@
       font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.1em; color: var(--muted); padding: 8px 6px 3px; flex-shrink: 0;
     }
+
+    /* ─── USAGE DONUT ───────────────────────────────── */
+    .usage-btn {
+      width: 30px; height: 30px; border-radius: 50%; border: none; cursor: pointer;
+      background: none; padding: 0; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: transform 0.15s;
+    }
+    .usage-btn:hover { transform: scale(1.12); }
+    .usage-btn svg { width: 24px; height: 24px; }
+    .usage-popup {
+      position: absolute; bottom: calc(100% + 10px); right: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-md); box-shadow: var(--shadow-lg);
+      padding: 14px 16px; min-width: 220px; z-index: 50;
+      animation: fadeIn 0.15s var(--ease) both;
+    }
+    .usage-popup.hidden { display: none; }
+    .usage-popup-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+    .usage-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.82rem; }
+    .usage-row-label { color: var(--muted); }
+    .usage-row-value { font-weight: 600; color: var(--text); }
+    .usage-row-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
+    .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
   </style>
 </head>
 <body>
@@ -627,6 +651,13 @@
                   <path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                 </svg>
               </button>
+              <button class="usage-btn" id="usage-btn" aria-label="Uso de API" title="Ver uso de API">
+                <svg id="usage-donut" viewBox="0 0 36 36"></svg>
+              </button>
+            </div>
+            <div class="usage-popup hidden" id="usage-popup">
+              <div class="usage-popup-title">Uso de API hoy</div>
+              <div id="usage-popup-content"></div>
             </div>
             <div class="composer-status-row">
               <span id="composer-status" class="hidden"></span>
@@ -2578,6 +2609,85 @@
       renderHistory();
     }
 
+
+    /* ─── API USAGE TRACKING ─────────────────────────── */
+
+    var USAGE_KEY = STORAGE_KEY + '::dailyUsage';
+    var USAGE_RPD_LIMIT = 1500;
+
+    function getUsageData() {
+      try {
+        var raw = localStorage.getItem(USAGE_KEY);
+        var data = raw ? JSON.parse(raw) : null;
+        if (!data || data.date !== new Date().toISOString().slice(0, 10)) {
+          return { date: new Date().toISOString().slice(0, 10), total: 0, models: {} };
+        }
+        return data;
+      } catch (e) {
+        return { date: new Date().toISOString().slice(0, 10), total: 0, models: {} };
+      }
+    }
+
+    function saveUsageData(data) {
+      try { localStorage.setItem(USAGE_KEY, JSON.stringify(data)); } catch (e) {}
+    }
+
+    function trackApiUsage() {
+      var data = getUsageData();
+      var model = activeModelName();
+      data.total = (data.total || 0) + 1;
+      if (!data.models) data.models = {};
+      data.models[model] = (data.models[model] || 0) + 1;
+      saveUsageData(data);
+      renderUsageDonut();
+    }
+
+    function renderUsageDonut() {
+      var data = getUsageData();
+      var used = data.total || 0;
+      var pct = Math.min(used / USAGE_RPD_LIMIT, 1);
+      var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
+      var radius = 15.915;
+      var circ = 2 * Math.PI * radius;
+      var filled = circ * pct;
+      var remaining = circ - filled;
+      var svg = document.getElementById('usage-donut');
+      if (!svg) return;
+      svg.innerHTML = [
+        '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="3"/>',
+        '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="3"',
+        '  stroke-dasharray="' + filled.toFixed(2) + ' ' + remaining.toFixed(2) + '"',
+        '  stroke-dashoffset="25" stroke-linecap="round" style="transition:stroke-dasharray 0.4s"/>',
+        '<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="' + color + '">' + used + '</text>'
+      ].join('');
+    }
+
+    function renderUsagePopup() {
+      var data = getUsageData();
+      var used = data.total || 0;
+      var remaining = Math.max(0, USAGE_RPD_LIMIT - used);
+      var pct = Math.min(used / USAGE_RPD_LIMIT, 1);
+      var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
+      var models = data.models || {};
+      var modelRows = Object.keys(models).map(function(m) {
+        return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(m) + '</span><span class="usage-row-value">' + models[m] + '</span></div>';
+      }).join('');
+      var content = document.getElementById('usage-popup-content');
+      content.innerHTML = [
+        '<div class="usage-row"><span class="usage-row-label">Peticiones</span><span class="usage-row-value">' + used + ' / ' + USAGE_RPD_LIMIT + '</span></div>',
+        '<div class="usage-row-bar"><div class="usage-row-bar-fill" style="width:' + (pct * 100).toFixed(1) + '%;background:' + color + '"></div></div>',
+        '<div class="usage-row" style="margin-top:6px"><span class="usage-row-label">Restantes</span><span class="usage-row-value" style="color:' + color + '">' + remaining + '</span></div>',
+        modelRows ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">POR MODELO</div>' + modelRows + '</div>' : ''
+      ].join('');
+    }
+
+    function toggleUsagePopup() {
+      var popup = document.getElementById('usage-popup');
+      var isHidden = popup.classList.contains('hidden');
+      popup.classList.toggle('hidden');
+      if (isHidden) renderUsagePopup();
+    }
+
     function bindEvents() {
       elements.composer.addEventListener('input', () => {
         autoResizeComposer();
@@ -2631,6 +2741,16 @@
       document.getElementById('preview-close').addEventListener('click', closeAttachmentPreview);
       document.getElementById('preview-overlay').addEventListener('click', function(e) {
         if (e.target.id === 'preview-overlay') closeAttachmentPreview();
+      });
+      document.getElementById('usage-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleUsagePopup();
+      });
+      document.addEventListener('click', function(e) {
+        var popup = document.getElementById('usage-popup');
+        if (!popup.classList.contains('hidden') && !popup.contains(e.target) && e.target.id !== 'usage-btn') {
+          popup.classList.add('hidden');
+        }
       });
     }
 
@@ -2816,11 +2936,23 @@
           return callGemini(chat, signal, false);
         }
 
+        if (response.status === 429) {
+          var retryMatch = data && data.error && data.error.message
+            ? data.error.message.match(/retry in ([\d.]+)s/i)
+            : null;
+          var waitSec = retryMatch ? Math.min(parseFloat(retryMatch[1]), 60) : 10;
+          setComposerStatus('Limite de tasa. Reintentando en ' + Math.ceil(waitSec) + 's...');
+          await new Promise(function(r) { setTimeout(r, waitSec * 1000); });
+          return callGemini(chat, signal, false);
+        }
+
         const message = data && data.error && data.error.message
           ? data.error.message
           : 'Error HTTP ' + response.status;
         throw new Error(message);
       }
+
+      trackApiUsage();
 
       return {
         text: extractTextFromResponse(data),
@@ -2933,6 +3065,7 @@
       updateSendUi();
       bindEvents();
       setComposerStatus('');
+      renderUsageDonut();
       elements.composer.placeholder = 'Escribe aqui...';
 
       if (location.protocol === 'file:') {
