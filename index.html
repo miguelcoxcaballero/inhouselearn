@@ -32,6 +32,10 @@
       --header-h: 64px;
     }
 
+    body {
+      overflow: hidden;
+    }
+
     html, body {
       height: 100%;
       font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -50,7 +54,7 @@
       z-index: 100;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 12px;
       padding: 0 24px;
       height: var(--header-h);
       background: var(--bg-secondary);
@@ -71,6 +75,34 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .topbar-models {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .topbar-models .status-pill {
+      flex-shrink: 0;
+      margin-left: 2px;
+    }
+
+    .topbar-select {
+      width: auto;
+      min-width: 150px;
+      max-width: 220px;
+      min-height: 38px;
+      flex-shrink: 1;
+    }
+
+    .topbar-models .field-note {
+      display: none;
     }
 
     .engine-chip {
@@ -249,13 +281,30 @@
       background: transparent;
       color: var(--text-secondary);
       border: 1px solid transparent;
-      font-size: 0.9rem;
-      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.96);
+      transition: opacity 0.14s, transform 0.14s, background 0.14s, color 0.14s;
+    }
+
+    .chat-delete svg {
+      width: 15px;
+      height: 15px;
     }
 
     .chat-delete:hover {
       background: rgba(0,0,0,0.05);
       color: var(--text-primary);
+    }
+
+    .chat-row:hover .chat-delete,
+    .chat-row:focus-within .chat-delete {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
     }
 
     .status-pill {
@@ -445,6 +494,18 @@
       font-weight: 700;
       font-size: 0.76rem;
       flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .message-badge img,
+    .message-badge svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .message-badge img {
+      object-fit: cover;
     }
 
     .message-badge.user {
@@ -513,6 +574,39 @@
       overflow-y: hidden;
     }
 
+    .attachment-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .attachment-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--line);
+      font-size: 0.78rem;
+      line-height: 1.2;
+    }
+
+    .attachment-pill svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .attachment-pill-text {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
     /* ── TYPING ───────────────────────────────── */
     .typing { display: inline-flex; align-items: center; gap: 6px; }
     .typing span {
@@ -544,6 +638,75 @@
       border-radius: var(--radius-xl);
       padding: 11px;
       box-shadow: var(--shadow-sm);
+    }
+
+    .composer-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .attach-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-md);
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .attach-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: var(--text-primary);
+    }
+
+    .attach-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .composer-attachments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 0;
+      flex: 1;
+    }
+
+    .composer-attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(0, 47, 217, 0.06);
+      border: 1px solid rgba(0, 47, 217, 0.12);
+      color: var(--text-primary);
+      font-size: 0.78rem;
+    }
+
+    .composer-attachment-name {
+      max-width: 260px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .composer-attachment button {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .composer-attachment button:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--text-primary);
     }
 
     .composer-frame {
@@ -630,11 +793,15 @@
       .sidebar-section { min-width: 180px; }
       .thread-wrap { padding: 20px 16px; }
       .composer-area { padding: 12px 16px 16px; }
+      .topbar-models .status-pill { display: none; }
+      .topbar-select { min-width: 124px; max-width: 180px; }
     }
 
     @media (max-width: 560px) {
       .drive-topbar { padding: 0 14px; }
       .engine-chip { display: none; }
+      .topbar-models { gap: 6px; }
+      .topbar-select { min-width: 0; max-width: 120px; }
       .composer-frame { grid-template-columns: 1fr; }
       .send-btn { width: 100%; height: 46px; }
     }
@@ -651,8 +818,17 @@
         </svg>
         inhouse learn
       </div>
-      <div class="drive-actions">
+      <div class="topbar-models">
         <div class="engine-chip" id="model-badge">gemini</div>
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          <span id="transport-label">Sin configurar</span>
+        </div>
+        <select id="chat-model-select" class="chat-select topbar-select" aria-label="Modelo del chat"></select>
+        <select id="chat-thinking-select" class="chat-select topbar-select hidden" aria-label="Thinking del chat"></select>
+        <div class="field-note" id="model-copy"></div>
+      </div>
+      <div class="drive-actions">
         <button class="btn btn-primary" id="new-chat-btn">Nuevo chat</button>
         <button class="btn btn-icon" id="clear-chat-btn" title="Limpiar chat actual">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -678,22 +854,6 @@
           <div class="chat-list" id="chat-list"></div>
         </div>
 
-        <!-- Motor -->
-        <div class="sidebar-section">
-          <div class="status-pill">
-            <span class="status-dot"></span>
-            <span id="transport-label">Sin configurar</span>
-          </div>
-          <div class="control-stack">
-            <div class="section-label">Modelo del chat</div>
-            <select id="chat-model-select" class="chat-select" aria-label="Modelo del chat"></select>
-            <select id="chat-thinking-select" class="chat-select hidden" aria-label="Thinking del chat"></select>
-            <div class="field-note" id="model-copy"></div>
-          </div>
-          <div id="config-copy" style="display:none"></div>
-          <div id="origin-copy" style="display:none"></div>
-        </div>
-
         <!-- Cuenta -->
         <div class="sidebar-section sidebar-account">
           <div class="profile-row hidden" id="profile-card">
@@ -704,6 +864,8 @@
             </div>
           </div>
           <div id="auth-copy" style="display:none"></div>
+          <div id="config-copy" style="display:none"></div>
+          <div id="origin-copy" style="display:none"></div>
         </div>
 
       </aside>
@@ -716,6 +878,15 @@
 
         <footer class="composer-area">
           <div class="composer-shell">
+            <div class="composer-tools">
+              <button class="attach-btn" id="attach-btn" aria-label="Adjuntar archivos" title="Adjuntar archivos">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21.44 11.05l-8.49 8.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66L9.4 17.43a2 2 0 1 1-2.83-2.83l8.49-8.48"></path>
+                </svg>
+              </button>
+              <div class="composer-attachments hidden" id="composer-attachments"></div>
+              <input id="file-input" type="file" multiple class="hidden">
+            </div>
             <div class="composer-frame">
               <textarea id="composer" class="composer" placeholder="Escribe aqui..."></textarea>
               <button class="send-btn" id="send-btn" aria-label="Enviar">
@@ -739,6 +910,9 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -787,20 +961,63 @@
     ];
 
     const STORAGE_KEY = 'inhouseGeminiStandaloneV1';
+    const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+    const DRIVE_FOLDER_NAME = 'inhouse learn';
+    const DRIVE_SNAPSHOT_NAME = 'conversations.json';
+    const DRIVE_FOLDER_TAG = 'inhouseLearnFolder';
+    const DRIVE_SNAPSHOT_TAG = 'inhouseLearnSnapshot';
+    const DRIVE_SYNC_DEBOUNCE_MS = 900;
+    const AUTH_SKIP_RESTORE_KEY = STORAGE_KEY + '::manualLogout';
+    const MAX_INLINE_ATTACHMENT_BYTES = 12 * 1024 * 1024;
+    const MAX_TEXT_ATTACHMENT_CHARS = 120000;
+    const MAX_PDF_PAGES = 80;
+    const EXTENSION_MIME_TYPES = {
+      pdf: 'application/pdf',
+      txt: 'text/plain',
+      md: 'text/markdown',
+      csv: 'text/csv',
+      tsv: 'text/tab-separated-values',
+      json: 'application/json',
+      js: 'text/javascript',
+      ts: 'text/typescript',
+      html: 'text/html',
+      css: 'text/css',
+      xml: 'application/xml',
+      yaml: 'text/yaml',
+      yml: 'text/yaml',
+      log: 'text/plain',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      xls: 'application/vnd.ms-excel',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ods: 'application/vnd.oasis.opendocument.spreadsheet',
+      odt: 'application/vnd.oasis.opendocument.text'
+    };
 
     const appState = {
       chats: [],
       activeChatId: null,
       busy: false,
+      attachmentBusy: false,
       accessToken: '',
       profile: null,
-      activeController: null
+      activeController: null,
+      driveFolderId: '',
+      driveSnapshotFileId: '',
+      driveReady: false,
+      driveSyncTimer: 0,
+      driveSyncPromise: null,
+      driveSyncQueued: false,
+      composerAttachments: []
     };
 
     const elements = {
       chatList: document.getElementById('chat-list'),
       thread: document.getElementById('thread'),
       composer: document.getElementById('composer'),
+      attachBtn: document.getElementById('attach-btn'),
+      fileInput: document.getElementById('file-input'),
+      composerAttachments: document.getElementById('composer-attachments'),
       sendBtn: document.getElementById('send-btn'),
       sendIcon: document.getElementById('send-icon'),
       newChatBtn: document.getElementById('new-chat-btn'),
@@ -905,6 +1122,454 @@
       return chat;
     }
 
+    function normalizeStoredMessage(message) {
+      const content = message && typeof message.content === 'string'
+        ? message.content
+        : '';
+      const attachments = Array.isArray(message && message.attachments)
+        ? message.attachments.map((item) => serializeAttachmentForStorage(item)).filter(Boolean)
+        : [];
+      const parts = Array.isArray(message && message.parts)
+        ? message.parts.map((part) => serializePartForStorage(part, attachments)).filter(Boolean)
+        : (content ? [{ text: content }] : []);
+      return {
+        id: message && typeof message.id === 'string' ? message.id : uid('msg'),
+        role: message && message.role === 'assistant' ? 'assistant' : 'user',
+        content,
+        parts,
+        attachments,
+        pending: !!(message && message.pending),
+        createdAt: message && typeof message.createdAt === 'string' ? message.createdAt : nowIso()
+      };
+    }
+
+    function normalizeStoredChat(chat) {
+      const createdAt = chat && typeof chat.createdAt === 'string'
+        ? chat.createdAt
+        : nowIso();
+      return normalizeChatConfig({
+        id: chat && typeof chat.id === 'string' ? chat.id : uid('chat'),
+        title: chat && typeof chat.title === 'string' && chat.title.trim() ? chat.title : 'Nuevo chat',
+        createdAt,
+        updatedAt: chat && typeof chat.updatedAt === 'string' ? chat.updatedAt : createdAt,
+        messages: Array.isArray(chat && chat.messages)
+          ? chat.messages.map((message) => normalizeStoredMessage(message))
+          : [],
+        model: chat && chat.model ? chat.model : APP_CONFIG.GEMINI_MODEL,
+        thinkingLevel: chat && typeof chat.thinkingLevel !== 'undefined'
+          ? chat.thinkingLevel
+          : APP_CONFIG.GEMINI_THINKING_LEVEL
+      });
+    }
+
+    function normalizeSnapshot(snapshot) {
+      if (!snapshot || !Array.isArray(snapshot.chats) || !snapshot.chats.length) {
+        return null;
+      }
+      const chats = snapshot.chats.map((chat) => normalizeStoredChat(chat));
+      return {
+        version: typeof snapshot.version === 'number' ? snapshot.version : 1,
+        savedAt: typeof snapshot.savedAt === 'string' ? snapshot.savedAt : nowIso(),
+        activeChatId: typeof snapshot.activeChatId === 'string' ? snapshot.activeChatId : chats[0].id,
+        chats
+      };
+    }
+
+    function buildStateSnapshot() {
+      return {
+        version: 1,
+        savedAt: nowIso(),
+        activeChatId: appState.activeChatId,
+        chats: appState.chats.map((chat) => {
+          const normalizedChat = normalizeStoredChat(chat);
+          normalizedChat.messages = normalizedChat.messages.filter((message) => !message.pending);
+          return normalizedChat;
+        })
+      };
+    }
+
+    function applySnapshotToState(snapshot) {
+      const normalized = normalizeSnapshot(snapshot);
+      if (!normalized) {
+        return false;
+      }
+      appState.chats = normalized.chats;
+      appState.activeChatId = normalized.activeChatId;
+      ensureActiveChat();
+      saveState({
+        skipDrive: true
+      });
+      return true;
+    }
+
+    function messageHasVisibleContent(message) {
+      if (!message || message.pending) {
+        return false;
+      }
+      if (typeof message.content === 'string' && message.content.trim()) {
+        return true;
+      }
+      return Array.isArray(message.parts) && message.parts.some((part) => {
+        return part && typeof part.text === 'string' && part.text.trim() && !part.thought;
+      });
+    }
+
+    function chatHasMeaningfulContent(chat) {
+      return !!(chat && Array.isArray(chat.messages) && chat.messages.some((message) => messageHasVisibleContent(message)));
+    }
+
+    function snapshotHasMeaningfulContent(snapshot) {
+      return !!(snapshot && Array.isArray(snapshot.chats) && snapshot.chats.some((chat) => chatHasMeaningfulContent(chat)));
+    }
+
+    function parseSnapshotMoment(value) {
+      const timestamp = Date.parse(value || '');
+      return Number.isFinite(timestamp) ? timestamp : 0;
+    }
+
+    function snapshotFreshness(snapshot) {
+      if (!snapshot || !Array.isArray(snapshot.chats)) {
+        return 0;
+      }
+      let newest = 0;
+      snapshot.chats.forEach((chat) => {
+        if (!chatHasMeaningfulContent(chat)) {
+          return;
+        }
+        newest = Math.max(newest, parseSnapshotMoment(chat.updatedAt), parseSnapshotMoment(chat.createdAt));
+        (chat.messages || []).forEach((message) => {
+          newest = Math.max(newest, parseSnapshotMoment(message.createdAt));
+        });
+      });
+      return newest;
+    }
+
+    function resetDriveState() {
+      if (appState.driveSyncTimer) {
+        window.clearTimeout(appState.driveSyncTimer);
+      }
+      appState.driveFolderId = '';
+      appState.driveSnapshotFileId = '';
+      appState.driveReady = false;
+      appState.driveSyncTimer = 0;
+      appState.driveSyncPromise = null;
+      appState.driveSyncQueued = false;
+    }
+
+    function fileExtension(name) {
+      const match = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/);
+      return match ? match[1] : '';
+    }
+
+    function inferMimeType(file) {
+      if (file && file.type) {
+        return file.type;
+      }
+      return EXTENSION_MIME_TYPES[fileExtension(file && file.name)] || 'application/octet-stream';
+    }
+
+    function formatBytes(value) {
+      const bytes = Number(value || 0);
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function truncateText(value, maxChars) {
+      const limit = maxChars || MAX_TEXT_ATTACHMENT_CHARS;
+      const text = String(value || '').replace(/\u0000/g, '').trim();
+      if (!text) {
+        return '';
+      }
+      if (text.length <= limit) {
+        return text;
+      }
+      return text.slice(0, limit) + '\n\n[Contenido truncado]';
+    }
+
+    function attachmentKindFromMime(mimeType, name) {
+      const mime = String(mimeType || '').toLowerCase();
+      const ext = fileExtension(name);
+      if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+      if (mime.startsWith('image/')) return 'image';
+      if (mime.startsWith('audio/')) return 'audio';
+      if (mime.startsWith('video/')) return 'video';
+      if (ext === 'docx' || ext === 'odt') return 'doc';
+      if (ext === 'xlsx' || ext === 'xls' || ext === 'ods' || ext === 'csv' || ext === 'tsv') return 'sheet';
+      if (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('javascript') || mime.includes('typescript') || mime.includes('yaml') || ext === 'md' || ext === 'log') return 'text';
+      return 'binary';
+    }
+
+    function attachmentIconMarkup(kind) {
+      const color = kind === 'image'
+        ? '#0f766e'
+        : kind === 'audio'
+          ? '#7c3aed'
+          : kind === 'video'
+            ? '#1d4ed8'
+            : kind === 'sheet'
+              ? '#15803d'
+              : '#E07A3C';
+      return [
+        '<svg viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+        '  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>',
+        '  <polyline points="14 2 14 8 20 8"></polyline>',
+        '</svg>'
+      ].join('');
+    }
+
+    function attachmentBadgeMarkup(attachment, removable) {
+      const item = attachment || {};
+      const sizeLabel = item.size ? ' · ' + formatBytes(item.size) : '';
+      const close = removable
+        ? '<button type="button" data-remove-attachment-id="' + escapeHtml(item.id) + '" aria-label="Quitar archivo">×</button>'
+        : '';
+      return [
+        '<div class="' + (removable ? 'composer-attachment' : 'attachment-pill') + '">',
+        attachmentIconMarkup(item.kind),
+        '<span class="' + (removable ? 'composer-attachment-name' : 'attachment-pill-text') + '">' + escapeHtml((item.name || 'Archivo') + sizeLabel) + '</span>',
+        close,
+        '</div>'
+      ].join('');
+    }
+
+    function renderComposerAttachments() {
+      if (!elements.composerAttachments) {
+        return;
+      }
+      const items = appState.composerAttachments || [];
+      elements.composerAttachments.classList.toggle('hidden', !items.length);
+      elements.composerAttachments.innerHTML = items.map((item) => attachmentBadgeMarkup(item, true)).join('');
+      Array.from(elements.composerAttachments.querySelectorAll('[data-remove-attachment-id]')).forEach((button) => {
+        button.addEventListener('click', () => {
+          appState.composerAttachments = appState.composerAttachments.filter((item) => item.id !== button.dataset.removeAttachmentId);
+          renderComposerAttachments();
+          updateSendUi();
+        });
+      });
+    }
+
+    function resetComposerAttachments() {
+      appState.composerAttachments = [];
+      if (elements.fileInput) {
+        elements.fileInput.value = '';
+      }
+      renderComposerAttachments();
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      const chunkSize = 0x8000;
+      for (let index = 0; index < bytes.length; index += chunkSize) {
+        const chunk = bytes.subarray(index, index + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      return btoa(binary);
+    }
+
+    async function readPdfAsText(file) {
+      if (!(window.pdfjsLib && window.pdfjsLib.getDocument)) {
+        throw new Error('pdf.js no esta cargado.');
+      }
+      if (window.pdfjsLib.GlobalWorkerOptions && !window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+      }
+      const buffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+      const parts = [];
+      const maxPages = Math.min(pdf.numPages, MAX_PDF_PAGES);
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        const text = content.items.map((item) => item && item.str ? item.str : '').join(' ').replace(/\s+/g, ' ').trim();
+        if (text) {
+          parts.push('[Pagina ' + pageNumber + ']\n' + text);
+        }
+      }
+      return truncateText(parts.join('\n\n'), MAX_TEXT_ATTACHMENT_CHARS);
+    }
+
+    async function readDocxAsText(file) {
+      if (!(window.mammoth && window.mammoth.extractRawText)) {
+        throw new Error('Mammoth no esta cargado.');
+      }
+      const result = await window.mammoth.extractRawText({
+        arrayBuffer: await file.arrayBuffer()
+      });
+      return truncateText(result && result.value ? result.value : '', MAX_TEXT_ATTACHMENT_CHARS);
+    }
+
+    async function readSpreadsheetAsText(file) {
+      if (!(window.XLSX && window.XLSX.read)) {
+        throw new Error('SheetJS no esta cargado.');
+      }
+      const workbook = window.XLSX.read(await file.arrayBuffer(), {
+        type: 'array'
+      });
+      const chunks = [];
+      workbook.SheetNames.forEach((sheetName) => {
+        const worksheet = workbook.Sheets[sheetName];
+        const csv = window.XLSX.utils.sheet_to_csv(worksheet, {
+          blankrows: false
+        }).trim();
+        if (csv) {
+          chunks.push('[Hoja: ' + sheetName + ']\n' + csv);
+        }
+      });
+      return truncateText(chunks.join('\n\n'), MAX_TEXT_ATTACHMENT_CHARS);
+    }
+
+    async function buildInlineAttachment(file, mimeType, kind) {
+      if (file.size > MAX_INLINE_ATTACHMENT_BYTES) {
+        throw new Error('"' + file.name + '" pesa ' + formatBytes(file.size) + '. Para adjuntos binarios el limite actual es ' + formatBytes(MAX_INLINE_ATTACHMENT_BYTES) + '.');
+      }
+      return {
+        id: uid('att'),
+        name: file.name,
+        size: file.size,
+        mimeType,
+        kind,
+        source: 'inline',
+        part: {
+          inlineData: {
+            mimeType,
+            data: arrayBufferToBase64(await file.arrayBuffer())
+          }
+        }
+      };
+    }
+
+    function buildTextAttachment(file, mimeType, kind, text) {
+      const trimmed = truncateText(text, MAX_TEXT_ATTACHMENT_CHARS);
+      if (!trimmed) {
+        throw new Error('No pude extraer texto util de "' + file.name + '".');
+      }
+      return {
+        id: uid('att'),
+        name: file.name,
+        size: file.size,
+        mimeType,
+        kind,
+        source: 'text',
+        extractedText: trimmed,
+        part: {
+          text: [
+            'Archivo adjunto: ' + file.name,
+            'Tipo: ' + mimeType,
+            '',
+            trimmed
+          ].join('\n')
+        }
+      };
+    }
+
+    async function prepareAttachment(file) {
+      const mimeType = inferMimeType(file);
+      const kind = attachmentKindFromMime(mimeType, file.name);
+
+      if (kind === 'pdf') {
+        try {
+          return await buildInlineAttachment(file, mimeType, kind);
+        } catch (error) {
+          const text = await readPdfAsText(file);
+          return buildTextAttachment(file, mimeType, kind, text);
+        }
+      }
+      if (kind === 'doc') {
+        return buildTextAttachment(file, mimeType, kind, await readDocxAsText(file));
+      }
+      if (kind === 'sheet') {
+        if (fileExtension(file.name) === 'csv' || fileExtension(file.name) === 'tsv') {
+          return buildTextAttachment(file, mimeType, kind, await file.text());
+        }
+        return buildTextAttachment(file, mimeType, kind, await readSpreadsheetAsText(file));
+      }
+      if (kind === 'text') {
+        return buildTextAttachment(file, mimeType, kind, await file.text());
+      }
+      return buildInlineAttachment(file, mimeType, kind);
+    }
+
+    async function addFilesToComposer(fileList) {
+      const files = Array.from(fileList || []);
+      if (!files.length) {
+        return;
+      }
+      appState.attachmentBusy = true;
+      updateSendUi();
+      setComposerStatus('Procesando adjuntos...');
+      try {
+        for (const file of files) {
+          const attachment = await prepareAttachment(file);
+          appState.composerAttachments.push(attachment);
+        }
+        renderComposerAttachments();
+        if (!appState.busy) {
+          setComposerStatus('');
+        }
+      } catch (error) {
+        showToast('Adjuntos', error.message);
+        setComposerStatus('No se pudo adjuntar uno de los archivos.');
+      } finally {
+        appState.attachmentBusy = false;
+        updateSendUi();
+        if (!appState.busy) {
+          window.setTimeout(() => {
+            if (!appState.busy) {
+              setComposerStatus('');
+            }
+          }, 1200);
+        }
+      }
+    }
+
+    function serializeAttachmentForStorage(attachment) {
+      if (!attachment || typeof attachment !== 'object') {
+        return null;
+      }
+      return {
+        id: typeof attachment.id === 'string' ? attachment.id : uid('att'),
+        name: typeof attachment.name === 'string' ? attachment.name : 'Archivo',
+        size: Number(attachment.size || 0),
+        mimeType: typeof attachment.mimeType === 'string' ? attachment.mimeType : 'application/octet-stream',
+        kind: typeof attachment.kind === 'string' ? attachment.kind : 'binary',
+        source: typeof attachment.source === 'string' ? attachment.source : 'text'
+      };
+    }
+
+    function serializePartForStorage(part, attachmentList) {
+      if (!part || typeof part !== 'object') {
+        return null;
+      }
+      if (typeof part.text === 'string') {
+        return {
+          text: part.text
+        };
+      }
+      if (part.inlineData && part.inlineData.mimeType) {
+        const match = (attachmentList || []).find((item) => item.mimeType === part.inlineData.mimeType);
+        return {
+          text: '[Adjunto binario: ' + (match ? match.name : part.inlineData.mimeType) + ']'
+        };
+      }
+      return null;
+    }
+
+    function rememberManualLogout() {
+      localStorage.setItem(AUTH_SKIP_RESTORE_KEY, '1');
+    }
+
+    function clearManualLogoutFlag() {
+      localStorage.removeItem(AUTH_SKIP_RESTORE_KEY);
+    }
+
+    function shouldAutoRestoreAuth() {
+      return hasOauthConfig() &&
+        location.protocol !== 'file:' &&
+        localStorage.getItem(AUTH_SKIP_RESTORE_KEY) !== '1';
+    }
+
     function getResolvedChat(chatLike) {
       if (chatLike) {
         return normalizeChatConfig(chatLike);
@@ -998,27 +1663,44 @@
 
     function deriveTitle(messages) {
       const firstUser = messages.find((message) => message.role === 'user' && message.content.trim());
-      if (!firstUser) return 'Nuevo chat';
+      if (!firstUser) {
+        const firstAttachmentMessage = messages.find((message) => message.role === 'user' && Array.isArray(message.attachments) && message.attachments.length);
+        if (firstAttachmentMessage) {
+          const names = firstAttachmentMessage.attachments.map((item) => item.name).filter(Boolean);
+          if (names.length) {
+            return names.length === 1 ? names[0] : names[0] + ' +' + (names.length - 1);
+          }
+        }
+        return 'Nuevo chat';
+      }
       const flat = firstUser.content.replace(/\s+/g, ' ').trim();
       return flat.length > 42 ? flat.slice(0, 42) + '...' : flat;
     }
 
-    function saveState() {
+    function saveState(options) {
+      const settings = Object.assign({
+        skipDrive: false
+      }, options);
       const payload = {
-        chats: appState.chats,
+        version: 1,
+        savedAt: nowIso(),
+        chats: appState.chats.map((chat) => normalizeStoredChat(chat)),
         activeChatId: appState.activeChatId
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      if (!settings.skipDrive) {
+        scheduleDriveSync();
+      }
     }
 
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed.chats) && parsed.chats.length) {
-          appState.chats = parsed.chats.map((chat) => normalizeChatConfig(chat));
-          appState.activeChatId = parsed.activeChatId || parsed.chats[0].id;
+        const parsed = normalizeSnapshot(JSON.parse(raw));
+        if (parsed) {
+          appState.chats = parsed.chats;
+          appState.activeChatId = parsed.activeChatId;
         }
       } catch (error) {
         console.warn('No se pudo restaurar localStorage:', error);
@@ -1053,13 +1735,20 @@
     }
 
     function updateSendUi() {
-      elements.sendBtn.disabled = !appState.busy && !elements.composer.value.trim();
+      const hasDraft = !!elements.composer.value.trim() || !!(appState.composerAttachments && appState.composerAttachments.length);
+      elements.sendBtn.disabled = !appState.busy && (!hasDraft || appState.attachmentBusy);
       if (appState.busy) {
         elements.sendBtn.setAttribute('aria-label', 'Cancelar');
         elements.sendIcon.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>';
       } else {
         elements.sendBtn.setAttribute('aria-label', 'Enviar');
         elements.sendIcon.innerHTML = '<path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>';
+      }
+      if (elements.attachBtn) {
+        elements.attachBtn.disabled = appState.busy || appState.attachmentBusy;
+      }
+      if (elements.fileInput) {
+        elements.fileInput.disabled = appState.busy || appState.attachmentBusy;
       }
       if (elements.modelSelect) {
         elements.modelSelect.disabled = appState.busy;
@@ -1209,6 +1898,27 @@
       });
     }
 
+    function renderMessageAttachments(message) {
+      if (!message || !Array.isArray(message.attachments) || !message.attachments.length) {
+        return '';
+      }
+      return '<div class="attachment-list">' + message.attachments.map((item) => attachmentBadgeMarkup(item, false)).join('') + '</div>';
+    }
+
+    function renderMessageBadge(role) {
+      if (role === 'user' && appState.profile && appState.profile.picture) {
+        return '<img src="' + escapeHtml(appState.profile.picture) + '" alt="Perfil">';
+      }
+      if (role === 'assistant') {
+        return [
+          '<svg viewBox="0 0 40 24" fill="none" aria-hidden="true">',
+          '  <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+          '</svg>'
+        ].join('');
+      }
+      return 'Tu';
+    }
+
     function assistantTypingMarkup() {
       return '<div class="typing"><span></span><span></span><span></span></div>';
     }
@@ -1241,14 +1951,15 @@
 
       elements.thread.innerHTML = chat.messages.map((message) => {
         const roleLabel = message.role === 'user' ? 'Usuario' : 'inhouse';
-        const badgeLabel = message.role === 'user' ? 'Tu' : 'ih';
+        const badgeMarkup = renderMessageBadge(message.role);
         const body = message.pending ? assistantTypingMarkup() : renderMarkdown(message.content);
+        const attachmentMarkup = message.pending ? '' : renderMessageAttachments(message);
         return [
           '<article class="message">',
-          '  <div class="message-badge ' + message.role + '">' + badgeLabel + '</div>',
+          '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
           '  <div>',
           '    <div class="message-meta">' + roleLabel + ' | ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-          '    <div class="bubble">' + body + '</div>',
+          '    <div class="bubble">' + body + attachmentMarkup + '</div>',
           '  </div>',
           '</article>'
         ].join('');
@@ -1313,6 +2024,297 @@
       return response.json();
     }
 
+    function escapeDriveQueryValue(value) {
+      return String(value || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'");
+    }
+
+    async function driveFetch(url, options, allowRetry) {
+      if (!appState.accessToken) {
+        throw new Error('Inicia sesion con Google para sincronizar con Drive.');
+      }
+
+      const requestOptions = Object.assign({}, options);
+      const headers = new Headers(requestOptions.headers || {});
+      headers.set('Authorization', 'Bearer ' + appState.accessToken);
+      requestOptions.headers = headers;
+
+      const response = await fetch(url, requestOptions);
+      if (response.status === 401 && allowRetry !== false) {
+        await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          skipDriveBootstrap: true
+        });
+        return driveFetch(url, options, false);
+      }
+      return response;
+    }
+
+    function extractDriveErrorMessage(payload, fallback, status) {
+      if (payload && payload.error && payload.error.message) {
+        return payload.error.message;
+      }
+      return fallback + ' (HTTP ' + status + ')';
+    }
+
+    async function driveFetchJson(url, options, allowRetry, fallbackMessage) {
+      const response = await driveFetch(url, options, allowRetry);
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(extractDriveErrorMessage(payload, fallbackMessage || 'Error de Drive', response.status));
+      }
+      return payload;
+    }
+
+    async function driveFetchText(url, options, allowRetry, fallbackMessage) {
+      const response = await driveFetch(url, options, allowRetry);
+      const text = await response.text();
+      if (!response.ok) {
+        let payload = null;
+        try {
+          payload = text ? JSON.parse(text) : null;
+        } catch (error) {}
+        throw new Error(extractDriveErrorMessage(payload, fallbackMessage || 'Error de Drive', response.status));
+      }
+      return text;
+    }
+
+    async function listDriveFiles(query, pageSize) {
+      const params = new URLSearchParams({
+        q: query,
+        spaces: 'drive',
+        pageSize: String(pageSize || 10),
+        fields: 'files(id,name,mimeType,modifiedTime,parents)'
+      });
+      const payload = await driveFetchJson(
+        'https://www.googleapis.com/drive/v3/files?' + params.toString(),
+        {
+          method: 'GET'
+        },
+        true,
+        'No se pudo listar Drive.'
+      );
+      return Array.isArray(payload && payload.files) ? payload.files : [];
+    }
+
+    async function findDriveFolderId() {
+      if (appState.driveFolderId) {
+        return appState.driveFolderId;
+      }
+      const taggedFolders = await listDriveFiles(
+        "mimeType='application/vnd.google-apps.folder' and trashed=false and appProperties has { key='" + DRIVE_FOLDER_TAG + "' and value='1' }",
+        5
+      );
+      const taggedFolder = taggedFolders[0];
+      if (taggedFolder && taggedFolder.id) {
+        appState.driveFolderId = taggedFolder.id;
+        return appState.driveFolderId;
+      }
+
+      const namedFolders = await listDriveFiles(
+        "mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + escapeDriveQueryValue(DRIVE_FOLDER_NAME) + "'",
+        5
+      );
+      const namedFolder = namedFolders[0];
+      if (namedFolder && namedFolder.id) {
+        appState.driveFolderId = namedFolder.id;
+        return appState.driveFolderId;
+      }
+      return '';
+    }
+
+    async function ensureDriveFolderId() {
+      const existingId = await findDriveFolderId();
+      if (existingId) {
+        return existingId;
+      }
+      const folder = await driveFetchJson(
+        'https://www.googleapis.com/drive/v3/files?fields=id,name',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: DRIVE_FOLDER_NAME,
+            mimeType: 'application/vnd.google-apps.folder',
+            appProperties: {
+              [DRIVE_FOLDER_TAG]: '1'
+            }
+          })
+        },
+        true,
+        'No se pudo crear la carpeta de Drive.'
+      );
+      appState.driveFolderId = folder.id || '';
+      return appState.driveFolderId;
+    }
+
+    async function findDriveSnapshotFileId(folderId) {
+      if (appState.driveSnapshotFileId) {
+        return appState.driveSnapshotFileId;
+      }
+      if (!folderId) {
+        return '';
+      }
+      const taggedFiles = await listDriveFiles(
+        "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and appProperties has { key='" + DRIVE_SNAPSHOT_TAG + "' and value='1' }",
+        5
+      );
+      const taggedFile = taggedFiles[0];
+      if (taggedFile && taggedFile.id) {
+        appState.driveSnapshotFileId = taggedFile.id;
+        return appState.driveSnapshotFileId;
+      }
+
+      const namedFiles = await listDriveFiles(
+        "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and name='" + escapeDriveQueryValue(DRIVE_SNAPSHOT_NAME) + "'",
+        5
+      );
+      const namedFile = namedFiles[0];
+      if (namedFile && namedFile.id) {
+        appState.driveSnapshotFileId = namedFile.id;
+        return appState.driveSnapshotFileId;
+      }
+      return '';
+    }
+
+    function buildDriveMultipartBody(metadata, content, mimeType) {
+      const boundary = 'inhouse_drive_' + Math.random().toString(36).slice(2);
+      const body = [
+        '--' + boundary,
+        'Content-Type: application/json; charset=UTF-8',
+        '',
+        JSON.stringify(metadata),
+        '--' + boundary,
+        'Content-Type: ' + (mimeType || 'application/json') + '; charset=UTF-8',
+        '',
+        content,
+        '--' + boundary + '--',
+        ''
+      ].join('\r\n');
+      return {
+        body,
+        contentType: 'multipart/related; boundary=' + boundary
+      };
+    }
+
+    async function readDriveSnapshot() {
+      const folderId = await findDriveFolderId();
+      if (!folderId) {
+        return null;
+      }
+      const fileId = await findDriveSnapshotFileId(folderId);
+      if (!fileId) {
+        return null;
+      }
+      const raw = await driveFetchText(
+        'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media',
+        {
+          method: 'GET'
+        },
+        true,
+        'No se pudo descargar el historial de Drive.'
+      );
+      return normalizeSnapshot(JSON.parse(raw));
+    }
+
+    async function persistDriveSnapshot(snapshot) {
+      if (!appState.accessToken) {
+        return;
+      }
+      const normalizedSnapshot = normalizeSnapshot(snapshot) || buildStateSnapshot();
+      const folderId = await ensureDriveFolderId();
+      const existingFileId = await findDriveSnapshotFileId(folderId);
+      const metadata = {
+        name: DRIVE_SNAPSHOT_NAME,
+        mimeType: 'application/json',
+        description: 'inhouse learn chat snapshot',
+        appProperties: {
+          [DRIVE_SNAPSHOT_TAG]: '1'
+        }
+      };
+      if (!existingFileId) {
+        metadata.parents = [folderId];
+      }
+
+      const multipart = buildDriveMultipartBody(
+        metadata,
+        JSON.stringify(normalizedSnapshot, null, 2),
+        'application/json'
+      );
+      const response = await driveFetchJson(
+        existingFileId
+          ? 'https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(existingFileId) + '?uploadType=multipart&fields=id,modifiedTime'
+          : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime',
+        {
+          method: existingFileId ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': multipart.contentType
+          },
+          body: multipart.body
+        },
+        true,
+        'No se pudo guardar el historial en Drive.'
+      );
+      appState.driveFolderId = folderId;
+      appState.driveSnapshotFileId = response && response.id ? response.id : existingFileId;
+      appState.driveReady = true;
+    }
+
+    async function ensureDriveReady() {
+      if (!appState.accessToken) {
+        return;
+      }
+      if (appState.driveReady) {
+        return;
+      }
+
+      const localSnapshot = buildStateSnapshot();
+      const remoteSnapshot = await readDriveSnapshot();
+      const localHasContent = snapshotHasMeaningfulContent(localSnapshot);
+      const remoteHasContent = snapshotHasMeaningfulContent(remoteSnapshot);
+
+      if (remoteHasContent && (!localHasContent || snapshotFreshness(remoteSnapshot) > snapshotFreshness(localSnapshot))) {
+        applySnapshotToState(remoteSnapshot);
+        appState.driveReady = true;
+        return;
+      }
+
+      appState.driveReady = true;
+      await persistDriveSnapshot(localSnapshot);
+    }
+
+    function scheduleDriveSync() {
+      if (!appState.accessToken || !appState.driveReady) {
+        return;
+      }
+      if (appState.driveSyncTimer) {
+        window.clearTimeout(appState.driveSyncTimer);
+      }
+      appState.driveSyncTimer = window.setTimeout(() => {
+        appState.driveSyncTimer = 0;
+        if (appState.driveSyncPromise) {
+          appState.driveSyncQueued = true;
+          return;
+        }
+        appState.driveSyncPromise = persistDriveSnapshot(buildStateSnapshot())
+          .catch((error) => {
+            console.error('Drive sync error:', error);
+            showToast('Drive', 'No se pudo guardar el chat en Drive. Revisa que Google Drive API este activada.');
+          })
+          .finally(() => {
+            appState.driveSyncPromise = null;
+            if (appState.driveSyncQueued) {
+              appState.driveSyncQueued = false;
+              scheduleDriveSync();
+            }
+          });
+      }, DRIVE_SYNC_DEBOUNCE_MS);
+    }
+
     async function loginWithGoogle() {
       await waitForGoogle();
       const scopes = [
@@ -1352,6 +2354,8 @@
       if (window.google && google.accounts && google.accounts.oauth2 && appState.accessToken) {
         google.accounts.oauth2.revoke(appState.accessToken, function() {});
       }
+      rememberManualLogout();
+      resetDriveState();
       appState.accessToken = '';
       appState.profile = null;
       updateAuthUi();
@@ -1480,12 +2484,21 @@
       saveState();
     }
 
-    function createMessage(role, content, pending) {
+    function createMessage(role, content, pending, options) {
+      const settings = Object.assign({
+        parts: null,
+        attachments: []
+      }, options);
       return {
         id: uid('msg'),
         role,
         content: content || '',
-        parts: content ? [{ text: content }] : [],
+        parts: Array.isArray(settings.parts)
+          ? cloneParts(settings.parts)
+          : (content ? [{ text: content }] : []),
+        attachments: Array.isArray(settings.attachments)
+          ? settings.attachments.map((item) => serializeAttachmentForStorage(item)).filter(Boolean)
+          : [],
         pending: !!pending,
         createdAt: nowIso()
       };
@@ -1500,7 +2513,12 @@
           '    <div class="chat-item-title">' + escapeHtml(chat.title || 'Nuevo chat') + '</div>',
           '    <div class="chat-item-meta">' + escapeHtml(formatWhen(chat.updatedAt) + ' | ' + activeModelBadge(chat)) + '</div>',
           '  </button>',
-          '  <button class="chat-delete" data-delete-chat-id="' + chat.id + '" aria-label="Eliminar chat" title="Eliminar chat">x</button>',
+          '  <button class="chat-delete" data-delete-chat-id="' + chat.id + '" aria-label="Eliminar chat" title="Eliminar chat">',
+          '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">',
+          '      <polyline points="3 6 5 6 21 6"></polyline>',
+          '      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>',
+          '    </svg>',
+          '  </button>',
           '</div>'
         ].join('');
       }).join('');
@@ -1627,6 +2645,7 @@
       const chat = createChat();
       appState.chats.unshift(chat);
       appState.activeChatId = chat.id;
+      resetComposerAttachments();
       saveState();
       updateConfigUi();
       renderHistory();
@@ -1646,6 +2665,7 @@
       chat.messages = [];
       chat.updatedAt = nowIso();
       chat.title = 'Nuevo chat';
+      resetComposerAttachments();
       saveState();
       updateConfigUi();
       renderHistory();
@@ -1666,6 +2686,15 @@
         }
       });
 
+      elements.attachBtn.addEventListener('click', () => {
+        if (!appState.busy && !appState.attachmentBusy) {
+          elements.fileInput.click();
+        }
+      });
+      elements.fileInput.addEventListener('change', async () => {
+        await addFilesToComposer(elements.fileInput.files);
+        elements.fileInput.value = '';
+      });
       elements.sendBtn.addEventListener('click', handleSend);
       elements.newChatBtn.addEventListener('click', newChat);
       elements.clearChatBtn.addEventListener('click', clearActiveChat);
@@ -1704,6 +2733,7 @@
       renderHistory();
       renderThread();
       autoResizeComposer();
+      renderComposerAttachments();
       updateSendUi();
       elements.composer.placeholder = 'Escribe aqui...';
       bindEvents();
@@ -1720,7 +2750,7 @@
         label = 'Falta configuracion';
       }
       if (appState.accessToken) {
-        label = 'Gemini OAuth';
+        label = appState.driveReady ? 'Gemini + Drive' : 'Gemini OAuth';
       }
       elements.transportLabel.textContent = label;
       elements.modelBadge.textContent = activeModelBadge();
@@ -1759,7 +2789,8 @@
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/generative-language.retriever',
-        'https://www.googleapis.com/auth/cloud-platform'
+        'https://www.googleapis.com/auth/cloud-platform',
+        DRIVE_SCOPE
       ];
 
       return new Promise((resolve, reject) => {
@@ -1785,9 +2816,24 @@
 
     async function syncGoogleSession(tokenResponse, options) {
       appState.accessToken = tokenResponse.access_token;
+      clearManualLogoutFlag();
       appState.profile = await fetchProfile(appState.accessToken);
       updateAuthUi();
       updateConfigUi();
+      if (!options || !options.skipDriveBootstrap) {
+        try {
+          await ensureDriveReady();
+          updateConfigUi();
+          renderHistory();
+          renderThread();
+          updateSendUi();
+        } catch (error) {
+          console.error('Drive bootstrap error:', error);
+          showToast('Drive', 'No se pudo sincronizar con Drive. Revisa que Google Drive API este activada.');
+        }
+      } else {
+        scheduleDriveSync();
+      }
       if (!options || options.toast !== false) {
         showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
       }
@@ -1798,11 +2844,28 @@
         interactive: true,
         toast: true
       }, options);
-      const promptMode = settings.interactive
-        ? (appState.accessToken ? '' : 'consent')
-        : '';
+      const promptMode = typeof settings.prompt === 'string'
+        ? settings.prompt
+        : (settings.interactive
+          ? (appState.accessToken ? '' : 'consent')
+          : 'none');
       const tokenResponse = await requestGoogleAccessToken(promptMode);
       await syncGoogleSession(tokenResponse, settings);
+    }
+
+    async function tryAutoRestoreGoogleSession() {
+      if (!shouldAutoRestoreAuth() || appState.accessToken) {
+        return;
+      }
+      try {
+        await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          prompt: 'none'
+        });
+      } catch (error) {
+        console.warn('No se pudo restaurar la sesion OAuth automaticamente:', error);
+      }
     }
 
     function buildGeminiEndpoint(chat) {
@@ -1833,7 +2896,8 @@
         if (response.status === 401 && allowRetry !== false) {
           await loginWithGoogle({
             interactive: false,
-            toast: false
+            toast: false,
+            skipDriveBootstrap: true
           });
           return callGemini(chat, signal, false);
         }
@@ -1850,6 +2914,21 @@
       };
     }
 
+    function buildUserMessageParts(prompt, attachments) {
+      const parts = [];
+      if (prompt) {
+        parts.push({
+          text: prompt
+        });
+      }
+      (attachments || []).forEach((attachment) => {
+        if (attachment && attachment.part) {
+          parts.push(cloneParts([attachment.part])[0]);
+        }
+      });
+      return parts;
+    }
+
     async function handleSend() {
       if (appState.busy) {
         if (appState.activeController) {
@@ -1859,7 +2938,12 @@
       }
 
       const prompt = elements.composer.value.trim();
-      if (!prompt) {
+      const attachments = (appState.composerAttachments || []).slice();
+      if (!prompt && !attachments.length) {
+        return;
+      }
+      if (appState.attachmentBusy) {
+        setComposerStatus('Espera a que terminen de procesarse los adjuntos.');
         return;
       }
 
@@ -1874,12 +2958,18 @@
       }
 
       const chat = getActiveChat();
-      const userMessage = createMessage('user', prompt, false);
+      const parts = buildUserMessageParts(prompt, attachments);
+      const fallbackContent = prompt || attachments.map((item) => item.name).join(', ');
+      const userMessage = createMessage('user', fallbackContent, false, {
+        parts,
+        attachments
+      });
       const assistantMessage = createMessage('assistant', '', true);
 
       chat.messages.push(userMessage, assistantMessage);
       touchChat(chat);
       elements.composer.value = '';
+      resetComposerAttachments();
       autoResizeComposer();
       appState.busy = true;
       appState.activeController = new AbortController();
@@ -1925,6 +3015,7 @@
       renderHistory();
       renderThread();
       autoResizeComposer();
+      renderComposerAttachments();
       updateSendUi();
       bindEvents();
       setComposerStatus('');
@@ -1933,7 +3024,12 @@
       if (location.protocol === 'file:') {
         elements.composer.placeholder = 'Escribe aqui...';
         showToast('Atencion', 'Sirve este HTML por http://localhost para que Google OAuth funcione correctamente.');
+        return;
       }
+
+      window.setTimeout(() => {
+        tryAutoRestoreGoogleSession();
+      }, 0);
     }
 
     boot();
