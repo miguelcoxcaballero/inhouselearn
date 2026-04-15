@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>inhouse learn</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap');
@@ -201,6 +202,13 @@
     .chat-list::-webkit-scrollbar { width: 4px; }
     .chat-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 999px; }
 
+    .chat-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: stretch;
+    }
+
     .chat-item {
       text-align: left;
       border-radius: var(--radius-md);
@@ -232,6 +240,24 @@
       color: var(--text-secondary);
     }
 
+    .chat-delete {
+      width: 34px;
+      min-width: 34px;
+      height: 34px;
+      align-self: center;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .chat-delete:hover {
+      background: rgba(0,0,0,0.05);
+      color: var(--text-primary);
+    }
+
     .status-pill {
       display: inline-flex;
       align-items: center;
@@ -251,6 +277,35 @@
       background: var(--accent-orange);
       box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.15);
       flex-shrink: 0;
+    }
+
+    .control-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .chat-select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: rgba(0,0,0,0.03);
+      color: var(--text-primary);
+      padding: 0 12px;
+      outline: none;
+    }
+
+    .chat-select:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .field-note {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      line-height: 1.35;
     }
 
     .profile-row {
@@ -424,9 +479,17 @@
     }
 
     .bubble h1, .bubble h2, .bubble h3 { margin: 0 0 10px; line-height: 1.2; }
-    .bubble p + p, .bubble ul + p, .bubble pre + p { margin-top: 10px; }
-    .bubble ul { margin: 10px 0 0 18px; }
+    .bubble p + p, .bubble ul + p, .bubble ol + p, .bubble pre + p, .bubble .katex-display + p { margin-top: 10px; }
+    .bubble ul, .bubble ol { margin: 10px 0 0 20px; }
     .bubble li + li { margin-top: 5px; }
+    .bubble strong { font-weight: 700; }
+    .bubble em { font-style: italic; }
+    .bubble blockquote {
+      margin: 10px 0 0;
+      padding-left: 12px;
+      border-left: 3px solid rgba(224, 122, 60, 0.35);
+      color: var(--text-secondary);
+    }
 
     .bubble pre {
       margin-top: 10px;
@@ -439,6 +502,16 @@
     }
 
     .bubble code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .bubble :not(pre) > code {
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .bubble .katex-display {
+      margin: 12px 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
 
     /* ── TYPING ───────────────────────────────── */
     .typing { display: inline-flex; align-items: center; gap: 6px; }
@@ -611,6 +684,12 @@
             <span class="status-dot"></span>
             <span id="transport-label">Sin configurar</span>
           </div>
+          <div class="control-stack">
+            <div class="section-label">Modelo del chat</div>
+            <select id="chat-model-select" class="chat-select" aria-label="Modelo del chat"></select>
+            <select id="chat-thinking-select" class="chat-select hidden" aria-label="Thinking del chat"></select>
+            <div class="field-note" id="model-copy"></div>
+          </div>
           <div id="config-copy" style="display:none"></div>
           <div id="origin-copy" style="display:none"></div>
         </div>
@@ -638,7 +717,7 @@
         <footer class="composer-area">
           <div class="composer-shell">
             <div class="composer-frame">
-              <textarea id="composer" class="composer" placeholder="Escribe tu prompt aquí. Enter envía, Shift+Enter hace salto de línea."></textarea>
+              <textarea id="composer" class="composer" placeholder="Escribe aqui..."></textarea>
               <button class="send-btn" id="send-btn" aria-label="Enviar">
                 <svg id="send-icon" viewBox="0 0 24 24" width="18" height="18" fill="none">
                   <path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -646,7 +725,7 @@
               </button>
             </div>
             <div class="composer-meta">
-              <div id="composer-status">Listo.</div>
+              <div id="composer-status" class="hidden"></div>
             </div>
           </div>
         </footer>
@@ -656,6 +735,10 @@
   </div>
 
   <div class="toast-wrap" id="toast-wrap"></div>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -667,6 +750,41 @@
       TEMPERATURE: 1.0,
       TOP_P: 0.95
     };
+
+    const MODEL_OPTIONS = [
+      {
+        id: 'gemini-2.5-flash',
+        label: 'Gemini 2.5 Flash',
+        badge: '2.5 Flash',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        id: 'gemini-2.5-pro',
+        label: 'Gemini 2.5 Pro',
+        badge: '2.5 Pro',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        id: 'gemini-3-flash-preview',
+        label: 'Gemini 3 Flash Preview',
+        badge: '3 Flash',
+        preview: true,
+        thinkingLevels: ['minimal', 'low', 'medium', 'high'],
+        defaultThinkingLevel: 'minimal'
+      },
+      {
+        id: 'gemini-3.1-pro-preview',
+        label: 'Gemini 3.1 Pro Preview',
+        badge: '3.1 Pro',
+        preview: true,
+        thinkingLevels: ['low', 'high'],
+        defaultThinkingLevel: 'high'
+      }
+    ];
 
     const STORAGE_KEY = 'inhouseGeminiStandaloneV1';
 
@@ -695,6 +813,9 @@
       profileEmail: document.getElementById('profile-email'),
       authCopy: document.getElementById('auth-copy'),
       transportLabel: document.getElementById('transport-label'),
+      modelSelect: document.getElementById('chat-model-select'),
+      thinkingSelect: document.getElementById('chat-thinking-select'),
+      modelCopy: document.getElementById('model-copy'),
       configCopy: document.getElementById('config-copy'),
       originCopy: document.getElementById('origin-copy'),
       modelBadge: document.getElementById('model-badge'),
@@ -750,30 +871,79 @@
       return isConfigured(APP_CONFIG.GOOGLE_CLIENT_ID) && !!googleProjectRef();
     }
 
-    function activeModelName() {
-      return APP_CONFIG.GEMINI_MODEL;
+    function getModelOption(modelId) {
+      return MODEL_OPTIONS.find((option) => option.id === modelId) || MODEL_OPTIONS.find((option) => option.id === APP_CONFIG.GEMINI_MODEL) || MODEL_OPTIONS[0];
     }
 
-    function isGemini3Model() {
-      return activeModelName().startsWith('gemini-3');
+    function normalizeModelId(modelId) {
+      return getModelOption(modelId).id;
     }
 
-    function currentThinkingLevel() {
-      const rawLevel = String(APP_CONFIG.GEMINI_THINKING_LEVEL || '').trim().toLowerCase();
-      if (!isGemini3Model() || !rawLevel) {
+    function defaultThinkingLevelForModel(modelId) {
+      return getModelOption(modelId).defaultThinkingLevel || '';
+    }
+
+    function normalizeThinkingLevelForModel(modelId, thinkingLevel) {
+      const option = getModelOption(modelId);
+      const allowedLevels = option.thinkingLevels || [];
+      if (!allowedLevels.length) {
         return '';
       }
-
-      const isFlashFamily = activeModelName().includes('flash');
-      const allowedLevels = isFlashFamily
-        ? ['minimal', 'low', 'medium', 'high']
-        : ['low', 'high'];
-
+      const rawLevel = String(thinkingLevel || '').trim().toLowerCase();
       if (allowedLevels.includes(rawLevel)) {
         return rawLevel;
       }
+      return defaultThinkingLevelForModel(option.id);
+    }
 
-      return isFlashFamily ? 'minimal' : 'high';
+    function normalizeChatConfig(chat) {
+      if (!chat || typeof chat !== 'object') {
+        return chat;
+      }
+      chat.model = normalizeModelId(chat.model || APP_CONFIG.GEMINI_MODEL);
+      chat.thinkingLevel = normalizeThinkingLevelForModel(chat.model, chat.thinkingLevel || APP_CONFIG.GEMINI_THINKING_LEVEL);
+      return chat;
+    }
+
+    function getResolvedChat(chatLike) {
+      if (chatLike) {
+        return normalizeChatConfig(chatLike);
+      }
+      const activeChat = appState.chats.find((item) => item.id === appState.activeChatId);
+      return activeChat ? normalizeChatConfig(activeChat) : null;
+    }
+
+    function activeModelName(chatLike) {
+      const chat = getResolvedChat(chatLike);
+      return normalizeModelId(chat && chat.model ? chat.model : APP_CONFIG.GEMINI_MODEL);
+    }
+
+    function activeModelLabel(chatLike) {
+      return getModelOption(activeModelName(chatLike)).label;
+    }
+
+    function activeModelBadge(chatLike) {
+      return getModelOption(activeModelName(chatLike)).badge;
+    }
+
+    function isGemini3Model(chatLike) {
+      return activeModelName(chatLike).startsWith('gemini-3');
+    }
+
+    function currentThinkingLevel(chatLike) {
+      const chat = getResolvedChat(chatLike);
+      const modelId = activeModelName(chat);
+      return normalizeThinkingLevelForModel(modelId, chat && typeof chat.thinkingLevel !== 'undefined' ? chat.thinkingLevel : APP_CONFIG.GEMINI_THINKING_LEVEL);
+    }
+
+    function thinkingLabel(level) {
+      const labels = {
+        minimal: 'Thinking minimal',
+        low: 'Thinking low',
+        medium: 'Thinking medium',
+        high: 'Thinking high'
+      };
+      return labels[level] || level;
     }
 
     function cloneParts(parts) {
@@ -806,7 +976,9 @@
         title: title || 'Nuevo chat',
         createdAt: nowIso(),
         updatedAt: nowIso(),
-        messages: []
+        messages: [],
+        model: normalizeModelId(APP_CONFIG.GEMINI_MODEL),
+        thinkingLevel: normalizeThinkingLevelForModel(APP_CONFIG.GEMINI_MODEL, APP_CONFIG.GEMINI_THINKING_LEVEL)
       };
     }
 
@@ -845,7 +1017,7 @@
         if (!raw) return;
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.chats) && parsed.chats.length) {
-          appState.chats = parsed.chats;
+          appState.chats = parsed.chats.map((chat) => normalizeChatConfig(chat));
           appState.activeChatId = parsed.activeChatId || parsed.chats[0].id;
         }
       } catch (error) {
@@ -855,7 +1027,9 @@
     }
 
     function setComposerStatus(text) {
-      elements.composerStatus.textContent = text;
+      const nextText = text || '';
+      elements.composerStatus.textContent = nextText;
+      elements.composerStatus.classList.toggle('hidden', !nextText);
     }
 
     function showToast(title, message) {
@@ -887,6 +1061,40 @@
         elements.sendBtn.setAttribute('aria-label', 'Enviar');
         elements.sendIcon.innerHTML = '<path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>';
       }
+      if (elements.modelSelect) {
+        elements.modelSelect.disabled = appState.busy;
+      }
+      if (elements.thinkingSelect) {
+        elements.thinkingSelect.disabled = appState.busy;
+      }
+    }
+
+    function renderModelControls() {
+      const chat = getActiveChat();
+      const modelOption = getModelOption(chat.model);
+      const thinkingLevel = currentThinkingLevel(chat);
+
+      elements.modelSelect.innerHTML = MODEL_OPTIONS.map((option) => {
+        return '<option value="' + escapeHtml(option.id) + '">' + escapeHtml(option.label) + '</option>';
+      }).join('');
+      elements.modelSelect.value = modelOption.id;
+
+      if (modelOption.thinkingLevels.length) {
+        elements.thinkingSelect.classList.remove('hidden');
+        elements.thinkingSelect.innerHTML = modelOption.thinkingLevels.map((level) => {
+          return '<option value="' + escapeHtml(level) + '">' + escapeHtml(thinkingLabel(level)) + '</option>';
+        }).join('');
+        elements.thinkingSelect.value = thinkingLevel;
+      } else {
+        elements.thinkingSelect.classList.add('hidden');
+        elements.thinkingSelect.innerHTML = '';
+      }
+
+      const modeCopy = modelOption.preview ? 'Preview' : 'Estable';
+      const thinkingCopy = modelOption.thinkingLevels.length
+        ? ' · ' + thinkingLabel(thinkingLevel)
+        : '';
+      elements.modelCopy.textContent = modeCopy + thinkingCopy + '. Se guarda en este chat.';
     }
 
     function updateConfigUi() {
@@ -923,14 +1131,12 @@
     }
 
     function renderInline(text) {
-      return escapeHtml(text).replace(/`([^`]+)`/g, '<code>$1</code>');
+      return escapeHtml(text)
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     }
 
-    function renderMarkdown(text) {
-      if (!text) {
-        return '';
-      }
-
+    function fallbackRenderMarkdown(text) {
       const fences = [];
       let html = escapeHtml(text).replace(/```([\s\S]*?)```/g, function(match, code) {
         const token = '__CODE_BLOCK_' + fences.length + '__';
@@ -948,13 +1154,59 @@
         if (lines.every((line) => /^[-*] /.test(line))) {
           return '<ul>' + lines.map((line) => '<li>' + renderInline(line.replace(/^[-*] /, '')) + '</li>').join('') + '</ul>';
         }
-        if (/^<h[1-3]>/.test(block) || /^<pre>/.test(block) || /^<ul>/.test(block)) {
+        if (lines.every((line) => /^\d+\. /.test(line))) {
+          return '<ol>' + lines.map((line) => '<li>' + renderInline(line.replace(/^\d+\. /, '')) + '</li>').join('') + '</ol>';
+        }
+        if (/^<h[1-3]>/.test(block) || /^<pre>/.test(block) || /^<ul>/.test(block) || /^<ol>/.test(block)) {
           return block;
         }
         return '<p>' + renderInline(block).replace(/\n/g, '<br>') + '</p>';
       }).join('');
 
       return fences.reduce((acc, code, index) => acc.replace('__CODE_BLOCK_' + index + '__', code), rendered);
+    }
+
+    function renderMarkdown(text) {
+      if (!text) {
+        return '';
+      }
+
+      if (!(window.marked && window.DOMPurify)) {
+        return fallbackRenderMarkdown(text);
+      }
+
+      const rawHtml = window.marked.parse(text, {
+        gfm: true,
+        breaks: true
+      });
+
+      return window.DOMPurify.sanitize(rawHtml);
+    }
+
+    function enhanceRichContent(root) {
+      if (!root) {
+        return;
+      }
+
+      Array.from(root.querySelectorAll('a[href]')).forEach((link) => {
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      });
+
+      if (!window.renderMathInElement) {
+        return;
+      }
+
+      window.renderMathInElement(root, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '\\[', right: '\\]', display: true },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '$', right: '$', display: false }
+        ],
+        throwOnError: false,
+        ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      });
     }
 
     function assistantTypingMarkup() {
@@ -1002,6 +1254,7 @@
         ].join('');
       }).join('');
 
+      enhanceRichContent(elements.thread);
       requestAnimationFrame(scrollThreadToBottom);
     }
 
@@ -1011,7 +1264,7 @@
         return [
           '<button class="chat-item ' + (chat.id === appState.activeChatId ? 'active' : '') + '" data-chat-id="' + chat.id + '">',
           '  <div class="chat-item-title">' + escapeHtml(chat.title || 'Nuevo chat') + '</div>',
-          '  <div class="chat-item-meta">' + escapeHtml(formatWhen(chat.updatedAt)) + '</div>',
+          '  <div class="chat-item-meta">' + escapeHtml(formatWhen(chat.updatedAt) + ' · ' + activeModelBadge(chat)) + '</div>',
           '</button>'
         ].join('');
       }).join('');
@@ -1020,6 +1273,7 @@
         button.addEventListener('click', () => {
           appState.activeChatId = button.dataset.chatId;
           saveState();
+          updateConfigUi();
           renderHistory();
           renderThread();
         });
@@ -1124,13 +1378,13 @@
         }));
     }
 
-    function buildRequestBody(messages) {
+    function buildRequestBody(messages, chat) {
       const generationConfig = {
         temperature: APP_CONFIG.TEMPERATURE,
         topP: APP_CONFIG.TOP_P,
         maxOutputTokens: APP_CONFIG.MAX_OUTPUT_TOKENS
       };
-      const thinkingLevel = currentThinkingLevel();
+      const thinkingLevel = currentThinkingLevel(chat);
       if (thinkingLevel) {
         generationConfig.thinkingConfig = {
           thinkingLevel
@@ -1237,6 +1491,73 @@
       };
     }
 
+    function renderHistory() {
+      const chats = appState.chats.slice().sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      elements.chatList.innerHTML = chats.map((chat) => {
+        return [
+          '<div class="chat-row">',
+          '  <button class="chat-item ' + (chat.id === appState.activeChatId ? 'active' : '') + '" data-chat-id="' + chat.id + '">',
+          '    <div class="chat-item-title">' + escapeHtml(chat.title || 'Nuevo chat') + '</div>',
+          '    <div class="chat-item-meta">' + escapeHtml(formatWhen(chat.updatedAt) + ' | ' + activeModelBadge(chat)) + '</div>',
+          '  </button>',
+          '  <button class="chat-delete" data-delete-chat-id="' + chat.id + '" aria-label="Eliminar chat" title="Eliminar chat">x</button>',
+          '</div>'
+        ].join('');
+      }).join('');
+
+      Array.from(elements.chatList.querySelectorAll('[data-chat-id]')).forEach((button) => {
+        button.addEventListener('click', () => {
+          appState.activeChatId = button.dataset.chatId;
+          saveState();
+          updateConfigUi();
+          renderHistory();
+          renderThread();
+        });
+      });
+
+      Array.from(elements.chatList.querySelectorAll('[data-delete-chat-id]')).forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          deleteChat(button.dataset.deleteChatId);
+        });
+      });
+    }
+
+    function deleteChat(chatId) {
+      const targetId = String(chatId || '');
+      const targetChat = appState.chats.find((chat) => chat.id === targetId);
+      if (!targetChat) {
+        return;
+      }
+
+      const label = targetChat.title && targetChat.title !== 'Nuevo chat'
+        ? '"' + targetChat.title + '"'
+        : 'este chat';
+      if (!window.confirm('Se eliminara ' + label + '. Continuar?')) {
+        return;
+      }
+
+      if (appState.busy && appState.activeChatId === targetId && appState.activeController) {
+        appState.activeController.abort();
+      }
+
+      appState.chats = appState.chats.filter((chat) => chat.id !== targetId);
+
+      if (!appState.chats.length) {
+        const chat = createChat();
+        appState.chats.unshift(chat);
+        appState.activeChatId = chat.id;
+      } else if (appState.activeChatId === targetId) {
+        appState.activeChatId = appState.chats[0].id;
+      }
+
+      saveState();
+      updateConfigUi();
+      renderHistory();
+      renderThread();
+      setComposerStatus('');
+    }
+
     async function handleSend() {
       if (appState.busy) {
         if (appState.activeController) {
@@ -1280,7 +1601,7 @@
         assistantMessage.pending = false;
         assistantMessage.content = reply;
         touchChat(chat);
-        setComposerStatus('Respuesta lista.');
+        setComposerStatus('');
       } catch (error) {
         if (error.name === 'AbortError') {
           chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id);
@@ -1307,9 +1628,10 @@
       appState.chats.unshift(chat);
       appState.activeChatId = chat.id;
       saveState();
+      updateConfigUi();
       renderHistory();
       renderThread();
-      setComposerStatus('Nuevo chat listo.');
+      setComposerStatus('');
       elements.composer.focus();
     }
 
@@ -1325,9 +1647,10 @@
       chat.updatedAt = nowIso();
       chat.title = 'Nuevo chat';
       saveState();
+      updateConfigUi();
       renderHistory();
       renderThread();
-      setComposerStatus('Chat vaciado.');
+      setComposerStatus('');
     }
 
     function bindEvents() {
@@ -1346,6 +1669,23 @@
       elements.sendBtn.addEventListener('click', handleSend);
       elements.newChatBtn.addEventListener('click', newChat);
       elements.clearChatBtn.addEventListener('click', clearActiveChat);
+      elements.modelSelect.addEventListener('change', () => {
+        const chat = getActiveChat();
+        chat.model = normalizeModelId(elements.modelSelect.value);
+        chat.thinkingLevel = defaultThinkingLevelForModel(chat.model);
+        touchChat(chat);
+        updateConfigUi();
+        renderHistory();
+        setComposerStatus('');
+      });
+      elements.thinkingSelect.addEventListener('change', () => {
+        const chat = getActiveChat();
+        chat.thinkingLevel = normalizeThinkingLevelForModel(chat.model, elements.thinkingSelect.value);
+        touchChat(chat);
+        updateConfigUi();
+        renderHistory();
+        setComposerStatus('');
+      });
       elements.loginBtn.addEventListener('click', async () => {
         try {
           await loginWithGoogle();
@@ -1358,14 +1698,16 @@
 
     function boot() {
       loadState();
+      elements.composer.placeholder = 'Escribe aquÃ­...';
       updateConfigUi();
       updateAuthUi();
       renderHistory();
       renderThread();
       autoResizeComposer();
       updateSendUi();
+      elements.composer.placeholder = 'Escribe aqui...';
       bindEvents();
-      setComposerStatus('Listo.');
+      setComposerStatus('');
 
       if (location.protocol === 'file:' && prefersVertex()) {
         showToast('Atencion', 'Sirve este HTML por http://localhost para que Google OAuth funcione correctamente.');
@@ -1381,15 +1723,14 @@
         label = 'Gemini OAuth';
       }
       elements.transportLabel.textContent = label;
-      elements.modelBadge.textContent = activeModelName();
+      elements.modelBadge.textContent = activeModelBadge();
+      renderModelControls();
       elements.configCopy.style.display = hasOauthConfig() ? 'none' : 'block';
       elements.configCopy.textContent = hasOauthConfig()
         ? ''
         : 'Configura GOOGLE_CLIENT_ID y GOOGLE_CLOUD_PROJECT en el HTML.';
-      elements.originCopy.style.display = appState.accessToken ? 'block' : 'none';
-      elements.originCopy.textContent = appState.accessToken
-        ? 'Proyecto OAuth: ' + googleProjectRef()
-        : '';
+      elements.originCopy.style.display = 'none';
+      elements.originCopy.textContent = '';
     }
 
     function updateAuthUi() {
@@ -1464,26 +1805,26 @@
       await syncGoogleSession(tokenResponse, settings);
     }
 
-    function buildGeminiEndpoint() {
+    function buildGeminiEndpoint(chat) {
       return 'https://generativelanguage.googleapis.com/v1beta/models/' +
-        encodeURIComponent(APP_CONFIG.GEMINI_MODEL) +
+        encodeURIComponent(activeModelName(chat)) +
         ':generateContent';
     }
 
-    async function callGemini(messages, signal, allowRetry) {
+    async function callGemini(chat, signal, allowRetry) {
       ensureOauthConfig();
       if (!appState.accessToken) {
         throw new Error('Inicia sesion con Google para usar Gemini.');
       }
 
-      const response = await fetch(buildGeminiEndpoint(), {
+      const response = await fetch(buildGeminiEndpoint(chat), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + appState.accessToken,
           'x-goog-user-project': googleProjectRef()
         },
-        body: JSON.stringify(buildRequestBody(messages)),
+        body: JSON.stringify(buildRequestBody(chat.messages, chat)),
         signal
       });
 
@@ -1494,7 +1835,7 @@
             interactive: false,
             toast: false
           });
-          return callGemini(messages, signal, false);
+          return callGemini(chat, signal, false);
         }
 
         const message = data && data.error && data.error.message
@@ -1542,18 +1883,18 @@
       autoResizeComposer();
       appState.busy = true;
       appState.activeController = new AbortController();
-      setComposerStatus('Consultando ' + activeModelName() + '...');
+      setComposerStatus('Consultando ' + activeModelLabel(chat) + '...');
       updateSendUi();
       renderHistory();
       renderThread();
 
       try {
-        const reply = await callGemini(chat.messages, appState.activeController.signal);
+        const reply = await callGemini(chat, appState.activeController.signal);
         assistantMessage.pending = false;
         assistantMessage.content = reply.text;
         assistantMessage.parts = reply.parts;
         touchChat(chat);
-        setComposerStatus('Respuesta lista.');
+        setComposerStatus('');
       } catch (error) {
         if (error.name === 'AbortError') {
           chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id);
@@ -1578,6 +1919,7 @@
 
     function boot() {
       loadState();
+      elements.composer.placeholder = 'Escribe aquÃ­...';
       updateConfigUi();
       updateAuthUi();
       renderHistory();
@@ -1585,9 +1927,11 @@
       autoResizeComposer();
       updateSendUi();
       bindEvents();
-      setComposerStatus('Listo.');
+      setComposerStatus('');
+      elements.composer.placeholder = 'Escribe aqui...';
 
       if (location.protocol === 'file:') {
+        elements.composer.placeholder = 'Escribe aqui...';
         showToast('Atencion', 'Sirve este HTML por http://localhost para que Google OAuth funcione correctamente.');
       }
     }
