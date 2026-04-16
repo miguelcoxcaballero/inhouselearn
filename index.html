@@ -651,15 +651,6 @@
       background: none; padding: 4px 8px; border: 0; cursor: pointer;
     }
     .boot-link:hover { color: var(--text-secondary); }
-    .boot-os-row {
-      display: flex; gap: 6px; margin-top: 6px; width: 100%;
-    }
-    .boot-os-row a {
-      flex: 1; padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
-      font-size: 0.82rem; font-weight: 500; color: var(--text-secondary); text-decoration: none;
-      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
-    }
-    .boot-os-row a:hover { background: var(--surface-hover); border-color: var(--border-strong); color: var(--text); }
     .boot-hint {
       font-size: 0.76rem; color: var(--muted); margin-top: 4px;
     }
@@ -683,13 +674,7 @@
       <div class="boot-phase" data-phase="not-installed">
         <h1 class="boot-h">Instala el agente local</h1>
         <p class="boot-p">Un pequeño proceso en tu ordenador que conecta con Claude Code, Gemini CLI y Codex. Sin API keys ni proyecto de Google Cloud.</p>
-        <a class="boot-btn" id="boot-download" href="#" download>Descargar</a>
-        <button class="boot-link" id="boot-other-os" type="button">Otro sistema operativo</button>
-        <div class="boot-os-row" id="boot-os-row" hidden>
-          <a data-os="win" href="#" download>Windows</a>
-          <a data-os="mac" href="#" download>macOS</a>
-          <a data-os="linux" href="#" download>Linux</a>
-        </div>
+        <a class="boot-btn" id="boot-download" href="#" download>Descargar para Windows</a>
         <p class="boot-hint">Se abrirá automáticamente al terminar la instalación.</p>
       </div>
 
@@ -849,9 +834,7 @@
       POLL_MAX_MS: 10 * 60 * 1000,
       RELEASE_BASE: '',
       INSTALLERS: {
-        win:   'releases/inhouse-agent-windows.zip',
-        mac:   'releases/inhouse-agent-macos.zip',
-        linux: 'releases/inhouse-agent-linux.zip'
+        win: 'releases/inhouse-agent-windows.zip'
       }
     };
 
@@ -859,28 +842,8 @@
     let __daemonStatus = null;
     let __daemonPollingAbort = false;
 
-    function detectOS() {
-      const uaData = navigator.userAgentData;
-      if (uaData && uaData.platform) {
-        const p = String(uaData.platform).toLowerCase();
-        if (p.includes('win')) return 'win';
-        if (p.includes('mac')) return 'mac';
-        if (p.includes('linux')) return 'linux';
-      }
-      const ua = (navigator.userAgent || '').toLowerCase();
-      const platform = (navigator.platform || '').toLowerCase();
-      if (ua.includes('windows') || platform.includes('win')) return 'win';
-      if (ua.includes('mac') || platform.includes('mac')) return 'mac';
-      if (ua.includes('linux') || platform.includes('linux')) return 'linux';
-      return 'win';
-    }
-
-    function osLabel(os) {
-      return os === 'mac' ? 'macOS' : os === 'linux' ? 'Linux' : 'Windows';
-    }
-
-    function installerUrl(os) {
-      const file = DAEMON_CONFIG.INSTALLERS[os] || DAEMON_CONFIG.INSTALLERS.win;
+    function installerUrl() {
+      const file = DAEMON_CONFIG.INSTALLERS.win;
       return (DAEMON_CONFIG.RELEASE_BASE || '') + file;
     }
 
@@ -942,11 +905,8 @@
     }
 
     function wireBootUi() {
-      const os = detectOS();
       const boot = document.getElementById('boot');
       const downloadBtn = document.getElementById('boot-download');
-      const osRow = document.getElementById('boot-os-row');
-      const otherBtn = document.getElementById('boot-other-os');
       const retryBtn = document.getElementById('boot-retry');
       const errorRetry = document.getElementById('boot-error-retry');
 
@@ -955,10 +915,10 @@
         const notInstalledHint = boot.querySelector('[data-phase="not-installed"] .boot-hint');
         const installingCopy = boot.querySelector('[data-phase="installing"] .boot-p');
         if (notInstalledPhase) {
-          notInstalledPhase.innerHTML = 'Descarga el paquete del agente local, extr&aacute;elo y ejecuta <code>start-agent</code>. El chat usar&aacute; los CLIs locales desde tu propio ordenador.';
+          notInstalledPhase.innerHTML = 'Descarga el paquete de Windows, extr&aacute;elo y ejecuta <code>start-agent</code>. El chat usar&aacute; los CLIs locales desde tu propio ordenador.';
         }
         if (notInstalledHint) {
-          notInstalledHint.textContent = 'El paquete incluye scripts de arranque y parada. La web detectará el daemon en cuanto arranque.';
+          notInstalledHint.textContent = 'Por ahora solo hay instalador para Windows. La web detectará el daemon en cuanto arranque.';
         }
         if (installingCopy) {
           installingCopy.innerHTML = 'Esperando a que el agente arranque... Si ya lo has descargado, ejecuta ahora <code>start-agent</code> dentro del paquete.';
@@ -966,8 +926,8 @@
       }
 
       if (downloadBtn) {
-        downloadBtn.href = installerUrl(os);
-        downloadBtn.textContent = 'Descargar para ' + osLabel(os);
+        downloadBtn.href = installerUrl();
+        downloadBtn.textContent = 'Descargar para Windows';
         downloadBtn.addEventListener('click', () => {
           setTimeout(() => {
             setBootPhase('installing');
@@ -977,19 +937,6 @@
               else setBootPhase('not-installed');
             });
           }, 500);
-        });
-      }
-
-      if (otherBtn && osRow) {
-        otherBtn.addEventListener('click', () => {
-          osRow.hidden = !osRow.hidden;
-        });
-      }
-
-      if (osRow) {
-        osRow.querySelectorAll('a[data-os]').forEach((a) => {
-          const targetOs = a.getAttribute('data-os');
-          a.href = installerUrl(targetOs);
         });
       }
 
@@ -1190,7 +1137,8 @@
       driveSyncTimer: 0,
       driveSyncPromise: null,
       driveSyncQueued: false,
-      composerAttachments: []
+      composerAttachments: [],
+      connectPollingTimer: 0
     };
 
     const elements = {
@@ -3673,7 +3621,7 @@
           showToast('Provider', error.message);
         }
       });
-      elements.logoutBtn.addEventListener('click', () => {});
+      elements.logoutBtn.addEventListener('click', () => { logoutGoogle(); });
       document.getElementById('preview-close').addEventListener('click', closeAttachmentPreview);
       document.getElementById('preview-overlay').addEventListener('click', function(e) {
         if (e.target.id === 'preview-overlay') closeAttachmentPreview();
@@ -3779,18 +3727,24 @@
     }
 
     async function connectActiveProvider() {
+      // Clear any previous polling timer to prevent terminal spam
+      if (appState.connectPollingTimer) {
+        window.clearInterval(appState.connectPollingTimer);
+        appState.connectPollingTimer = 0;
+      }
       const providerId = activeProviderName();
       await daemonFetchJson('/v1/connect', {
         provider: providerId
       });
       setComposerStatus('Abriendo ' + activeProviderLabel() + ' en una terminal nueva...');
       let attempts = 0;
-      const timer = window.setInterval(async () => {
+      appState.connectPollingTimer = window.setInterval(async () => {
         attempts += 1;
         const status = await refreshDaemonStatus(1200);
         const providerStatus = status && status.providerDetails ? status.providerDetails[providerId] : null;
         if (providerStatus && providerStatus.installed && providerStatus.connected) {
-          window.clearInterval(timer);
+          window.clearInterval(appState.connectPollingTimer);
+          appState.connectPollingTimer = 0;
           setComposerStatus(activeProviderLabel() + ' listo.');
           window.setTimeout(() => {
             if (!appState.busy) setComposerStatus('');
@@ -3798,7 +3752,8 @@
           return;
         }
         if (attempts >= 40) {
-          window.clearInterval(timer);
+          window.clearInterval(appState.connectPollingTimer);
+          appState.connectPollingTimer = 0;
         }
       }, 2000);
     }
@@ -4219,7 +4174,6 @@
 
     function boot() {
       loadState();
-      elements.composer.placeholder = 'Escribe aquÃ­...';
       updateConfigUi();
       updateAuthUi();
       renderHistory();
@@ -4228,11 +4182,27 @@
       renderComposerAttachments();
       updateSendUi();
       bindEvents();
+      bindMobileMenu();
       setComposerStatus('');
       renderUsageDonut();
-      elements.composer.placeholder = 'Escribe aqui...';
+      elements.composer.placeholder = 'Escribe aqu\u00ed...';
 
       refreshDaemonStatus(1200);
+    }
+
+    function bindMobileMenu() {
+      const hamburger = document.getElementById('hamburger-btn');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (!hamburger || !sidebar || !overlay) return;
+      hamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+      });
     }
 
     // boot() lo invoca continueBoot() una vez el agente local responde a /v1/ping.
