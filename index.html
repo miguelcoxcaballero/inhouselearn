@@ -684,7 +684,7 @@
               </button>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
-              <div class="usage-popup-title">Usos (Cuenta Propia)</div>
+              <div class="usage-popup-title">Uso Real (Code Assist)</div>
               <div id="usage-popup-content"></div>
             </div>
             <div class="composer-status-row">
@@ -793,6 +793,14 @@
       ods: 'application/vnd.oasis.opendocument.spreadsheet',
       odt: 'application/vnd.oasis.opendocument.text'
     };
+    const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
+    const CODE_ASSIST_VERSION = 'v1internal';
+    const CODE_ASSIST_CREDIT_TYPE = 'GOOGLE_ONE_AI';
+    const CODE_ASSIST_CREDIT_ELIGIBLE_MODELS = [
+      'gemini-3-pro-preview',
+      'gemini-3.1-pro-preview',
+      'gemini-3-flash-preview'
+    ];
 
     const appState = {
       chats: [],
@@ -1322,11 +1330,12 @@
 
       if (kind === 'pdf') {
         try {
-          return await buildInlineAttachment(file, mimeType, kind);
-        } catch (error) {
           const text = await readPdfAsText(file);
-          return buildTextAttachment(file, mimeType, kind, text);
+          if (text) return buildTextAttachment(file, mimeType, kind, text);
+        } catch (error) {
+          console.warn('PDF text extraction failed:', error);
         }
+        return await buildInlineAttachment(file, mimeType, kind);
       }
       if (kind === 'doc') {
         return buildTextAttachment(file, mimeType, kind, await readDocxAsText(file));
@@ -2311,6 +2320,78 @@
       };
     }
 
+    function codeAssistProject() {
+      return String(APP_CONFIG.GOOGLE_CLOUD_PROJECT || '').trim();
+    }
+
+    function buildCodeAssistBaseUrl() {
+      return CODE_ASSIST_ENDPOINT + '/' + CODE_ASSIST_VERSION;
+    }
+
+    function buildCodeAssistGenerateEndpoint() {
+      return buildCodeAssistBaseUrl() + ':generateContent';
+    }
+
+    function buildCodeAssistLoadEndpoint() {
+      return buildCodeAssistBaseUrl() + ':loadCodeAssist';
+    }
+
+    function buildCodeAssistQuotaEndpoint() {
+      return buildCodeAssistBaseUrl() + ':retrieveUserQuota';
+    }
+
+    function buildCodeAssistClientMetadata() {
+      const project = codeAssistProject();
+      return {
+        ideType: 'IDE_UNSPECIFIED',
+        platform: 'PLATFORM_UNSPECIFIED',
+        pluginType: 'GEMINI',
+        duetProject: project || undefined
+      };
+    }
+
+    function isCodeAssistCreditEligibleModel(model) {
+      return CODE_ASSIST_CREDIT_ELIGIBLE_MODELS.indexOf(String(model || '')) !== -1;
+    }
+
+    function buildCodeAssistGenerateBody(chat) {
+      const model = activeModelName(chat);
+      const project = codeAssistProject();
+      const body = {
+        model: model,
+        project: project || undefined,
+        user_prompt_id: uid('prompt'),
+        request: Object.assign(buildRequestBody(chat.messages, chat), {
+          session_id: chat && chat.id ? String(chat.id) : undefined
+        })
+      };
+      if (isCodeAssistCreditEligibleModel(model)) {
+        body.enabled_credit_types = [CODE_ASSIST_CREDIT_TYPE];
+      }
+      return body;
+    }
+
+    function buildCodeAssistLoadBody() {
+      const project = codeAssistProject();
+      return {
+        cloudaicompanionProject: project || undefined,
+        metadata: buildCodeAssistClientMetadata(),
+        mode: 'HEALTH_CHECK'
+      };
+    }
+
+    function buildCodeAssistQuotaBody() {
+      const project = codeAssistProject();
+      return {
+        project: project,
+        userAgent: navigator.userAgent || 'inhouse-learn'
+      };
+    }
+
+    function unwrapGenerateContentPayload(data) {
+      return data && data.response ? data.response : data;
+    }
+
     function buildVertexEndpoint() {
       const location = APP_CONFIG.VERTEX_LOCATION || 'global';
       const root = location === 'global'
@@ -2330,21 +2411,23 @@
     }
 
     function extractTextFromResponse(data) {
-      const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      const payload = unwrapGenerateContentPayload(data);
+      const parts = payload && payload.candidates && payload.candidates[0] && payload.candidates[0].content && payload.candidates[0].content.parts;
       if (Array.isArray(parts)) {
         const text = extractVisibleTextFromParts(parts);
         if (text) {
           return text;
         }
       }
-      if (data && data.promptFeedback && data.promptFeedback.blockReason) {
-        return 'La respuesta fue bloqueada: ' + data.promptFeedback.blockReason;
+      if (payload && payload.promptFeedback && payload.promptFeedback.blockReason) {
+        return 'La respuesta fue bloqueada: ' + payload.promptFeedback.blockReason;
       }
       return 'No llego texto util desde Gemini.';
     }
 
     function extractModelParts(data) {
-      const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      const payload = unwrapGenerateContentPayload(data);
+      const parts = payload && payload.candidates && payload.candidates[0] && payload.candidates[0].content && payload.candidates[0].content.parts;
       return Array.isArray(parts) ? cloneParts(parts) : [];
     }
 
@@ -2732,17 +2815,44 @@
     var USAGE_KEY = STORAGE_KEY + '::dailyUsage';
     var USAGE_SOFT_LIMIT = 1500;
 
+    function createDefaultUsageData() {
+      return {
+        date: new Date().toISOString().slice(0, 10),
+        total: 0,
+        models: {},
+        quotaByModel: {},
+        creditsRemaining: null,
+        creditsLastConsumed: 0,
+        creditsSessionConsumed: 0,
+        lastUsageMetadata: null,
+        lastQuotaSyncAt: '',
+        lastBackendError: null
+      };
+    }
+
+    function normalizeUsageData(data) {
+      var normalized = data && typeof data === 'object' ? data : createDefaultUsageData();
+      if (normalized.date !== new Date().toISOString().slice(0, 10)) {
+        normalized = createDefaultUsageData();
+      }
+      if (!normalized.models || typeof normalized.models !== 'object') normalized.models = {};
+      if (!normalized.quotaByModel || typeof normalized.quotaByModel !== 'object') normalized.quotaByModel = {};
+      if (typeof normalized.total !== 'number') normalized.total = 0;
+      if (typeof normalized.creditsLastConsumed !== 'number') normalized.creditsLastConsumed = 0;
+      if (typeof normalized.creditsSessionConsumed !== 'number') normalized.creditsSessionConsumed = 0;
+      if (typeof normalized.creditsRemaining !== 'number' && normalized.creditsRemaining !== null) normalized.creditsRemaining = null;
+      if (!normalized.lastUsageMetadata || typeof normalized.lastUsageMetadata !== 'object') normalized.lastUsageMetadata = null;
+      if (typeof normalized.lastQuotaSyncAt !== 'string') normalized.lastQuotaSyncAt = '';
+      if (!normalized.lastBackendError || typeof normalized.lastBackendError !== 'object') normalized.lastBackendError = null;
+      return normalized;
+    }
+
     function getUsageData() {
       try {
         var raw = localStorage.getItem(USAGE_KEY);
-        var data = raw ? JSON.parse(raw) : null;
-        if (!data || data.date !== new Date().toISOString().slice(0, 10)) {
-          return { date: new Date().toISOString().slice(0, 10), total: 0, models: {}, lastBackendError: null };
-        }
-        if (!data.models) data.models = {};
-        return data;
+        return normalizeUsageData(raw ? JSON.parse(raw) : null);
       } catch (e) {
-        return { date: new Date().toISOString().slice(0, 10), total: 0, models: {}, lastBackendError: null };
+        return createDefaultUsageData();
       }
     }
 
@@ -2750,15 +2860,105 @@
       try { localStorage.setItem(USAGE_KEY, JSON.stringify(data)); } catch (e) {}
     }
 
-    function trackApiUsage() {
+    function sumCreditAmount(entries) {
+      if (!Array.isArray(entries)) {
+        return null;
+      }
+      return entries.reduce(function(total, entry) {
+        if (!entry || entry.creditType !== CODE_ASSIST_CREDIT_TYPE) {
+          return total;
+        }
+        return total + (parseInt(entry.creditAmount, 10) || 0);
+      }, 0);
+    }
+
+    function syncUsageCreditsRemaining(entries) {
+      var remaining = sumCreditAmount(entries);
+      if (remaining === null) {
+        return;
+      }
       var data = getUsageData();
+      data.creditsRemaining = remaining;
+      saveUsageData(data);
+      renderUsageDonut();
+      renderUsagePopup();
+    }
+
+    function syncUsageQuotaBuckets(buckets) {
+      if (!Array.isArray(buckets)) {
+        return;
+      }
+      var data = getUsageData();
+      var nextQuotaByModel = {};
+      buckets.forEach(function(bucket) {
+        if (!bucket || !bucket.modelId || !bucket.remainingAmount || bucket.remainingFraction == null) {
+          return;
+        }
+        var remaining = parseInt(bucket.remainingAmount, 10);
+        var limit = bucket.remainingFraction > 0
+          ? Math.round(remaining / bucket.remainingFraction)
+          : 0;
+        if (!isFinite(remaining) || !isFinite(limit) || limit <= 0) {
+          return;
+        }
+        nextQuotaByModel[String(bucket.modelId)] = {
+          remaining: remaining,
+          limit: limit,
+          tokenType: String(bucket.tokenType || 'REQUESTS'),
+          resetTime: String(bucket.resetTime || '')
+        };
+      });
+      data.quotaByModel = nextQuotaByModel;
+      data.lastQuotaSyncAt = nowIso();
+      saveUsageData(data);
+      renderUsageDonut();
+      renderUsagePopup();
+    }
+
+    function getActiveQuotaInfo(data) {
       var model = activeModelName();
+      var quotaByModel = data && data.quotaByModel ? data.quotaByModel : {};
+      return quotaByModel[model] || null;
+    }
+
+    function formatUsageResetTime(value) {
+      if (!value) {
+        return '';
+      }
+      try {
+        return new Date(value).toLocaleString();
+      } catch (e) {
+        return String(value);
+      }
+    }
+
+    function trackApiUsage(model, responseData) {
+      var data = getUsageData();
+      var usagePayload = unwrapGenerateContentPayload(responseData);
+      var consumedCredits = sumCreditAmount(responseData && responseData.consumedCredits);
+      var remainingCredits = sumCreditAmount(responseData && responseData.remainingCredits);
       data.total = (data.total || 0) + 1;
       if (!data.models) data.models = {};
       data.models[model] = (data.models[model] || 0) + 1;
+      data.creditsLastConsumed = consumedCredits === null ? 0 : consumedCredits;
+      if (consumedCredits !== null) {
+        data.creditsSessionConsumed = (data.creditsSessionConsumed || 0) + consumedCredits;
+      }
+      if (remainingCredits !== null) {
+        data.creditsRemaining = remainingCredits;
+      }
+      data.lastUsageMetadata = usagePayload && usagePayload.usageMetadata
+        ? {
+            model: String(model || ''),
+            promptTokenCount: Number(usagePayload.usageMetadata.promptTokenCount || 0),
+            candidatesTokenCount: Number(usagePayload.usageMetadata.candidatesTokenCount || 0),
+            totalTokenCount: Number(usagePayload.usageMetadata.totalTokenCount || 0)
+          }
+        : null;
       data.lastBackendError = null;
       saveUsageData(data);
       renderUsageDonut();
+      renderUsagePopup();
     }
 
     function trackBackendLimit(status, message, model) {
@@ -2771,21 +2971,26 @@
       };
       saveUsageData(data);
       renderUsageDonut();
+      renderUsagePopup();
     }
 
     function renderUsageDonut() {
       var data = getUsageData();
       var used = data.total || 0;
+      var activeQuota = getActiveQuotaInfo(data);
       var isBlocked = !!data.lastBackendError;
-      var pct = isBlocked ? 1 : Math.min(used / USAGE_SOFT_LIMIT, 1);
-      var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
-      if (isBlocked) {
-        color = '#ef4444';
-      }
+      var remainingFraction = activeQuota && activeQuota.limit
+        ? Math.max(0, Math.min(activeQuota.remaining / activeQuota.limit, 1))
+        : (isBlocked ? 0 : Math.max(0, USAGE_SOFT_LIMIT - used) / USAGE_SOFT_LIMIT);
+      var pct = isBlocked ? 1 : 1 - remainingFraction;
+      var color = remainingFraction > 0.5 ? '#22c55e' : remainingFraction > 0.2 ? '#eab308' : '#ef4444';
       var radius = 15.915;
       var circ = 2 * Math.PI * radius;
       var filled = circ * pct;
       var remaining = circ - filled;
+      var centerLabel = activeQuota
+        ? String(activeQuota.remaining)
+        : String(used);
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
       svg.innerHTML = [
@@ -2793,21 +2998,47 @@
         '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="3"',
         '  stroke-dasharray="' + filled.toFixed(2) + ' ' + remaining.toFixed(2) + '"',
         '  stroke-dashoffset="25" stroke-linecap="round" style="transition:stroke-dasharray 0.4s"/>',
-        '<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="' + color + '">' + used + '</text>'
+        '<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="' + color + '">' + centerLabel + '</text>'
       ].join('');
     }
 
     function renderUsagePopup() {
+      var content = document.getElementById('usage-popup-content');
+      if (!content) return;
       var data = getUsageData();
       var used = data.total || 0;
+      var activeQuota = getActiveQuotaInfo(data);
       var isBlocked = !!data.lastBackendError;
-      var estimatedRemaining = isBlocked ? 0 : Math.max(0, USAGE_SOFT_LIMIT - used);
-      var pct = isBlocked ? 1 : Math.min(used / USAGE_SOFT_LIMIT, 1);
-      var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
+      var remainingFraction = activeQuota && activeQuota.limit
+        ? Math.max(0, Math.min(activeQuota.remaining / activeQuota.limit, 1))
+        : (isBlocked ? 0 : Math.max(0, USAGE_SOFT_LIMIT - used) / USAGE_SOFT_LIMIT);
+      var pct = isBlocked ? 1 : 1 - remainingFraction;
+      var color = remainingFraction > 0.5 ? '#22c55e' : remainingFraction > 0.2 ? '#eab308' : '#ef4444';
       var models = data.models || {};
       var modelRows = Object.keys(models).map(function(m) {
         return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(m) + '</span><span class="usage-row-value">' + models[m] + '</span></div>';
       }).join('');
+      var quotaRows = Object.keys(data.quotaByModel || {}).sort().map(function(modelId) {
+        var quota = data.quotaByModel[modelId];
+        return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(modelId) + '</span><span class="usage-row-value">' + escapeHtml(String(quota.remaining)) + ' / ' + escapeHtml(String(quota.limit)) + '</span></div>';
+      }).join('');
+      var creditsBlock = data.creditsRemaining !== null || data.creditsSessionConsumed || data.creditsLastConsumed
+        ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">' +
+          '<div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">GOOGLE ONE AI CREDITS</div>' +
+          '<div class="usage-row"><span class="usage-row-label">Restantes</span><span class="usage-row-value">' + escapeHtml(data.creditsRemaining === null ? '-' : String(data.creditsRemaining)) + '</span></div>' +
+          '<div class="usage-row"><span class="usage-row-label">Consumidos ultima respuesta</span><span class="usage-row-value">' + escapeHtml(String(data.creditsLastConsumed || 0)) + '</span></div>' +
+          '<div class="usage-row"><span class="usage-row-label">Consumidos esta sesion</span><span class="usage-row-value">' + escapeHtml(String(data.creditsSessionConsumed || 0)) + '</span></div>' +
+          '</div>'
+        : '';
+      var tokenBlock = data.lastUsageMetadata
+        ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">' +
+          '<div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">ULTIMA RESPUESTA</div>' +
+          '<div class="usage-row"><span class="usage-row-label">Modelo</span><span class="usage-row-value">' + escapeHtml(data.lastUsageMetadata.model || '-') + '</span></div>' +
+          '<div class="usage-row"><span class="usage-row-label">Tokens prompt</span><span class="usage-row-value">' + escapeHtml(String(data.lastUsageMetadata.promptTokenCount || 0)) + '</span></div>' +
+          '<div class="usage-row"><span class="usage-row-label">Tokens salida</span><span class="usage-row-value">' + escapeHtml(String(data.lastUsageMetadata.candidatesTokenCount || 0)) + '</span></div>' +
+          '<div class="usage-row"><span class="usage-row-label">Tokens totales</span><span class="usage-row-value">' + escapeHtml(String(data.lastUsageMetadata.totalTokenCount || 0)) + '</span></div>' +
+          '</div>'
+        : '';
       var backend = data.lastBackendError;
       var backendBlock = backend
         ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">' +
@@ -2816,13 +3047,19 @@
           '<div class="usage-row"><span class="usage-row-label">Estado</span><span class="usage-row-value" style="color:#ef4444">' + escapeHtml(backend.status || '-') + '</span></div>' +
           '<div style="font-size:0.72rem;line-height:1.45;color:var(--text);margin-top:6px">' + escapeHtml(backend.message || '') + '</div>' +
           '</div>'
-        : '<div style="font-size:0.72rem;line-height:1.45;color:var(--muted);margin-top:8px">Este panel refleja el consumo facturado y registrado directamente contra el token de tu cuenta de Google actual.</div>';
-      var content = document.getElementById('usage-popup-content');
+        : '<div style="font-size:0.72rem;line-height:1.45;color:var(--muted);margin-top:8px">Este panel usa datos reales de Code Assist: cuota por modelo, tokens de la ultima respuesta y creditos Google One AI cuando el backend los devuelve.</div>';
       content.innerHTML = [
-        '<div class="usage-row"><span class="usage-row-label">Peticiones correctas</span><span class="usage-row-value">' + used + '</span></div>',
+        activeQuota
+          ? '<div class="usage-row"><span class="usage-row-label">Cuota real modelo activo</span><span class="usage-row-value">' + escapeHtml(String(activeQuota.remaining)) + ' / ' + escapeHtml(String(activeQuota.limit)) + '</span></div>'
+          : '<div class="usage-row"><span class="usage-row-label">Peticiones correctas</span><span class="usage-row-value">' + used + '</span></div>',
         '<div class="usage-row-bar"><div class="usage-row-bar-fill" style="width:' + (pct * 100).toFixed(1) + '%;background:' + color + '"></div></div>',
-        '<div class="usage-row" style="margin-top:6px"><span class="usage-row-label">Margen local</span><span class="usage-row-value" style="color:' + color + '">' + estimatedRemaining + ' est.</span></div>',
+        activeQuota
+          ? '<div class="usage-row" style="margin-top:6px"><span class="usage-row-label">Reset</span><span class="usage-row-value" style="color:' + color + '">' + escapeHtml(formatUsageResetTime(activeQuota.resetTime) || '-') + '</span></div>'
+          : '<div class="usage-row" style="margin-top:6px"><span class="usage-row-label">Margen local</span><span class="usage-row-value" style="color:' + color + '">' + Math.max(0, USAGE_SOFT_LIMIT - used) + ' est.</span></div>',
         modelRows ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">CORRECTAS POR MODELO</div>' + modelRows + '</div>' : '',
+        quotaRows ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">CUOTA REAL POR MODELO</div>' + quotaRows + '</div>' : '',
+        creditsBlock,
+        tokenBlock,
         backendBlock
       ].join('');
     }
@@ -2831,7 +3068,12 @@
       var popup = document.getElementById('usage-popup');
       var isHidden = popup.classList.contains('hidden');
       popup.classList.toggle('hidden');
-      if (isHidden) renderUsagePopup();
+      if (isHidden) {
+        renderUsagePopup();
+        if (appState.accessToken) {
+          refreshCodeAssistUsage(true);
+        }
+      }
     }
 
     function bindEvents() {
@@ -2955,7 +3197,7 @@
         label = 'Falta configuracion';
       }
       if (appState.accessToken) {
-        label = appState.driveReady ? 'Gemini + Drive' : 'Gemini OAuth';
+        label = appState.driveReady ? 'Code Assist + Drive' : 'Code Assist OAuth';
       }
       elements.transportLabel.textContent = label;
       elements.modelBadge.textContent = activeModelBadge();
@@ -3042,6 +3284,7 @@
       } else {
         scheduleDriveSync();
       }
+      await refreshCodeAssistUsage(false);
       if (!options || options.toast !== false) {
         showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
       }
@@ -3078,7 +3321,11 @@
     }
 
     async function bootstrapRestoredSession() {
-      if (!appState.accessToken || appState.driveReady) {
+      if (!appState.accessToken) {
+        return;
+      }
+      if (appState.driveReady) {
+        await refreshCodeAssistUsage(false);
         return;
       }
       try {
@@ -3090,65 +3337,154 @@
         saveState({
           skipDrive: true
         });
+        await refreshCodeAssistUsage(false);
       } catch (error) {
         console.warn('No se pudo reactivar Drive con la sesion restaurada:', error);
       }
     }
 
-    function buildGeminiEndpoint(chat) {
-      return 'https://generativelanguage.googleapis.com/v1beta/models/' +
-        encodeURIComponent(activeModelName(chat)) +
-        ':generateContent';
+    function extractBackendErrorMessage(data, status) {
+      var fallback = 'Error HTTP ' + status;
+      if (!data) {
+        return fallback;
+      }
+      var message = data.error && data.error.message
+        ? data.error.message
+        : (data.message || '');
+      if (typeof message !== 'string' || !message) {
+        return fallback;
+      }
+      try {
+        var parsed = JSON.parse(message);
+        if (parsed && parsed.error && parsed.error.message) {
+          return String(parsed.error.message);
+        }
+      } catch (e) {}
+      return message;
     }
 
-    async function callGemini(chat, signal, allowRetry, retryCount) {
+    function extractWaitSecondsFromBackendMessage(message) {
+      if (!message) {
+        return 60;
+      }
+      var retryMatch = message.match(/retry in ([\d.]+)s/i);
+      if (retryMatch) {
+        return Math.ceil(parseFloat(retryMatch[1])) || 60;
+      }
+      var durationMatch = message.match(/after\s+((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)/i);
+      if (!durationMatch || !durationMatch[1]) {
+        return 60;
+      }
+      var value = durationMatch[1];
+      var hours = (value.match(/(\d+)h/i) || [])[1];
+      var minutes = (value.match(/(\d+)m/i) || [])[1];
+      var seconds = (value.match(/([\d.]+)s/i) || [])[1];
+      var total = 0;
+      if (hours) total += parseInt(hours, 10) * 3600;
+      if (minutes) total += parseInt(minutes, 10) * 60;
+      if (seconds) total += Math.ceil(parseFloat(seconds));
+      return total || 60;
+    }
+
+    async function codeAssistFetchJson(url, body, signal, allowRetry) {
       ensureOauthConfig();
       if (!appState.accessToken) {
         throw new Error('Inicia sesion con Google para usar Gemini.');
       }
 
-      const response = await fetch(buildGeminiEndpoint(chat), {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + appState.accessToken
         },
-        body: JSON.stringify(buildRequestBody(chat.messages, chat)),
+        body: JSON.stringify(body),
         signal
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        if (response.status === 401 && allowRetry !== false) {
-          await loginWithGoogle({
-            interactive: false,
-            toast: false,
-            skipDriveBootstrap: true
-          });
-          return callGemini(chat, signal, false, retryCount);
-        }
+      if (response.status === 401 && allowRetry !== false) {
+        await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          skipDriveBootstrap: true
+        });
+        return codeAssistFetchJson(url, body, signal, false);
+      }
 
+      return {
+        response: response,
+        data: data
+      };
+    }
+
+    async function refreshCodeAssistCredits(allowRetry) {
+      if (!appState.accessToken) {
+        return;
+      }
+      var project = codeAssistProject();
+      if (!project) {
+        return;
+      }
+      try {
+        var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
+        if (!result.response.ok) {
+          return;
+        }
+        var tier = result.data && (result.data.paidTier || result.data.currentTier);
+        if (tier && tier.availableCredits) {
+          syncUsageCreditsRemaining(tier.availableCredits);
+        }
+      } catch (error) {
+        console.warn('No se pudo sincronizar creditos de Code Assist:', error);
+      }
+    }
+
+    async function refreshCodeAssistQuota(allowRetry) {
+      if (!appState.accessToken) {
+        return;
+      }
+      var project = codeAssistProject();
+      if (!project) {
+        return;
+      }
+      try {
+        var result = await codeAssistFetchJson(buildCodeAssistQuotaEndpoint(), buildCodeAssistQuotaBody(), null, allowRetry);
+        if (!result.response.ok) {
+          return;
+        }
+        syncUsageQuotaBuckets(result.data && result.data.buckets);
+      } catch (error) {
+        console.warn('No se pudo sincronizar la cuota real de Code Assist:', error);
+      }
+    }
+
+    async function refreshCodeAssistUsage(allowRetry) {
+      await refreshCodeAssistCredits(allowRetry);
+      await refreshCodeAssistQuota(allowRetry);
+    }
+
+    async function callGemini(chat, signal, allowRetry, retryCount) {
+      const requestBody = buildCodeAssistGenerateBody(chat);
+      const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
+      const response = result.response;
+      const data = result.data;
+      if (!response.ok) {
         if (response.status === 429) {
-          var backendMessage = data && data.error && data.error.message
-            ? data.error.message
-            : 'Google ha limitado temporalmente este modelo o esta cuenta.';
+          var backendMessage = extractBackendErrorMessage(data, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
           trackBackendLimit('429', backendMessage, activeModelName(chat));
           
-          var retryMatch = backendMessage
-            ? backendMessage.match(/retry in ([\d.]+)s/i)
-            : null;
-          var waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 60;
+          var waitSec = extractWaitSecondsFromBackendMessage(backendMessage);
           
           throw new Error('Se ha alcanzado el límite de usos. Podrás mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
         }
 
-        const message = data && data.error && data.error.message
-          ? data.error.message
-          : 'Error HTTP ' + response.status;
+        const message = extractBackendErrorMessage(data, response.status);
         throw new Error(message);
       }
 
-      trackApiUsage();
+      trackApiUsage(activeModelName(chat), data);
+      await refreshCodeAssistUsage(false);
 
       return {
         text: extractTextFromResponse(data),
