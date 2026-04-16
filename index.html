@@ -121,12 +121,14 @@
     .btn-icon:hover { background: rgba(0,0,0,0.05); color: var(--text); }
     .profile-btn {
       width: 32px; height: 32px; border-radius: 50%;
-      overflow: hidden; background: rgba(0,0,0,0.06); border: 2px solid transparent;
-      flex-shrink: 0; cursor: pointer; padding: 0;
-      transition: border-color 0.18s var(--ease), transform 0.18s var(--ease);
+      background: conic-gradient(from 225deg, #ea4335 0deg 90deg, #4285f4 90deg 180deg, #34a853 180deg 270deg, #fbbc04 270deg 360deg);
+      border: none; padding: 2px;
+      flex-shrink: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.18s var(--ease), filter 0.18s var(--ease);
     }
-    .profile-btn:hover { border-color: var(--orange-border); transform: scale(1.05); }
-    .profile-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .profile-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+    .profile-btn img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; border: 1.5px solid var(--bg); }
 
     /* ─── LAYOUT ─────────────────────────────────────── */
     #app-container { height: 100vh; padding-top: var(--topbar-h); display: flex; flex-direction: column; }
@@ -187,7 +189,12 @@
       display: flex; align-items: center; gap: 10px; flex-shrink: 0;
     }
     .sidebar-profile.hidden { display: none !important; }
-    .sidebar-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .sidebar-avatar-wrap {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: conic-gradient(from 225deg, #ea4335 0deg 90deg, #4285f4 90deg 180deg, #34a853 180deg 270deg, #fbbc04 270deg 360deg);
+      padding: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; border: 1.5px solid var(--surface); }
     .sidebar-profile-info { min-width: 0; }
     .sidebar-profile-name { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sidebar-profile-email { font-size: 0.67rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -642,7 +649,9 @@
           <div class="chat-list" id="chat-list"></div>
         </div>
         <div class="sidebar-profile hidden" id="profile-card">
-          <img class="sidebar-avatar" id="profile-avatar-sidebar" alt="">
+          <div class="sidebar-avatar-wrap">
+            <img class="sidebar-avatar" id="profile-avatar-sidebar" alt="">
+          </div>
           <div class="sidebar-profile-info">
             <div class="sidebar-profile-name" id="profile-name"></div>
             <div class="sidebar-profile-email" id="profile-email"></div>
@@ -675,7 +684,7 @@
               </button>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
-              <div class="usage-popup-title">Actividad local</div>
+              <div class="usage-popup-title">Usos (Cuenta Propia)</div>
               <div id="usage-popup-content"></div>
             </div>
             <div class="composer-status-row">
@@ -2807,7 +2816,7 @@
           '<div class="usage-row"><span class="usage-row-label">Estado</span><span class="usage-row-value" style="color:#ef4444">' + escapeHtml(backend.status || '-') + '</span></div>' +
           '<div style="font-size:0.72rem;line-height:1.45;color:var(--text);margin-top:6px">' + escapeHtml(backend.message || '') + '</div>' +
           '</div>'
-        : '<div style="font-size:0.72rem;line-height:1.45;color:var(--muted);margin-top:8px">Este panel refleja actividad local correcta en este navegador. No muestra la cuota real restante de Google.</div>';
+        : '<div style="font-size:0.72rem;line-height:1.45;color:var(--muted);margin-top:8px">Este panel refleja el consumo facturado y registrado directamente contra el token de tu cuenta de Google actual.</div>';
       var content = document.getElementById('usage-popup-content');
       content.innerHTML = [
         '<div class="usage-row"><span class="usage-row-label">Peticiones correctas</span><span class="usage-row-value">' + used + '</span></div>',
@@ -3102,8 +3111,7 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken,
-          'x-goog-user-project': googleProjectRef()
+          Authorization: 'Bearer ' + appState.accessToken
         },
         body: JSON.stringify(buildRequestBody(chat.messages, chat)),
         signal
