@@ -582,9 +582,131 @@
     .usage-row-value { font-weight: 600; color: var(--text); }
     .usage-row-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
     .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
+
+    /* ─── BOOT / INSTALL OVERLAY ─────────────────────── */
+    .boot {
+      position: fixed; inset: 0; z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      padding: 24px;
+      opacity: 1; transition: opacity 0.25s var(--ease);
+    }
+    .boot[hidden] { display: none !important; }
+    .boot.fade-out { opacity: 0; pointer-events: none; }
+    body.boot-pending { overflow: hidden; }
+    body.boot-pending #app-container { visibility: hidden; }
+    .boot-card {
+      width: 100%; max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 34px 30px 28px;
+      text-align: center;
+    }
+    .boot-brand {
+      font-family: 'Comfortaa', cursive; font-weight: 700; font-size: 1.05rem;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      margin-bottom: 22px;
+      color: var(--text);
+    }
+    .boot-brand-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--orange);
+      box-shadow: 0 0 12px var(--orange-glow);
+    }
+    .boot-phase { display: none; flex-direction: column; align-items: center; gap: 14px; }
+    .boot-phase[data-active="true"] { display: flex; }
+    .boot-h {
+      font-family: 'Comfortaa', cursive; font-weight: 700; font-size: 1.18rem;
+      margin: 0; color: var(--text);
+    }
+    .boot-p {
+      font-size: 0.9rem; color: var(--text-secondary); line-height: 1.55;
+      max-width: 36ch; margin: 0;
+    }
+    .boot-spinner {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--orange);
+      animation: boot-spin 0.8s linear infinite;
+    }
+    @keyframes boot-spin { to { transform: rotate(360deg); } }
+    .boot-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 22px;
+      background: var(--orange); color: #fff;
+      border-radius: var(--r-full);
+      font-weight: 600; font-size: 0.92rem;
+      text-decoration: none;
+      transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.15s var(--ease);
+      box-shadow: 0 4px 14px var(--orange-glow);
+      margin-top: 6px; border: 0; cursor: pointer;
+    }
+    .boot-btn:hover { transform: translateY(-1px); background: #d26a2e; box-shadow: 0 6px 18px var(--orange-glow); }
+    .boot-btn:active { transform: translateY(0); }
+    .boot-link {
+      color: var(--muted); font-size: 0.82rem;
+      text-decoration: underline; text-underline-offset: 3px;
+      background: none; padding: 4px 8px; border: 0; cursor: pointer;
+    }
+    .boot-link:hover { color: var(--text-secondary); }
+    .boot-os-row {
+      display: flex; gap: 6px; margin-top: 6px; width: 100%;
+    }
+    .boot-os-row a {
+      flex: 1; padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
+      font-size: 0.82rem; font-weight: 500; color: var(--text-secondary); text-decoration: none;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+    }
+    .boot-os-row a:hover { background: var(--surface-hover); border-color: var(--border-strong); color: var(--text); }
+    .boot-hint {
+      font-size: 0.76rem; color: var(--muted); margin-top: 4px;
+    }
   </style>
 </head>
-<body>
+<body class="boot-pending">
+
+  <!-- ─── BOOT / INSTALL OVERLAY ───────────────────── -->
+  <div class="boot" id="boot" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="boot-card">
+      <div class="boot-brand">
+        <span class="boot-brand-dot" aria-hidden="true"></span>
+        <span>inhouse learn</span>
+      </div>
+
+      <div class="boot-phase" data-phase="detecting" data-active="true">
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <p class="boot-p">Buscando el agente local...</p>
+      </div>
+
+      <div class="boot-phase" data-phase="not-installed">
+        <h1 class="boot-h">Instala el agente local</h1>
+        <p class="boot-p">Un pequeño proceso en tu ordenador que conecta con Claude Code, Gemini CLI y Codex. Sin API keys ni proyecto de Google Cloud.</p>
+        <a class="boot-btn" id="boot-download" href="#" download>Descargar</a>
+        <button class="boot-link" id="boot-other-os" type="button">Otro sistema operativo</button>
+        <div class="boot-os-row" id="boot-os-row" hidden>
+          <a data-os="win" href="#" download>Windows</a>
+          <a data-os="mac" href="#" download>macOS</a>
+          <a data-os="linux" href="#" download>Linux</a>
+        </div>
+        <p class="boot-hint">Se abrirá automáticamente al terminar la instalación.</p>
+      </div>
+
+      <div class="boot-phase" data-phase="installing">
+        <div class="boot-spinner" aria-hidden="true"></div>
+        <p class="boot-p">Esperando a que el agente arranque...</p>
+        <button class="boot-link" id="boot-retry" type="button">Reintentar</button>
+      </div>
+
+      <div class="boot-phase" data-phase="error">
+        <h1 class="boot-h">No hemos podido conectar</h1>
+        <p class="boot-p" id="boot-error-msg">El agente local no responde. Comprueba que esté en ejecución.</p>
+        <button class="boot-btn" id="boot-error-retry" type="button">Reintentar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Off-screen elements for JS (IDs needed but not displayed) -->
   <div style="position:absolute;left:-9999px;overflow:hidden;height:1px;" aria-hidden="true">
     <div id="auth-copy"></div>
@@ -713,6 +835,174 @@
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
+    // ─── DAEMON BOOT ──────────────────────────────────
+    // Detecta el agente local; si no está, muestra la pantalla de descarga.
+    // Cuando el daemon responde a /v1/ping, arranca la app llamando a boot().
+    const DAEMON_CONFIG = {
+      URL: 'http://localhost:7823',
+      PING_PATH: '/v1/ping',
+      PING_TIMEOUT_MS: 900,
+      POLL_INTERVAL_MS: 1500,
+      POLL_MAX_MS: 10 * 60 * 1000,
+      RELEASE_BASE: '',
+      INSTALLERS: {
+        win:   '/releases/inhouse-agent-setup.exe',
+        mac:   '/releases/inhouse-agent.dmg',
+        linux: '/releases/inhouse-agent.AppImage'
+      }
+    };
+
+    const SKIP_DAEMON = /(?:[?&])skipDaemon=1\b/.test(location.search);
+    let __daemonStatus = null;
+    let __daemonPollingAbort = false;
+
+    function detectOS() {
+      const uaData = navigator.userAgentData;
+      if (uaData && uaData.platform) {
+        const p = String(uaData.platform).toLowerCase();
+        if (p.includes('win')) return 'win';
+        if (p.includes('mac')) return 'mac';
+        if (p.includes('linux')) return 'linux';
+      }
+      const ua = (navigator.userAgent || '').toLowerCase();
+      const platform = (navigator.platform || '').toLowerCase();
+      if (ua.includes('windows') || platform.includes('win')) return 'win';
+      if (ua.includes('mac') || platform.includes('mac')) return 'mac';
+      if (ua.includes('linux') || platform.includes('linux')) return 'linux';
+      return 'win';
+    }
+
+    function osLabel(os) {
+      return os === 'mac' ? 'macOS' : os === 'linux' ? 'Linux' : 'Windows';
+    }
+
+    function installerUrl(os) {
+      const file = DAEMON_CONFIG.INSTALLERS[os] || DAEMON_CONFIG.INSTALLERS.win;
+      return (DAEMON_CONFIG.RELEASE_BASE || '') + file;
+    }
+
+    async function pingDaemon(timeoutMs) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs || DAEMON_CONFIG.PING_TIMEOUT_MS);
+      try {
+        const response = await fetch(DAEMON_CONFIG.URL + DAEMON_CONFIG.PING_PATH, {
+          method: 'GET',
+          signal: controller.signal,
+          cache: 'no-store',
+          credentials: 'omit'
+        });
+        if (!response.ok) return null;
+        const data = await response.json().catch(() => ({}));
+        return data && data.ok !== false ? data : { ok: true };
+      } catch (_) {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function setBootPhase(phase) {
+      const boot = document.getElementById('boot');
+      if (!boot) return;
+      boot.querySelectorAll('.boot-phase').forEach((node) => {
+        node.setAttribute('data-active', node.getAttribute('data-phase') === phase ? 'true' : 'false');
+      });
+    }
+
+    function hideBoot() {
+      const boot = document.getElementById('boot');
+      document.body.classList.remove('boot-pending');
+      if (!boot) return;
+      boot.classList.add('fade-out');
+      setTimeout(() => { boot.hidden = true; }, 280);
+    }
+
+    async function pollUntilReady() {
+      const stopAt = Date.now() + DAEMON_CONFIG.POLL_MAX_MS;
+      while (Date.now() < stopAt && !__daemonPollingAbort) {
+        const r = await pingDaemon();
+        if (r) return r;
+        await new Promise((resolve) => setTimeout(resolve, DAEMON_CONFIG.POLL_INTERVAL_MS));
+      }
+      return null;
+    }
+
+    function continueBoot(status) {
+      __daemonStatus = status || { ok: true };
+      window.__daemonStatus = __daemonStatus;
+      hideBoot();
+      try {
+        if (typeof boot === 'function') boot();
+      } catch (err) {
+        console.error('Error al arrancar la app:', err);
+      }
+    }
+
+    function wireBootUi() {
+      const os = detectOS();
+      const downloadBtn = document.getElementById('boot-download');
+      const osRow = document.getElementById('boot-os-row');
+      const otherBtn = document.getElementById('boot-other-os');
+      const retryBtn = document.getElementById('boot-retry');
+      const errorRetry = document.getElementById('boot-error-retry');
+
+      if (downloadBtn) {
+        downloadBtn.href = installerUrl(os);
+        downloadBtn.textContent = 'Descargar para ' + osLabel(os);
+        downloadBtn.addEventListener('click', () => {
+          setTimeout(() => {
+            setBootPhase('installing');
+            __daemonPollingAbort = false;
+            pollUntilReady().then((r) => {
+              if (r) continueBoot(r);
+              else setBootPhase('not-installed');
+            });
+          }, 500);
+        });
+      }
+
+      if (otherBtn && osRow) {
+        otherBtn.addEventListener('click', () => {
+          osRow.hidden = !osRow.hidden;
+        });
+      }
+
+      if (osRow) {
+        osRow.querySelectorAll('a[data-os]').forEach((a) => {
+          const targetOs = a.getAttribute('data-os');
+          a.href = installerUrl(targetOs);
+        });
+      }
+
+      if (retryBtn) {
+        retryBtn.addEventListener('click', async () => {
+          const r = await pingDaemon(1500);
+          if (r) continueBoot(r);
+          else setBootPhase('not-installed');
+        });
+      }
+
+      if (errorRetry) {
+        errorRetry.addEventListener('click', () => { startDaemonBoot(); });
+      }
+    }
+
+    async function startDaemonBoot() {
+      if (SKIP_DAEMON) { continueBoot({ ok: true, skipped: true }); return; }
+      setBootPhase('detecting');
+      const r = await pingDaemon();
+      if (r) { continueBoot(r); return; }
+      setBootPhase('not-installed');
+    }
+
+    function __onDomReady(fn) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn, { once: true });
+      } else { fn(); }
+    }
+    __onDomReady(() => { wireBootUi(); startDaemonBoot(); });
+    // ──────────────────────────────────────────────────
+
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
       GOOGLE_CLOUD_PROJECT: '435784295430',
@@ -766,8 +1056,12 @@
     const DRIVE_FOLDER_TAG = 'inhouseLearnFolder';
     const DRIVE_SNAPSHOT_TAG = 'inhouseLearnSnapshot';
     const DRIVE_SYNC_DEBOUNCE_MS = 900;
+    const OAUTH_TOKEN_STORAGE_KEY = STORAGE_KEY + '::oauthToken';
+    const OAUTH_REMEMBER_KEY = STORAGE_KEY + '::oauthRemember';
+    const OAUTH_HINT_EMAIL_KEY = STORAGE_KEY + '::oauthHintEmail';
     const AUTH_SKIP_RESTORE_KEY = STORAGE_KEY + '::manualLogout';
     const AUTH_EXPIRY_SKEW_MS = 30000;
+    const AUTH_REFRESH_SKEW_MS = 5 * 60 * 1000;
     const MAX_INLINE_ATTACHMENT_BYTES = 12 * 1024 * 1024;
     const MAX_TEXT_ATTACHMENT_CHARS = 120000;
     const MAX_PDF_PAGES = 80;
@@ -801,6 +1095,8 @@
       'gemini-3.1-pro-preview',
       'gemini-3-flash-preview'
     ];
+    let googleTokenClient = null;
+    let googleTokenRefreshTimer = 0;
 
     const appState = {
       chats: [],
@@ -811,6 +1107,7 @@
       accessToken: '',
       accessTokenExpiresAt: 0,
       profile: null,
+      codeAssistProjectId: '',
       activeController: null,
       driveFolderId: '',
       driveSnapshotFileId: '',
@@ -1429,41 +1726,106 @@
       localStorage.removeItem(AUTH_SKIP_RESTORE_KEY);
     }
 
+    function hasStoredGoogleRememberSession() {
+      return localStorage.getItem(OAUTH_REMEMBER_KEY) === '1';
+    }
+
+    function getStoredGoogleHintEmail() {
+      return String(localStorage.getItem(OAUTH_HINT_EMAIL_KEY) || '').trim();
+    }
+
+    function saveGoogleTokenToStorage(accessToken, expiresAt) {
+      if (!accessToken) {
+        return;
+      }
+      localStorage.setItem(OAUTH_TOKEN_STORAGE_KEY, JSON.stringify({
+        accessToken: String(accessToken),
+        expiresAt: Number(expiresAt || 0)
+      }));
+      localStorage.setItem(OAUTH_REMEMBER_KEY, '1');
+    }
+
+    function clearGoogleTokenRefreshTimer() {
+      if (googleTokenRefreshTimer) {
+        window.clearTimeout(googleTokenRefreshTimer);
+        googleTokenRefreshTimer = 0;
+      }
+    }
+
+    function clearGoogleTokenStorage(options) {
+      const settings = Object.assign({
+        preserveRemember: false
+      }, options);
+      clearGoogleTokenRefreshTimer();
+      localStorage.removeItem(OAUTH_TOKEN_STORAGE_KEY);
+      if (!settings.preserveRemember) {
+        localStorage.removeItem(OAUTH_REMEMBER_KEY);
+        localStorage.removeItem(OAUTH_HINT_EMAIL_KEY);
+      }
+    }
+
+    function hasFreshGoogleAccessToken() {
+      return !!appState.accessToken &&
+        !!appState.accessTokenExpiresAt &&
+        Date.now() < appState.accessTokenExpiresAt - AUTH_EXPIRY_SKEW_MS;
+    }
+
+    function scheduleGoogleTokenRefresh() {
+      clearGoogleTokenRefreshTimer();
+      if (!appState.accessToken || !appState.accessTokenExpiresAt) {
+        return;
+      }
+      const refreshInMs = Math.max(0, appState.accessTokenExpiresAt - Date.now() - AUTH_REFRESH_SKEW_MS);
+      googleTokenRefreshTimer = window.setTimeout(async function() {
+        try {
+          await loginWithGoogle({
+            interactive: false,
+            toast: false,
+            skipDriveBootstrap: true,
+            prompt: 'none'
+          });
+        } catch (error) {
+          console.warn('No se pudo refrescar el token OAuth en segundo plano:', error);
+        }
+      }, refreshInMs);
+    }
+
+    function loadGoogleTokenFromStorage() {
+      try {
+        const raw = localStorage.getItem(OAUTH_TOKEN_STORAGE_KEY);
+        if (!raw) {
+          return false;
+        }
+        const payload = JSON.parse(raw);
+        const accessToken = payload && payload.accessToken ? String(payload.accessToken) : '';
+        const expiresAt = Number(payload && payload.expiresAt || 0);
+        if (!accessToken || !expiresAt || Date.now() >= expiresAt - AUTH_EXPIRY_SKEW_MS) {
+          clearGoogleTokenStorage({
+            preserveRemember: true
+          });
+          return false;
+        }
+        appState.accessToken = accessToken;
+        appState.accessTokenExpiresAt = expiresAt;
+        scheduleGoogleTokenRefresh();
+        return true;
+      } catch (error) {
+        console.warn('No se pudo leer el token OAuth guardado:', error);
+        clearGoogleTokenStorage({
+          preserveRemember: true
+        });
+        return false;
+      }
+    }
+
     function shouldAutoRestoreAuth() {
       return hasOauthConfig() &&
         location.protocol !== 'file:' &&
         localStorage.getItem(AUTH_SKIP_RESTORE_KEY) !== '1';
     }
 
-    function canRestoreStoredAuth(authState) {
-      if (!authState || typeof authState !== 'object') {
-        return false;
-      }
-      if (!shouldAutoRestoreAuth()) {
-        return false;
-      }
-      if (!authState.accessToken || !authState.profile) {
-        return false;
-      }
-      const expiresAt = Number(authState.expiresAt || 0);
-      if (expiresAt && Date.now() >= expiresAt - AUTH_EXPIRY_SKEW_MS) {
-        return false;
-      }
-      return true;
-    }
-
     function buildStoredAuthState() {
-      if (!appState.accessToken || !appState.profile) {
-        return null;
-      }
-      return {
-        accessToken: appState.accessToken,
-        expiresAt: Number(appState.accessTokenExpiresAt || 0),
-        profile: appState.profile,
-        driveFolderId: appState.driveFolderId || '',
-        driveSnapshotFileId: appState.driveSnapshotFileId || '',
-        driveReady: !!appState.driveReady
-      };
+      return null;
     }
 
     function getResolvedChat(chatLike) {
@@ -1602,14 +1964,6 @@
         if (parsed) {
           appState.chats = parsed.chats;
           appState.activeChatId = parsed.activeChatId;
-        }
-        if (canRestoreStoredAuth(payload && payload.auth)) {
-          appState.accessToken = String(payload.auth.accessToken || '');
-          appState.accessTokenExpiresAt = Number(payload.auth.expiresAt || 0);
-          appState.profile = payload.auth.profile || null;
-          appState.driveFolderId = String(payload.auth.driveFolderId || '');
-          appState.driveSnapshotFileId = String(payload.auth.driveSnapshotFileId || '');
-          appState.driveReady = !!payload.auth.driveReady;
         }
       } catch (error) {
         console.warn('No se pudo restaurar localStorage:', error);
@@ -1957,6 +2311,30 @@
       }
     }
 
+    function googleOauthScopes() {
+      return [
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/generative-language.retriever',
+        'https://www.googleapis.com/auth/cloud-platform',
+        DRIVE_SCOPE
+      ];
+    }
+
+    async function getGoogleTokenClient() {
+      ensureOauthConfig();
+      await waitForGoogle();
+      if (!googleTokenClient) {
+        googleTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
+          scope: googleOauthScopes().join(' '),
+          callback: function() {},
+          error_callback: function() {}
+        });
+      }
+      return googleTokenClient;
+    }
+
     async function fetchProfile(accessToken) {
       const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: {
@@ -2267,10 +2645,12 @@
         google.accounts.oauth2.revoke(appState.accessToken, function() {});
       }
       rememberManualLogout();
+      clearGoogleTokenStorage();
       resetDriveState();
       appState.accessToken = '';
       appState.accessTokenExpiresAt = 0;
       appState.profile = null;
+      appState.codeAssistProjectId = '';
       updateAuthUi();
       updateConfigUi();
       saveState({
@@ -2320,8 +2700,15 @@
       };
     }
 
+    function configuredCodeAssistProject() {
+      if (isConfigured(APP_CONFIG.CODE_ASSIST_PROJECT_ID)) {
+        return String(APP_CONFIG.CODE_ASSIST_PROJECT_ID).trim();
+      }
+      return '';
+    }
+
     function codeAssistProject() {
-      return String(APP_CONFIG.GOOGLE_CLOUD_PROJECT || '').trim();
+      return String(appState.codeAssistProjectId || configuredCodeAssistProject() || '').trim();
     }
 
     function buildCodeAssistBaseUrl() {
@@ -2340,8 +2727,7 @@
       return buildCodeAssistBaseUrl() + ':retrieveUserQuota';
     }
 
-    function buildCodeAssistClientMetadata() {
-      const project = codeAssistProject();
+    function buildCodeAssistClientMetadata(project) {
       return {
         ideType: 'IDE_UNSPECIFIED',
         platform: 'PLATFORM_UNSPECIFIED',
@@ -2375,7 +2761,7 @@
       const project = codeAssistProject();
       return {
         cloudaicompanionProject: project || undefined,
-        metadata: buildCodeAssistClientMetadata(),
+        metadata: buildCodeAssistClientMetadata(project),
         mode: 'HEALTH_CHECK'
       };
     }
@@ -3196,7 +3582,9 @@
       if (!hasOauthConfig()) {
         label = 'Falta configuracion';
       }
-      if (appState.accessToken) {
+      if (appState.accessToken && !appState.profile) {
+        label = 'Restaurando login';
+      } else if (appState.accessToken) {
         label = appState.driveReady ? 'Code Assist + Drive' : 'Code Assist OAuth';
       }
       elements.transportLabel.textContent = label;
@@ -3212,9 +3600,10 @@
 
     function updateAuthUi() {
       const signedIn = !!appState.profile;
+      const restoring = !!appState.accessToken && !signedIn;
       elements.profileCard.classList.toggle('hidden', !signedIn);
       elements.logoutBtn.classList.toggle('hidden', !signedIn);
-      elements.loginBtn.classList.toggle('hidden', signedIn);
+      elements.loginBtn.classList.toggle('hidden', signedIn || restoring);
       if (signedIn) {
         elements.profileAvatar.src = appState.profile.picture || '';
         const sidebarAvatar = document.getElementById('profile-avatar-sidebar');
@@ -3222,6 +3611,8 @@
         elements.profileName.textContent = appState.profile.name || 'Cuenta Google';
         elements.profileEmail.textContent = appState.profile.email || '';
         elements.authCopy.textContent = 'Sesion lista. Gemini usara el token OAuth de esta cuenta.';
+      } else if (restoring) {
+        elements.authCopy.textContent = 'Restaurando sesion de Google...';
       } else {
         elements.authCopy.textContent = hasOauthConfig()
           ? 'Inicia sesion y ya puedes usar Gemini. No hace falta meter API keys en el navegador.'
@@ -3230,44 +3621,60 @@
     }
 
     async function requestGoogleAccessToken(promptMode) {
-      ensureOauthConfig();
-      await waitForGoogle();
-      const scopes = [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/generative-language.retriever',
-        'https://www.googleapis.com/auth/cloud-platform',
-        DRIVE_SCOPE
-      ];
-
+      if (hasFreshGoogleAccessToken()) {
+        return {
+          access_token: appState.accessToken,
+          expires_in: Math.max(0, Math.floor((appState.accessTokenExpiresAt - Date.now()) / 1000))
+        };
+      }
+      const tokenClient = await getGoogleTokenClient();
+      const loginHint = (appState.profile && appState.profile.email)
+        ? String(appState.profile.email).trim()
+        : getStoredGoogleHintEmail();
       return new Promise((resolve, reject) => {
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
-          scope: scopes.join(' '),
-          callback: (response) => {
-            if (response && response.access_token) {
-              resolve(response);
-              return;
-            }
-            reject(new Error('No se recibio access token.'));
-          },
-          error_callback: (error) => {
-            reject(new Error(error && error.message ? error.message : 'OAuth cancelado.'));
+        tokenClient.callback = function(response) {
+          if (response && response.access_token) {
+            const expiresAt = response && response.expires_in
+              ? Date.now() + (Number(response.expires_in) * 1000)
+              : 0;
+            appState.accessToken = response.access_token;
+            appState.accessTokenExpiresAt = expiresAt;
+            saveGoogleTokenToStorage(appState.accessToken, appState.accessTokenExpiresAt);
+            scheduleGoogleTokenRefresh();
+            clearManualLogoutFlag();
+            resolve(response);
+            return;
           }
-        });
-        tokenClient.requestAccessToken({
+          reject(new Error('No se recibio access token.'));
+        };
+        tokenClient.error_callback = function(error) {
+          reject(new Error(error && error.message ? error.message : 'OAuth cancelado.'));
+        };
+        const requestOptions = {
           prompt: promptMode
-        });
+        };
+        if (loginHint) {
+          requestOptions.login_hint = loginHint;
+        }
+        tokenClient.requestAccessToken(requestOptions);
       });
     }
 
     async function syncGoogleSession(tokenResponse, options) {
-      appState.accessToken = tokenResponse.access_token;
-      appState.accessTokenExpiresAt = tokenResponse && tokenResponse.expires_in
-        ? Date.now() + (Number(tokenResponse.expires_in) * 1000)
-        : 0;
+      if (tokenResponse && tokenResponse.access_token) {
+        appState.accessToken = tokenResponse.access_token;
+        appState.accessTokenExpiresAt = tokenResponse && tokenResponse.expires_in
+          ? Date.now() + (Number(tokenResponse.expires_in) * 1000)
+          : appState.accessTokenExpiresAt;
+        saveGoogleTokenToStorage(appState.accessToken, appState.accessTokenExpiresAt);
+        scheduleGoogleTokenRefresh();
+      }
       clearManualLogoutFlag();
       appState.profile = await fetchProfile(appState.accessToken);
+      localStorage.setItem(OAUTH_REMEMBER_KEY, '1');
+      if (appState.profile && appState.profile.email) {
+        localStorage.setItem(OAUTH_HINT_EMAIL_KEY, String(appState.profile.email).trim());
+      }
       updateAuthUi();
       updateConfigUi();
       if (!options || !options.skipDriveBootstrap) {
@@ -3299,14 +3706,17 @@
       const promptMode = typeof settings.prompt === 'string'
         ? settings.prompt
         : (settings.interactive
-          ? (appState.accessToken ? '' : 'consent')
+          ? 'consent'
           : 'none');
       const tokenResponse = await requestGoogleAccessToken(promptMode);
       await syncGoogleSession(tokenResponse, settings);
     }
 
     async function tryAutoRestoreGoogleSession() {
-      if (!shouldAutoRestoreAuth() || appState.accessToken) {
+      if (!shouldAutoRestoreAuth()) {
+        return;
+      }
+      if (!appState.accessToken && !hasStoredGoogleRememberSession()) {
         return;
       }
       try {
@@ -3316,30 +3726,17 @@
           prompt: 'none'
         });
       } catch (error) {
-        console.warn('No se pudo restaurar la sesion OAuth automaticamente:', error);
-      }
-    }
-
-    async function bootstrapRestoredSession() {
-      if (!appState.accessToken) {
-        return;
-      }
-      if (appState.driveReady) {
-        await refreshCodeAssistUsage(false);
-        return;
-      }
-      try {
-        await ensureDriveReady();
-        updateConfigUi();
-        renderHistory();
-        renderThread();
-        updateSendUi();
-        saveState({
-          skipDrive: true
+        clearGoogleTokenStorage({
+          preserveRemember: true
         });
-        await refreshCodeAssistUsage(false);
-      } catch (error) {
-        console.warn('No se pudo reactivar Drive con la sesion restaurada:', error);
+        resetDriveState();
+        appState.accessToken = '';
+        appState.accessTokenExpiresAt = 0;
+        appState.profile = null;
+        appState.codeAssistProjectId = '';
+        updateAuthUi();
+        updateConfigUi();
+        console.warn('No se pudo restaurar la sesion OAuth automaticamente:', error);
       }
     }
 
@@ -3422,14 +3819,19 @@
       if (!appState.accessToken) {
         return;
       }
-      var project = codeAssistProject();
-      if (!project) {
-        return;
-      }
       try {
         var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
         if (!result.response.ok) {
           return;
+        }
+        var resolvedProject = result.data && result.data.cloudaicompanionProject
+          ? String(result.data.cloudaicompanionProject)
+          : '';
+        if (resolvedProject && resolvedProject !== appState.codeAssistProjectId) {
+          appState.codeAssistProjectId = resolvedProject;
+          saveState({
+            skipDrive: true
+          });
         }
         var tier = result.data && (result.data.paidTier || result.data.currentTier);
         if (tier && tier.availableCredits) {
@@ -3465,6 +3867,12 @@
     }
 
     async function callGemini(chat, signal, allowRetry, retryCount) {
+      if (!codeAssistProject()) {
+        await refreshCodeAssistCredits(false);
+      }
+      if (!codeAssistProject()) {
+        throw new Error('Code Assist no devolvio un cloudaicompanionProject util para esta cuenta. Si quieres forzar uno propio, usa APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto que tenga Cloud Code Private API habilitada.');
+      }
       const requestBody = buildCodeAssistGenerateBody(chat);
       const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
       const response = result.response;
@@ -3587,6 +3995,7 @@
 
     function boot() {
       loadState();
+      loadGoogleTokenFromStorage();
       elements.composer.placeholder = 'Escribe aquÃ­...';
       updateConfigUi();
       updateAuthUi();
@@ -3606,19 +4015,12 @@
         return;
       }
 
-      if (appState.accessToken) {
-        window.setTimeout(() => {
-          bootstrapRestoredSession();
-        }, 0);
-        return;
-      }
-
       window.setTimeout(() => {
         tryAutoRestoreGoogleSession();
       }, 0);
     }
 
-    boot();
+    // boot() lo invoca continueBoot() una vez el agente local responde a /v1/ping.
   </script>
 </body>
 </html>
