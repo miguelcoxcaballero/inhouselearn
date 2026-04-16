@@ -160,17 +160,17 @@
       display: flex; align-items: center;
       border-radius: var(--r-sm);
       transition: background 0.15s var(--ease);
+      padding: 0 4px 0 6px;
     }
     .chat-row:hover { background: rgba(0,0,0,0.03); }
 
     .chat-item {
-      flex: 1; min-width: 0; text-align: left; border-radius: var(--r-sm); padding: 9px 10px;
+      flex: 1; min-width: 0; text-align: left; border-radius: var(--r-sm); padding: 9px 8px;
       display: flex; flex-direction: column; gap: 2px;
       cursor: pointer; border: none; width: 100%;
       background: transparent;
       transition: none;
     }
-    .chat-item.active { background: var(--orange-soft); }
     .chat-row:has(.chat-item.active) { background: var(--orange-soft); }
     .chat-item-title { font-size: 0.81rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
     .chat-item-meta { font-size: 0.67rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2376,7 +2376,7 @@
       var allChats = appState.chats.slice().sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
       var pinned = allChats.filter(function(c) { return c.pinned; });
       var unpinned = allChats.filter(function(c) { return !c.pinned; });
-      var pinIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="M4.93 10.93l2.83-2.83"/><path d="M19.07 10.93l-2.83-2.83"/><path d="M12 10v12"/><path d="M8 22h8"/></svg>';
+      var pinIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 11.24V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v5.24a2 2 0 0 1-1.11 1.31l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>';
       function chatRowMarkup(chat) {
         return [
           '<div class="chat-row">',
