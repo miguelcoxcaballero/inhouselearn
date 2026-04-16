@@ -2767,9 +2767,10 @@
     function renderUsageDonut() {
       var data = getUsageData();
       var used = data.total || 0;
-      var pct = Math.min(used / USAGE_SOFT_LIMIT, 1);
+      var isBlocked = !!data.lastBackendError;
+      var pct = isBlocked ? 1 : Math.min(used / USAGE_SOFT_LIMIT, 1);
       var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
-      if (data.lastBackendError) {
+      if (isBlocked) {
         color = '#ef4444';
       }
       var radius = 15.915;
@@ -2790,8 +2791,9 @@
     function renderUsagePopup() {
       var data = getUsageData();
       var used = data.total || 0;
-      var estimatedRemaining = Math.max(0, USAGE_SOFT_LIMIT - used);
-      var pct = Math.min(used / USAGE_SOFT_LIMIT, 1);
+      var isBlocked = !!data.lastBackendError;
+      var estimatedRemaining = isBlocked ? 0 : Math.max(0, USAGE_SOFT_LIMIT - used);
+      var pct = isBlocked ? 1 : Math.min(used / USAGE_SOFT_LIMIT, 1);
       var color = pct < 0.5 ? '#22c55e' : pct < 0.8 ? '#eab308' : '#ef4444';
       var models = data.models || {};
       var modelRows = Object.keys(models).map(function(m) {
@@ -3119,21 +3121,17 @@
         }
 
         if (response.status === 429) {
-          var attempts = Number(retryCount) || 0;
           var backendMessage = data && data.error && data.error.message
             ? data.error.message
             : 'Google ha limitado temporalmente este modelo o esta cuenta.';
-          if (attempts >= 2) {
-            trackBackendLimit('429', backendMessage, activeModelName(chat));
-            throw new Error('Google esta limitando temporalmente ' + activeModelLabel(chat) + '. Prueba otra vez en un momento o cambia a Gemini 2.5 Flash.');
-          }
+          trackBackendLimit('429', backendMessage, activeModelName(chat));
+          
           var retryMatch = backendMessage
             ? backendMessage.match(/retry in ([\d.]+)s/i)
             : null;
-          var waitSec = retryMatch ? Math.min(parseFloat(retryMatch[1]), 45) : 8;
-          setComposerStatus('Limite de tasa. Reintentando en ' + Math.ceil(waitSec) + 's...');
-          await new Promise(function(r) { setTimeout(r, waitSec * 1000); });
-          return callGemini(chat, signal, false, attempts + 1);
+          var waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : 60;
+          
+          throw new Error('Se ha alcanzado el límite de usos. Podrás mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
         }
 
         const message = data && data.error && data.error.message
