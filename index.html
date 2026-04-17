@@ -282,6 +282,35 @@
       line-height: 1.65; font-size: 0.9rem; overflow-wrap: anywhere;
       box-shadow: var(--shadow-sm);
     }
+    .reasoning {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.02);
+      margin-bottom: 10px;
+      font-size: 0.82rem;
+    }
+    .reasoning[open] { background: rgba(0,0,0,0.035); }
+    .reasoning-summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; cursor: pointer; color: var(--muted);
+      font-weight: 600; letter-spacing: 0.02em; list-style: none;
+      user-select: none;
+    }
+    .reasoning-summary::-webkit-details-marker { display: none; }
+    .reasoning-summary::after {
+      content: '▸'; margin-left: auto; font-size: 0.7rem; transition: transform 0.15s;
+    }
+    .reasoning[open] .reasoning-summary::after { transform: rotate(90deg); }
+    .reasoning-icon svg { width: 14px; height: 14px; }
+    .reasoning-body {
+      padding: 6px 12px 10px;
+      border-top: 1px dashed var(--border);
+      color: var(--muted);
+      line-height: 1.55;
+      max-height: 340px; overflow-y: auto;
+    }
+    .reasoning-body p { margin: 0 0 6px; }
+    .reasoning-body p:last-child { margin-bottom: 0; }
     .message.user-msg .bubble {
       background: var(--orange-soft); border-color: var(--orange-border);
       border-radius: var(--r-lg) 4px var(--r-lg) var(--r-lg);
@@ -672,10 +701,10 @@
       </div>
 
       <div class="boot-phase" data-phase="not-installed">
-        <h1 class="boot-h">Instala el agente local</h1>
-        <p class="boot-p">Un pequeño proceso en tu ordenador que conecta con Claude Code, Gemini CLI y Codex. Sin API keys ni proyecto de Google Cloud.</p>
+        <h1 class="boot-h">Descarga el agente</h1>
+        <p class="boot-p">Un solo archivo. Descarga, doble click y listo. Conecta con Claude Code, Gemini y Codex sin API keys.</p>
         <a class="boot-btn" id="boot-download" href="#" download>Descargar para Windows</a>
-        <p class="boot-hint">Se abrirá automáticamente al terminar la instalación.</p>
+        <p class="boot-hint">Si Windows muestra un aviso, pulsa "Más información" → "Ejecutar de todas formas".</p>
       </div>
 
       <div class="boot-phase" data-phase="installing">
@@ -834,7 +863,7 @@
       POLL_MAX_MS: 10 * 60 * 1000,
       RELEASE_BASE: '',
       INSTALLERS: {
-        win: 'releases/inhouse-agent-windows.zip'
+        win: 'releases/inhouse-agent.exe'
       }
     };
 
@@ -1017,6 +1046,15 @@
       },
       {
         provider: 'gemini',
+        id: 'gemini-2.5-flash-lite',
+        label: 'Gemini 2.5 Flash Lite',
+        badge: '2.5 Flash Lite',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        provider: 'gemini',
         id: 'gemini-2.5-flash',
         label: 'Gemini 2.5 Flash',
         badge: '2.5 Flash',
@@ -1035,10 +1073,10 @@
       },
       {
         provider: 'gemini',
-        id: 'gemini-3-flash',
-        label: 'Gemini 3 Flash',
-        badge: '3 Flash',
-        preview: false,
+        id: 'gemini-3.1-flash-lite-preview',
+        label: 'Gemini 3.1 Flash Lite Preview',
+        badge: '3.1 Flash Lite (P)',
+        preview: true,
         thinkingLevels: ['minimal', 'low', 'medium', 'high'],
         defaultThinkingLevel: 'minimal'
       },
@@ -1053,39 +1091,12 @@
       },
       {
         provider: 'gemini',
-        id: 'gemini-3-pro',
-        label: 'Gemini 3 Pro',
-        badge: '3 Pro',
-        preview: false,
-        thinkingLevels: ['low', 'medium', 'high'],
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'gemini',
         id: 'gemini-3-pro-preview',
         label: 'Gemini 3 Pro Preview',
         badge: '3 Pro (P)',
         preview: true,
         thinkingLevels: ['low', 'medium', 'high'],
         defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'gemini',
-        id: 'gemini-3.1-flash',
-        label: 'Gemini 3.1 Flash',
-        badge: '3.1 Flash',
-        preview: false,
-        thinkingLevels: ['minimal', 'low', 'medium', 'high'],
-        defaultThinkingLevel: 'minimal'
-      },
-      {
-        provider: 'gemini',
-        id: 'gemini-3.1-pro',
-        label: 'Gemini 3.1 Pro',
-        badge: '3.1 Pro',
-        preview: false,
-        thinkingLevels: ['low', 'high'],
-        defaultThinkingLevel: 'high'
       },
       {
         provider: 'gemini',
@@ -1156,14 +1167,12 @@
     };
     const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
     const CODE_ASSIST_VERSION = 'v1internal';
-    const CODE_ASSIST_CREDIT_TYPE = 'GOOGLE_ONE_AI';
+    const CODE_ASSIST_CREDIT_TYPE = 'G1_CREDIT_TYPE';
+    const CODE_ASSIST_CREDIT_TYPES = ['G1_CREDIT_TYPE', 'GOOGLE_ONE_AI', 'GOOGLE_AI_PRO'];
     const CODE_ASSIST_CREDIT_ELIGIBLE_MODELS = [
-      'gemini-3-flash',
       'gemini-3-flash-preview',
-      'gemini-3-pro',
       'gemini-3-pro-preview',
-      'gemini-3.1-flash',
-      'gemini-3.1-pro',
+      'gemini-3.1-flash-lite-preview',
       'gemini-3.1-pro-preview'
     ];
     let googleTokenClient = null;
@@ -1339,6 +1348,7 @@
         content,
         parts,
         attachments,
+        thinking: message && typeof message.thinking === 'string' ? message.thinking : '',
         alternatives: Array.isArray(message && message.alternatives) ? message.alternatives : [],
         activeAlternative: Number(message && message.activeAlternative) || 0,
         pending: !!(message && message.pending),
@@ -1995,6 +2005,17 @@
         .trim();
     }
 
+    function extractThoughtTextFromParts(parts) {
+      if (!Array.isArray(parts)) {
+        return '';
+      }
+      return parts
+        .filter((part) => part && part.text && part.thought)
+        .map((part) => part.text)
+        .join('')
+        .trim();
+    }
+
     function ensureOauthConfig() {
       if (!isConfigured(APP_CONFIG.GOOGLE_CLIENT_ID)) {
         throw new Error('Falta configurar GOOGLE_CLIENT_ID para el login con Google.');
@@ -2377,15 +2398,20 @@
         const msgClass = isUser ? 'message user-msg' : 'message';
         const badgeMarkup = renderMessageBadge(message.role);
         const visibleContent = getVisibleContent(message);
-        const body = message.pending ? assistantTypingMarkup() : renderMarkdown(visibleContent);
-        const attachmentMarkup = message.pending ? '' : renderMessageAttachments(message);
+        const hasVisible = typeof visibleContent === 'string' && visibleContent.trim().length > 0;
+        const thinking = !isUser && typeof message.thinking === 'string' ? message.thinking : '';
+        const thinkingMarkup = thinking ? renderReasoningMarkup(message, thinking, !hasVisible && message.pending) : '';
+        const body = message.pending && !hasVisible
+          ? assistantTypingMarkup()
+          : renderMarkdown(visibleContent);
+        const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
         const actionsMarkup = renderMsgActions(message, idx === lastAssistantIdx);
         return [
           '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
           '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
           '  <div class="message-body">',
           '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-          '    <div class="bubble">' + body + attachmentMarkup + '</div>',
+          '    <div class="bubble">' + thinkingMarkup + body + attachmentMarkup + '</div>',
           actionsMarkup,
           '  </div>',
           '</article>'
@@ -2397,7 +2423,31 @@
       requestAnimationFrame(scrollThreadToBottom);
     }
 
+    function renderReasoningMarkup(message, thinking, liveOpen) {
+      const storageKey = 'reasoning::' + message.id;
+      let openState = null;
+      try { openState = sessionStorage.getItem(storageKey); } catch (_) {}
+      const isOpen = openState === null ? !!liveOpen : openState === '1';
+      const label = message.pending ? 'Razonando...' : 'Razonamiento';
+      return [
+        '<details class="reasoning"' + (isOpen ? ' open' : '') + ' data-reasoning-id="' + message.id + '">',
+        '  <summary class="reasoning-summary">',
+        '    <span class="reasoning-icon" aria-hidden="true">',
+        '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z"/></svg>',
+        '    </span>',
+        '    <span>' + escapeHtml(label) + '</span>',
+        '  </summary>',
+        '  <div class="reasoning-body">' + renderMarkdown(thinking) + '</div>',
+        '</details>'
+      ].join('');
+    }
+
     function bindThreadActions() {
+      elements.thread.querySelectorAll('[data-reasoning-id]').forEach(function(el) {
+        el.addEventListener('toggle', function() {
+          try { sessionStorage.setItem('reasoning::' + el.dataset.reasoningId, el.open ? '1' : '0'); } catch (_) {}
+        });
+      });
       elements.thread.querySelectorAll('[data-edit-msg]').forEach(function(btn) {
         btn.addEventListener('click', function() { editMessage(btn.dataset.editMsg); });
       });
@@ -2814,7 +2864,8 @@
       const thinkingLevel = currentThinkingLevel(chat);
       if (thinkingLevel) {
         generationConfig.thinkingConfig = {
-          thinkingLevel
+          thinkingLevel,
+          includeThoughts: true
         };
       }
 
@@ -2844,6 +2895,10 @@
 
     function buildCodeAssistGenerateEndpoint() {
       return buildCodeAssistBaseUrl() + ':generateContent';
+    }
+
+    function buildCodeAssistStreamEndpoint() {
+      return buildCodeAssistBaseUrl() + ':streamGenerateContent?alt=sse';
     }
 
     function buildCodeAssistLoadEndpoint() {
@@ -3380,15 +3435,21 @@
     }
 
     function sumCreditAmount(entries) {
-      if (!Array.isArray(entries)) {
+      if (!Array.isArray(entries) || !entries.length) {
         return null;
       }
-      return entries.reduce(function(total, entry) {
-        if (!entry || entry.creditType !== CODE_ASSIST_CREDIT_TYPE) {
-          return total;
-        }
-        return total + (parseInt(entry.creditAmount, 10) || 0);
-      }, 0);
+      var total = 0;
+      var matched = false;
+      entries.forEach(function(entry) {
+        if (!entry) return;
+        var amount = parseInt(entry.creditAmount, 10);
+        if (!isFinite(amount)) return;
+        var type = String(entry.creditType || '');
+        if (type && CODE_ASSIST_CREDIT_TYPES.indexOf(type) === -1) return;
+        total += amount;
+        matched = true;
+      });
+      return matched ? total : null;
     }
 
     function syncUsageCreditsRemaining(entries) {
@@ -3518,6 +3579,12 @@
       ].join('');
     }
 
+    function formatNumber(value) {
+      var n = Number(value);
+      if (!isFinite(n)) return '-';
+      return n.toLocaleString();
+    }
+
     function renderUsagePopup() {
       var content = document.getElementById('usage-popup-content');
       if (!content) return;
@@ -3545,11 +3612,41 @@
             '<div class="usage-row"><span class="usage-row-label">Login detectado</span><span class="usage-row-value">' + (activeStatus.connected ? 'si' : 'no') + '</span></div>' +
           '</div>'
         : '';
+
+      var usageBlock = '';
+      if (activeProviderName() === 'gemini') {
+        var usageData = getUsageData();
+        var usageRows = [];
+        if (typeof usageData.creditsRemaining === 'number' && usageData.creditsRemaining !== null) {
+          usageRows.push('<div class="usage-row"><span class="usage-row-label">Creditos Google AI</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.creditsRemaining)) + '</span></div>');
+        }
+        if (usageData.creditsSessionConsumed > 0) {
+          usageRows.push('<div class="usage-row"><span class="usage-row-label">Consumidos en sesion</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.creditsSessionConsumed)) + '</span></div>');
+        }
+        var modelKey = activeModelName();
+        var quota = usageData.quotaByModel && usageData.quotaByModel[modelKey];
+        if (quota) {
+          usageRows.push('<div class="usage-row"><span class="usage-row-label">Cuota ' + escapeHtml(activeModelLabel()) + '</span><span class="usage-row-value">' + escapeHtml(formatNumber(quota.remaining) + ' / ' + formatNumber(quota.limit)) + '</span></div>');
+          if (quota.resetTime) {
+            usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(quota.resetTime)) + '</span></div>');
+          }
+        }
+        if (usageData.lastUsageMetadata && usageData.lastUsageMetadata.totalTokenCount) {
+          usageRows.push('<div class="usage-row"><span class="usage-row-label">Ultimo uso (tokens)</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.lastUsageMetadata.totalTokenCount)) + '</span></div>');
+        }
+        if (usageRows.length) {
+          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">USO GEMINI</div>' + usageRows.join('') + '</div>';
+        } else {
+          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:0.7rem;color:var(--muted)">Envia un mensaje para ver los creditos y cuota actuales.</div>';
+        }
+      }
+
       content.innerHTML = [
         '<div class="usage-row"><span class="usage-row-label">Daemon</span><span class="usage-row-value">' + escapeHtml(status.ok ? 'online' : 'offline') + '</span></div>',
         '<div class="usage-row"><span class="usage-row-label">Version</span><span class="usage-row-value">' + escapeHtml(status.version || '-') + '</span></div>',
         '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">PROVIDERS</div>' + rows + '</div>',
-        detailBlock
+        detailBlock,
+        usageBlock
       ].join('');
     }
 
@@ -3559,6 +3656,13 @@
       popup.classList.toggle('hidden');
       if (isHidden) {
         renderUsagePopup();
+        if (appState.accessToken && activeProviderName() === 'gemini') {
+          refreshCodeAssistUsage(true).catch(function() {}).then(function() {
+            if (!popup.classList.contains('hidden')) {
+              renderUsagePopup();
+            }
+          });
+        }
       }
     }
 
@@ -3842,12 +3946,27 @@
       };
     }
 
-    async function callModel(chat, signal) {
+    async function callModel(chat, signal, onProgress) {
+      if (activeProviderName(chat) === 'gemini' && appState.accessToken) {
+        const streamResult = await callGeminiStream(chat, signal, onProgress);
+        return {
+          text: streamResult.text || '',
+          thinking: streamResult.thinking || '',
+          parts: Array.isArray(streamResult.parts) && streamResult.parts.length
+            ? streamResult.parts
+            : [{ text: streamResult.text || '' }]
+        };
+      }
       const payload = buildDaemonChatBody(chat);
       const result = await daemonFetchJson('/v1/chat', payload, signal);
+      const text = result.text || '';
+      if (typeof onProgress === 'function') {
+        onProgress({ text, thinking: '', parts: [{ text }], done: true });
+      }
       return {
-        text: result.text || '',
-        parts: [{ text: result.text || '' }]
+        text,
+        thinking: '',
+        parts: [{ text }]
       };
     }
 
@@ -4131,6 +4250,143 @@
       };
     }
 
+    async function callGeminiStream(chat, signal, onProgress) {
+      if (!codeAssistProject()) {
+        await refreshCodeAssistCredits(false);
+      }
+      if (!codeAssistProject()) {
+        throw new Error('Code Assist no devolvio un cloudaicompanionProject util para esta cuenta. Si quieres forzar uno propio, usa APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto que tenga Cloud Code Private API habilitada.');
+      }
+      ensureOauthConfig();
+      if (!appState.accessToken) {
+        throw new Error('Inicia sesion con Google para usar Gemini.');
+      }
+
+      const requestBody = buildCodeAssistGenerateBody(chat);
+      const response = await fetch(buildCodeAssistStreamEndpoint(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + appState.accessToken,
+          Accept: 'text/event-stream'
+        },
+        body: JSON.stringify(requestBody),
+        signal
+      });
+
+      if (!response.ok) {
+        var errorPayload = {};
+        try { errorPayload = await response.json(); } catch (_) { errorPayload = {}; }
+        if (response.status === 429) {
+          var backendMessage = extractBackendErrorMessage(errorPayload, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
+          trackBackendLimit('429', backendMessage, activeModelName(chat));
+          var waitSec = extractWaitSecondsFromBackendMessage(backendMessage);
+          throw new Error('Se ha alcanzado el limite de usos. Podras mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
+        }
+        throw new Error(extractBackendErrorMessage(errorPayload, response.status));
+      }
+      if (!response.body || !response.body.getReader) {
+        const fallback = await response.json().catch(() => ({}));
+        const parts = extractModelParts(fallback);
+        const text = extractVisibleTextFromParts(parts);
+        const thinking = extractThoughtTextFromParts(parts);
+        if (typeof onProgress === 'function') onProgress({ text, thinking, parts, done: true });
+        trackApiUsage(activeModelName(chat), fallback);
+        await refreshCodeAssistUsage(false);
+        return { text, thinking, parts };
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let accumulatedText = '';
+      let accumulatedThinking = '';
+      const accumulatedParts = [];
+      let lastPayload = null;
+
+      function flushEvent(rawEvent) {
+        const lines = rawEvent.split(/\r?\n/);
+        const dataLines = [];
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).replace(/^\s/, ''));
+          }
+        }
+        if (!dataLines.length) return;
+        const payloadText = dataLines.join('\n').trim();
+        if (!payloadText || payloadText === '[DONE]') return;
+        let payload;
+        try {
+          payload = JSON.parse(payloadText);
+        } catch (_) {
+          return;
+        }
+        lastPayload = payload;
+        const chunkParts = extractModelParts(payload);
+        if (chunkParts.length) {
+          for (const part of chunkParts) {
+            accumulatedParts.push(part);
+            if (!part || typeof part.text !== 'string') continue;
+            if (part.thought) {
+              accumulatedThinking += part.text;
+            } else {
+              accumulatedText += part.text;
+            }
+          }
+          if (typeof onProgress === 'function') {
+            onProgress({
+              text: accumulatedText.trim(),
+              thinking: accumulatedThinking.trim(),
+              parts: accumulatedParts.slice(),
+              done: false
+            });
+          }
+        }
+      }
+
+      const drainBuffer = () => {
+        const re = /\r?\n\r?\n/;
+        while (true) {
+          const match = re.exec(buffer);
+          if (!match) return;
+          const rawEvent = buffer.slice(0, match.index);
+          buffer = buffer.slice(match.index + match[0].length);
+          flushEvent(rawEvent);
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        drainBuffer();
+      }
+      buffer += decoder.decode();
+      drainBuffer();
+      if (buffer.trim()) flushEvent(buffer);
+
+      if (lastPayload) {
+        trackApiUsage(activeModelName(chat), lastPayload);
+      }
+      await refreshCodeAssistUsage(false);
+
+      const finalText = accumulatedText.trim();
+      const finalThinking = accumulatedThinking.trim();
+      if (typeof onProgress === 'function') {
+        onProgress({
+          text: finalText,
+          thinking: finalThinking,
+          parts: accumulatedParts.slice(),
+          done: true
+        });
+      }
+      return {
+        text: finalText,
+        thinking: finalThinking,
+        parts: accumulatedParts
+      };
+    }
+
     function buildUserMessageParts(prompt, attachments) {
       const parts = [];
       if (prompt) {
@@ -4213,9 +4469,25 @@
       _sendLock = false;
 
       try {
-        const reply = await callModel(chat, appState.activeController.signal);
+        let lastRender = 0;
+        const onProgress = (chunk) => {
+          if (!chunk) return;
+          const hasText = typeof chunk.text === 'string' && chunk.text.length > 0;
+          const hasThinking = typeof chunk.thinking === 'string' && chunk.thinking.length > 0;
+          if (hasText) assistantMessage.content = chunk.text;
+          if (hasThinking) assistantMessage.thinking = chunk.thinking;
+          if (Array.isArray(chunk.parts) && chunk.parts.length) assistantMessage.parts = chunk.parts;
+          if (hasText || hasThinking) assistantMessage.pending = false;
+          const now = Date.now();
+          if (chunk.done || now - lastRender >= 60) {
+            lastRender = now;
+            renderThread();
+          }
+        };
+        const reply = await callModel(chat, appState.activeController.signal, onProgress);
         assistantMessage.pending = false;
         assistantMessage.content = reply.text;
+        assistantMessage.thinking = reply.thinking || assistantMessage.thinking || '';
         assistantMessage.parts = reply.parts;
         touchChat(chat);
         setComposerStatus('');
