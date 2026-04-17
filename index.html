@@ -119,6 +119,7 @@
       background: transparent; color: var(--muted);
     }
     .btn-icon:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+    .btn-localhost svg { flex-shrink: 0; }
     .profile-btn {
       width: 32px; height: 32px; border-radius: 50%;
       background: conic-gradient(from 225deg, #ea4335 0deg 90deg, #4285f4 90deg 180deg, #34a853 180deg 270deg, #fbbc04 270deg 360deg);
@@ -486,6 +487,8 @@
       .brand svg { width: 22px; height: 13px; }
       .sel-wrap { display: none; }
       .btn-primary .btn-label { display: none; }
+      .btn-localhost { width: 34px; padding: 0; }
+      .btn-localhost .btn-label { display: none; }
       .thread-wrap { padding: 12px 8px; }
       .bubble { padding: 10px 13px; font-size: 0.87rem; }
       .composer { font-size: 0.87rem; }
@@ -680,6 +683,11 @@
       background: none; padding: 4px 8px; border: 0; cursor: pointer;
     }
     .boot-link:hover { color: var(--text-secondary); }
+    .boot-extra {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+    }
     .boot-hint {
       font-size: 0.76rem; color: var(--muted); margin-top: 4px;
     }
@@ -717,6 +725,9 @@
         <h1 class="boot-h">No hemos podido conectar</h1>
         <p class="boot-p" id="boot-error-msg">El agente local no responde. Comprueba que esté en ejecución.</p>
         <button class="boot-btn" id="boot-error-retry" type="button">Reintentar</button>
+      </div>
+      <div class="boot-extra">
+        <button class="boot-link" id="boot-open-localhost" type="button">Abrir localhost</button>
       </div>
     </div>
   </div>
@@ -771,6 +782,15 @@
             <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           </svg>
         </button>
+        <button class="btn btn-outline btn-localhost" id="open-localhost-btn" title="Abrir el estado del daemon local">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3h7v7"></path>
+            <path d="M10 14L21 3"></path>
+            <path d="M21 14v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h4"></path>
+          </svg>
+          <span class="btn-label">Abrir localhost</span>
+        </button>
+        <button class="btn btn-outline" id="google-drive-btn">Conectar Drive</button>
         <button class="btn btn-outline" id="login-btn">Conectar</button>
         <button class="profile-btn hidden" id="logout-btn" title="Cerrar sesión">
           <img id="profile-avatar" alt="">
@@ -863,7 +883,7 @@
       POLL_MAX_MS: 10 * 60 * 1000,
       RELEASE_BASE: '',
       INSTALLERS: {
-        win: 'https://github.com/miguelcoxcaballero/inhouselearn/releases/download/v0.1.3/inhouse-agent.exe'
+        win: './downloads/windows/inhouse-agent-setup.exe'
       }
     };
 
@@ -874,6 +894,18 @@
     function installerUrl() {
       const file = DAEMON_CONFIG.INSTALLERS.win;
       return (DAEMON_CONFIG.RELEASE_BASE || '') + file;
+    }
+
+    function daemonBrowserUrl() {
+      return DAEMON_CONFIG.URL + DAEMON_CONFIG.PING_PATH;
+    }
+
+    function openDaemonInBrowser() {
+      const target = daemonBrowserUrl();
+      const win = window.open(target, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        window.location.href = target;
+      }
     }
 
     async function pingDaemon(timeoutMs) {
@@ -938,19 +970,20 @@
       const downloadBtn = document.getElementById('boot-download');
       const retryBtn = document.getElementById('boot-retry');
       const errorRetry = document.getElementById('boot-error-retry');
+      const openLocalhostBtn = document.getElementById('boot-open-localhost');
 
       if (boot) {
         const notInstalledPhase = boot.querySelector('[data-phase="not-installed"] .boot-p');
         const notInstalledHint = boot.querySelector('[data-phase="not-installed"] .boot-hint');
         const installingCopy = boot.querySelector('[data-phase="installing"] .boot-p');
         if (notInstalledPhase) {
-          notInstalledPhase.innerHTML = 'Descarga el paquete de Windows, extr&aacute;elo y ejecuta <code>start-agent</code>. El chat usar&aacute; los CLIs locales desde tu propio ordenador.';
+          notInstalledPhase.innerHTML = 'Descarga el instalador de Windows y ejec&uacute;talo. El propio instalador bajar&aacute; el runtime y dejar&aacute; el agente listo en tu ordenador.';
         }
         if (notInstalledHint) {
-          notInstalledHint.textContent = 'Por ahora solo hay instalador para Windows. La web detectará el daemon en cuanto arranque.';
+          notInstalledHint.textContent = 'Por ahora solo hay instalador para Windows. No hace falta extraer ningun ZIP.';
         }
         if (installingCopy) {
-          installingCopy.innerHTML = 'Esperando a que el agente arranque... Si ya lo has descargado, ejecuta ahora <code>start-agent</code> dentro del paquete.';
+          installingCopy.innerHTML = 'Esperando a que el agente arranque... Si ya has descargado el instalador, ejec&uacute;talo ahora y esta web avanzar&aacute; sola cuando detecte el daemon.';
         }
       }
 
@@ -980,6 +1013,12 @@
       if (errorRetry) {
         errorRetry.addEventListener('click', () => { startDaemonBoot(); });
       }
+
+      if (openLocalhostBtn) {
+        openLocalhostBtn.addEventListener('click', () => {
+          openDaemonInBrowser();
+        });
+      }
     }
 
     async function startDaemonBoot() {
@@ -1004,7 +1043,7 @@
       DEFAULT_PROVIDER: 'codex',
       DEFAULT_MODEL: 'gpt-5.4',
       DEFAULT_THINKING_LEVEL: '',
-      SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
+      SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension, but never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
       MAX_OUTPUT_TOKENS: 32768,
       TEMPERATURE: 1.0,
       TOP_P: 0.95
@@ -1211,10 +1250,13 @@
       sendIcon: document.getElementById('send-icon'),
       newChatBtn: document.getElementById('new-chat-btn'),
       clearChatBtn: document.getElementById('clear-chat-btn'),
+      openLocalhostBtn: document.getElementById('open-localhost-btn'),
+      googleDriveBtn: document.getElementById('google-drive-btn'),
       loginBtn: document.getElementById('login-btn'),
       logoutBtn: document.getElementById('logout-btn'),
       profileCard: document.getElementById('profile-card'),
       profileAvatar: document.getElementById('profile-avatar'),
+      profileAvatarSidebar: document.getElementById('profile-avatar-sidebar'),
       profileName: document.getElementById('profile-name'),
       profileEmail: document.getElementById('profile-email'),
       authCopy: document.getElementById('auth-copy'),
@@ -2199,7 +2241,40 @@
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     }
 
+    function looksLikeLatexMathBlock(code) {
+      var text = String(code || '').trim();
+      if (!text || text.length > 1600) {
+        return false;
+      }
+      var lines = text.split(/\r?\n/).map(function(line) { return line.trim(); }).filter(Boolean);
+      if (!lines.length || lines.length > 14) {
+        return false;
+      }
+      var joined = lines.join(' ');
+      var latexSignals = 0;
+      var commandMatches = joined.match(/\\[a-zA-Z]+/g);
+      var symbolMatches = joined.match(/[{}_^]/g);
+      latexSignals += commandMatches ? commandMatches.length : 0;
+      latexSignals += symbolMatches ? symbolMatches.length : 0;
+
+      var hasMathOperator = /(?:^|[\s(])[\w\\{}^]+?\s*(?:=|\\approx|\\neq|\\geq|\\leq|\\sim|\\propto|\\to|\\Rightarrow)|\\frac|\\sum|\\int|\\sqrt|\\sin|\\cos|\\tan|\\cdot|\\times|\\pm|\\mp/.test(joined);
+      var looksLikeCode = /(?:\bconst\b|\blet\b|\bvar\b|\bfunction\b|=>|console\.|<\/?[a-z][^>]*>|#include\b|\bimport\b|\bfrom\b|\bclass\b|;\s*$)/i.test(joined);
+
+      return !looksLikeCode && hasMathOperator && latexSignals >= 2;
+    }
+
+    function normalizeMathMarkdown(text) {
+      return String(text || '').replace(/```(?:latex|tex)?\s*([\s\S]*?)```/gi, function(match, code) {
+        var raw = String(code || '').trim();
+        if (!looksLikeLatexMathBlock(raw)) {
+          return match;
+        }
+        return '\n\n$$\n' + raw + '\n$$\n\n';
+      });
+    }
+
     function fallbackRenderMarkdown(text) {
+      text = normalizeMathMarkdown(text);
       const fences = [];
       let html = escapeHtml(text).replace(/```([\s\S]*?)```/g, function(match, code) {
         const token = '__CODE_BLOCK_' + fences.length + '__';
@@ -2233,6 +2308,8 @@
       if (!text) {
         return '';
       }
+
+      text = normalizeMathMarkdown(text);
 
       if (!(window.marked && window.DOMPurify)) {
         return fallbackRenderMarkdown(text);
@@ -3744,6 +3821,24 @@
       });
       elements.newChatBtn.addEventListener('click', newChat);
       elements.clearChatBtn.addEventListener('click', clearActiveChat);
+      elements.openLocalhostBtn.addEventListener('click', () => {
+        openDaemonInBrowser();
+      });
+      elements.googleDriveBtn.addEventListener('click', async () => {
+        try {
+          ensureOauthConfig();
+          await loginWithGoogle({
+            interactive: true,
+            toast: true
+          });
+          setComposerStatus('Google Drive listo.');
+          window.setTimeout(() => {
+            if (!appState.busy) setComposerStatus('');
+          }, 1400);
+        } catch (error) {
+          setComposerStatus(error.message || 'No se pudo conectar Google Drive.');
+        }
+      });
       if (elements.providerSelect) {
         elements.providerSelect.addEventListener('change', () => {
           const chat = getActiveChat();
@@ -3829,23 +3924,62 @@
       const providerLabel = activeProviderLabel();
       const providerStatus = daemonProviderStatus(providerId);
       const isReady = !!(providerStatus && providerStatus.installed && providerStatus.connected);
-      elements.profileCard.classList.add('hidden');
-      elements.logoutBtn.classList.add('hidden');
       elements.loginBtn.classList.remove('hidden');
       elements.loginBtn.textContent = isReady
         ? 'Reabrir ' + providerLabel
         : 'Conectar ' + providerLabel;
-      if (!__daemonStatus || !__daemonStatus.ok) {
-        elements.authCopy.textContent = 'El daemon local no responde todavia.';
-        return;
+
+      const hasDriveOauth = hasOauthConfig();
+      const driveConnected = !!(appState.accessToken && appState.profile);
+      if (elements.googleDriveBtn) {
+        elements.googleDriveBtn.disabled = !hasDriveOauth;
+        elements.googleDriveBtn.textContent = !hasDriveOauth
+          ? 'Drive sin OAuth'
+          : (driveConnected ? 'Drive listo' : 'Conectar Drive');
+        elements.googleDriveBtn.title = hasDriveOauth
+          ? (driveConnected ? 'Google Drive conectado y sincronizando historial' : 'Iniciar sesión con Google para guardar el historial en Drive')
+          : 'Configura GOOGLE_CLIENT_ID y el proyecto OAuth para activar Google Drive';
       }
-      if (providerStatus && providerStatus.installed && providerStatus.connected) {
-        elements.authCopy.textContent = providerLabel + ' esta listo en tu ordenador.';
-      } else if (providerStatus && providerStatus.installed) {
-        elements.authCopy.textContent = providerLabel + ' esta instalado, pero falta completar el login del CLI.';
+
+      elements.profileCard.classList.toggle('hidden', !driveConnected);
+      elements.logoutBtn.classList.toggle('hidden', !driveConnected);
+      elements.logoutBtn.title = driveConnected ? 'Cerrar sesión de Google Drive' : 'Cerrar sesión';
+
+      if (driveConnected) {
+        const picture = String(appState.profile.picture || '').trim();
+        if (picture) {
+          elements.profileAvatar.src = picture;
+          if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.src = picture;
+        } else {
+          elements.profileAvatar.removeAttribute('src');
+          if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
+        }
+        elements.profileName.textContent = String(appState.profile.name || 'Google Drive');
+        elements.profileEmail.textContent = String(appState.profile.email || '');
       } else {
-        elements.authCopy.textContent = providerLabel + ' no esta instalado todavia. El boton Conectar abre el flujo de instalacion/login.';
+        elements.profileAvatar.removeAttribute('src');
+        if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
+        elements.profileName.textContent = '';
+        elements.profileEmail.textContent = '';
       }
+
+      let providerCopy = '';
+      if (!__daemonStatus || !__daemonStatus.ok) {
+        providerCopy = 'El daemon local no responde todavia.';
+      } else if (providerStatus && providerStatus.installed && providerStatus.connected) {
+        providerCopy = providerLabel + ' esta listo en tu ordenador.';
+      } else if (providerStatus && providerStatus.installed) {
+        providerCopy = providerLabel + ' esta instalado, pero falta completar el login del CLI.';
+      } else {
+        providerCopy = providerLabel + ' no esta instalado todavia. El boton Conectar abre el flujo de instalacion/login.';
+      }
+
+      const driveCopy = !hasDriveOauth
+        ? 'Google Drive no esta configurado en esta build.'
+        : driveConnected
+          ? 'Google Drive esta conectado y el historial se puede guardar alli.'
+          : 'Falta iniciar sesion con Google para sincronizar el historial en Drive.';
+      elements.authCopy.textContent = providerCopy + ' ' + driveCopy;
     }
 
     async function refreshDaemonStatus(timeoutMs) {
@@ -4514,6 +4648,7 @@
 
     function boot() {
       loadState();
+      loadGoogleTokenFromStorage();
       updateConfigUi();
       updateAuthUi();
       renderHistory();
@@ -4528,6 +4663,11 @@
       elements.composer.placeholder = 'Escribe aqu\u00ed...';
 
       refreshDaemonStatus(1200);
+      window.setTimeout(() => {
+        tryAutoRestoreGoogleSession().catch((error) => {
+          console.warn('No se pudo restaurar Google Drive automaticamente:', error);
+        });
+      }, 0);
     }
 
     function bindMobileMenu() {
