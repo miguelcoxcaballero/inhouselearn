@@ -975,8 +975,8 @@
       DEFAULT_PROVIDER: 'codex',
       DEFAULT_MODEL: 'gpt-5.4',
       DEFAULT_THINKING_LEVEL: '',
-      SYSTEM_PROMPT: 'You are the inhouse assistant. Be concise, practical, and clear. Keep answers structured when useful.',
-      MAX_OUTPUT_TOKENS: 2048,
+      SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
+      MAX_OUTPUT_TOKENS: 32768,
       TEMPERATURE: 1.0,
       TOP_P: 0.95
     };
@@ -1035,18 +1035,63 @@
       },
       {
         provider: 'gemini',
+        id: 'gemini-3-flash',
+        label: 'Gemini 3 Flash',
+        badge: '3 Flash',
+        preview: false,
+        thinkingLevels: ['minimal', 'low', 'medium', 'high'],
+        defaultThinkingLevel: 'minimal'
+      },
+      {
+        provider: 'gemini',
         id: 'gemini-3-flash-preview',
         label: 'Gemini 3 Flash Preview',
-        badge: '3 Flash',
+        badge: '3 Flash (P)',
         preview: true,
         thinkingLevels: ['minimal', 'low', 'medium', 'high'],
         defaultThinkingLevel: 'minimal'
       },
       {
         provider: 'gemini',
+        id: 'gemini-3-pro',
+        label: 'Gemini 3 Pro',
+        badge: '3 Pro',
+        preview: false,
+        thinkingLevels: ['low', 'medium', 'high'],
+        defaultThinkingLevel: 'medium'
+      },
+      {
+        provider: 'gemini',
+        id: 'gemini-3-pro-preview',
+        label: 'Gemini 3 Pro Preview',
+        badge: '3 Pro (P)',
+        preview: true,
+        thinkingLevels: ['low', 'medium', 'high'],
+        defaultThinkingLevel: 'medium'
+      },
+      {
+        provider: 'gemini',
+        id: 'gemini-3.1-flash',
+        label: 'Gemini 3.1 Flash',
+        badge: '3.1 Flash',
+        preview: false,
+        thinkingLevels: ['minimal', 'low', 'medium', 'high'],
+        defaultThinkingLevel: 'minimal'
+      },
+      {
+        provider: 'gemini',
+        id: 'gemini-3.1-pro',
+        label: 'Gemini 3.1 Pro',
+        badge: '3.1 Pro',
+        preview: false,
+        thinkingLevels: ['low', 'high'],
+        defaultThinkingLevel: 'high'
+      },
+      {
+        provider: 'gemini',
         id: 'gemini-3.1-pro-preview',
         label: 'Gemini 3.1 Pro Preview',
-        badge: '3.1 Pro',
+        badge: '3.1 Pro (P)',
         preview: true,
         thinkingLevels: ['low', 'high'],
         defaultThinkingLevel: 'high'
@@ -1113,9 +1158,13 @@
     const CODE_ASSIST_VERSION = 'v1internal';
     const CODE_ASSIST_CREDIT_TYPE = 'GOOGLE_ONE_AI';
     const CODE_ASSIST_CREDIT_ELIGIBLE_MODELS = [
+      'gemini-3-flash',
+      'gemini-3-flash-preview',
+      'gemini-3-pro',
       'gemini-3-pro-preview',
-      'gemini-3.1-pro-preview',
-      'gemini-3-flash-preview'
+      'gemini-3.1-flash',
+      'gemini-3.1-pro',
+      'gemini-3.1-pro-preview'
     ];
     let googleTokenClient = null;
     let googleTokenRefreshTimer = 0;
@@ -3522,7 +3571,10 @@
       elements.composer.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
           event.preventDefault();
-          handleSend();
+          event.stopPropagation();
+          if (!appState.busy && !_sendLock) {
+            handleSend();
+          }
         }
       });
       elements.composer.addEventListener('paste', async (event) => {
@@ -3582,7 +3634,10 @@
         setComposerDragActive(false);
         await addFilesToComposer(files);
       });
-      elements.sendBtn.addEventListener('click', handleSend);
+      elements.sendBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        handleSend();
+      });
       elements.newChatBtn.addEventListener('click', newChat);
       elements.clearChatBtn.addEventListener('click', clearActiveChat);
       if (elements.providerSelect) {
@@ -4091,7 +4146,10 @@
       return parts;
     }
 
+    let _sendLock = false;
+
     async function handleSend() {
+      // If busy, stop the current request (intentional user action)
       if (appState.busy) {
         if (appState.activeController) {
           appState.activeController.abort();
@@ -4099,13 +4157,19 @@
         return;
       }
 
+      // Prevent double-firing from rapid Enter/click events
+      if (_sendLock) return;
+      _sendLock = true;
+
       const prompt = elements.composer.value.trim();
       const attachments = (appState.composerAttachments || []).slice();
       if (!prompt && !attachments.length) {
+        _sendLock = false;
         return;
       }
       if (appState.attachmentBusy) {
         setComposerStatus('Espera a que terminen de procesarse los adjuntos.');
+        _sendLock = false;
         return;
       }
 
@@ -4113,12 +4177,14 @@
         const status = await refreshDaemonStatus(1200);
         if (!status) {
           setComposerStatus('El daemon local no responde.');
+          _sendLock = false;
           return;
         }
       }
       const selectedProviderStatus = daemonProviderStatus(activeProviderName());
       if (!selectedProviderStatus || !selectedProviderStatus.installed) {
         setComposerStatus('Instala o conecta ' + activeProviderLabel() + ' antes de enviar.');
+        _sendLock = false;
         return;
       }
 
@@ -4143,6 +4209,9 @@
       renderHistory();
       renderThread();
 
+      // Release the lock now that busy=true protects us
+      _sendLock = false;
+
       try {
         const reply = await callModel(chat, appState.activeController.signal);
         assistantMessage.pending = false;
@@ -4159,8 +4228,7 @@
           assistantMessage.content = 'Error: ' + error.message;
           assistantMessage.parts = [{ text: assistantMessage.content }];
           touchChat(chat);
-          setComposerStatus('Hubo un error.');
-          showToast('Error del provider', error.message);
+          setComposerStatus('Hubo un error: ' + error.message);
         }
       } finally {
         appState.busy = false;
