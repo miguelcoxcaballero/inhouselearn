@@ -70,6 +70,7 @@
     .brand:hover svg { transform: translateY(-1px); }
     .topbar-mid {
       flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+      justify-content: flex-start;
     }
     .transport-pill {
       display: none;
@@ -98,6 +99,157 @@
     .topbar-select:hover { border-color: var(--border-strong); }
     .topbar-select:focus { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange-soft); }
     .topbar-end { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto; }
+    .model-menu-wrap, .profile-wrap {
+      position: relative;
+      min-width: 0;
+    }
+    .model-menu-wrap {
+      flex: 1;
+      max-width: 520px;
+    }
+    .model-trigger {
+      width: 100%;
+      min-width: 0;
+      height: 40px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.86);
+      transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), background 0.18s var(--ease);
+    }
+    .model-trigger:hover {
+      border-color: var(--border-strong);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .model-trigger[aria-expanded="true"] {
+      border-color: var(--orange-border);
+      box-shadow: 0 0 0 3px var(--orange-soft);
+      background: var(--surface);
+    }
+    .model-trigger-copy {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+      text-align: left;
+    }
+    .model-trigger-kicker {
+      max-width: 100%;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .model-trigger-main {
+      max-width: 100%;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .model-trigger-meta {
+      max-width: 100%;
+      font-size: 0.69rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .model-trigger-caret {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--muted);
+      transition: transform 0.18s var(--ease);
+    }
+    .model-trigger[aria-expanded="true"] .model-trigger-caret { transform: rotate(180deg); }
+    .topbar-popover {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: min(360px, calc(100vw - 24px));
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.97);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      z-index: 140;
+    }
+    .topbar-popover.hidden { display: none; }
+    .topbar-popover-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .topbar-popover-copy {
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .popover-field {
+      display: block;
+      margin-bottom: 10px;
+    }
+    .popover-field:has(select.hidden) { display: none; }
+    .popover-field-label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .topbar-popover .sel-wrap { width: 100%; }
+    .topbar-popover .topbar-select {
+      width: 100%;
+      padding: 8px 30px 8px 10px;
+      font-size: 0.82rem;
+      background: var(--surface);
+    }
+    .popover-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .popover-actions .btn {
+      flex: 1;
+      min-width: 0;
+    }
+    .profile-popover { width: 280px; }
+    .profile-menu-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .profile-menu-email {
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      overflow-wrap: anywhere;
+    }
 
     /* ─── BUTTONS ────────────────────────────────────── */
     .btn {
@@ -119,7 +271,6 @@
       background: transparent; color: var(--muted);
     }
     .btn-icon:hover { background: rgba(0,0,0,0.05); color: var(--text); }
-    .btn-localhost svg { flex-shrink: 0; }
     .profile-btn {
       width: 32px; height: 32px; border-radius: 50%;
       background: conic-gradient(from 225deg, #ea4335 0deg 90deg, #4285f4 90deg 180deg, #34a853 180deg 270deg, #fbbc04 270deg 360deg);
@@ -130,6 +281,8 @@
     }
     .profile-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
     .profile-btn img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; border: 1.5px solid var(--bg); }
+    .profile-btn img:not([src]) { display: none; }
+    .profile-btn[data-connected="true"] { box-shadow: 0 0 0 2px rgba(34,197,94,0.15); }
 
     /* ─── LAYOUT ─────────────────────────────────────── */
     #app-container { height: 100vh; padding-top: var(--topbar-h); display: flex; flex-direction: column; }
@@ -460,6 +613,11 @@
       :root { --sidebar-w: 0px; --topbar-h: 50px; }
       .hamburger { display: flex; }
       .layout { grid-template-columns: 1fr; }
+      .model-trigger-kicker,
+      .model-trigger-meta { display: none; }
+      .model-trigger { height: 36px; padding: 0 12px; }
+      .model-trigger-main { font-size: 0.78rem; }
+      .topbar-popover { right: auto; left: 0; width: min(360px, calc(100vw - 20px)); }
       .sidebar {
         position: fixed; inset: var(--topbar-h) auto 0 0; width: 280px; z-index: 60;
         transform: translateX(-100%);
@@ -485,10 +643,12 @@
       .topbar { padding: 0 10px; gap: 6px; }
       .brand { font-size: 0.85rem; }
       .brand svg { width: 22px; height: 13px; }
-      .sel-wrap { display: none; }
+      .topbar-mid { max-width: calc(100vw - 146px); }
+      .model-menu-wrap { max-width: none; }
+      .model-trigger { height: 34px; padding: 0 10px; }
+      .model-trigger-main { font-size: 0.74rem; }
       .btn-primary .btn-label { display: none; }
-      .btn-localhost { width: 34px; padding: 0; }
-      .btn-localhost .btn-label { display: none; }
+      .topbar-popover { width: min(320px, calc(100vw - 16px)); left: 0; right: auto; }
       .thread-wrap { padding: 12px 8px; }
       .bubble { padding: 10px 13px; font-size: 0.87rem; }
       .composer { font-size: 0.87rem; }
@@ -762,14 +922,43 @@
           <span class="transport-dot"></span>
           <span id="transport-label">—</span>
         </div>
-        <div class="sel-wrap">
-          <select id="chat-provider-select" class="topbar-select" aria-label="Provider"></select>
-        </div>
-        <div class="sel-wrap">
-          <select id="chat-model-select" class="topbar-select" aria-label="Modelo"></select>
-        </div>
-        <div class="sel-wrap">
-          <select id="chat-thinking-select" class="topbar-select hidden" aria-label="Thinking"></select>
+        <div class="model-menu-wrap">
+          <button class="model-trigger" id="model-menu-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <span class="model-trigger-copy">
+              <span class="model-trigger-kicker" id="model-trigger-kicker">Modelo</span>
+              <span class="model-trigger-main" id="model-trigger-main">Selecciona un modelo</span>
+              <span class="model-trigger-meta" id="model-trigger-meta">Configuración local</span>
+            </span>
+            <svg class="model-trigger-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="topbar-popover hidden" id="model-menu-popup">
+            <div class="topbar-popover-title">Configuración del chat</div>
+            <div class="topbar-popover-copy" id="model-menu-status">Elige compañía, modelo y reasoning para este chat.</div>
+            <label class="popover-field">
+              <span class="popover-field-label">Compañía</span>
+              <div class="sel-wrap">
+                <select id="chat-provider-select" class="topbar-select" aria-label="Provider"></select>
+              </div>
+            </label>
+            <label class="popover-field">
+              <span class="popover-field-label">Modelo</span>
+              <div class="sel-wrap">
+                <select id="chat-model-select" class="topbar-select" aria-label="Modelo"></select>
+              </div>
+            </label>
+            <label class="popover-field">
+              <span class="popover-field-label">Razonamiento</span>
+              <div class="sel-wrap">
+                <select id="chat-thinking-select" class="topbar-select hidden" aria-label="Thinking"></select>
+              </div>
+            </label>
+            <div class="popover-actions">
+              <button class="btn btn-outline" id="open-localhost-btn" type="button">Abrir localhost</button>
+              <button class="btn btn-primary" id="login-btn" type="button">Conectar</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="topbar-end">
@@ -782,19 +971,17 @@
             <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
           </svg>
         </button>
-        <button class="btn btn-outline btn-localhost" id="open-localhost-btn" title="Abrir el estado del daemon local">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 3h7v7"></path>
-            <path d="M10 14L21 3"></path>
-            <path d="M21 14v4a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h4"></path>
-          </svg>
-          <span class="btn-label">Abrir localhost</span>
-        </button>
-        <button class="btn btn-outline" id="google-drive-btn">Conectar Drive</button>
-        <button class="btn btn-outline" id="login-btn">Conectar</button>
-        <button class="profile-btn hidden" id="logout-btn" title="Cerrar sesión">
-          <img id="profile-avatar" alt="">
-        </button>
+        <div class="profile-wrap">
+          <button class="profile-btn" id="profile-btn" type="button" title="Conectar Google Drive" data-connected="false" aria-haspopup="dialog" aria-expanded="false">
+            <img id="profile-avatar" alt="">
+          </button>
+          <div class="topbar-popover profile-popover hidden" id="profile-popup">
+            <div class="topbar-popover-title">Google Drive</div>
+            <div class="profile-menu-name" id="profile-menu-name">Sin conectar</div>
+            <div class="profile-menu-email" id="profile-menu-email">Haz clic en la foto para iniciar sesión y guardar el historial en Drive.</div>
+            <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -1250,15 +1437,24 @@
       sendIcon: document.getElementById('send-icon'),
       newChatBtn: document.getElementById('new-chat-btn'),
       clearChatBtn: document.getElementById('clear-chat-btn'),
+      modelMenuBtn: document.getElementById('model-menu-btn'),
+      modelMenuPopup: document.getElementById('model-menu-popup'),
+      modelMenuStatus: document.getElementById('model-menu-status'),
+      modelTriggerKicker: document.getElementById('model-trigger-kicker'),
+      modelTriggerMain: document.getElementById('model-trigger-main'),
+      modelTriggerMeta: document.getElementById('model-trigger-meta'),
       openLocalhostBtn: document.getElementById('open-localhost-btn'),
-      googleDriveBtn: document.getElementById('google-drive-btn'),
       loginBtn: document.getElementById('login-btn'),
-      logoutBtn: document.getElementById('logout-btn'),
+      profileBtn: document.getElementById('profile-btn'),
+      profilePopup: document.getElementById('profile-popup'),
+      logoutMenuBtn: document.getElementById('logout-menu-btn'),
       profileCard: document.getElementById('profile-card'),
       profileAvatar: document.getElementById('profile-avatar'),
       profileAvatarSidebar: document.getElementById('profile-avatar-sidebar'),
       profileName: document.getElementById('profile-name'),
       profileEmail: document.getElementById('profile-email'),
+      profileMenuName: document.getElementById('profile-menu-name'),
+      profileMenuEmail: document.getElementById('profile-menu-email'),
       authCopy: document.getElementById('auth-copy'),
       transportLabel: document.getElementById('transport-label'),
       providerSelect: document.getElementById('chat-provider-select'),
@@ -2202,6 +2398,7 @@
       const providerModels = modelOptionsForProvider(providerId);
       const modelOption = getModelOption(chat.model, providerId);
       const thinkingLevel = currentThinkingLevel(chat);
+      const providerStatus = daemonProviderStatus(providerId);
 
       if (elements.providerSelect) {
         elements.providerSelect.innerHTML = PROVIDER_OPTIONS.map((option) => {
@@ -2231,6 +2428,30 @@
         ? ' · ' + thinkingLabel(thinkingLevel)
         : '';
       elements.modelCopy.textContent = providerOption.label + ' · ' + modeCopy + thinkingCopy + '. Se guarda en este chat.';
+      if (elements.modelTriggerKicker) {
+        elements.modelTriggerKicker.textContent = providerOption.label;
+      }
+      if (elements.modelTriggerMain) {
+        elements.modelTriggerMain.textContent = modelOption.label;
+      }
+      if (elements.modelTriggerMeta) {
+        elements.modelTriggerMeta.textContent = modelOption.thinkingLevels.length
+          ? thinkingLabel(thinkingLevel)
+          : modeCopy;
+      }
+      if (elements.modelMenuStatus) {
+        let statusCopy = 'El daemon local no responde todavia.';
+        if (__daemonStatus && __daemonStatus.ok) {
+          if (providerStatus && providerStatus.installed && providerStatus.connected) {
+            statusCopy = providerOption.label + ' esta listo en tu ordenador.';
+          } else if (providerStatus && providerStatus.installed) {
+            statusCopy = providerOption.label + ' esta instalado, pero falta completar el login.';
+          } else {
+            statusCopy = providerOption.label + ' no esta instalado todavia.';
+          }
+        }
+        elements.modelMenuStatus.textContent = statusCopy + ' La configuracion se guarda por chat.';
+      }
     }
 
 
@@ -3743,6 +3964,34 @@
       }
     }
 
+    function closeModelMenu() {
+      if (!elements.modelMenuPopup || !elements.modelMenuBtn) return;
+      elements.modelMenuPopup.classList.add('hidden');
+      elements.modelMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleModelMenu() {
+      if (!elements.modelMenuPopup || !elements.modelMenuBtn) return;
+      const shouldOpen = elements.modelMenuPopup.classList.contains('hidden');
+      closeProfileMenu();
+      elements.modelMenuPopup.classList.toggle('hidden', !shouldOpen);
+      elements.modelMenuBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+
+    function closeProfileMenu() {
+      if (!elements.profilePopup || !elements.profileBtn) return;
+      elements.profilePopup.classList.add('hidden');
+      elements.profileBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleProfileMenu() {
+      if (!elements.profilePopup || !elements.profileBtn) return;
+      const shouldOpen = elements.profilePopup.classList.contains('hidden');
+      closeModelMenu();
+      elements.profilePopup.classList.toggle('hidden', !shouldOpen);
+      elements.profileBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+    }
+
     function bindEvents() {
       elements.composer.addEventListener('input', () => {
         autoResizeComposer();
@@ -3821,10 +4070,27 @@
       });
       elements.newChatBtn.addEventListener('click', newChat);
       elements.clearChatBtn.addEventListener('click', clearActiveChat);
+      elements.modelMenuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleModelMenu();
+      });
+      elements.modelMenuPopup.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
       elements.openLocalhostBtn.addEventListener('click', () => {
         openDaemonInBrowser();
       });
-      elements.googleDriveBtn.addEventListener('click', async () => {
+      elements.profileBtn.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        const driveConnected = !!(appState.accessToken && appState.profile);
+        if (driveConnected) {
+          toggleProfileMenu();
+          return;
+        }
+        if (!hasOauthConfig()) {
+          showToast('Drive', 'Configura GOOGLE_CLIENT_ID para activar Google Drive.');
+          return;
+        }
         try {
           ensureOauthConfig();
           await loginWithGoogle({
@@ -3838,6 +4104,9 @@
         } catch (error) {
           setComposerStatus(error.message || 'No se pudo conectar Google Drive.');
         }
+      });
+      elements.profilePopup.addEventListener('click', function(e) {
+        e.stopPropagation();
       });
       if (elements.providerSelect) {
         elements.providerSelect.addEventListener('change', () => {
@@ -3875,7 +4144,10 @@
           showToast('Provider', error.message);
         }
       });
-      elements.logoutBtn.addEventListener('click', () => { logoutGoogle(); });
+      elements.logoutMenuBtn.addEventListener('click', () => {
+        closeProfileMenu();
+        logoutGoogle();
+      });
       document.getElementById('preview-close').addEventListener('click', closeAttachmentPreview);
       document.getElementById('preview-overlay').addEventListener('click', function(e) {
         if (e.target.id === 'preview-overlay') closeAttachmentPreview();
@@ -3885,9 +4157,22 @@
         toggleUsagePopup();
       });
       document.addEventListener('click', function(e) {
-        var popup = document.getElementById('usage-popup');
-        if (!popup.classList.contains('hidden') && !popup.contains(e.target) && e.target.id !== 'usage-btn') {
-          popup.classList.add('hidden');
+        var usagePopup = document.getElementById('usage-popup');
+        var usageBtn = document.getElementById('usage-btn');
+        if (!usagePopup.classList.contains('hidden') && !usagePopup.contains(e.target) && !(usageBtn && usageBtn.contains(e.target))) {
+          usagePopup.classList.add('hidden');
+        }
+        if (!elements.modelMenuPopup.classList.contains('hidden') && !elements.modelMenuPopup.contains(e.target) && !elements.modelMenuBtn.contains(e.target)) {
+          closeModelMenu();
+        }
+        if (!elements.profilePopup.classList.contains('hidden') && !elements.profilePopup.contains(e.target) && !elements.profileBtn.contains(e.target)) {
+          closeProfileMenu();
+        }
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          closeModelMenu();
+          closeProfileMenu();
         }
       });
     }
@@ -3907,7 +4192,9 @@
           label = 'Local · ' + activeProviderLabel() + ' no instalado';
         }
       }
-      elements.transportLabel.textContent = label;
+      if (elements.transportLabel) {
+        elements.transportLabel.textContent = label;
+      }
       elements.modelBadge.textContent = activeModelBadge();
       renderModelControls();
       elements.configCopy.style.display = 'block';
@@ -3931,19 +4218,12 @@
 
       const hasDriveOauth = hasOauthConfig();
       const driveConnected = !!(appState.accessToken && appState.profile);
-      if (elements.googleDriveBtn) {
-        elements.googleDriveBtn.disabled = !hasDriveOauth;
-        elements.googleDriveBtn.textContent = !hasDriveOauth
-          ? 'Drive sin OAuth'
-          : (driveConnected ? 'Drive listo' : 'Conectar Drive');
-        elements.googleDriveBtn.title = hasDriveOauth
-          ? (driveConnected ? 'Google Drive conectado y sincronizando historial' : 'Iniciar sesión con Google para guardar el historial en Drive')
-          : 'Configura GOOGLE_CLIENT_ID y el proyecto OAuth para activar Google Drive';
-      }
-
       elements.profileCard.classList.toggle('hidden', !driveConnected);
-      elements.logoutBtn.classList.toggle('hidden', !driveConnected);
-      elements.logoutBtn.title = driveConnected ? 'Cerrar sesión de Google Drive' : 'Cerrar sesión';
+      elements.profileBtn.dataset.connected = driveConnected ? 'true' : 'false';
+      elements.profileBtn.title = !hasDriveOauth
+        ? 'Google Drive no esta configurado en esta build'
+        : (driveConnected ? 'Google Drive conectado' : 'Conectar Google Drive');
+      elements.logoutMenuBtn.classList.toggle('hidden', !driveConnected);
 
       if (driveConnected) {
         const picture = String(appState.profile.picture || '').trim();
@@ -3956,11 +4236,18 @@
         }
         elements.profileName.textContent = String(appState.profile.name || 'Google Drive');
         elements.profileEmail.textContent = String(appState.profile.email || '');
+        elements.profileMenuName.textContent = String(appState.profile.name || 'Google Drive');
+        elements.profileMenuEmail.textContent = String(appState.profile.email || 'Sincronizando historial con Drive.');
       } else {
         elements.profileAvatar.removeAttribute('src');
         if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
         elements.profileName.textContent = '';
         elements.profileEmail.textContent = '';
+        elements.profileMenuName.textContent = hasDriveOauth ? 'Google Drive' : 'OAuth no configurado';
+        elements.profileMenuEmail.textContent = hasDriveOauth
+          ? 'Haz clic en la foto para iniciar sesión y guardar el historial en Drive.'
+          : 'Configura GOOGLE_CLIENT_ID para activar el guardado en Drive.';
+        closeProfileMenu();
       }
 
       let providerCopy = '';
@@ -3971,7 +4258,7 @@
       } else if (providerStatus && providerStatus.installed) {
         providerCopy = providerLabel + ' esta instalado, pero falta completar el login del CLI.';
       } else {
-        providerCopy = providerLabel + ' no esta instalado todavia. El boton Conectar abre el flujo de instalacion/login.';
+        providerCopy = providerLabel + ' no esta instalado todavia. Abre el selector del modelo para iniciar la instalacion o el login.';
       }
 
       const driveCopy = !hasDriveOauth
