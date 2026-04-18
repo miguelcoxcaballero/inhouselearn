@@ -792,6 +792,19 @@
     }
     .attach-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); transform: scale(1.05); }
     .attach-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .guided-btn {
+      width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); background: transparent;
+      transition: background 0.18s var(--ease), color 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+      position: relative;
+    }
+    .guided-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); transform: scale(1.05); }
+    .guided-btn.active {
+      background: var(--orange); color: #fff;
+      box-shadow: 0 4px 14px rgba(224, 122, 60, 0.35);
+    }
+    .guided-btn.active:hover { background: #d06a30; color: #fff; }
     .composer {
       flex: 1; min-height: 36px; max-height: 200px; padding: 8px 6px;
       resize: none; border: 0; outline: none; background: transparent;
@@ -1378,6 +1391,12 @@
                   <path d="M21.44 11.05l-8.49 8.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66L9.4 17.43a2 2 0 1 1-2.83-2.83l8.49-8.48"/>
                 </svg>
               </button>
+              <button class="guided-btn" id="guided-btn" type="button" aria-pressed="false" aria-label="Guided Learning" title="Guided Learning: modo tutor paso a paso">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10L12 5 2 10l10 5 10-5z"/>
+                  <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>
+                </svg>
+              </button>
               <textarea id="composer" class="composer" rows="1" placeholder="Escribe aquí..."></textarea>
               <button class="send-btn" id="send-btn" aria-label="Enviar">
                 <svg id="send-icon" viewBox="0 0 24 24" width="15" height="15" fill="none">
@@ -1600,6 +1619,36 @@
       DEFAULT_MODEL: 'gpt-5.4',
       DEFAULT_THINKING_LEVEL: '',
       SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension, but never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
+      GUIDED_LEARNING_PROMPT: [
+        'Estás en modo "Guided Learning" de inhouse learn. El usuario está estudiando: quiere entender en profundidad, no correr. Habla siempre en español, tuteo informal, tono cercano.',
+        '',
+        'REGLAS (en orden de prioridad):',
+        '',
+        '1. TODO mensaje tuyo empieza SIN EXCEPCIÓN con una línea de progreso del tema actual, indicando los apartados cubiertos y pendientes. Formato exacto:',
+        '   Progreso: [█████████░] 90% (Fundamentos 🌍 | Órbitas 🛰️ | Cónicas 📐 | Energía 🔋)',
+        '   Rellena la barra de forma proporcional a los apartados completados sobre el total del tema activo. Usa los nombres del índice acordado y un emoji por apartado para anclaje visual.',
+        '',
+        '2. Cuando el usuario suba documentos o diga que tiene material, lo PRIMERO es proponer un índice: detecta los temas de los archivos y sugiere una jerarquía Tema → Bloque → Apartado (como carpetas). Pide confirmación o ajustes antes de enseñar nada. No empieces con teoría hasta que el índice esté acordado.',
+        '',
+        '3. Enseña UN apartado por mensaje. Nunca vuelques el bloque entero, ni mucho menos el tema, de golpe. Nunca listes todos los apartados a la vez con su contenido. Quédate en el apartado actual hasta que el usuario lo entienda de verdad — no hasta que diga "ok", sino hasta que sus respuestas muestren comprensión intuitiva.',
+        '',
+        '4. Al final de cada apartado, plantea 2 o 3 retos / preguntas de lógica cortas (NO problemas completos — solo preguntas de razonamiento o pequeños desafíos conceptuales). Espera la respuesta del usuario. Si detectas huecos, vuelve a explicar ESE hueco concreto con otro ángulo: metáfora distinta, caso más simple, derivación alternativa. Cuando las respuestas sean sólidas, pregunta: "¿Seguimos con el siguiente apartado o quieres profundizar más en este?"',
+        '',
+        '5. POR NINGÚN MOTIVO pases al siguiente apartado sin confirmación explícita del usuario. Lo mismo para saltar de bloque o de tema.',
+        '',
+        '6. Estilo de enseñanza:',
+        '   - Asume que el usuario NO sabe nada del tema. Todo concepto es nuevo.',
+        '   - El usuario tiene TDA/TDAH: mensajes en trozos cortos, viñetas, negritas como anclas, nada de muros de texto. PERO no sacrifiques profundidad — reparte la profundidad entre turnos, no la aplanes.',
+        '   - Prioriza INTUICIÓN y ORIGEN: de dónde sale cada fórmula, qué mide de verdad, por qué tiene esa forma. Deriva, no la sueltes sin más. Si algo es pura convención, dilo claramente ("esto es convención, memorízalo").',
+        '   - Usa metáforas y ejemplos cortos ilustrativos, NO problemas completos. Aquí el usuario no resuelve ejercicios, solo entiende.',
+        '   - Profundiza progresivamente. Empieza desde cero, pero cada apartado/bloque debe ir acercándose al nivel de examen. Se va a examinar de todo.',
+        '',
+        '7. Formato: LaTeX para matemáticas — inline \\(...\\) y display $$...$$. NUNCA pongas matemáticas dentro de bloques de código cercados. Headings, bullets y negritas con moderación, para ayudar a comprender, no para decorar.',
+        '',
+        '8. Si el usuario pregunta algo fuera del apartado actual, apúntalo como "lo vemos luego" y sigue con el apartado actual, salvo que él quiera saltar expresamente.',
+        '',
+        'Arranca cada respuesta con la línea de Progreso. Sin excepciones.'
+      ].join('\n'),
       MAX_OUTPUT_TOKENS: 32768,
       TEMPERATURE: 1.0,
       TOP_P: 0.95
@@ -1806,8 +1855,15 @@
       driveSyncQueued: false,
       authGateReason: '',
       composerAttachments: [],
-      connectPollingTimer: 0
+      connectPollingTimer: 0,
+      guidedLearning: false
     };
+
+    function getActiveSystemPrompt() {
+      return appState.guidedLearning
+        ? APP_CONFIG.GUIDED_LEARNING_PROMPT
+        : APP_CONFIG.SYSTEM_PROMPT;
+    }
 
     const elements = {
       chatList: document.getElementById('chat-list'),
@@ -1815,6 +1871,7 @@
       composerShell: document.querySelector('.composer-shell'),
       composer: document.getElementById('composer'),
       attachBtn: document.getElementById('attach-btn'),
+      guidedBtn: document.getElementById('guided-btn'),
       fileInput: document.getElementById('file-input'),
       composerAttachments: document.getElementById('composer-attachments'),
       sendBtn: document.getElementById('send-btn'),
@@ -1961,15 +2018,16 @@
       return chat;
     }
 
-    function normalizeStoredMessage(message) {
+    function normalizeStoredMessage(message, options) {
+      const opts = options || {};
       const content = message && typeof message.content === 'string'
         ? message.content
         : '';
       const attachments = Array.isArray(message && message.attachments)
-        ? message.attachments.map((item) => serializeAttachmentForStorage(item)).filter(Boolean)
+        ? message.attachments.map((item) => serializeAttachmentForStorage(item, opts)).filter(Boolean)
         : [];
       const parts = Array.isArray(message && message.parts)
-        ? message.parts.map((part) => serializePartForStorage(part, attachments)).filter(Boolean)
+        ? message.parts.map((part) => serializePartForStorage(part, attachments, opts)).filter(Boolean)
         : (content ? [{ text: content }] : []);
       const alternatives = Array.isArray(message && message.alternatives) ? message.alternatives : [];
       const rawActiveAlternative = Number(message && message.activeAlternative);
@@ -2004,7 +2062,8 @@
       };
     }
 
-    function normalizeStoredChat(chat) {
+    function normalizeStoredChat(chat, options) {
+      const opts = options || {};
       const createdAt = chat && typeof chat.createdAt === 'string'
         ? chat.createdAt
         : nowIso();
@@ -2016,7 +2075,7 @@
         createdAt,
         updatedAt: chat && typeof chat.updatedAt === 'string' ? chat.updatedAt : createdAt,
         messages: Array.isArray(chat && chat.messages)
-          ? chat.messages.map((message) => normalizeStoredMessage(message))
+          ? chat.messages.map((message) => normalizeStoredMessage(message, opts))
           : [],
         provider: chat && chat.provider ? chat.provider : APP_CONFIG.DEFAULT_PROVIDER,
         model: chat && chat.model ? chat.model : APP_CONFIG.DEFAULT_MODEL,
@@ -2026,11 +2085,12 @@
       });
     }
 
-    function normalizeSnapshot(snapshot) {
+    function normalizeSnapshot(snapshot, options) {
       if (!snapshot || !Array.isArray(snapshot.chats) || !snapshot.chats.length) {
         return null;
       }
-      const chats = snapshot.chats.map((chat) => normalizeStoredChat(chat));
+      const opts = options || { includeBinaries: true };
+      const chats = snapshot.chats.map((chat) => normalizeStoredChat(chat, opts));
       return {
         version: typeof snapshot.version === 'number' ? snapshot.version : 1,
         savedAt: typeof snapshot.savedAt === 'string' ? snapshot.savedAt : nowIso(),
@@ -2039,13 +2099,14 @@
       };
     }
 
-    function buildStateSnapshot() {
+    function buildStateSnapshot(options) {
+      const opts = options || { includeBinaries: true };
       return {
         version: 1,
         savedAt: nowIso(),
         activeChatId: appState.activeChatId,
         chats: appState.chats.map((chat) => {
-          const normalizedChat = normalizeStoredChat(chat);
+          const normalizedChat = normalizeStoredChat(chat, opts);
           normalizedChat.messages = normalizedChat.messages.filter((message) => !message.pending);
           return normalizedChat;
         })
@@ -2373,25 +2434,58 @@
       };
     }
 
+    async function buildPdfAttachment(file, mimeType, kind) {
+      const parts = [];
+      let extractedText = '';
+      try {
+        extractedText = await readPdfAsText(file);
+      } catch (error) {
+        console.warn('PDF text extraction failed:', error);
+      }
+      if (extractedText) {
+        parts.push({
+          text: [
+            'Archivo adjunto: ' + file.name,
+            'Tipo: ' + mimeType,
+            '',
+            extractedText
+          ].join('\n')
+        });
+      }
+      if (file.size <= MAX_INLINE_ATTACHMENT_BYTES) {
+        try {
+          const buffer = await file.arrayBuffer();
+          parts.push({
+            inlineData: {
+              mimeType,
+              data: arrayBufferToBase64(buffer)
+            }
+          });
+        } catch (error) {
+          console.warn('PDF inline packaging failed:', error);
+        }
+      }
+      if (!parts.length) {
+        throw new Error('No pude procesar "' + file.name + '" (PDF demasiado grande o sin texto extraible).');
+      }
+      return {
+        id: uid('att'),
+        name: file.name,
+        size: file.size,
+        mimeType,
+        kind,
+        source: extractedText ? 'pdf-mixed' : 'inline',
+        extractedText: extractedText || undefined,
+        parts: parts
+      };
+    }
+
     async function prepareAttachment(file) {
       const mimeType = inferMimeType(file);
       const kind = attachmentKindFromMime(mimeType, file.name);
 
       if (kind === 'pdf') {
-        if (file.size <= MAX_INLINE_ATTACHMENT_BYTES) {
-          try {
-            return await buildInlineAttachment(file, mimeType, kind);
-          } catch (error) {
-            console.warn('PDF inline upload failed, falling back to text extraction:', error);
-          }
-        }
-        try {
-          const text = await readPdfAsText(file);
-          if (text) return buildTextAttachment(file, mimeType, kind, text);
-        } catch (error) {
-          console.warn('PDF text extraction failed:', error);
-        }
-        throw new Error('No pude procesar "' + file.name + '" (PDF demasiado grande o sin texto extraible).');
+        return await buildPdfAttachment(file, mimeType, kind);
       }
       if (kind === 'doc') {
         return buildTextAttachment(file, mimeType, kind, await readDocxAsText(file));
@@ -2441,10 +2535,29 @@
       }
     }
 
-    function serializeAttachmentForStorage(attachment) {
+    function clonePartForStorage(part) {
+      if (!part || typeof part !== 'object') {
+        return null;
+      }
+      if (typeof part.text === 'string') {
+        return { text: part.text };
+      }
+      if (part.inlineData && typeof part.inlineData.mimeType === 'string' && typeof part.inlineData.data === 'string') {
+        return {
+          inlineData: {
+            mimeType: part.inlineData.mimeType,
+            data: part.inlineData.data
+          }
+        };
+      }
+      return null;
+    }
+
+    function serializeAttachmentForStorage(attachment, options) {
       if (!attachment || typeof attachment !== 'object') {
         return null;
       }
+      const opts = options || {};
       var out = {
         id: typeof attachment.id === 'string' ? attachment.id : uid('att'),
         name: typeof attachment.name === 'string' ? attachment.name : 'Archivo',
@@ -2456,10 +2569,23 @@
       if (typeof attachment.extractedText === 'string' && attachment.extractedText) {
         out.extractedText = attachment.extractedText;
       }
+      if (opts.includeBinaries) {
+        if (Array.isArray(attachment.parts) && attachment.parts.length) {
+          const clonedParts = attachment.parts.map((part) => clonePartForStorage(part)).filter(Boolean);
+          if (clonedParts.length) {
+            out.parts = clonedParts;
+          }
+        } else if (attachment.part) {
+          const clonedPart = clonePartForStorage(attachment.part);
+          if (clonedPart) {
+            out.part = clonedPart;
+          }
+        }
+      }
       return out;
     }
 
-    function serializePartForStorage(part, attachmentList) {
+    function serializePartForStorage(part, attachmentList, options) {
       if (!part || typeof part !== 'object') {
         return null;
       }
@@ -2469,6 +2595,15 @@
         };
       }
       if (part.inlineData && part.inlineData.mimeType) {
+        const opts = options || {};
+        if (opts.includeBinaries && typeof part.inlineData.data === 'string' && part.inlineData.data) {
+          return {
+            inlineData: {
+              mimeType: part.inlineData.mimeType,
+              data: part.inlineData.data
+            }
+          };
+        }
         const match = (attachmentList || []).find((item) => item.mimeType === part.inlineData.mimeType);
         return {
           text: '[Adjunto binario: ' + (match ? match.name : part.inlineData.mimeType) + ']'
@@ -2866,11 +3001,16 @@
       const payload = {
         version: 1,
         savedAt: nowIso(),
-        chats: appState.chats.map((chat) => normalizeStoredChat(chat)),
+        chats: appState.chats.map((chat) => normalizeStoredChat(chat, { includeBinaries: false })),
         activeChatId: appState.activeChatId,
-        auth: buildStoredAuthState()
+        auth: buildStoredAuthState(),
+        guidedLearning: !!appState.guidedLearning
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('localStorage save failed:', error);
+      }
       if (!settings.skipDrive) {
         scheduleDriveSync();
       }
@@ -2885,6 +3025,9 @@
         if (parsed) {
           appState.chats = parsed.chats;
           appState.activeChatId = parsed.activeChatId;
+        }
+        if (payload && typeof payload.guidedLearning === 'boolean') {
+          appState.guidedLearning = payload.guidedLearning;
         }
       } catch (error) {
         console.warn('No se pudo restaurar localStorage:', error);
@@ -2996,6 +3139,19 @@
       if (elements.clearChatBtn) {
         elements.clearChatBtn.disabled = driveLocked;
       }
+      if (elements.guidedBtn) {
+        elements.guidedBtn.disabled = driveLocked;
+      }
+    }
+
+    function updateGuidedLearningUi() {
+      if (!elements.guidedBtn) return;
+      const active = !!appState.guidedLearning;
+      elements.guidedBtn.classList.toggle('active', active);
+      elements.guidedBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      elements.guidedBtn.title = active
+        ? 'Guided Learning activo — modo tutor paso a paso. Click para desactivar.'
+        : 'Guided Learning: activa el modo tutor paso a paso.';
     }
 
     function providerBrandIconSvg(providerId) {
@@ -4072,6 +4228,59 @@
       appState.driveReady = true;
     }
 
+    function partsHaveInlineData(parts) {
+      return Array.isArray(parts) && parts.some((part) => part && part.inlineData && typeof part.inlineData.data === 'string' && part.inlineData.data);
+    }
+
+    function mergeBinariesIntoChats(chats, remoteSnapshot) {
+      if (!remoteSnapshot || !Array.isArray(remoteSnapshot.chats) || !Array.isArray(chats)) {
+        return;
+      }
+      const remoteChatById = new Map();
+      remoteSnapshot.chats.forEach((chat) => {
+        if (chat && typeof chat.id === 'string') {
+          remoteChatById.set(chat.id, chat);
+        }
+      });
+      chats.forEach((chat) => {
+        if (!chat || typeof chat.id !== 'string') return;
+        const remoteChat = remoteChatById.get(chat.id);
+        if (!remoteChat || !Array.isArray(remoteChat.messages)) return;
+        const remoteMsgById = new Map();
+        remoteChat.messages.forEach((message) => {
+          if (message && typeof message.id === 'string') {
+            remoteMsgById.set(message.id, message);
+          }
+        });
+        (chat.messages || []).forEach((message) => {
+          if (!message || typeof message.id !== 'string') return;
+          const remoteMsg = remoteMsgById.get(message.id);
+          if (!remoteMsg) return;
+          if (!partsHaveInlineData(message.parts) && partsHaveInlineData(remoteMsg.parts)) {
+            message.parts = cloneParts(remoteMsg.parts);
+          }
+          if (Array.isArray(message.attachments) && Array.isArray(remoteMsg.attachments)) {
+            const remoteAttById = new Map();
+            remoteMsg.attachments.forEach((att) => {
+              if (att && typeof att.id === 'string') {
+                remoteAttById.set(att.id, att);
+              }
+            });
+            message.attachments.forEach((att) => {
+              if (!att || typeof att.id !== 'string') return;
+              const remoteAtt = remoteAttById.get(att.id);
+              if (!remoteAtt) return;
+              if (!Array.isArray(att.parts) && Array.isArray(remoteAtt.parts) && remoteAtt.parts.length) {
+                att.parts = cloneParts(remoteAtt.parts);
+              } else if (!att.part && remoteAtt.part) {
+                att.part = cloneParts([remoteAtt.part])[0];
+              }
+            });
+          }
+        });
+      });
+    }
+
     async function ensureDriveReady() {
       if (!appState.accessToken) {
         return;
@@ -4091,8 +4300,12 @@
         return;
       }
 
+      if (remoteHasContent) {
+        mergeBinariesIntoChats(appState.chats, remoteSnapshot);
+      }
+
       appState.driveReady = true;
-      await persistDriveSnapshot(localSnapshot);
+      await persistDriveSnapshot(buildStateSnapshot());
     }
 
     function scheduleDriveSync() {
@@ -4179,7 +4392,7 @@
 
       return {
         systemInstruction: {
-          parts: [{ text: APP_CONFIG.SYSTEM_PROMPT }]
+          parts: [{ text: getActiveSystemPrompt() }]
         },
         contents: buildContents(messages),
         generationConfig
@@ -5191,6 +5404,19 @@
           elements.fileInput.click();
         }
       });
+      if (elements.guidedBtn) {
+        elements.guidedBtn.addEventListener('click', () => {
+          appState.guidedLearning = !appState.guidedLearning;
+          updateGuidedLearningUi();
+          saveState({ skipDrive: true });
+          showToast(
+            'Guided Learning',
+            appState.guidedLearning
+              ? 'Modo tutor activado. Sube tus apuntes y te propondré un índice.'
+              : 'Modo tutor desactivado. Vuelve al chat normal.'
+          );
+        });
+      }
       elements.fileInput.addEventListener('change', async () => {
         await addFilesToComposer(elements.fileInput.files);
         elements.fileInput.value = '';
@@ -5621,7 +5847,7 @@
         provider: activeProviderName(chat),
         model: activeModelName(chat),
         thinkingLevel: currentThinkingLevel(chat),
-        systemPrompt: APP_CONFIG.SYSTEM_PROMPT,
+        systemPrompt: getActiveSystemPrompt(),
         messages: (chat.messages || [])
           .filter((message) => !message.pending)
           .map((message) => ({
@@ -6364,7 +6590,10 @@
         });
       }
       (attachments || []).forEach((attachment) => {
-        if (attachment && attachment.part) {
+        if (!attachment) return;
+        if (Array.isArray(attachment.parts) && attachment.parts.length) {
+          cloneParts(attachment.parts).forEach((part) => parts.push(part));
+        } else if (attachment.part) {
           parts.push(cloneParts([attachment.part])[0]);
         }
       });
@@ -6543,6 +6772,7 @@
       autoResizeComposer();
       renderComposerAttachments();
       updateSendUi();
+      updateGuidedLearningUi();
       bindEvents();
       bindMobileMenu();
       setComposerStatus('');
