@@ -1323,15 +1323,6 @@
         </div>
       </div>
       <div class="topbar-end">
-        <button class="btn btn-primary" id="new-chat-btn">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span class="btn-label">Nuevo</span>
-        </button>
-        <button class="btn btn-icon" id="clear-chat-btn" title="Limpiar chat">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          </svg>
-        </button>
         <div class="profile-wrap">
           <button class="profile-btn" id="profile-btn" type="button" title="Conectar Google Drive" data-connected="false" aria-haspopup="dialog" aria-expanded="false">
             <svg class="profile-google-icon" viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -4906,9 +4897,81 @@
       renderUsagePopup();
     }
 
+    var MODEL_DONUT_PALETTE = ['#22c55e', '#3b82f6', '#eab308', '#a855f7', '#06b6d4', '#f97316', '#14b8a6', '#ef4444'];
+
+    function modelDonutColor(index) {
+      return MODEL_DONUT_PALETTE[index % MODEL_DONUT_PALETTE.length];
+    }
+
+    function collectQuotaEntries() {
+      var data = getUsageData();
+      var quotaByModel = (data && data.quotaByModel) || {};
+      var entries = [];
+      MODEL_OPTIONS.forEach(function(option) {
+        var q = quotaByModel[option.id];
+        if (!q) return;
+        var remaining = Number(q.remaining);
+        var limit = Number(q.limit);
+        if (!isFinite(remaining) || !isFinite(limit) || limit <= 0) return;
+        entries.push({
+          id: option.id,
+          label: option.label,
+          badge: option.badge,
+          remaining: Math.max(0, remaining),
+          limit: limit,
+          resetTime: q.resetTime || ''
+        });
+      });
+      return entries;
+    }
+
+    function formatCompactNumber(value) {
+      var n = Number(value);
+      if (!isFinite(n)) return '-';
+      if (n >= 1000) {
+        var k = n / 1000;
+        return (k >= 10 ? Math.round(k) : k.toFixed(1).replace(/\.0$/, '')) + 'K';
+      }
+      return String(Math.round(n));
+    }
+
     function renderUsageDonut() {
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
+      var radius = 15.915;
+      var circ = 2 * Math.PI * radius;
+      var entries = collectQuotaEntries();
+
+      if (entries.length) {
+        var totalLimit = 0;
+        var totalRemaining = 0;
+        entries.forEach(function(entry) {
+          totalLimit += entry.limit;
+          totalRemaining += entry.remaining;
+        });
+        var parts = ['<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="3"/>'];
+        var cumulative = 0;
+        entries.forEach(function(entry, index) {
+          if (entry.remaining <= 0) return;
+          var frac = entry.remaining / totalLimit;
+          var len = circ * frac;
+          if (len <= 0) return;
+          var offset = 25 - cumulative;
+          parts.push(
+            '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + modelDonutColor(index) + '" stroke-width="3"' +
+            ' stroke-dasharray="' + len.toFixed(2) + ' ' + (circ - len).toFixed(2) + '"' +
+            ' stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="butt">' +
+            '<title>' + escapeHtml(entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit)) + '</title>' +
+            '</circle>'
+          );
+          cumulative += len;
+        });
+        var label = formatCompactNumber(totalRemaining);
+        parts.push('<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor">' + escapeHtml(label) + '</text>');
+        svg.innerHTML = parts.join('');
+        return;
+      }
+
       var status = __daemonStatus || {};
       var providerDetails = status.providerDetails || {};
       var readyCount = Object.keys(providerDetails).filter(function(providerId) {
@@ -4917,8 +4980,6 @@
       }).length;
       var totalCount = PROVIDER_OPTIONS.length;
       var pct = totalCount ? readyCount / totalCount : 0;
-      var radius = 15.915;
-      var circ = 2 * Math.PI * radius;
       var filled = circ * pct;
       var remaining = circ - filled;
       var color = readyCount === totalCount ? '#22c55e' : readyCount > 0 ? '#eab308' : '#ef4444';
@@ -4975,12 +5036,16 @@
         if (usageData.creditsSessionConsumed > 0) {
           usageRows.push('<div class="usage-row"><span class="usage-row-label">Consumidos en sesion</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.creditsSessionConsumed)) + '</span></div>');
         }
-        var modelKey = activeModelName();
-        var quota = usageData.quotaByModel && usageData.quotaByModel[modelKey];
-        if (quota) {
-          usageRows.push('<div class="usage-row"><span class="usage-row-label">Cuota ' + escapeHtml(activeModelLabel()) + '</span><span class="usage-row-value">' + escapeHtml(formatNumber(quota.remaining) + ' / ' + formatNumber(quota.limit)) + '</span></div>');
-          if (quota.resetTime) {
-            usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(quota.resetTime)) + '</span></div>');
+        var quotaEntries = collectQuotaEntries();
+        if (quotaEntries.length) {
+          usageRows.push('<div class="usage-row" style="margin-top:4px"><span class="usage-row-label" style="font-weight:700">Usos restantes por modelo</span><span class="usage-row-value"></span></div>');
+          quotaEntries.forEach(function(entry, index) {
+            var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + modelDonutColor(index) + ';margin-right:6px;vertical-align:middle"></span>';
+            usageRows.push('<div class="usage-row"><span class="usage-row-label">' + dot + escapeHtml(entry.label) + '</span><span class="usage-row-value">' + escapeHtml(formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit)) + '</span></div>');
+          });
+          var firstReset = quotaEntries.find(function(entry) { return entry.resetTime; });
+          if (firstReset) {
+            usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(firstReset.resetTime)) + '</span></div>');
           }
         }
         if (usageData.lastUsageMetadata && usageData.lastUsageMetadata.totalTokenCount) {
@@ -5614,7 +5679,7 @@
       } else if (appState.driveReady) {
         scheduleDriveSync();
       }
-      await refreshCodeAssistUsage(false);
+      refreshCodeAssistUsage(false).catch(function() {});
       if (!options || options.toast !== false) {
         showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
       }
@@ -5651,7 +5716,7 @@
       const promptMode = typeof settings.prompt === 'string'
         ? settings.prompt
         : (settings.interactive
-          ? 'consent'
+          ? ''
           : 'none');
       if (settings.interactive) {
         setAuthGateStatus('Abriendo Google para iniciar sesion...');
