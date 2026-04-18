@@ -612,6 +612,525 @@
       transform: translateY(-1px); color: var(--text);
     }
 
+    /* GUIDED LEARNING */
+    .guided-shell {
+      display: grid;
+      gap: 14px;
+      margin: 0 0 20px;
+      padding: 18px;
+      border: 1px solid var(--orange-border);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top right, rgba(224, 122, 60, 0.14), transparent 32%),
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.92));
+      box-shadow: var(--shadow);
+      animation: fadeSlideUp 0.3s var(--ease) both;
+    }
+    .guided-shell.empty-state {
+      margin-top: 8px;
+    }
+    .guided-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .guided-head-copy {
+      min-width: 0;
+      display: grid;
+      gap: 5px;
+    }
+    .guided-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--orange);
+    }
+    .guided-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .guided-sub {
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      max-width: 62ch;
+    }
+    .guided-badge {
+      flex: 0 0 auto;
+      padding: 7px 11px;
+      border-radius: var(--r-full);
+      border: 1px solid var(--orange-border);
+      background: rgba(255,255,255,0.9);
+      color: var(--orange);
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .guided-overview-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
+      gap: 12px;
+    }
+    .guided-panel,
+    .guided-roadmap,
+    .guided-quiz {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: var(--shadow-sm);
+    }
+    .guided-panel {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .guided-panel-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .guided-panel-sub {
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+    .guided-meter-block {
+      display: grid;
+      gap: 6px;
+    }
+    .guided-meter-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .guided-meter-label {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .guided-meter-value {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--orange);
+      white-space: nowrap;
+    }
+    .guided-meter {
+      width: 100%;
+      height: 10px;
+      border-radius: var(--r-full);
+      background: rgba(0,0,0,0.06);
+      overflow: hidden;
+      position: relative;
+    }
+    .guided-meter > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #e07a3c, #f2b46d);
+    }
+    .guided-meter.mastery > span {
+      background: linear-gradient(90deg, #d65245, #22c55e);
+    }
+    .guided-crumbs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .guided-crumb {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: var(--r-full);
+      background: rgba(0,0,0,0.04);
+      color: var(--text-secondary);
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+    .guided-crumb.current {
+      background: var(--orange-soft);
+      color: var(--text);
+      border: 1px solid var(--orange-border);
+    }
+    .guided-topic-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .guided-topic-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.86);
+      min-width: 0;
+    }
+    .guided-topic-card.current {
+      border-color: var(--orange-border);
+      box-shadow: 0 0 0 2px rgba(224, 122, 60, 0.1);
+      background: rgba(255,247,241,0.96);
+    }
+    .guided-topic-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .guided-topic-name {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .guided-topic-status {
+      flex: 0 0 auto;
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .guided-topic-status.done { color: var(--green); }
+    .guided-topic-status.in_progress { color: var(--orange); }
+    .guided-topic-status.locked,
+    .guided-topic-status.planned { color: var(--muted); }
+    .guided-topic-meta {
+      font-size: 0.68rem;
+      color: var(--muted);
+    }
+    .guided-side-grid {
+      display: grid;
+      gap: 12px;
+    }
+    .guided-side-card {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.9);
+      box-shadow: var(--shadow-sm);
+      display: grid;
+      gap: 10px;
+    }
+    .guided-stat {
+      display: grid;
+      gap: 4px;
+    }
+    .guided-stat-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .guided-stat-value {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .guided-lock {
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+    .guided-lock.good {
+      color: #15803d;
+      font-weight: 600;
+    }
+    .guided-roadmap {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .guided-roadmap-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .guided-roadmap-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .guided-roadmap-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .guided-block-list {
+      display: grid;
+      gap: 10px;
+    }
+    .guided-block {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(0,0,0,0.02);
+      display: grid;
+      gap: 10px;
+    }
+    .guided-block.current {
+      border-color: var(--orange-border);
+      background: rgba(255,248,243,0.9);
+    }
+    .guided-block-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .guided-block-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .guided-section-list {
+      display: grid;
+      gap: 8px;
+    }
+    .guided-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid transparent;
+    }
+    .guided-section.current {
+      border-color: var(--orange-border);
+      box-shadow: 0 0 0 2px rgba(224, 122, 60, 0.08);
+    }
+    .guided-section-main {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+    .guided-section-name {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .guided-section-meta {
+      font-size: 0.68rem;
+      color: var(--muted);
+    }
+    .guided-section-badge {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+      border-radius: var(--r-full);
+      background: rgba(0,0,0,0.05);
+      color: var(--muted);
+      font-size: 0.64rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .guided-section-badge.done {
+      background: rgba(34,197,94,0.14);
+      color: #15803d;
+    }
+    .guided-section-badge.in_progress {
+      background: var(--orange-soft);
+      color: var(--orange);
+    }
+    .guided-section-badge.locked,
+    .guided-section-badge.planned {
+      background: rgba(0,0,0,0.05);
+      color: var(--muted);
+    }
+    .guided-quiz {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .guided-quiz-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .guided-quiz-copy {
+      min-width: 0;
+      display: grid;
+      gap: 5px;
+    }
+    .guided-quiz-title {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .guided-quiz-sub {
+      font-size: 0.74rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+    .guided-quiz-score {
+      flex: 0 0 auto;
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.92);
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: right;
+      white-space: nowrap;
+    }
+    .guided-quiz-items {
+      display: grid;
+      gap: 12px;
+    }
+    .guided-question {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.02);
+      display: grid;
+      gap: 10px;
+    }
+    .guided-question-title {
+      font-size: 0.77rem;
+      font-weight: 700;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .guided-option-list {
+      display: grid;
+      gap: 8px;
+    }
+    .guided-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.94);
+      color: var(--text-secondary);
+      text-align: left;
+      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease), color 0.18s var(--ease);
+    }
+    .guided-option:hover {
+      border-color: var(--orange-border);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+    .guided-option.active {
+      border-color: rgba(224, 122, 60, 0.28);
+      background: rgba(255,247,241,0.96);
+      color: var(--text);
+    }
+    .guided-option.correct {
+      border-color: rgba(34,197,94,0.32);
+      background: rgba(34,197,94,0.1);
+      color: #166534;
+    }
+    .guided-option.wrong {
+      border-color: rgba(220,38,38,0.22);
+      background: rgba(220,38,38,0.08);
+      color: #991b1b;
+    }
+    .guided-option-key {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.05);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .guided-option.active .guided-option-key,
+    .guided-option.correct .guided-option-key,
+    .guided-option.wrong .guided-option-key {
+      background: rgba(255,255,255,0.86);
+      color: inherit;
+    }
+    .guided-option-text {
+      font-size: 0.75rem;
+      line-height: 1.45;
+    }
+    .guided-answer-note {
+      font-size: 0.72rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      padding-top: 2px;
+    }
+    .guided-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .guided-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.94);
+      color: var(--text);
+      font-size: 0.77rem;
+      font-weight: 700;
+      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
+    }
+    .guided-action:hover:not(:disabled) {
+      border-color: var(--orange-border);
+      transform: translateY(-1px);
+    }
+    .guided-action.primary {
+      border-color: rgba(224, 122, 60, 0.18);
+      background: var(--orange);
+      color: #fff;
+      box-shadow: 0 8px 16px rgba(224, 122, 60, 0.16);
+    }
+    .guided-action.secondary {
+      background: rgba(0,0,0,0.03);
+    }
+    .guided-action:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .guided-empty {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px dashed var(--orange-border);
+      background: rgba(255,247,241,0.7);
+      font-size: 0.78rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+    .guided-empty strong {
+      color: var(--text);
+    }
+
     /* ─── MESSAGES ───────────────────────────────────── */
     .message {
       display: flex; align-items: flex-start; gap: 10px;
@@ -914,6 +1433,11 @@
       .hero h2 { font-size: 1.3rem; }
       .chips { grid-template-columns: 1fr; max-width: 100%; }
       .chip { padding: 11px 13px; }
+      .guided-shell { padding: 14px; gap: 12px; }
+      .guided-overview-grid { grid-template-columns: 1fr; }
+      .guided-topic-list { grid-template-columns: 1fr 1fr; }
+      .guided-actions { flex-direction: column; }
+      .guided-action { width: 100%; }
       .chat-delete { opacity: 1; }
     }
     @media (max-width: 480px) {
@@ -933,6 +1457,18 @@
       .message, .message.user-msg { gap: 0; max-width: 96%; }
       .hero { padding: 32px 0 20px; gap: 12px; }
       .hero-icon { width: 44px; height: 44px; }
+      .guided-topic-list { grid-template-columns: 1fr; }
+      .guided-head,
+      .guided-quiz-head,
+      .guided-roadmap-top,
+      .guided-block-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .guided-section {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
 
     /* ─── MSG ACTIONS ────────────────────────────────── */
@@ -1654,6 +2190,97 @@
       TOP_P: 0.95
     };
 
+    APP_CONFIG.GUIDED_LEARNING_PROMPT = [
+      'Estas en modo "Guided Learning" de inhouse learn.',
+      'La UI del producto ya muestra progreso, profundidad y mini tests. Asi que:',
+      '- NO pongas barras de progreso de texto en la respuesta visible.',
+      '- NO pongas el mini test en el texto visible si ya lo mandas en metadatos.',
+      '- Usa siempre espanol, tuteo informal y explicaciones cortas pero profundas.',
+      '',
+      'REGLAS:',
+      '',
+      '1. Si el usuario sube documentos o dice que tiene material, primero propone un indice jerarquico Tema -> Bloque -> Apartado. No empieces la teoria hasta que exista una ruta razonable.',
+      '',
+      '2. Explica un solo apartado por mensaje. No vuelques bloques ni temas enteros. No avances si el usuario no lo entiende o si la UI indica que el siguiente apartado sigue bloqueado.',
+      '',
+      '3. Asume que el usuario parte de cero. Prioriza intuicion, origen de formulas, significado real y por que cada idea tiene sentido. Usa analogias cortas y ejemplos pequenos, no problemas completos.',
+      '',
+      '4. Piensa en una persona con TDA/TDAH: fragmenta, usa anclas, evita muros de texto, pero no pierdas profundidad.',
+      '',
+      '5. Si el usuario se va fuera del apartado actual, aparcalo brevemente y vuelve al foco salvo que quiera cambiar de ruta de forma explicita.',
+      '',
+      '6. LaTeX para matematicas: inline \\(...\\) y display $$...$$. Nunca metas matematicas en bloques de codigo.',
+      '',
+      '7. Al final de CADA respuesta debes anadir exactamente un bloque XML con JSON valido y nada despues:',
+      '   <guided-state>{...}</guided-state>',
+      '',
+      '8. En el texto visible puedes cerrar con una frase corta tipo "Cuando termines, responde al mini test de abajo".',
+      '',
+      '9. El JSON debe seguir este schema:',
+      '   {',
+      '     "syllabusTitle": "string",',
+      '     "overview": "string opcional",',
+      '     "topics": [',
+      '       {',
+      '         "id": "string estable",',
+      '         "title": "string",',
+      '         "emoji": "string opcional",',
+      '         "progress": 0,',
+      '         "status": "planned|locked|in_progress|done",',
+      '         "blocks": [',
+      '           {',
+      '             "id": "string estable",',
+      '             "title": "string",',
+      '             "progress": 0,',
+      '             "status": "planned|locked|in_progress|done",',
+      '             "sections": [',
+      '               {',
+      '                 "id": "string estable",',
+      '                 "title": "string",',
+      '                 "progress": 0,',
+      '                 "status": "planned|locked|in_progress|done",',
+      '                 "summary": "string opcional"',
+      '               }',
+      '             ]',
+      '           }',
+      '         ]',
+      '       }',
+      '     ],',
+      '     "current": {',
+      '       "topicId": "string",',
+      '       "topicTitle": "string",',
+      '       "blockId": "string",',
+      '       "blockTitle": "string",',
+      '       "sectionId": "string",',
+      '       "sectionTitle": "string",',
+      '       "overallProgress": 0,',
+      '       "topicProgress": 0,',
+      '       "depthPercent": 0,',
+      '       "canAdvance": false',
+      '     },',
+      '     "quiz": {',
+      '       "title": "string",',
+      '       "intro": "string",',
+      '       "requiredAccuracy": 70,',
+      '       "items": [',
+      '         {',
+      '           "id": "string estable",',
+      '           "prompt": "string",',
+      '           "options": [',
+      '             { "id": "a", "text": "string", "correct": true }',
+      '           ],',
+      '           "explanation": "string corta"',
+      '         }',
+      '       ]',
+      '     },',
+      '     "teacherNote": "string opcional para recordar que reforzar si falla"',
+      '   }',
+      '',
+      '10. El mini test debe ser conceptual, corto y util para decidir si puede pasar al siguiente apartado. Usa 2 o 3 preguntas multiple choice, con 3 o 4 opciones y exactamente una correcta.',
+      '',
+      '11. Si sigues dentro del mismo apartado, reutiliza los mismos ids estables siempre que puedas.'
+    ].join('\n');
+
     const PROVIDER_OPTIONS = [
       { id: 'codex', label: 'Codex' },
       { id: 'gemini', label: 'Gemini' },
@@ -1859,10 +2486,425 @@
       guidedLearning: false
     };
 
-    function getActiveSystemPrompt() {
-      return appState.guidedLearning
-        ? APP_CONFIG.GUIDED_LEARNING_PROMPT
+    function isGuidedLearningEnabled(chatLike) {
+      const chat = chatLike || getActiveChat();
+      return !!(chat && chat.guidedLearning);
+    }
+
+    function getGuidedResolvedCurrent(session) {
+      if (!session || typeof session !== 'object') {
+        return {
+          topic: null,
+          block: null,
+          section: null
+        };
+      }
+      const topic = chooseGuidedCurrent(session.topics, session.current && session.current.topicId);
+      const block = topic ? chooseGuidedCurrent(topic.blocks, session.current && session.current.blockId) : null;
+      const section = block ? chooseGuidedCurrent(block.sections, session.current && session.current.sectionId) : null;
+      return {
+        topic,
+        block,
+        section
+      };
+    }
+
+    function ensureGuidedSectionRecord(session, sectionKey, requiredAccuracy) {
+      if (!session || !sectionKey) {
+        return null;
+      }
+      if (!session.sectionStats || typeof session.sectionStats !== 'object') {
+        session.sectionStats = {};
+      }
+      session.sectionStats[sectionKey] = normalizeGuidedSectionRecord(
+        session.sectionStats[sectionKey],
+        requiredAccuracy
+      );
+      return session.sectionStats[sectionKey];
+    }
+
+    function computeGuidedQuizStats(session, sectionKey) {
+      const quiz = session && session.quiz ? session.quiz : createEmptyGuidedQuiz();
+      const requiredAccuracy = clampNumber(quiz.requiredAccuracy, 0, 100);
+      const record = ensureGuidedSectionRecord(session, sectionKey, requiredAccuracy);
+      const items = Array.isArray(quiz.items) ? quiz.items : [];
+      let answered = 0;
+      let correct = 0;
+      const itemStates = items.map((item) => {
+        const response = record && record.responses ? record.responses[item.id] : null;
+        const selectedOptionId = response && response.selectedOptionId ? response.selectedOptionId : '';
+        const selectedOption = item.options.find((option) => option.id === selectedOptionId) || null;
+        const correctOption = item.options.find((option) => option.correct) || null;
+        const isAnswered = !!selectedOptionId;
+        const isCorrect = !!(isAnswered && selectedOption && selectedOption.correct);
+        if (isAnswered) answered += 1;
+        if (isCorrect) correct += 1;
+        return {
+          item,
+          response,
+          selectedOptionId,
+          selectedOption,
+          correctOption,
+          answered: isAnswered,
+          correct: isCorrect
+        };
+      });
+      const total = items.length;
+      const accuracy = total ? Math.round((correct / total) * 100) : 0;
+      const completed = total > 0 && answered === total;
+      const unlocked = total
+        ? !!((record && record.mastered) || (completed && accuracy >= requiredAccuracy))
+        : !!(session && session.current && session.current.canAdvance);
+      return {
+        record,
+        itemStates,
+        answered,
+        correct,
+        total,
+        accuracy,
+        completed,
+        requiredAccuracy,
+        unlocked,
+        hasQuiz: total > 0
+      };
+    }
+
+    function syncGuidedStatsToRecord(stats) {
+      if (!stats || !stats.record) {
+        return stats;
+      }
+      stats.record.lastAccuracy = stats.accuracy;
+      stats.record.requiredAccuracy = stats.requiredAccuracy;
+      stats.record.updatedAt = nowIso();
+      if (stats.accuracy > stats.record.bestAccuracy) {
+        stats.record.bestAccuracy = stats.accuracy;
+      }
+      if (stats.unlocked) {
+        stats.record.mastered = true;
+        if (!stats.record.completedAt) {
+          stats.record.completedAt = nowIso();
+        }
+      }
+      return stats;
+    }
+
+    function getGuidedCurrentMastery(chatLike) {
+      const chat = chatLike || getActiveChat();
+      if (!chat) {
+        return {
+          record: null,
+          itemStates: [],
+          answered: 0,
+          correct: 0,
+          total: 0,
+          accuracy: 0,
+          completed: false,
+          requiredAccuracy: 70,
+          unlocked: false,
+          hasQuiz: false
+        };
+      }
+      const session = ensureGuidedSession(chat);
+      const sectionKey = guidedSectionKey(
+        session.current.topicId,
+        session.current.blockId,
+        session.current.sectionId
+      );
+      return computeGuidedQuizStats(session, sectionKey);
+    }
+
+    function buildGuidedUiState(chatLike) {
+      const chat = chatLike || getActiveChat();
+      const session = ensureGuidedSession(chat);
+      const resolved = getGuidedResolvedCurrent(session);
+      const mastery = getGuidedCurrentMastery(chat);
+      const weakQuestions = mastery.itemStates
+        .filter((state) => state.answered && !state.correct)
+        .map((state) => state.item.prompt)
+        .slice(0, 3);
+      return JSON.stringify({
+        syllabusTitle: session.syllabusTitle || '',
+        current: {
+          topicId: session.current.topicId || '',
+          topicTitle: resolved.topic ? resolved.topic.title : session.current.topicTitle || '',
+          blockId: session.current.blockId || '',
+          blockTitle: resolved.block ? resolved.block.title : session.current.blockTitle || '',
+          sectionId: session.current.sectionId || '',
+          sectionTitle: resolved.section ? resolved.section.title : session.current.sectionTitle || '',
+          overallProgress: clampNumber(session.current.overallProgress, 0, 100),
+          topicProgress: clampNumber(session.current.topicProgress, 0, 100),
+          depthPercent: clampNumber(session.current.depthPercent, 0, 100)
+        },
+        uiLock: {
+          nextSectionLocked: mastery.hasQuiz ? !mastery.unlocked : false,
+          mastered: !!(mastery.record && mastery.record.mastered),
+          requiredAccuracy: mastery.requiredAccuracy,
+          accuracy: mastery.accuracy,
+          bestAccuracy: mastery.record ? mastery.record.bestAccuracy : mastery.accuracy,
+          answered: mastery.answered,
+          totalQuestions: mastery.total,
+          weakQuestions
+        },
+        teacherNote: session.teacherNote || '',
+        syllabusKnown: Array.isArray(session.topics) && session.topics.length > 0
+      }, null, 2);
+    }
+
+    function buildGuidedSystemPrompt(chatLike) {
+      const chat = chatLike || getActiveChat();
+      return [
+        APP_CONFIG.GUIDED_LEARNING_PROMPT,
+        '',
+        'UI_STATE (fuente de verdad de la app; respetalo):',
+        buildGuidedUiState(chat)
+      ].join('\n');
+    }
+
+    function getActiveSystemPrompt(chatLike) {
+      const chat = chatLike || getActiveChat();
+      return isGuidedLearningEnabled(chat)
+        ? buildGuidedSystemPrompt(chat)
         : APP_CONFIG.SYSTEM_PROMPT;
+    }
+
+    function parseGuidedAssistantPayload(text) {
+      const raw = String(text || '');
+      const start = raw.indexOf(GUIDED_STATE_TAG_START);
+      if (start === -1) {
+        let partialTrimmed = raw;
+        for (let len = GUIDED_STATE_TAG_START.length - 1; len > 0; len -= 1) {
+          const prefix = GUIDED_STATE_TAG_START.slice(0, len);
+          if (raw.endsWith(prefix)) {
+            partialTrimmed = raw.slice(0, raw.length - len);
+            break;
+          }
+        }
+        return {
+          visibleText: partialTrimmed,
+          meta: null,
+          complete: false
+        };
+      }
+      const visibleText = raw.slice(0, start).replace(/\s+$/, '');
+      const end = raw.indexOf(GUIDED_STATE_TAG_END, start + GUIDED_STATE_TAG_START.length);
+      if (end === -1) {
+        return {
+          visibleText,
+          meta: null,
+          complete: false
+        };
+      }
+      const jsonText = raw.slice(start + GUIDED_STATE_TAG_START.length, end).trim();
+      let meta = null;
+      try {
+        meta = JSON.parse(jsonText);
+      } catch (error) {
+        meta = null;
+      }
+      return {
+        visibleText,
+        meta,
+        complete: true
+      };
+    }
+
+    function mergeGuidedStateIntoSession(sessionLike, rawState, sourceMessageId) {
+      const session = normalizeGuidedSession(sessionLike);
+      if (!rawState || typeof rawState !== 'object') {
+        return session;
+      }
+      if (typeof rawState.syllabusTitle === 'string') {
+        session.syllabusTitle = rawState.syllabusTitle.trim();
+      }
+      if (typeof rawState.overview === 'string') {
+        session.overview = rawState.overview.trim();
+      }
+      if (Array.isArray(rawState.topics)) {
+        session.topics = rawState.topics.map((topic, index) => normalizeGuidedTopic(topic, index));
+      }
+      if (rawState.current && typeof rawState.current === 'object') {
+        session.current = Object.assign(createEmptyGuidedCurrent(), session.current, {
+          topicId: typeof rawState.current.topicId === 'string' ? rawState.current.topicId.trim() : session.current.topicId,
+          topicTitle: typeof rawState.current.topicTitle === 'string' ? rawState.current.topicTitle.trim() : session.current.topicTitle,
+          blockId: typeof rawState.current.blockId === 'string' ? rawState.current.blockId.trim() : session.current.blockId,
+          blockTitle: typeof rawState.current.blockTitle === 'string' ? rawState.current.blockTitle.trim() : session.current.blockTitle,
+          sectionId: typeof rawState.current.sectionId === 'string' ? rawState.current.sectionId.trim() : session.current.sectionId,
+          sectionTitle: typeof rawState.current.sectionTitle === 'string' ? rawState.current.sectionTitle.trim() : session.current.sectionTitle,
+          overallProgress: typeof rawState.current.overallProgress !== 'undefined'
+            ? clampNumber(rawState.current.overallProgress, 0, 100)
+            : session.current.overallProgress,
+          topicProgress: typeof rawState.current.topicProgress !== 'undefined'
+            ? clampNumber(rawState.current.topicProgress, 0, 100)
+            : session.current.topicProgress,
+          depthPercent: typeof rawState.current.depthPercent !== 'undefined'
+            ? clampNumber(rawState.current.depthPercent, 0, 100)
+            : session.current.depthPercent,
+          canAdvance: typeof rawState.current.canAdvance === 'boolean'
+            ? rawState.current.canAdvance
+            : session.current.canAdvance
+        });
+      }
+      if (rawState.quiz && typeof rawState.quiz === 'object') {
+        const nextQuiz = Object.assign({}, session.quiz, rawState.quiz);
+        if (Array.isArray(rawState.quiz.items)) {
+          nextQuiz.items = rawState.quiz.items;
+        }
+        session.quiz = normalizeGuidedQuiz(nextQuiz);
+      }
+      if (typeof rawState.teacherNote === 'string') {
+        session.teacherNote = rawState.teacherNote.trim();
+      }
+      if (sourceMessageId) {
+        session.quiz.sourceMessageId = sourceMessageId;
+      }
+      session.lastUpdatedAt = nowIso();
+      syncGuidedCurrentTitles(session);
+      const sectionKey = guidedSectionKey(
+        session.current.topicId,
+        session.current.blockId,
+        session.current.sectionId
+      );
+      if (sectionKey) {
+        ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
+      }
+      return session;
+    }
+
+    function cleanAssistantTextForUi(chat, message, rawText) {
+      const parsed = parseGuidedAssistantPayload(rawText);
+      if (chat && chat.guidedLearning && parsed.meta) {
+        chat.guidedSession = mergeGuidedStateIntoSession(
+          ensureGuidedSession(chat),
+          parsed.meta,
+          message && message.id ? message.id : ''
+        );
+      }
+      return parsed.visibleText;
+    }
+
+    function currentGuidedSectionKey(chatLike) {
+      const chat = chatLike || getActiveChat();
+      if (!chat || !chat.guidedLearning) {
+        return '';
+      }
+      const session = ensureGuidedSession(chat);
+      return guidedSectionKey(
+        session.current.topicId,
+        session.current.blockId,
+        session.current.sectionId
+      );
+    }
+
+    function resetGuidedQuizState(chatLike) {
+      const chat = chatLike || getActiveChat();
+      const session = ensureGuidedSession(chat);
+      const sectionKey = currentGuidedSectionKey(chat);
+      if (!sectionKey) {
+        return;
+      }
+      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
+      record.responses = {};
+      record.lastAccuracy = 0;
+      record.updatedAt = nowIso();
+      saveState({ skipDrive: true });
+      renderThread({ preserveScroll: true });
+    }
+
+    function answerGuidedQuizQuestion(questionId, optionId) {
+      const chat = getActiveChat();
+      if (!chat || !chat.guidedLearning) {
+        return;
+      }
+      const session = ensureGuidedSession(chat);
+      const sectionKey = currentGuidedSectionKey(chat);
+      if (!sectionKey) {
+        return;
+      }
+      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
+      const item = session.quiz.items.find((quizItem) => quizItem.id === questionId);
+      if (!item) {
+        return;
+      }
+      const selected = item.options.find((option) => option.id === optionId);
+      if (!selected) {
+        return;
+      }
+      record.responses[questionId] = {
+        selectedOptionId: optionId,
+        answeredAt: nowIso(),
+        correct: !!selected.correct
+      };
+      syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
+      saveState({ skipDrive: true });
+      renderThread({ preserveScroll: true });
+    }
+
+    function guidedWeakAreasText(chatLike) {
+      const mastery = getGuidedCurrentMastery(chatLike);
+      const weak = mastery.itemStates
+        .filter((state) => state.answered && !state.correct)
+        .map((state) => '"' + state.item.prompt + '"');
+      return weak.length
+        ? weak.join(', ')
+        : 'Refuerza la intuicion general de este apartado antes de seguir.';
+    }
+
+    function sendGuidedActionPrompt(promptText) {
+      if (!promptText || appState.busy) {
+        return;
+      }
+      elements.composer.value = String(promptText);
+      autoResizeComposer();
+      updateSendUi();
+      handleSend();
+    }
+
+    function handleGuidedAction(action) {
+      const chat = getActiveChat();
+      if (!chat || !chat.guidedLearning) {
+        return;
+      }
+      const session = ensureGuidedSession(chat);
+      const current = getGuidedResolvedCurrent(session);
+      const mastery = getGuidedCurrentMastery(chat);
+      if (action === 'reset-quiz') {
+        resetGuidedQuizState(chat);
+        return;
+      }
+      if (action === 'reinforce') {
+        sendGuidedActionPrompt(
+          'Quedate en el mismo apartado y vuelve a explicarlo con otra intuicion. Mis huecos ahora mismo son: ' +
+          guidedWeakAreasText(chat)
+        );
+        return;
+      }
+      if (action === 'confirm-roadmap') {
+        sendGuidedActionPrompt('Indice confirmado. Empecemos por el primer apartado, paso a paso y sin saltar nada.');
+        return;
+      }
+      if (action === 'continue') {
+        const reportedAccuracy = mastery.record
+          ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0)
+          : mastery.accuracy;
+        if (!mastery.hasQuiz) {
+          showToast(
+            'Guided Learning',
+            'Todavia no hay mini test para este apartado. Espera a que el tutor lo genere antes de seguir.'
+          );
+          return;
+        }
+        if (mastery.hasQuiz && !mastery.unlocked) {
+          showToast(
+            'Guided Learning',
+            'Antes de seguir necesitas completar el mini test con al menos un ' + mastery.requiredAccuracy + '% de acierto.'
+          );
+          return;
+        }
+        const sectionTitle = current.section ? current.section.title : (session.current.sectionTitle || 'este apartado');
+        sendGuidedActionPrompt(
+          'He terminado el mini test de "' + sectionTitle + '" con un ' + reportedAccuracy + '% de acierto. Si no ves huecos, seguimos con el siguiente apartado.'
+        );
+      }
     }
 
     const elements = {
@@ -2008,6 +3050,312 @@
       return defaultThinkingLevelForModel(providerId, option.id);
     }
 
+    const GUIDED_STATE_TAG_START = '<guided-state>';
+    const GUIDED_STATE_TAG_END = '</guided-state>';
+
+    function clampNumber(value, min, max) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) {
+        return min;
+      }
+      return Math.min(max, Math.max(min, num));
+    }
+
+    function slugify(value, fallback) {
+      const raw = String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return raw || fallback || uid('guided');
+    }
+
+    function guidedStatusValue(status, fallback) {
+      const raw = String(status || '').trim().toLowerCase();
+      if (raw === 'done' || raw === 'in_progress' || raw === 'locked' || raw === 'planned') {
+        return raw;
+      }
+      return fallback || 'planned';
+    }
+
+    function createEmptyGuidedCurrent() {
+      return {
+        topicId: '',
+        topicTitle: '',
+        blockId: '',
+        blockTitle: '',
+        sectionId: '',
+        sectionTitle: '',
+        overallProgress: 0,
+        topicProgress: 0,
+        depthPercent: 0,
+        canAdvance: false
+      };
+    }
+
+    function createEmptyGuidedQuiz() {
+      return {
+        title: '',
+        intro: '',
+        requiredAccuracy: 70,
+        items: [],
+        sourceMessageId: '',
+        updatedAt: ''
+      };
+    }
+
+    function createEmptyGuidedSession() {
+      return {
+        syllabusTitle: '',
+        overview: '',
+        topics: [],
+        current: createEmptyGuidedCurrent(),
+        quiz: createEmptyGuidedQuiz(),
+        sectionStats: {},
+        teacherNote: '',
+        lastUpdatedAt: ''
+      };
+    }
+
+    function normalizeGuidedOption(option, index) {
+      const label = option && typeof option.text === 'string'
+        ? option.text.trim()
+        : option && typeof option.label === 'string'
+          ? option.label.trim()
+          : '';
+      return {
+        id: option && typeof option.id === 'string' && option.id.trim()
+          ? option.id.trim()
+          : 'opt-' + String(index + 1),
+        text: label || ('Opcion ' + String(index + 1)),
+        correct: !!(option && option.correct)
+      };
+    }
+
+    function normalizeGuidedQuizItem(item, index) {
+      const prompt = item && typeof item.prompt === 'string'
+        ? item.prompt.trim()
+        : '';
+      return {
+        id: item && typeof item.id === 'string' && item.id.trim()
+          ? item.id.trim()
+          : slugify(prompt || ('pregunta-' + String(index + 1)), 'pregunta-' + String(index + 1)),
+        prompt: prompt || ('Pregunta ' + String(index + 1)),
+        explanation: item && typeof item.explanation === 'string' ? item.explanation.trim() : '',
+        options: Array.isArray(item && item.options) && item.options.length
+          ? item.options.map((option, optionIndex) => normalizeGuidedOption(option, optionIndex))
+          : []
+      };
+    }
+
+    function normalizeGuidedQuiz(raw) {
+      const quiz = createEmptyGuidedQuiz();
+      if (!raw || typeof raw !== 'object') {
+        return quiz;
+      }
+      quiz.title = typeof raw.title === 'string' ? raw.title.trim() : '';
+      quiz.intro = typeof raw.intro === 'string' ? raw.intro.trim() : '';
+      quiz.requiredAccuracy = clampNumber(
+        typeof raw.requiredAccuracy !== 'undefined' ? raw.requiredAccuracy : 70,
+        0,
+        100
+      );
+      quiz.items = Array.isArray(raw.items)
+        ? raw.items.map((item, index) => normalizeGuidedQuizItem(item, index)).filter((item) => item.options.length >= 2)
+        : [];
+      quiz.sourceMessageId = typeof raw.sourceMessageId === 'string' ? raw.sourceMessageId : '';
+      quiz.updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : '';
+      return quiz;
+    }
+
+    function normalizeGuidedSection(section, index) {
+      const title = section && typeof section.title === 'string' ? section.title.trim() : '';
+      return {
+        id: section && typeof section.id === 'string' && section.id.trim()
+          ? section.id.trim()
+          : slugify(title || ('apartado-' + String(index + 1)), 'apartado-' + String(index + 1)),
+        title: title || ('Apartado ' + String(index + 1)),
+        status: guidedStatusValue(section && section.status, 'planned'),
+        progress: clampNumber(section && section.progress, 0, 100),
+        summary: section && typeof section.summary === 'string' ? section.summary.trim() : ''
+      };
+    }
+
+    function normalizeGuidedBlock(block, index) {
+      const title = block && typeof block.title === 'string' ? block.title.trim() : '';
+      return {
+        id: block && typeof block.id === 'string' && block.id.trim()
+          ? block.id.trim()
+          : slugify(title || ('bloque-' + String(index + 1)), 'bloque-' + String(index + 1)),
+        title: title || ('Bloque ' + String(index + 1)),
+        status: guidedStatusValue(block && block.status, 'planned'),
+        progress: clampNumber(block && block.progress, 0, 100),
+        sections: Array.isArray(block && block.sections)
+          ? block.sections.map((section, sectionIndex) => normalizeGuidedSection(section, sectionIndex))
+          : []
+      };
+    }
+
+    function normalizeGuidedTopic(topic, index) {
+      const title = topic && typeof topic.title === 'string' ? topic.title.trim() : '';
+      return {
+        id: topic && typeof topic.id === 'string' && topic.id.trim()
+          ? topic.id.trim()
+          : slugify(title || ('tema-' + String(index + 1)), 'tema-' + String(index + 1)),
+        title: title || ('Tema ' + String(index + 1)),
+        emoji: topic && typeof topic.emoji === 'string' ? topic.emoji.trim() : '',
+        status: guidedStatusValue(topic && topic.status, 'planned'),
+        progress: clampNumber(topic && topic.progress, 0, 100),
+        blocks: Array.isArray(topic && topic.blocks)
+          ? topic.blocks.map((block, blockIndex) => normalizeGuidedBlock(block, blockIndex))
+          : []
+      };
+    }
+
+    function normalizeGuidedSectionRecord(raw, requiredAccuracy) {
+      const responses = {};
+      if (raw && raw.responses && typeof raw.responses === 'object') {
+        Object.keys(raw.responses).forEach((questionId) => {
+          const item = raw.responses[questionId];
+          if (!item || typeof item !== 'object') return;
+          responses[String(questionId)] = {
+            selectedOptionId: item && typeof item.selectedOptionId === 'string' ? item.selectedOptionId : '',
+            answeredAt: item && typeof item.answeredAt === 'string' ? item.answeredAt : '',
+            correct: typeof item.correct === 'boolean' ? item.correct : null
+          };
+        });
+      }
+      return {
+        responses,
+        bestAccuracy: clampNumber(raw && raw.bestAccuracy, 0, 100),
+        lastAccuracy: clampNumber(raw && raw.lastAccuracy, 0, 100),
+        requiredAccuracy: clampNumber(
+          raw && typeof raw.requiredAccuracy !== 'undefined' ? raw.requiredAccuracy : requiredAccuracy,
+          0,
+          100
+        ),
+        mastered: !!(raw && raw.mastered),
+        updatedAt: raw && typeof raw.updatedAt === 'string' ? raw.updatedAt : '',
+        completedAt: raw && typeof raw.completedAt === 'string' ? raw.completedAt : ''
+      };
+    }
+
+    function guidedAverageProgress(topics) {
+      if (!Array.isArray(topics) || !topics.length) {
+        return 0;
+      }
+      const total = topics.reduce((sum, topic) => sum + clampNumber(topic && topic.progress, 0, 100), 0);
+      return Math.round(total / topics.length);
+    }
+
+    function chooseGuidedCurrent(list, preferredId) {
+      if (!Array.isArray(list) || !list.length) {
+        return null;
+      }
+      if (preferredId) {
+        const exact = list.find((item) => item && item.id === preferredId);
+        if (exact) {
+          return exact;
+        }
+      }
+      return list.find((item) => item && item.status === 'in_progress')
+        || list.find((item) => item && item.status === 'planned')
+        || list.find((item) => item && item.status === 'locked')
+        || list.find((item) => item && item.status === 'done')
+        || list[0];
+    }
+
+    function syncGuidedCurrentTitles(session) {
+      if (!session || typeof session !== 'object') {
+        return session;
+      }
+      if (!session.current || typeof session.current !== 'object') {
+        session.current = createEmptyGuidedCurrent();
+      }
+      const topic = chooseGuidedCurrent(session.topics, session.current.topicId);
+      const block = topic ? chooseGuidedCurrent(topic.blocks, session.current.blockId) : null;
+      const section = block ? chooseGuidedCurrent(block.sections, session.current.sectionId) : null;
+      if (topic) {
+        session.current.topicId = topic.id;
+        session.current.topicTitle = topic.title;
+        if (!session.current.topicProgress) {
+          session.current.topicProgress = clampNumber(topic.progress, 0, 100);
+        }
+      }
+      if (block) {
+        session.current.blockId = block.id;
+        session.current.blockTitle = block.title;
+      }
+      if (section) {
+        session.current.sectionId = section.id;
+        session.current.sectionTitle = section.title;
+      }
+      if (!session.current.overallProgress) {
+        session.current.overallProgress = guidedAverageProgress(session.topics);
+      }
+      session.current.overallProgress = clampNumber(session.current.overallProgress, 0, 100);
+      session.current.topicProgress = clampNumber(session.current.topicProgress, 0, 100);
+      session.current.depthPercent = clampNumber(session.current.depthPercent, 0, 100);
+      session.current.canAdvance = !!session.current.canAdvance;
+      return session;
+    }
+
+    function normalizeGuidedSession(raw) {
+      const session = createEmptyGuidedSession();
+      if (raw && typeof raw === 'object') {
+        session.syllabusTitle = typeof raw.syllabusTitle === 'string' ? raw.syllabusTitle.trim() : '';
+        session.overview = typeof raw.overview === 'string' ? raw.overview.trim() : '';
+        session.topics = Array.isArray(raw.topics)
+          ? raw.topics.map((topic, index) => normalizeGuidedTopic(topic, index))
+          : [];
+        session.current = Object.assign(createEmptyGuidedCurrent(), raw.current && typeof raw.current === 'object' ? {
+          topicId: typeof raw.current.topicId === 'string' ? raw.current.topicId.trim() : '',
+          topicTitle: typeof raw.current.topicTitle === 'string' ? raw.current.topicTitle.trim() : '',
+          blockId: typeof raw.current.blockId === 'string' ? raw.current.blockId.trim() : '',
+          blockTitle: typeof raw.current.blockTitle === 'string' ? raw.current.blockTitle.trim() : '',
+          sectionId: typeof raw.current.sectionId === 'string' ? raw.current.sectionId.trim() : '',
+          sectionTitle: typeof raw.current.sectionTitle === 'string' ? raw.current.sectionTitle.trim() : '',
+          overallProgress: clampNumber(raw.current.overallProgress, 0, 100),
+          topicProgress: clampNumber(raw.current.topicProgress, 0, 100),
+          depthPercent: clampNumber(raw.current.depthPercent, 0, 100),
+          canAdvance: !!raw.current.canAdvance
+        } : {});
+        session.quiz = normalizeGuidedQuiz(raw.quiz);
+        session.teacherNote = typeof raw.teacherNote === 'string' ? raw.teacherNote.trim() : '';
+        session.lastUpdatedAt = typeof raw.lastUpdatedAt === 'string' ? raw.lastUpdatedAt : '';
+        if (raw.sectionStats && typeof raw.sectionStats === 'object') {
+          Object.keys(raw.sectionStats).forEach((key) => {
+            session.sectionStats[key] = normalizeGuidedSectionRecord(raw.sectionStats[key], session.quiz.requiredAccuracy);
+          });
+        }
+      }
+      syncGuidedCurrentTitles(session);
+      const currentKey = guidedSectionKey(session.current.topicId, session.current.blockId, session.current.sectionId);
+      if (currentKey) {
+        session.sectionStats[currentKey] = normalizeGuidedSectionRecord(
+          session.sectionStats[currentKey],
+          session.quiz.requiredAccuracy
+        );
+      }
+      return session;
+    }
+
+    function ensureGuidedSession(chat) {
+      if (!chat || typeof chat !== 'object') {
+        return createEmptyGuidedSession();
+      }
+      chat.guidedSession = normalizeGuidedSession(chat.guidedSession);
+      return chat.guidedSession;
+    }
+
+    function guidedSectionKey(topicId, blockId, sectionId) {
+      if (!topicId || !blockId || !sectionId) {
+        return '';
+      }
+      return [topicId, blockId, sectionId].join('::');
+    }
+
     function normalizeChatConfig(chat) {
       if (!chat || typeof chat !== 'object') {
         return chat;
@@ -2064,6 +3412,9 @@
 
     function normalizeStoredChat(chat, options) {
       const opts = options || {};
+      const defaultGuidedLearning = typeof opts.defaultGuidedLearning === 'boolean'
+        ? opts.defaultGuidedLearning
+        : false;
       const createdAt = chat && typeof chat.createdAt === 'string'
         ? chat.createdAt
         : nowIso();
@@ -2081,7 +3432,11 @@
         model: chat && chat.model ? chat.model : APP_CONFIG.DEFAULT_MODEL,
         thinkingLevel: chat && typeof chat.thinkingLevel !== 'undefined'
           ? chat.thinkingLevel
-          : APP_CONFIG.DEFAULT_THINKING_LEVEL
+          : APP_CONFIG.DEFAULT_THINKING_LEVEL,
+        guidedLearning: chat && typeof chat.guidedLearning === 'boolean'
+          ? chat.guidedLearning
+          : defaultGuidedLearning,
+        guidedSession: normalizeGuidedSession(chat && chat.guidedSession)
       });
     }
 
@@ -2089,7 +3444,7 @@
       if (!snapshot || !Array.isArray(snapshot.chats) || !snapshot.chats.length) {
         return null;
       }
-      const opts = options || { includeBinaries: true };
+      const opts = Object.assign({ includeBinaries: true }, options || {});
       const chats = snapshot.chats.map((chat) => normalizeStoredChat(chat, opts));
       return {
         version: typeof snapshot.version === 'number' ? snapshot.version : 1,
@@ -2105,6 +3460,7 @@
         version: 1,
         savedAt: nowIso(),
         activeChatId: appState.activeChatId,
+        guidedLearning: !!appState.guidedLearning,
         chats: appState.chats.map((chat) => {
           const normalizedChat = normalizeStoredChat(chat, opts);
           normalizedChat.messages = normalizedChat.messages.filter((message) => !message.pending);
@@ -2114,12 +3470,19 @@
     }
 
     function applySnapshotToState(snapshot) {
-      const normalized = normalizeSnapshot(snapshot);
+      const normalized = normalizeSnapshot(snapshot, {
+        defaultGuidedLearning: snapshot && typeof snapshot.guidedLearning === 'boolean'
+          ? snapshot.guidedLearning
+          : false
+      });
       if (!normalized) {
         return false;
       }
       appState.chats = normalized.chats;
       appState.activeChatId = normalized.activeChatId;
+      if (snapshot && typeof snapshot.guidedLearning === 'boolean') {
+        appState.guidedLearning = snapshot.guidedLearning;
+      }
       ensureActiveChat();
       saveState({
         skipDrive: true
@@ -2131,7 +3494,7 @@
       if (!message || message.pending) {
         return false;
       }
-      if (typeof message.content === 'string' && message.content.trim()) {
+      if (typeof parseGuidedAssistantPayload(message && message.content).visibleText === 'string' && parseGuidedAssistantPayload(message && message.content).visibleText.trim()) {
         return true;
       }
       return Array.isArray(message.parts) && message.parts.some((part) => {
@@ -2957,7 +4320,9 @@
         messages: [],
         provider,
         model,
-        thinkingLevel: normalizeThinkingLevelForModel(provider, model, APP_CONFIG.DEFAULT_THINKING_LEVEL)
+        thinkingLevel: normalizeThinkingLevelForModel(provider, model, APP_CONFIG.DEFAULT_THINKING_LEVEL),
+        guidedLearning: !!appState.guidedLearning,
+        guidedSession: createEmptyGuidedSession()
       };
     }
 
@@ -3021,7 +4386,11 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
         const payload = JSON.parse(raw);
-        const parsed = normalizeSnapshot(payload);
+        const parsed = normalizeSnapshot(payload, {
+          defaultGuidedLearning: payload && typeof payload.guidedLearning === 'boolean'
+            ? payload.guidedLearning
+            : false
+        });
         if (parsed) {
           appState.chats = parsed.chats;
           appState.activeChatId = parsed.activeChatId;
@@ -3112,6 +4481,8 @@
 
     function updateSendUi() {
       const driveLocked = !hasDrivePersistenceReady();
+      const activeChat = getActiveChat();
+      const guidedActive = !!(activeChat && activeChat.guidedLearning);
       const hasDraft = !!elements.composer.value.trim() || !!(appState.composerAttachments && appState.composerAttachments.length);
       elements.sendBtn.disabled = !appState.busy && (driveLocked || !hasDraft || appState.attachmentBusy);
       if (appState.busy) {
@@ -3125,7 +4496,9 @@
         elements.composer.disabled = driveLocked;
         elements.composer.placeholder = driveLocked
           ? 'Inicia sesion con Google para continuar...'
-          : 'Escribe aqui...';
+          : (guidedActive
+            ? 'Sube apuntes, pide un indice o responde al apartado actual...'
+            : 'Escribe aqui...');
       }
       if (elements.attachBtn) {
         elements.attachBtn.disabled = driveLocked || appState.busy || appState.attachmentBusy;
@@ -3146,7 +4519,8 @@
 
     function updateGuidedLearningUi() {
       if (!elements.guidedBtn) return;
-      const active = !!appState.guidedLearning;
+      const chat = getActiveChat();
+      const active = !!(chat && chat.guidedLearning);
       elements.guidedBtn.classList.toggle('active', active);
       elements.guidedBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
       elements.guidedBtn.title = active
@@ -3537,12 +4911,14 @@
       const idx = activeVersionIndex(message);
       if (idx === alts.length) {
         if (typeof message.streamDisplayContent === 'string' && (message._streamAnimating || message.pending)) {
-          return message.streamDisplayContent;
+          return parseGuidedAssistantPayload(message.streamDisplayContent).visibleText;
         }
-        return message.content;
+        return parseGuidedAssistantPayload(message.content).visibleText;
       }
       const alt = alts[idx];
-      return alt && typeof alt.content === 'string' ? alt.content : message.content;
+      return alt && typeof alt.content === 'string'
+        ? parseGuidedAssistantPayload(alt.content).visibleText
+        : parseGuidedAssistantPayload(message.content).visibleText;
     }
 
     function isProgressiveGeminiRender(chat) {
@@ -3691,25 +5067,291 @@
       }
     }
 
-    function renderEmptyThread() {
-      elements.thread.innerHTML = [
-        '<section class="hero">',
-        '  <div class="hero-icon" aria-hidden="true">',
-        '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
-        '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
-        '    </svg>',
+    function guidedStatusLabel(status) {
+      if (status === 'done') return 'Hecho';
+      if (status === 'in_progress') return 'En curso';
+      if (status === 'locked') return 'Bloqueado';
+      return 'Pendiente';
+    }
+
+    function renderGuidedMeter(value, extraClass) {
+      const width = clampNumber(value, 0, 100);
+      const cssClass = extraClass ? 'guided-meter ' + extraClass : 'guided-meter';
+      return '<div class="' + cssClass + '"><span style="width:' + width + '%"></span></div>';
+    }
+
+    function renderGuidedTopicCards(session) {
+      if (!Array.isArray(session.topics) || !session.topics.length) {
+        return '<div class="guided-empty"><strong>Sin indice aun.</strong> Sube apuntes o describe el tema y el chat te propondra una ruta completa en formato tema, bloque y apartado.</div>';
+      }
+      return '<div class="guided-topic-list">' + session.topics.map((topic) => {
+        const currentClass = topic.id === session.current.topicId ? ' current' : '';
+        const emoji = topic.emoji ? escapeHtml(topic.emoji) + ' ' : '';
+        return [
+          '<div class="guided-topic-card' + currentClass + '">',
+          '  <div class="guided-topic-top">',
+          '    <div class="guided-topic-name">' + emoji + escapeHtml(topic.title) + '</div>',
+          '    <div class="guided-topic-status ' + topic.status + '">' + escapeHtml(guidedStatusLabel(topic.status)) + '</div>',
+          '  </div>',
+          '  ' + renderGuidedMeter(topic.progress),
+          '  <div class="guided-topic-meta">' + escapeHtml(String(clampNumber(topic.progress, 0, 100)) + '% completado') + '</div>',
+          '</div>'
+        ].join('');
+      }).join('') + '</div>';
+    }
+
+    function renderGuidedRoadmap(session) {
+      const resolved = getGuidedResolvedCurrent(session);
+      const activeTopic = resolved.topic || (Array.isArray(session.topics) ? session.topics[0] : null);
+      if (!activeTopic) {
+        return '';
+      }
+      return [
+        '<section class="guided-roadmap">',
+        '  <div class="guided-roadmap-top">',
+        '    <div>',
+        '      <div class="guided-roadmap-title">Mapa del tema actual</div>',
+        '      <div class="guided-roadmap-sub">' + escapeHtml(activeTopic.title) + '</div>',
+        '    </div>',
+        '    <div class="guided-roadmap-sub">' + escapeHtml(String(clampNumber(activeTopic.progress, 0, 100)) + '% del tema') + '</div>',
         '  </div>',
-        '  <h2>\u00bfQu\u00e9 quieres aprender hoy?</h2>',
-        '  <p class="hero-sub">Pregunta lo que quieras. Adjunta documentos, PDFs o im\u00e1genes.</p>',
-        '  <div class="chips">',
-        '    <button class="chip suggestion-chip" data-prompt="Resume el proyecto y propon un plan de trabajo en 5 puntos.">\ud83d\udccb Resumir proyecto y plan</button>',
-        '    <button class="chip suggestion-chip" data-prompt="Redacta un correo corto y profesional para un cliente.">\u2709\ufe0f Redactar correo profesional</button>',
-        '    <button class="chip suggestion-chip" data-prompt="Convierte estas notas en un briefing ejecutivo.">\ud83d\udcdd Notas \u2192 briefing ejecutivo</button>',
-        '    <button class="chip suggestion-chip" data-prompt="Ayudame a depurar un error de JavaScript paso a paso.">\ud83d\udc1b Depurar JavaScript</button>',
+        '  <div class="guided-block-list">',
+        activeTopic.blocks.map((block) => {
+          const currentBlock = block.id === session.current.blockId;
+          return [
+            '<div class="guided-block' + (currentBlock ? ' current' : '') + '">',
+            '  <div class="guided-block-head">',
+            '    <div class="guided-block-name">' + escapeHtml(block.title) + '</div>',
+            '    <div class="guided-roadmap-sub">' + escapeHtml(String(clampNumber(block.progress, 0, 100)) + '%') + '</div>',
+            '  </div>',
+            '  <div class="guided-section-list">',
+            block.sections.map((section) => {
+              const key = guidedSectionKey(activeTopic.id, block.id, section.id);
+              const record = session.sectionStats && session.sectionStats[key] ? session.sectionStats[key] : null;
+              const effectiveStatus = record && record.mastered ? 'done' : section.status;
+              const sectionMeta = record && record.mastered
+                ? 'Superado'
+                : section.summary || 'Sin resumen todavia';
+              return [
+                '<div class="guided-section' + (section.id === session.current.sectionId ? ' current' : '') + '">',
+                '  <div class="guided-section-main">',
+                '    <div class="guided-section-name">' + escapeHtml(section.title) + '</div>',
+                '    <div class="guided-section-meta">' + escapeHtml(sectionMeta) + '</div>',
+                '  </div>',
+                '  <div class="guided-section-badge ' + effectiveStatus + '">' + escapeHtml(guidedStatusLabel(effectiveStatus)) + '</div>',
+                '</div>'
+              ].join('');
+            }).join(''),
+            '  </div>',
+            '</div>'
+          ].join('');
+        }).join(''),
         '  </div>',
         '</section>'
       ].join('');
+    }
+
+    function renderGuidedQuiz(chat, session) {
+      const current = getGuidedResolvedCurrent(session);
+      const mastery = getGuidedCurrentMastery(chat);
+      const currentSectionTitle = current.section ? current.section.title : (session.current.sectionTitle || '');
+      const scoreValue = mastery.total
+        ? mastery.correct + '/' + mastery.total + ' correctas · ' + mastery.accuracy + '%'
+        : 'Esperando mini test';
+      let body = '';
+      if (!session.topics.length) {
+        body = '<div class="guided-empty"><strong>Paso 1.</strong> Activa este modo, sube tus documentos o describe la asignatura y el chat te devolvera primero el indice.</div>';
+      } else if (!currentSectionTitle) {
+        body = '<div class="guided-empty"><strong>Indice listo.</strong> Confirma la ruta y empezamos por el primer apartado sin saltos.</div>';
+      } else if (!mastery.hasQuiz) {
+        body = '<div class="guided-empty"><strong>Sin mini test aun.</strong> El siguiente mensaje del tutor deberia traer preguntas de comprobacion para este apartado.</div>';
+      } else {
+        body = '<div class="guided-quiz-items">' + mastery.itemStates.map((state, index) => {
+          return [
+            '<div class="guided-question">',
+            '  <div class="guided-question-title">' + escapeHtml(String(index + 1) + '. ' + state.item.prompt) + '</div>',
+            '  <div class="guided-option-list">',
+            state.item.options.map((option, optionIndex) => {
+              let optionClass = 'guided-option';
+              if (state.answered && option.id === state.selectedOptionId) {
+                optionClass += state.correct ? ' active correct' : ' active wrong';
+              } else if (state.answered && state.correctOption && option.id === state.correctOption.id) {
+                optionClass += ' correct';
+              }
+              const keyLabel = String.fromCharCode(65 + optionIndex);
+              return [
+                '<button class="' + optionClass + '" type="button" data-guided-answer="' + escapeHtml(state.item.id) + '" data-guided-option="' + escapeHtml(option.id) + '">',
+                '  <span class="guided-option-key">' + escapeHtml(keyLabel) + '</span>',
+                '  <span class="guided-option-text">' + escapeHtml(option.text) + '</span>',
+                '</button>'
+              ].join('');
+            }).join(''),
+            '  </div>',
+            state.answered && state.item.explanation
+              ? '  <div class="guided-answer-note">' + escapeHtml(state.item.explanation) + '</div>'
+              : '',
+            '</div>'
+          ].join('');
+        }).join('') + '</div>';
+      }
+      const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
+      const unlockLabel = mastery.hasQuiz
+        ? (mastery.unlocked
+          ? 'Desbloqueado para seguir.'
+          : 'Necesitas ' + mastery.requiredAccuracy + '% para desbloquear el siguiente apartado.')
+        : 'El avance se abrira cuando haya indice y mini test.';
+      return [
+        '<section class="guided-quiz">',
+        '  <div class="guided-quiz-head">',
+        '    <div class="guided-quiz-copy">',
+        '      <div class="guided-quiz-title">' + escapeHtml(session.quiz.title || 'Chequeo del apartado') + '</div>',
+        '      <div class="guided-quiz-sub">' + escapeHtml(session.quiz.intro || unlockLabel) + '</div>',
+        '    </div>',
+        '    <div class="guided-quiz-score">' + escapeHtml(scoreValue) + '<br><span style="font-size:0.66rem;color:#777">Mejor: ' + bestAccuracy + '% · Objetivo: ' + mastery.requiredAccuracy + '%</span></div>',
+        '  </div>',
+        body,
+        '  <div class="guided-actions">',
+        currentSectionTitle
+          ? '<button class="guided-action secondary" type="button" data-guided-action="reinforce">Necesito otra explicacion</button>'
+          : (session.topics.length
+            ? '<button class="guided-action secondary" type="button" data-guided-action="confirm-roadmap">Confirmar indice y empezar</button>'
+            : ''),
+        mastery.hasQuiz
+          ? '<button class="guided-action secondary" type="button" data-guided-action="reset-quiz">Resetear test</button>'
+          : '',
+        currentSectionTitle
+          ? '<button class="guided-action primary" type="button" data-guided-action="continue"' + ((!mastery.hasQuiz || !mastery.unlocked) ? ' disabled' : '') + '>Siguiente apartado</button>'
+          : '',
+        '  </div>',
+        '</section>'
+      ].join('');
+    }
+
+    function renderGuidedDashboard(chat, options) {
+      if (!chat || !chat.guidedLearning) {
+        return '';
+      }
+      const settings = Object.assign({ emptyState: false }, options);
+      const session = ensureGuidedSession(chat);
+      const current = getGuidedResolvedCurrent(session);
+      const mastery = getGuidedCurrentMastery(chat);
+      const overallProgress = clampNumber(
+        session.current.overallProgress || guidedAverageProgress(session.topics),
+        0,
+        100
+      );
+      const depthPercent = clampNumber(session.current.depthPercent, 0, 100);
+      const masteryPercent = mastery.record
+        ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0)
+        : mastery.accuracy;
+      const subtitle = current.section
+        ? 'Ahora mismo estas en ' + current.section.title + '. No se avanza hasta dominarlo.'
+        : session.topics.length
+          ? 'La ruta ya esta montada. Confirma el indice o pide el primer apartado.'
+          : 'Sube documentos o describe el temario y el chat lo convertira en una ruta guiada.';
+      const lockCopy = mastery.hasQuiz
+        ? (mastery.unlocked
+          ? 'Mini test superado. Puedes pasar al siguiente apartado.'
+          : 'Paso bloqueado hasta llegar al ' + mastery.requiredAccuracy + '% de acierto.')
+        : 'Todavia no hay bloqueo activo porque falta indice o mini test.';
+      return [
+        '<section class="guided-shell' + (settings.emptyState ? ' empty-state' : '') + '">',
+        '  <div class="guided-head">',
+        '    <div class="guided-head-copy">',
+        '      <div class="guided-kicker">Guided Learning</div>',
+        '      <div class="guided-title">' + escapeHtml(session.syllabusTitle || 'Ruta de estudio') + '</div>',
+        '      <div class="guided-sub">' + escapeHtml(subtitle) + '</div>',
+        '    </div>',
+        '    <div class="guided-badge">' + escapeHtml(overallProgress + '% del temario') + '</div>',
+        '  </div>',
+        '  <section class="guided-panel">',
+        '    <div class="guided-panel-title">Progreso global del temario</div>',
+        '    <div class="guided-panel-sub">Tema por tema, con el apartado actual siempre visible arriba.</div>',
+        '    <div class="guided-meter-block">',
+        '      <div class="guided-meter-head"><div class="guided-meter-label">Temario completo</div><div class="guided-meter-value">' + escapeHtml(String(overallProgress) + '%') + '</div></div>',
+        '      ' + renderGuidedMeter(overallProgress),
+        '    </div>',
+        '    ' + renderGuidedTopicCards(session),
+        '  </section>',
+        '  <div class="guided-overview-grid">',
+        '    <div class="guided-panel">',
+        '      <div class="guided-panel-title">Donde estas ahora</div>',
+        '      <div class="guided-crumbs">',
+        '        <div class="guided-crumb">' + escapeHtml(current.topic ? current.topic.title : 'Tema pendiente') + '</div>',
+        '        <div class="guided-crumb">' + escapeHtml(current.block ? current.block.title : 'Bloque pendiente') + '</div>',
+        '        <div class="guided-crumb current">' + escapeHtml(current.section ? current.section.title : 'Apartado pendiente') + '</div>',
+        '      </div>',
+        '      <div class="guided-lock' + (mastery.unlocked ? ' good' : '') + '">' + escapeHtml(lockCopy) + '</div>',
+        '    </div>',
+        '    <div class="guided-side-grid">',
+        '      <div class="guided-side-card">',
+        '        <div class="guided-stat">',
+        '          <div class="guided-stat-label">Profundidad</div>',
+        '          <div class="guided-stat-value">' + escapeHtml(depthPercent + '% del apartado') + '</div>',
+        '        </div>',
+        '        ' + renderGuidedMeter(depthPercent),
+        '      </div>',
+        '      <div class="guided-side-card">',
+        '        <div class="guided-stat">',
+        '          <div class="guided-stat-label">Dominio actual</div>',
+        '          <div class="guided-stat-value">' + escapeHtml(masteryPercent + '% de acierto') + '</div>',
+        '        </div>',
+        '        ' + renderGuidedMeter(masteryPercent, 'mastery'),
+        '        <div class="guided-lock">' + escapeHtml(mastery.correct + '/' + mastery.total + ' correctas · objetivo ' + mastery.requiredAccuracy + '%') + '</div>',
+        '      </div>',
+        '    </div>',
+        '  </div>',
+        renderGuidedRoadmap(session),
+        renderGuidedQuiz(chat, session),
+        '</section>'
+      ].join('');
+    }
+
+    function renderEmptyThread(options) {
+      const settings = Object.assign({ preserveScroll: false }, options);
+      const chat = getActiveChat();
+      const guidedActive = !!(chat && chat.guidedLearning);
+      const heroMarkup = guidedActive
+        ? [
+            '<section class="hero">',
+            '  <div class="hero-icon" aria-hidden="true">',
+            '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
+            '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+            '    </svg>',
+            '  </div>',
+            '  <h2>Construye tu ruta de estudio</h2>',
+            '  <p class="hero-sub">Sube documentos o di el tema y te lo organizo por tema, bloque y apartado antes de empezar.</p>',
+            '  <div class="chips">',
+            '    <button class="chip suggestion-chip" data-prompt="Quiero estudiar fuerza desde cero. Proponme primero un indice en Tema > Bloque > Apartado.">Indice para fuerza</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Organiza estos apuntes por tema, bloque y apartado antes de explicarme nada.">Organizar apuntes</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Actua como tutor guiado. No pases de apartado hasta que lo domine y pon mini test en la UI.">Activar tutor paso a paso</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Empieza por el primer apartado del indice y explicamelo con intuicion, muy poco a poco.">Empezar primer apartado</button>',
+            '  </div>',
+            '</section>'
+          ].join('')
+        : [
+            '<section class="hero">',
+            '  <div class="hero-icon" aria-hidden="true">',
+            '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
+            '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+            '    </svg>',
+            '  </div>',
+            '  <h2>\u00bfQue quieres aprender hoy?</h2>',
+            '  <p class="hero-sub">Pregunta lo que quieras. Adjunta documentos, PDFs o imagenes.</p>',
+            '  <div class="chips">',
+            '    <button class="chip suggestion-chip" data-prompt="Resume el proyecto y propon un plan de trabajo en 5 puntos.">\ud83d\udccb Resumir proyecto y plan</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Redacta un correo corto y profesional para un cliente.">\u2709\ufe0f Redactar correo profesional</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Convierte estas notas en un briefing ejecutivo.">\ud83d\udcdd Notas \u2192 briefing ejecutivo</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Ayudame a depurar un error de JavaScript paso a paso.">\ud83d\udc1b Depurar JavaScript</button>',
+            '  </div>',
+            '</section>'
+          ].join('');
+      elements.thread.innerHTML = heroMarkup + (guidedActive ? renderGuidedDashboard(chat, { emptyState: true }) : '');
       bindSuggestionChips();
+      bindThreadActions();
+      if (!settings.preserveScroll) {
+        requestAnimationFrame(scrollThreadToBottom);
+      }
     }
 
     function lastAssistantMessageIndex(chat) {
@@ -3823,22 +5465,26 @@
       pendingStreamRenderTimer = window.setTimeout(flushPendingStreamRender, 90);
     }
 
-    function renderThread() {
+    function renderThread(options) {
+      const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
       flushPendingStreamRender();
       if (!chat.messages.length) {
-        renderEmptyThread();
+        renderEmptyThread(settings);
         return;
       }
 
       const lastAssistantIdx = lastAssistantMessageIndex(chat);
-      elements.thread.innerHTML = chat.messages.map(function(message, idx) {
+      const guidedMarkup = chat.guidedLearning ? renderGuidedDashboard(chat) : '';
+      elements.thread.innerHTML = guidedMarkup + chat.messages.map(function(message, idx) {
         return renderMessageMarkup(message, idx === lastAssistantIdx);
       }).join('');
 
       enhanceRichContent(elements.thread);
       bindThreadActions();
-      requestAnimationFrame(scrollThreadToBottom);
+      if (!settings.preserveScroll) {
+        requestAnimationFrame(scrollThreadToBottom);
+      }
     }
 
     function renderReasoningMarkup(message, thinking, liveOpen) {
@@ -3893,6 +5539,20 @@
         if (pill.dataset.boundClick === '1') return;
         pill.dataset.boundClick = '1';
         pill.addEventListener('click', function() { openAttachmentPreview(pill.dataset.previewMsg, pill.dataset.previewAtt); });
+      });
+      scope.querySelectorAll('[data-guided-answer]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
+        btn.addEventListener('click', function() {
+          answerGuidedQuizQuestion(btn.dataset.guidedAnswer, btn.dataset.guidedOption);
+        });
+      });
+      scope.querySelectorAll('[data-guided-action]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
+        btn.addEventListener('click', function() {
+          handleGuidedAction(btn.dataset.guidedAction);
+        });
       });
     }
 
@@ -4371,8 +6031,14 @@
         .map((message) => ({
           role: message.role === 'assistant' ? 'model' : 'user',
           parts: Array.isArray(message.parts) && message.parts.length
-            ? cloneParts(message.parts)
-            : [{ text: message.content }]
+            ? cloneParts(message.parts).map((part) => {
+                if (part && typeof part.text === 'string') {
+                  const cleanText = parseGuidedAssistantPayload(part.text).visibleText;
+                  return Object.assign({}, part, { text: cleanText });
+                }
+                return part;
+              }).filter((part) => !(part && typeof part.text === 'string') || part.text.trim())
+            : [{ text: parseGuidedAssistantPayload(message.content).visibleText }]
         }));
     }
 
@@ -4392,7 +6058,7 @@
 
       return {
         systemInstruction: {
-          parts: [{ text: getActiveSystemPrompt() }]
+          parts: [{ text: getActiveSystemPrompt(chat) }]
         },
         contents: buildContents(messages),
         generationConfig
@@ -4602,7 +6268,7 @@
       elements.chatList.querySelectorAll('[data-chat-id]').forEach(function(btn) {
         btn.addEventListener('click', function() {
           appState.activeChatId = btn.dataset.chatId;
-          saveState(); updateConfigUi(); renderHistory(); renderThread();
+          saveState(); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
         });
       });
       elements.chatList.querySelectorAll('[data-delete-chat-id]').forEach(function(btn) {
@@ -5406,12 +7072,19 @@
       });
       if (elements.guidedBtn) {
         elements.guidedBtn.addEventListener('click', () => {
-          appState.guidedLearning = !appState.guidedLearning;
+          const chat = getActiveChat();
+          chat.guidedLearning = !chat.guidedLearning;
+          if (chat.guidedLearning) {
+            ensureGuidedSession(chat);
+          }
+          appState.guidedLearning = chat.guidedLearning;
           updateGuidedLearningUi();
           saveState({ skipDrive: true });
+          updateSendUi();
+          renderThread({ preserveScroll: true });
           showToast(
             'Guided Learning',
-            appState.guidedLearning
+            chat.guidedLearning
               ? 'Modo tutor activado. Sube tus apuntes y te propondré un índice.'
               : 'Modo tutor desactivado. Vuelve al chat normal.'
           );
@@ -5686,6 +7359,7 @@
         : 'El daemon local no responde en ' + DAEMON_CONFIG.URL + '.';
       elements.originCopy.style.display = 'none';
       elements.originCopy.textContent = '';
+      updateGuidedLearningUi();
       updateAuthUi();
     }
 
@@ -5837,9 +7511,9 @@
             .join('\n\n')
         : '';
       if (partsText) {
-        return partsText;
+        return parseGuidedAssistantPayload(partsText).visibleText;
       }
-      return String(message && message.content || '').trim();
+      return parseGuidedAssistantPayload(String(message && message.content || '').trim()).visibleText;
     }
 
     function buildDaemonChatBody(chat) {
@@ -5847,7 +7521,7 @@
         provider: activeProviderName(chat),
         model: activeModelName(chat),
         thinkingLevel: currentThinkingLevel(chat),
-        systemPrompt: getActiveSystemPrompt(),
+        systemPrompt: getActiveSystemPrompt(chat),
         messages: (chat.messages || [])
           .filter((message) => !message.pending)
           .map((message) => ({
@@ -6707,14 +8381,15 @@
           const hasText = typeof chunk.text === 'string' && chunk.text.length > 0;
           const hasThinking = typeof chunk.thinking === 'string' && chunk.thinking.length > 0;
           if (hasText) {
+            const visibleText = cleanAssistantTextForUi(chat, assistantMessage, chunk.text);
             if (useProgressiveGemini) {
-              queueMessageStream(assistantMessage, chat, chunk.text, !!chunk.done);
+              queueMessageStream(assistantMessage, chat, visibleText, !!chunk.done);
             } else {
-              assistantMessage.content = chunk.text;
+              assistantMessage.content = visibleText;
             }
+            assistantMessage.parts = visibleText ? [{ text: visibleText }] : [];
           }
           if (hasThinking) assistantMessage.thinking = chunk.thinking;
-          if (Array.isArray(chunk.parts) && chunk.parts.length) assistantMessage.parts = chunk.parts;
           if (hasText || hasThinking) assistantMessage.pending = false;
           if (useProgressiveGemini) {
             if (hasThinking && !hasText) {
@@ -6725,15 +8400,20 @@
           }
         };
         const reply = await callModel(chat, appState.activeController.signal, onProgress);
+        const finalVisibleText = cleanAssistantTextForUi(
+          chat,
+          assistantMessage,
+          reply.text || assistantMessage.streamTargetContent || ''
+        );
         if (useProgressiveGemini) {
-          queueMessageStream(assistantMessage, chat, reply.text || assistantMessage.streamTargetContent || '', true);
+          queueMessageStream(assistantMessage, chat, finalVisibleText, true);
           await waitForMessageStream(assistantMessage);
         }
         flushPendingStreamRender();
         assistantMessage.pending = false;
-        assistantMessage.content = reply.text;
+        assistantMessage.content = finalVisibleText;
         assistantMessage.thinking = reply.thinking || assistantMessage.thinking || '';
-        assistantMessage.parts = reply.parts;
+        assistantMessage.parts = finalVisibleText ? [{ text: finalVisibleText }] : [];
         clearMessageStreamState(assistantMessage);
         touchChat(chat);
         setComposerStatus('');
