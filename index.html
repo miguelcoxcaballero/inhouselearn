@@ -3192,9 +3192,11 @@
         renderThread();
         return;
       }
-      currentEl.replaceWith(nextEl);
-      enhanceRichContent(nextEl, { renderMath: !isStreaming });
-      bindThreadActions(nextEl);
+      currentEl.className = nextEl.className;
+      currentEl.setAttribute('data-msg-id', message.id);
+      currentEl.innerHTML = nextEl.innerHTML;
+      enhanceRichContent(currentEl, { renderMath: !isStreaming });
+      bindThreadActions(currentEl);
       requestAnimationFrame(scrollThreadToBottom);
     }
 
