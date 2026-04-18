@@ -2963,17 +2963,18 @@
       return window.DOMPurify.sanitize(rawHtml);
     }
 
-    function enhanceRichContent(root) {
+    function enhanceRichContent(root, options) {
       if (!root) {
         return;
       }
+      options = options || {};
 
       Array.from(root.querySelectorAll('a[href]')).forEach((link) => {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
       });
 
-      if (!window.renderMathInElement) {
+      if (options.renderMath === false || !window.renderMathInElement) {
         return;
       }
 
@@ -3108,58 +3109,138 @@
       return alt && typeof alt.content === 'string' ? alt.content : message.content;
     }
 
+    function renderEmptyThread() {
+      elements.thread.innerHTML = [
+        '<section class="hero">',
+        '  <div class="hero-icon" aria-hidden="true">',
+        '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
+        '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+        '    </svg>',
+        '  </div>',
+        '  <h2>\u00bfQu\u00e9 quieres aprender hoy?</h2>',
+        '  <p class="hero-sub">Pregunta lo que quieras. Adjunta documentos, PDFs o im\u00e1genes.</p>',
+        '  <div class="chips">',
+        '    <button class="chip suggestion-chip" data-prompt="Resume el proyecto y propon un plan de trabajo en 5 puntos.">\ud83d\udccb Resumir proyecto y plan</button>',
+        '    <button class="chip suggestion-chip" data-prompt="Redacta un correo corto y profesional para un cliente.">\u2709\ufe0f Redactar correo profesional</button>',
+        '    <button class="chip suggestion-chip" data-prompt="Convierte estas notas en un briefing ejecutivo.">\ud83d\udcdd Notas \u2192 briefing ejecutivo</button>',
+        '    <button class="chip suggestion-chip" data-prompt="Ayudame a depurar un error de JavaScript paso a paso.">\ud83d\udc1b Depurar JavaScript</button>',
+        '  </div>',
+        '</section>'
+      ].join('');
+      bindSuggestionChips();
+    }
+
+    function lastAssistantMessageIndex(chat) {
+      for (let i = chat.messages.length - 1; i >= 0; i--) {
+        if (chat.messages[i].role === 'assistant') return i;
+      }
+      return -1;
+    }
+
+    function renderMessageMarkup(message, isLastAssistant) {
+      const isUser = message.role === 'user';
+      const roleLabel = isUser ? 'T\u00fa' : 'inhouse';
+      const msgClass = isUser ? 'message user-msg' : 'message';
+      const badgeMarkup = renderMessageBadge(message.role);
+      const visibleContent = getVisibleContent(message);
+      const hasVisible = typeof visibleContent === 'string' && visibleContent.trim().length > 0;
+      const thinking = !isUser && typeof message.thinking === 'string' ? message.thinking : '';
+      const thinkingMarkup = thinking ? renderReasoningMarkup(message, thinking, !hasVisible && message.pending) : '';
+      const body = message.pending && !hasVisible
+        ? assistantTypingMarkup()
+        : renderMarkdown(visibleContent);
+      const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
+      const actionsMarkup = renderMsgActions(message, !!isLastAssistant);
+      const attributionMarkup = renderMessageAttribution(message);
+      return [
+        '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
+        '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
+        '  <div class="message-body">',
+        '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
+        '    <div class="bubble">' + thinkingMarkup + body + attachmentMarkup + '</div>',
+        attributionMarkup,
+        actionsMarkup,
+        '  </div>',
+        '</article>'
+      ].join('');
+    }
+
+    function findMessageElement(messageId) {
+      return Array.from(elements.thread.querySelectorAll('[data-msg-id]')).find(function(el) {
+        return el.dataset.msgId === messageId;
+      }) || null;
+    }
+
+    function patchThreadMessage(message, chat, isStreaming) {
+      const resolvedChat = chat || getActiveChat();
+      if (!resolvedChat || !message) {
+        return;
+      }
+      if (resolvedChat.id !== appState.activeChatId) {
+        return;
+      }
+      const messageIndex = resolvedChat.messages.findIndex(function(item) { return item.id === message.id; });
+      const currentEl = findMessageElement(message.id);
+      if (messageIndex === -1 || !currentEl) {
+        renderThread();
+        return;
+      }
+      const template = document.createElement('template');
+      template.innerHTML = renderMessageMarkup(message, messageIndex === lastAssistantMessageIndex(resolvedChat)).trim();
+      const nextEl = template.content.firstElementChild;
+      if (!nextEl) {
+        renderThread();
+        return;
+      }
+      currentEl.replaceWith(nextEl);
+      enhanceRichContent(nextEl, { renderMath: !isStreaming });
+      bindThreadActions(nextEl);
+      requestAnimationFrame(scrollThreadToBottom);
+    }
+
+    let pendingStreamRender = null;
+    let pendingStreamRenderTimer = 0;
+
+    function flushPendingStreamRender() {
+      if (pendingStreamRenderTimer) {
+        clearTimeout(pendingStreamRenderTimer);
+        pendingStreamRenderTimer = 0;
+      }
+      const task = pendingStreamRender;
+      pendingStreamRender = null;
+      if (!task) {
+        return;
+      }
+      patchThreadMessage(task.message, task.chat, task.isStreaming);
+    }
+
+    function scheduleStreamRender(message, chat, isStreaming, immediate) {
+      pendingStreamRender = {
+        message: message,
+        chat: chat,
+        isStreaming: !!isStreaming
+      };
+      if (immediate) {
+        flushPendingStreamRender();
+        return;
+      }
+      if (pendingStreamRenderTimer) {
+        return;
+      }
+      pendingStreamRenderTimer = window.setTimeout(flushPendingStreamRender, 90);
+    }
+
     function renderThread() {
       const chat = getActiveChat();
+      flushPendingStreamRender();
       if (!chat.messages.length) {
-        elements.thread.innerHTML = [
-          '<section class="hero">',
-          '  <div class="hero-icon" aria-hidden="true">',
-          '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
-          '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
-          '    </svg>',
-          '  </div>',
-          '  <h2>\u00bfQu\u00e9 quieres aprender hoy?</h2>',
-          '  <p class="hero-sub">Pregunta lo que quieras. Adjunta documentos, PDFs o im\u00e1genes.</p>',
-          '  <div class="chips">',
-          '    <button class="chip suggestion-chip" data-prompt="Resume el proyecto y propon un plan de trabajo en 5 puntos.">\ud83d\udccb Resumir proyecto y plan</button>',
-          '    <button class="chip suggestion-chip" data-prompt="Redacta un correo corto y profesional para un cliente.">\u2709\ufe0f Redactar correo profesional</button>',
-          '    <button class="chip suggestion-chip" data-prompt="Convierte estas notas en un briefing ejecutivo.">\ud83d\udcdd Notas \u2192 briefing ejecutivo</button>',
-          '    <button class="chip suggestion-chip" data-prompt="Ayudame a depurar un error de JavaScript paso a paso.">\ud83d\udc1b Depurar JavaScript</button>',
-          '  </div>',
-          '</section>'
-        ].join('');
-        bindSuggestionChips();
+        renderEmptyThread();
         return;
       }
 
-      const lastAssistantIdx = (() => { for (let i = chat.messages.length - 1; i >= 0; i--) { if (chat.messages[i].role === 'assistant') return i; } return -1; })();
-
-      elements.thread.innerHTML = chat.messages.map((message, idx) => {
-        const isUser = message.role === 'user';
-        const roleLabel = isUser ? 'T\u00fa' : 'inhouse';
-        const msgClass = isUser ? 'message user-msg' : 'message';
-        const badgeMarkup = renderMessageBadge(message.role);
-        const visibleContent = getVisibleContent(message);
-        const hasVisible = typeof visibleContent === 'string' && visibleContent.trim().length > 0;
-        const thinking = !isUser && typeof message.thinking === 'string' ? message.thinking : '';
-        const thinkingMarkup = thinking ? renderReasoningMarkup(message, thinking, !hasVisible && message.pending) : '';
-        const body = message.pending && !hasVisible
-          ? assistantTypingMarkup()
-          : renderMarkdown(visibleContent);
-        const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
-        const actionsMarkup = renderMsgActions(message, idx === lastAssistantIdx);
-        const attributionMarkup = renderMessageAttribution(message);
-        return [
-          '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
-          '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
-          '  <div class="message-body">',
-          '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-          '    <div class="bubble">' + thinkingMarkup + body + attachmentMarkup + '</div>',
-          attributionMarkup,
-          actionsMarkup,
-          '  </div>',
-          '</article>'
-        ].join('');
+      const lastAssistantIdx = lastAssistantMessageIndex(chat);
+      elements.thread.innerHTML = chat.messages.map(function(message, idx) {
+        return renderMessageMarkup(message, idx === lastAssistantIdx);
       }).join('');
 
       enhanceRichContent(elements.thread);
@@ -3186,25 +3267,38 @@
       ].join('');
     }
 
-    function bindThreadActions() {
-      elements.thread.querySelectorAll('[data-reasoning-id]').forEach(function(el) {
+    function bindThreadActions(root) {
+      const scope = root || elements.thread;
+      scope.querySelectorAll('[data-reasoning-id]').forEach(function(el) {
+        if (el.dataset.boundToggle === '1') return;
+        el.dataset.boundToggle = '1';
         el.addEventListener('toggle', function() {
           try { sessionStorage.setItem('reasoning::' + el.dataset.reasoningId, el.open ? '1' : '0'); } catch (_) {}
         });
       });
-      elements.thread.querySelectorAll('[data-edit-msg]').forEach(function(btn) {
+      scope.querySelectorAll('[data-edit-msg]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
         btn.addEventListener('click', function() { editMessage(btn.dataset.editMsg); });
       });
-      elements.thread.querySelectorAll('[data-regen-msg]').forEach(function(btn) {
+      scope.querySelectorAll('[data-regen-msg]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
         btn.addEventListener('click', function() { regenerateMessage(btn.dataset.regenMsg); });
       });
-      elements.thread.querySelectorAll('[data-copy-msg]').forEach(function(btn) {
+      scope.querySelectorAll('[data-copy-msg]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
         btn.addEventListener('click', function() { copyMessageContent(btn.dataset.copyMsg); });
       });
-      elements.thread.querySelectorAll('[data-nav-msg]').forEach(function(btn) {
+      scope.querySelectorAll('[data-nav-msg]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
         btn.addEventListener('click', function() { switchAlternative(btn.dataset.navMsg, Number(btn.dataset.navDir)); });
       });
-      elements.thread.querySelectorAll('[data-preview-msg]').forEach(function(pill) {
+      scope.querySelectorAll('[data-preview-msg]').forEach(function(pill) {
+        if (pill.dataset.boundClick === '1') return;
+        pill.dataset.boundClick = '1';
         pill.addEventListener('click', function() { openAttachmentPreview(pill.dataset.previewMsg, pill.dataset.previewAtt); });
       });
     }
@@ -5544,7 +5638,6 @@
       _sendLock = false;
 
       try {
-        let lastRender = 0;
         const onProgress = (chunk) => {
           if (!chunk) return;
           const hasText = typeof chunk.text === 'string' && chunk.text.length > 0;
@@ -5553,13 +5646,10 @@
           if (hasThinking) assistantMessage.thinking = chunk.thinking;
           if (Array.isArray(chunk.parts) && chunk.parts.length) assistantMessage.parts = chunk.parts;
           if (hasText || hasThinking) assistantMessage.pending = false;
-          const now = Date.now();
-          if (chunk.done || now - lastRender >= 60) {
-            lastRender = now;
-            renderThread();
-          }
+          scheduleStreamRender(assistantMessage, chat, !chunk.done, !!chunk.done);
         };
         const reply = await callModel(chat, appState.activeController.signal, onProgress);
+        flushPendingStreamRender();
         assistantMessage.pending = false;
         assistantMessage.content = reply.text;
         assistantMessage.thinking = reply.thinking || assistantMessage.thinking || '';
@@ -5567,6 +5657,7 @@
         touchChat(chat);
         setComposerStatus('');
       } catch (error) {
+        flushPendingStreamRender();
         if (error.name === 'AbortError') {
           chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id);
           setComposerStatus('Solicitud cancelada.');
@@ -5578,6 +5669,7 @@
           setComposerStatus('Hubo un error: ' + error.message);
         }
       } finally {
+        flushPendingStreamRender();
         appState.busy = false;
         appState.activeController = null;
         saveState();
