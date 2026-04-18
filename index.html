@@ -706,6 +706,24 @@
     @media (max-width: 768px) {
       .msg-actions { opacity: 1; }
     }
+    .msg-attribution {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 0 0; margin-left: 2px;
+      font-size: 0.62rem; letter-spacing: 0.01em;
+      color: var(--muted);
+      opacity: 0.45;
+      transition: opacity 0.15s var(--ease);
+      user-select: none;
+    }
+    .message:hover .msg-attribution { opacity: 0.75; }
+    .msg-attribution svg {
+      width: 11px; height: 11px;
+      display: block; flex: 0 0 auto;
+    }
+    .msg-attribution-sep { opacity: 0.5; }
+    @media (max-width: 768px) {
+      .msg-attribution { opacity: 0.6; }
+    }
 
     /* ─── ATTACHMENT PREVIEW ─────────────────────────── */
     .attachment-pill[data-has-preview] { cursor: pointer; }
@@ -1240,7 +1258,7 @@
     // ──────────────────────────────────────────────────
 
     const APP_CONFIG = {
-      GOOGLE_CLIENT_ID: '',
+      GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
       GOOGLE_CLOUD_PROJECT: '',
       DEFAULT_PROVIDER: 'codex',
       DEFAULT_MODEL: 'gpt-5.4',
@@ -1605,6 +1623,8 @@
         alternatives: Array.isArray(message && message.alternatives) ? message.alternatives : [],
         activeAlternative: Number(message && message.activeAlternative) || 0,
         pending: !!(message && message.pending),
+        provider: message && typeof message.provider === 'string' ? message.provider : '',
+        model: message && typeof message.model === 'string' ? message.model : '',
         createdAt: message && typeof message.createdAt === 'string' ? message.createdAt : nowIso()
       };
     }
@@ -2654,6 +2674,42 @@
       };
     }
 
+    function providerBrandSvg(providerId) {
+      if (providerId === 'gemini') {
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.4 4.3 2.7 7.6 7 10-4.3 2.4-6.6 5.7-7 10-.4-4.3-2.7-7.6-7-10 4.3-2.4 6.6-5.7 7-10z"/></svg>';
+      }
+      if (providerId === 'claude') {
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.3 6.8h1.9l3.4 8.6h-1.7l-.8-2.1H7.1L6.3 15.4H4.7L7.3 6.8zm.3 5.1h2.3L8.75 8.9 7.6 11.9zm6.5-5.1h1.6v8.6h-1.6V6.8z"/></svg>';
+      }
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3.5a6.5 6.5 0 1 1-6.5 6.5A6.5 6.5 0 0 1 12 5.5zm0 2.5a4 4 0 1 0 4 4 4 4 0 0 0-4-4z"/></svg>';
+    }
+
+    function resolveMessageAttribution(message, fallbackChat) {
+      const providerId = normalizeProviderId(
+        (message && message.provider) || (fallbackChat && fallbackChat.provider) || APP_CONFIG.DEFAULT_PROVIDER
+      );
+      const modelId = normalizeModelId(
+        (message && message.model) || (fallbackChat && fallbackChat.model) || defaultModelForProvider(providerId),
+        providerId
+      );
+      const providerOption = getProviderOption(providerId);
+      const modelOption = getModelOption(modelId, providerId);
+      return {
+        providerId,
+        providerLabel: providerOption.label,
+        modelLabel: modelOption.label
+      };
+    }
+
+    function renderMessageAttribution(message, chat) {
+      if (!message || message.role !== 'assistant' || message.pending) return '';
+      const info = resolveMessageAttribution(message, chat);
+      return '<div class="msg-attribution" title="' + escapeHtml(info.providerLabel + ' · ' + info.modelLabel) + '">' +
+        providerBrandSvg(info.providerId) +
+        '<span>' + escapeHtml(info.modelLabel) + '</span>' +
+        '</div>';
+    }
+
     function renderMsgActions(message, isLast) {
       if (message.pending) return '';
       const ic = msgActionIcons();
@@ -2729,6 +2785,7 @@
           : renderMarkdown(visibleContent);
         const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
         const actionsMarkup = renderMsgActions(message, idx === lastAssistantIdx);
+        const attributionMarkup = renderMessageAttribution(message, chat);
         return [
           '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
           '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
@@ -2736,6 +2793,7 @@
           '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
           '    <div class="bubble">' + thinkingMarkup + body + attachmentMarkup + '</div>',
           actionsMarkup,
+          attributionMarkup,
           '  </div>',
           '</article>'
         ].join('');
@@ -3351,6 +3409,8 @@
         alternatives: [],
         activeAlternative: 0,
         pending: !!pending,
+        provider: settings.provider || '',
+        model: settings.model || '',
         createdAt: nowIso()
       };
     }
@@ -3514,6 +3574,8 @@
       msg.pending = true;
       msg.content = '';
       msg.activeAlternative = 0;
+      msg.provider = activeProviderName(chat);
+      msg.model = activeModelName(chat);
       touchChat(chat);
       appState.busy = true;
       appState.activeController = new AbortController();
@@ -4897,7 +4959,10 @@
         parts,
         attachments
       });
-      const assistantMessage = createMessage('assistant', '', true);
+      const assistantMessage = createMessage('assistant', '', true, {
+        provider: activeProviderName(chat),
+        model: activeModelName(chat)
+      });
 
       chat.messages.push(userMessage, assistantMessage);
       touchChat(chat);
