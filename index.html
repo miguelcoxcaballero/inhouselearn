@@ -2250,7 +2250,7 @@
               </button>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
-              <div class="usage-popup-title">Estado del Agente Local</div>
+              <div class="usage-popup-title">Cuota y Estado</div>
               <div id="usage-popup-content"></div>
             </div>
             <div class="composer-status-row">
@@ -7199,6 +7199,7 @@
         total: 0,
         models: {},
         quotaByModel: {},
+        providerRateLimits: {},
         creditsRemaining: null,
         creditsLastConsumed: 0,
         creditsSessionConsumed: 0,
@@ -7215,6 +7216,7 @@
       }
       if (!normalized.models || typeof normalized.models !== 'object') normalized.models = {};
       if (!normalized.quotaByModel || typeof normalized.quotaByModel !== 'object') normalized.quotaByModel = {};
+      if (!normalized.providerRateLimits || typeof normalized.providerRateLimits !== 'object') normalized.providerRateLimits = {};
       if (typeof normalized.total !== 'number') normalized.total = 0;
       if (typeof normalized.creditsLastConsumed !== 'number') normalized.creditsLastConsumed = 0;
       if (typeof normalized.creditsSessionConsumed !== 'number') normalized.creditsSessionConsumed = 0;
@@ -7236,6 +7238,199 @@
 
     function saveUsageData(data) {
       try { localStorage.setItem(USAGE_KEY, JSON.stringify(data)); } catch (e) {}
+    }
+
+    function toFiniteUsageNumber(value) {
+      if (value == null || value === '') {
+        return null;
+      }
+      if (typeof value === 'number') {
+        return isFinite(value) ? value : null;
+      }
+      var normalized = String(value).trim().replace(/,/g, '');
+      if (!normalized) {
+        return null;
+      }
+      var matched = normalized.match(/-?\d+(?:\.\d+)?/);
+      if (!matched) {
+        return null;
+      }
+      var num = Number(matched[0]);
+      return isFinite(num) ? num : null;
+    }
+
+    function firstUsageValue(source, keys) {
+      if (!source || typeof source !== 'object' || !Array.isArray(keys)) {
+        return undefined;
+      }
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (key in source && source[key] != null && source[key] !== '') {
+          return source[key];
+        }
+      }
+      return undefined;
+    }
+
+    function usageHeaderMap(headers) {
+      if (!headers || typeof headers !== 'object') {
+        return null;
+      }
+      var map = {};
+      Object.keys(headers).forEach(function(key) {
+        map[String(key).toLowerCase()] = headers[key];
+      });
+      return map;
+    }
+
+    function extractUsageHeaders(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return null;
+      }
+      var candidates = [
+        payload.responseHeaders,
+        payload.headers,
+        payload.rateLimitHeaders,
+        payload.usageHeaders,
+        payload.meta && payload.meta.headers,
+        payload.usage && payload.usage.headers,
+        payload.usage && payload.usage.responseHeaders
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i] && typeof candidates[i] === 'object') {
+          return usageHeaderMap(candidates[i]);
+        }
+      }
+      return null;
+    }
+
+    function usageHeaderValue(headers, keys) {
+      if (!headers || !Array.isArray(keys)) {
+        return undefined;
+      }
+      for (var i = 0; i < keys.length; i++) {
+        var value = headers[String(keys[i]).toLowerCase()];
+        if (value != null && value !== '') {
+          return value;
+        }
+      }
+      return undefined;
+    }
+
+    function extractUsageRateLimitPayload(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return null;
+      }
+      var candidates = [
+        payload.rateLimits,
+        payload.rateLimit,
+        payload.usage && payload.usage.rateLimits,
+        payload.usage && payload.usage.rateLimit,
+        payload.meta && payload.meta.rateLimits
+      ];
+      for (var i = 0; i < candidates.length; i++) {
+        if (candidates[i] && typeof candidates[i] === 'object') {
+          return candidates[i];
+        }
+      }
+      return null;
+    }
+
+    function parseProviderRateLimitSnapshot(providerId, modelId, payload) {
+      if (!payload || typeof payload !== 'object') {
+        return null;
+      }
+      var raw = extractUsageRateLimitPayload(payload) || {};
+      var headers = extractUsageHeaders(payload);
+      var snapshot = {
+        providerId: String(providerId || ''),
+        modelId: String(modelId || ''),
+        requestsRemaining: null,
+        requestsLimit: null,
+        requestsReset: '',
+        tokensRemaining: null,
+        tokensLimit: null,
+        tokensReset: '',
+        inputTokensRemaining: null,
+        inputTokensLimit: null,
+        inputTokensReset: '',
+        outputTokensRemaining: null,
+        outputTokensLimit: null,
+        outputTokensReset: '',
+        source: '',
+        updatedAt: nowIso()
+      };
+      if (providerId === 'codex') {
+        snapshot.requestsRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['requestsRemaining', 'remainingRequests']) || usageHeaderValue(headers, ['x-ratelimit-remaining-requests']));
+        snapshot.requestsLimit = toFiniteUsageNumber(firstUsageValue(raw, ['requestsLimit', 'limitRequests']) || usageHeaderValue(headers, ['x-ratelimit-limit-requests']));
+        snapshot.requestsReset = String(firstUsageValue(raw, ['requestsReset', 'resetRequests']) || usageHeaderValue(headers, ['x-ratelimit-reset-requests']) || '');
+        snapshot.tokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['tokensRemaining', 'remainingTokens']) || usageHeaderValue(headers, ['x-ratelimit-remaining-tokens']));
+        snapshot.tokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['tokensLimit', 'limitTokens']) || usageHeaderValue(headers, ['x-ratelimit-limit-tokens']));
+        snapshot.tokensReset = String(firstUsageValue(raw, ['tokensReset', 'resetTokens']) || usageHeaderValue(headers, ['x-ratelimit-reset-tokens']) || '');
+      } else if (providerId === 'claude') {
+        snapshot.requestsRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['requestsRemaining', 'remainingRequests']) || usageHeaderValue(headers, ['anthropic-ratelimit-requests-remaining', 'x-ratelimit-remaining-requests']));
+        snapshot.requestsLimit = toFiniteUsageNumber(firstUsageValue(raw, ['requestsLimit', 'limitRequests']) || usageHeaderValue(headers, ['anthropic-ratelimit-requests-limit', 'x-ratelimit-limit-requests']));
+        snapshot.requestsReset = String(firstUsageValue(raw, ['requestsReset', 'resetRequests']) || usageHeaderValue(headers, ['anthropic-ratelimit-requests-reset', 'x-ratelimit-reset-requests']) || '');
+        snapshot.tokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['tokensRemaining', 'remainingTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-tokens-remaining', 'x-ratelimit-remaining-tokens']));
+        snapshot.tokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['tokensLimit', 'limitTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-tokens-limit', 'x-ratelimit-limit-tokens']));
+        snapshot.tokensReset = String(firstUsageValue(raw, ['tokensReset', 'resetTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-tokens-reset', 'x-ratelimit-reset-tokens']) || '');
+        snapshot.inputTokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['inputTokensRemaining', 'remainingInputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-input-tokens-remaining']));
+        snapshot.inputTokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['inputTokensLimit', 'limitInputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-input-tokens-limit']));
+        snapshot.inputTokensReset = String(firstUsageValue(raw, ['inputTokensReset', 'resetInputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-input-tokens-reset']) || '');
+        snapshot.outputTokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['outputTokensRemaining', 'remainingOutputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-output-tokens-remaining', 'anthropic-priority-output-tokens-remaining']));
+        snapshot.outputTokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['outputTokensLimit', 'limitOutputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-output-tokens-limit', 'anthropic-priority-output-tokens-limit']));
+        snapshot.outputTokensReset = String(firstUsageValue(raw, ['outputTokensReset', 'resetOutputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-output-tokens-reset', 'anthropic-priority-output-tokens-reset']) || '');
+      } else {
+        return null;
+      }
+      var hasData =
+        snapshot.requestsRemaining !== null ||
+        snapshot.requestsLimit !== null ||
+        snapshot.tokensRemaining !== null ||
+        snapshot.tokensLimit !== null ||
+        snapshot.inputTokensRemaining !== null ||
+        snapshot.outputTokensRemaining !== null;
+      if (!hasData) {
+        return null;
+      }
+      snapshot.source = headers ? 'headers' : 'payload';
+      return snapshot;
+    }
+
+    function syncProviderRateLimits(providerId, modelId, payload) {
+      var snapshot = parseProviderRateLimitSnapshot(providerId, modelId, payload);
+      if (!snapshot) {
+        return;
+      }
+      var data = getUsageData();
+      if (!data.providerRateLimits || typeof data.providerRateLimits !== 'object') {
+        data.providerRateLimits = {};
+      }
+      data.providerRateLimits[String(providerId || '')] = snapshot;
+      saveUsageData(data);
+      renderUsageDonut();
+      renderUsagePopup();
+    }
+
+    function getProviderRateLimitSnapshot(providerId) {
+      var data = getUsageData();
+      var snapshots = data && data.providerRateLimits ? data.providerRateLimits : {};
+      var key = String(providerId || '');
+      return snapshots && snapshots[key] ? snapshots[key] : null;
+    }
+
+    function syncProviderRateLimitsFromStatus(status) {
+      var details = status && status.providerDetails;
+      if (!details || typeof details !== 'object') {
+        return;
+      }
+      Object.keys(details).forEach(function(providerId) {
+        var providerStatus = details[providerId];
+        if (!providerStatus || typeof providerStatus !== 'object') {
+          return;
+        }
+        syncProviderRateLimits(providerId, providerStatus.modelId || providerStatus.model || '', providerStatus);
+      });
     }
 
     function sumCreditAmount(entries) {
@@ -7457,13 +7652,28 @@
         });
         return;
       }
-
-      var sessionEntries = collectSessionUsageEntries();
-      if (sessionEntries.length) {
-        var totalCalls = 0;
-        sessionEntries.forEach(function(entry) { totalCalls += entry.count; });
-        renderDonutSegments(svg, sessionEntries, 'count', totalCalls || 1, formatCompactNumber(totalCalls), function(entry) {
-          return entry.label + ': ' + formatNumber(entry.count) + ' usos';
+      var activeRateLimit = getProviderRateLimitSnapshot(activeProviderName());
+      if (activeRateLimit && activeRateLimit.requestsRemaining !== null && activeRateLimit.requestsLimit) {
+        var requestRemaining = Math.max(0, Number(activeRateLimit.requestsRemaining) || 0);
+        var requestLimit = Math.max(1, Number(activeRateLimit.requestsLimit) || 1);
+        renderDonutSegments(svg, [{
+          label: activeProviderLabel(),
+          remaining: requestRemaining,
+          limit: requestLimit
+        }], 'remaining', requestLimit, formatCompactNumber(requestRemaining), function(entry) {
+          return entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit) + ' peticiones restantes';
+        });
+        return;
+      }
+      if (activeRateLimit && activeRateLimit.tokensRemaining !== null && activeRateLimit.tokensLimit) {
+        var tokenRemaining = Math.max(0, Number(activeRateLimit.tokensRemaining) || 0);
+        var tokenLimit = Math.max(1, Number(activeRateLimit.tokensLimit) || 1);
+        renderDonutSegments(svg, [{
+          label: activeProviderLabel(),
+          remaining: tokenRemaining,
+          limit: tokenLimit
+        }], 'remaining', tokenLimit, formatCompactNumber(tokenRemaining), function(entry) {
+          return entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit) + ' tokens restantes';
         });
         return;
       }
@@ -7529,9 +7739,6 @@
         if (typeof usageData.creditsRemaining === 'number' && usageData.creditsRemaining !== null) {
           usageRows.push('<div class="usage-row"><span class="usage-row-label">Creditos Google AI</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.creditsRemaining)) + '</span></div>');
         }
-        if (usageData.creditsSessionConsumed > 0) {
-          usageRows.push('<div class="usage-row"><span class="usage-row-label">Consumidos en sesion</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.creditsSessionConsumed)) + '</span></div>');
-        }
         var quotaEntries = collectQuotaEntries();
         if (quotaEntries.length) {
           usageRows.push('<div class="usage-row" style="margin-top:4px"><span class="usage-row-label" style="font-weight:700">Usos restantes por modelo</span><span class="usage-row-value"></span></div>');
@@ -7543,23 +7750,40 @@
           if (firstReset) {
             usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(firstReset.resetTime)) + '</span></div>');
           }
-        } else {
-          var sessionEntries = collectSessionUsageEntries();
-          if (sessionEntries.length) {
-            usageRows.push('<div class="usage-row" style="margin-top:4px"><span class="usage-row-label" style="font-weight:700">Usos por modelo (sesion)</span><span class="usage-row-value"></span></div>');
-            sessionEntries.forEach(function(entry, index) {
-              var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + modelDonutColor(index) + ';margin-right:6px;vertical-align:middle"></span>';
-              usageRows.push('<div class="usage-row"><span class="usage-row-label">' + dot + escapeHtml(entry.label) + '</span><span class="usage-row-value">' + escapeHtml(formatNumber(entry.count)) + '</span></div>');
-            });
-          }
-        }
-        if (usageData.lastUsageMetadata && usageData.lastUsageMetadata.totalTokenCount) {
-          usageRows.push('<div class="usage-row"><span class="usage-row-label">Ultimo uso (tokens)</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.lastUsageMetadata.totalTokenCount)) + '</span></div>');
+        } else if (!usageRows.length) {
+          usageRows.push('<div style="font-size:0.7rem;color:var(--muted);line-height:1.45">No hay cuota restante confirmada todavia. Gemini API publica limites por modelo, pero no devuelve "remaining" por respuesta; aqui solo se muestra lo que Google Code Assist expone de forma real.</div>');
         }
         if (usageRows.length) {
           usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">USO GEMINI</div>' + usageRows.join('') + '</div>';
         } else {
           usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:0.7rem;color:var(--muted)">Envia un mensaje para ver los creditos y cuota actuales.</div>';
+        }
+      } else {
+        var providerId = activeProviderName();
+        var snapshot = getProviderRateLimitSnapshot(providerId);
+        var providerRows = [];
+        if (snapshot && snapshot.requestsRemaining !== null && snapshot.requestsLimit !== null) {
+          providerRows.push('<div class="usage-row"><span class="usage-row-label">Peticiones restantes</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.requestsRemaining) + ' / ' + formatNumber(snapshot.requestsLimit)) + '</span></div>');
+          if (snapshot.requestsReset) {
+            providerRows.push('<div class="usage-row"><span class="usage-row-label">Reset peticiones</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(snapshot.requestsReset)) + '</span></div>');
+          }
+        }
+        if (snapshot && snapshot.tokensRemaining !== null && snapshot.tokensLimit !== null) {
+          providerRows.push('<div class="usage-row"><span class="usage-row-label">Tokens restantes</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.tokensRemaining) + ' / ' + formatNumber(snapshot.tokensLimit)) + '</span></div>');
+          if (snapshot.tokensReset) {
+            providerRows.push('<div class="usage-row"><span class="usage-row-label">Reset tokens</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(snapshot.tokensReset)) + '</span></div>');
+          }
+        }
+        if (snapshot && snapshot.inputTokensRemaining !== null && snapshot.inputTokensLimit !== null) {
+          providerRows.push('<div class="usage-row"><span class="usage-row-label">Input restante</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.inputTokensRemaining) + ' / ' + formatNumber(snapshot.inputTokensLimit)) + '</span></div>');
+        }
+        if (snapshot && snapshot.outputTokensRemaining !== null && snapshot.outputTokensLimit !== null) {
+          providerRows.push('<div class="usage-row"><span class="usage-row-label">Output restante</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.outputTokensRemaining) + ' / ' + formatNumber(snapshot.outputTokensLimit)) + '</span></div>');
+        }
+        if (providerRows.length) {
+          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">CUOTA RESTANTE</div>' + providerRows.join('') + '</div>';
+        } else {
+          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:0.7rem;color:var(--muted);line-height:1.45">Este provider no esta devolviendo cuota restante al cliente. La UI ya no usa contadores de sesion como sustituto. Si el daemon expone los headers de rate limit de OpenAI o Anthropic, aqui se mostraran automaticamente.</div>';
         }
       }
 
@@ -8014,6 +8238,7 @@
       if (status) {
         __daemonStatus = status;
         window.__daemonStatus = status;
+        syncProviderRateLimitsFromStatus(status);
       } else {
         __daemonStatus = null;
         window.__daemonStatus = null;
@@ -8036,6 +8261,7 @@
       if (payload && payload.ping) {
         __daemonStatus = payload.ping;
         window.__daemonStatus = payload.ping;
+        syncProviderRateLimitsFromStatus(payload.ping);
         updateConfigUi();
         updateAuthUi();
         renderUsageDonut();
@@ -8120,6 +8346,7 @@
       }
       const payload = buildDaemonChatBody(chat);
       const result = await daemonFetchJson('/v1/chat', payload, signal);
+      syncProviderRateLimits(activeProviderName(chat), activeModelName(chat), result);
       const text = result.text || '';
       if (typeof onProgress === 'function') {
         onProgress({ text, thinking: '', parts: [{ text }], done: true });
