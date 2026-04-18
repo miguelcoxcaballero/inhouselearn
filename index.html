@@ -792,8 +792,47 @@
     }
     .send-btn:hover:not([disabled]) { transform: scale(1.06); background: #d06a30; }
     .send-btn[disabled] { opacity: 0.2; cursor: not-allowed; background: var(--muted); }
-    .composer-status-row { padding: 4px 8px 0; }
-    #composer-status { font-size: 0.7rem; color: var(--muted); }
+    .composer-status-row { display: none !important; }
+    #composer-status { display: none !important; }
+
+    /* ─── CONFIRM MODAL ──────────────────────────────── */
+    .confirm-backdrop {
+      position: fixed; inset: 0; z-index: 400;
+      background: rgba(15, 17, 21, 0.48);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; animation: fadeIn 0.18s var(--ease) both;
+    }
+    .confirm-backdrop.hidden { display: none; }
+    .confirm-card {
+      width: min(420px, 100%);
+      background: var(--surface, #fff);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      padding: 22px 22px 18px;
+      animation: confirm-in 0.2s var(--ease) both;
+    }
+    @keyframes confirm-in {
+      from { opacity: 0; transform: translateY(8px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .confirm-title { margin: 0 0 6px; font-size: 1.02rem; font-weight: 600; color: var(--text); }
+    .confirm-message { margin: 0 0 18px; font-size: 0.9rem; line-height: 1.45; color: var(--muted); }
+    .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .confirm-btn {
+      appearance: none; border: 1px solid var(--border);
+      background: transparent; color: var(--text);
+      padding: 8px 16px; border-radius: 12px;
+      font-size: 0.88rem; font-weight: 500; cursor: pointer;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), transform 0.1s var(--ease);
+    }
+    .confirm-btn:hover { background: rgba(0,0,0,0.04); }
+    .confirm-btn:active { transform: scale(0.98); }
+    .confirm-btn.primary { background: var(--text); color: var(--surface, #fff); border-color: var(--text); }
+    .confirm-btn.primary:hover { opacity: 0.9; background: var(--text); }
+    .confirm-btn.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+    .confirm-btn.danger:hover { background: #b91c1c; border-color: #b91c1c; }
 
     /* ─── TOAST ──────────────────────────────────────── */
     .toast-wrap { position: fixed; right: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 300; }
@@ -1285,6 +1324,16 @@
     <div class="preview-body" id="preview-body"></div>
   </div>
   <input type="file" multiple id="file-input" style="display:none">
+  <div class="confirm-backdrop hidden" id="confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-card">
+      <h3 class="confirm-title" id="confirm-title"></h3>
+      <p class="confirm-message" id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn" id="confirm-cancel"></button>
+        <button type="button" class="confirm-btn primary" id="confirm-ok"></button>
+      </div>
+    </div>
+  </div>
   <div class="toast-wrap" id="toast-wrap"></div>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
@@ -1571,8 +1620,8 @@
       {
         provider: 'claude',
         id: 'sonnet',
-        label: 'Claude Sonnet',
-        badge: 'Sonnet',
+        label: 'Claude Sonnet 4.6',
+        badge: 'Sonnet 4.6',
         preview: false,
         thinkingLevels: [],
         defaultThinkingLevel: ''
@@ -1580,8 +1629,17 @@
       {
         provider: 'claude',
         id: 'opus',
-        label: 'Claude Opus',
-        badge: 'Opus',
+        label: 'Claude Opus 4.7',
+        badge: 'Opus 4.7',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        provider: 'claude',
+        id: 'haiku',
+        label: 'Claude Haiku 4.5',
+        badge: 'Haiku 4.5',
         preview: false,
         thinkingLevels: [],
         defaultThinkingLevel: ''
@@ -2603,6 +2661,51 @@
       }, 4000);
     }
 
+    function confirmDialog(options) {
+      const opts = options || {};
+      const backdrop = document.getElementById('confirm-backdrop');
+      const titleEl = document.getElementById('confirm-title');
+      const messageEl = document.getElementById('confirm-message');
+      const okBtn = document.getElementById('confirm-ok');
+      const cancelBtn = document.getElementById('confirm-cancel');
+      if (!backdrop || !titleEl || !messageEl || !okBtn || !cancelBtn) {
+        return Promise.resolve(window.confirm(opts.message || opts.title || ''));
+      }
+      titleEl.textContent = opts.title || 'Confirmar';
+      messageEl.textContent = opts.message || '';
+      okBtn.textContent = opts.confirmText || 'Confirmar';
+      cancelBtn.textContent = opts.cancelText || 'Cancelar';
+      okBtn.classList.toggle('danger', !!opts.danger);
+      okBtn.classList.toggle('primary', !opts.danger);
+      backdrop.classList.remove('hidden');
+      const previouslyFocused = document.activeElement;
+      window.setTimeout(function() { okBtn.focus(); }, 20);
+      return new Promise(function(resolve) {
+        function close(result) {
+          backdrop.classList.add('hidden');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          backdrop.removeEventListener('click', onBackdrop);
+          document.removeEventListener('keydown', onKey);
+          if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+            try { previouslyFocused.focus(); } catch (err) {}
+          }
+          resolve(result);
+        }
+        function onOk() { close(true); }
+        function onCancel() { close(false); }
+        function onBackdrop(e) { if (e.target === backdrop) close(false); }
+        function onKey(e) {
+          if (e.key === 'Escape') { e.preventDefault(); close(false); }
+          else if (e.key === 'Enter') { e.preventDefault(); close(true); }
+        }
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        backdrop.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
+      });
+    }
+
     function scrollThreadToBottom() {
       const wrap = document.querySelector('.thread-wrap');
       wrap.scrollTop = wrap.scrollHeight;
@@ -2657,7 +2760,7 @@
             ' data-provider-id="' + escapeHtml(option.id) + '"' +
             ' data-provider="' + escapeHtml(option.id) + '"' +
             ' role="tab" aria-selected="' + (isActive ? 'true' : 'false') + '"' +
-            ' ' + (appState.busy ? 'disabled' : '') + '>' +
+            '>' +
             '<span class="provider-chip-dot"></span>' +
             '<span>' + escapeHtml(option.label) + '</span>' +
             '</button>';
@@ -2678,7 +2781,7 @@
             ' data-model-id="' + escapeHtml(option.id) + '"' +
             ' data-provider="' + escapeHtml(option.provider) + '"' +
             ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
-            ' ' + (appState.busy ? 'disabled' : '') + '>' +
+            '>' +
             '<span class="model-card-icon">' + providerBrandIconSvg(option.provider) + '</span>' +
             '<span class="model-card-main">' +
               '<span class="model-card-name">' + escapeHtml(option.label) + '</span>' +
@@ -2699,7 +2802,7 @@
             return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
               ' data-thinking-level="' + escapeHtml(level) + '"' +
               ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
-              ' ' + (appState.busy ? 'disabled' : '') + '>' +
+              '>' +
               escapeHtml(shortLabel) +
               '</button>';
           }).join('');
@@ -3543,6 +3646,10 @@
       return buildCodeAssistBaseUrl() + ':loadCodeAssist';
     }
 
+    function buildCodeAssistOnboardEndpoint() {
+      return buildCodeAssistBaseUrl() + ':onboardUser';
+    }
+
     function buildCodeAssistQuotaEndpoint() {
       return buildCodeAssistBaseUrl() + ':retrieveUserQuota';
     }
@@ -3716,7 +3823,7 @@
       });
     }
 
-    function deleteChat(chatId) {
+    async function deleteChat(chatId) {
       const targetId = String(chatId || '');
       const targetChat = appState.chats.find((chat) => chat.id === targetId);
       if (!targetChat) {
@@ -3726,7 +3833,14 @@
       const label = targetChat.title && targetChat.title !== 'Nuevo chat'
         ? '"' + targetChat.title + '"'
         : 'este chat';
-      if (!window.confirm('Se eliminara ' + label + '. Continuar?')) {
+      const ok = await confirmDialog({
+        title: 'Eliminar chat',
+        message: 'Se eliminará ' + label + '. Esta acción no se puede deshacer.',
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        danger: true
+      });
+      if (!ok) {
         return;
       }
 
@@ -3766,12 +3880,19 @@
       elements.composer.focus();
     }
 
-    function clearActiveChat() {
+    async function clearActiveChat() {
       const chat = getActiveChat();
       if (!chat.messages.length) {
         return;
       }
-      if (!window.confirm('Se borraran los mensajes del chat actual. Continuar?')) {
+      const ok = await confirmDialog({
+        title: 'Vaciar chat',
+        message: 'Se borrarán todos los mensajes del chat actual.',
+        confirmText: 'Vaciar',
+        cancelText: 'Cancelar',
+        danger: true
+      });
+      if (!ok) {
         return;
       }
       chat.messages = [];
@@ -4460,7 +4581,7 @@
       if (elements.providerSegmented) {
         elements.providerSegmented.addEventListener('click', (event) => {
           const btn = event.target.closest('[data-provider-id]');
-          if (!btn || btn.disabled) return;
+          if (!btn) return;
           const chat = getActiveChat();
           const nextProvider = normalizeProviderId(btn.getAttribute('data-provider-id'));
           if (nextProvider === activeProviderName(chat)) return;
@@ -4476,7 +4597,7 @@
       if (elements.modelList) {
         elements.modelList.addEventListener('click', (event) => {
           const btn = event.target.closest('[data-model-id]');
-          if (!btn || btn.disabled) return;
+          if (!btn) return;
           const chat = getActiveChat();
           const nextModel = normalizeModelId(btn.getAttribute('data-model-id'), activeProviderName(chat));
           if (nextModel === chat.model) return;
@@ -4491,7 +4612,7 @@
       if (elements.thinkingSegmented) {
         elements.thinkingSegmented.addEventListener('click', (event) => {
           const btn = event.target.closest('[data-thinking-level]');
-          if (!btn || btn.disabled) return;
+          if (!btn) return;
           const chat = getActiveChat();
           const nextLevel = normalizeThinkingLevelForModel(activeProviderName(chat), chat.model, btn.getAttribute('data-thinking-level'));
           if (nextLevel === currentThinkingLevel(chat)) return;
@@ -4963,6 +5084,9 @@
         var resolvedProject = result.data && result.data.cloudaicompanionProject
           ? String(result.data.cloudaicompanionProject)
           : '';
+        if (!resolvedProject) {
+          resolvedProject = await onboardCodeAssistUser(result.data, allowRetry);
+        }
         if (resolvedProject && resolvedProject !== appState.codeAssistProjectId) {
           appState.codeAssistProjectId = resolvedProject;
           saveState({
@@ -4975,6 +5099,40 @@
         }
       } catch (error) {
         console.warn('No se pudo sincronizar creditos de Code Assist:', error);
+      }
+    }
+
+    async function onboardCodeAssistUser(loadData, allowRetry) {
+      try {
+        var tierId = '';
+        var tiers = (loadData && Array.isArray(loadData.allowedTiers)) ? loadData.allowedTiers : [];
+        for (var i = 0; i < tiers.length; i++) {
+          if (tiers[i] && tiers[i].isDefault) { tierId = String(tiers[i].id || ''); break; }
+        }
+        if (!tierId) tierId = 'free-tier';
+        var onboardBody = {
+          tierId: tierId,
+          cloudaicompanionProject: undefined,
+          metadata: buildCodeAssistClientMetadata('')
+        };
+        for (var attempt = 0; attempt < 6; attempt++) {
+          var result = await codeAssistFetchJson(buildCodeAssistOnboardEndpoint(), onboardBody, null, allowRetry);
+          if (!result.response.ok) return '';
+          var op = result.data || {};
+          if (op.done) {
+            var proj = op.response && op.response.cloudaicompanionProject
+              ? (typeof op.response.cloudaicompanionProject === 'string'
+                  ? op.response.cloudaicompanionProject
+                  : op.response.cloudaicompanionProject.id)
+              : '';
+            return proj ? String(proj) : '';
+          }
+          await new Promise(function(r) { setTimeout(r, 1500); });
+        }
+        return '';
+      } catch (error) {
+        console.warn('Code Assist onboardUser fallo:', error);
+        return '';
       }
     }
 
@@ -5007,7 +5165,7 @@
         await refreshCodeAssistCredits(false);
       }
       if (!codeAssistProject()) {
-        throw new Error('Code Assist no devolvio un cloudaicompanionProject util para esta cuenta. Si quieres forzar uno propio, usa APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto que tenga Cloud Code Private API habilitada.');
+        throw new Error('Gemini no está activo aún en tu cuenta de Google. Abre https://gemini.google.com y acepta los términos con esta misma cuenta, o define APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto con Cloud Code Private API habilitada.');
       }
       const requestBody = buildCodeAssistGenerateBody(chat);
       const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
@@ -5041,7 +5199,7 @@
         await refreshCodeAssistCredits(false);
       }
       if (!codeAssistProject()) {
-        throw new Error('Code Assist no devolvio un cloudaicompanionProject util para esta cuenta. Si quieres forzar uno propio, usa APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto que tenga Cloud Code Private API habilitada.');
+        throw new Error('Gemini no está activo aún en tu cuenta de Google. Abre https://gemini.google.com y acepta los términos con esta misma cuenta, o define APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto con Cloud Code Private API habilitada.');
       }
       ensureOauthConfig();
       if (!appState.accessToken) {
