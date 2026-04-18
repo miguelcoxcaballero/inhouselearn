@@ -1686,6 +1686,8 @@
     };
     const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
     const CODE_ASSIST_VERSION = 'v1internal';
+    const GENLANG_ENDPOINT = 'https://generativelanguage.googleapis.com';
+    const GENLANG_VERSION = 'v1beta';
     const CODE_ASSIST_CREDIT_TYPE = 'G1_CREDIT_TYPE';
     const CODE_ASSIST_CREDIT_TYPES = ['G1_CREDIT_TYPE', 'GOOGLE_ONE_AI', 'GOOGLE_AI_PRO'];
     const CODE_ASSIST_CREDIT_ELIGIBLE_MODELS = [
@@ -1707,6 +1709,7 @@
       accessTokenExpiresAt: 0,
       profile: null,
       codeAssistProjectId: '',
+      geminiUseGenLang: false,
       activeController: null,
       driveFolderId: '',
       driveSnapshotFileId: '',
@@ -3654,6 +3657,19 @@
       return buildCodeAssistBaseUrl() + ':retrieveUserQuota';
     }
 
+    function buildGenLangEndpoint(model, stream) {
+      var modelId = String(model || '').trim();
+      var method = stream ? 'streamGenerateContent?alt=sse' : 'generateContent';
+      return GENLANG_ENDPOINT + '/' + GENLANG_VERSION + '/models/' + encodeURIComponent(modelId) + ':' + method;
+    }
+
+    function isCloudCodePrivateApiDisabledError(message) {
+      var m = String(message || '').toLowerCase();
+      return m.indexOf('cloud code private api') !== -1
+          || m.indexOf('cloudcode-pa.googleapis.com') !== -1
+          || (m.indexOf('has not been used in project') !== -1 && m.indexOf('enable it') !== -1);
+    }
+
     function buildCodeAssistClientMetadata(project) {
       return {
         ideType: 'IDE_UNSPECIFIED',
@@ -5075,6 +5091,9 @@
       if (!appState.accessToken) {
         return;
       }
+      if (appState.geminiUseGenLang) {
+        return;
+      }
       var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
       if (!result.response.ok) {
         var loadErr = extractBackendErrorMessage(result.data, result.response.status) || ('HTTP ' + result.response.status);
@@ -5145,6 +5164,9 @@
       if (!appState.accessToken) {
         return;
       }
+      if (appState.geminiUseGenLang) {
+        return;
+      }
       var project = codeAssistProject();
       if (!project) {
         return;
@@ -5169,16 +5191,86 @@
       await refreshCodeAssistQuota(allowRetry);
     }
 
+    async function callGenLangOnce(chat, signal) {
+      ensureOauthConfig();
+      if (!appState.accessToken) {
+        throw new Error('Inicia sesion con Google para usar Gemini.');
+      }
+      const requestBody = buildRequestBody(chat.messages, chat);
+      const response = await fetch(buildGenLangEndpoint(activeModelName(chat), false), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + appState.accessToken
+        },
+        body: JSON.stringify(requestBody),
+        signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 429) {
+          var msg = extractBackendErrorMessage(data, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
+          trackBackendLimit('429', msg, activeModelName(chat));
+          var waitSec = extractWaitSecondsFromBackendMessage(msg);
+          throw new Error('Se ha alcanzado el límite de usos. Podrás mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
+        }
+        throw new Error(extractBackendErrorMessage(data, response.status));
+      }
+      trackApiUsage(activeModelName(chat), data);
+      return {
+        text: extractTextFromResponse(data),
+        parts: extractModelParts(data)
+      };
+    }
+
+    async function callGenLangStreamOnce(chat, signal, onProgress) {
+      ensureOauthConfig();
+      if (!appState.accessToken) {
+        throw new Error('Inicia sesion con Google para usar Gemini.');
+      }
+      const requestBody = buildRequestBody(chat.messages, chat);
+      const response = await fetch(buildGenLangEndpoint(activeModelName(chat), true), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + appState.accessToken,
+          Accept: 'text/event-stream'
+        },
+        body: JSON.stringify(requestBody),
+        signal
+      });
+      if (!response.ok) {
+        var errorPayload = {};
+        try { errorPayload = await response.json(); } catch (_) { errorPayload = {}; }
+        if (response.status === 429) {
+          var msg = extractBackendErrorMessage(errorPayload, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
+          trackBackendLimit('429', msg, activeModelName(chat));
+          var waitSec = extractWaitSecondsFromBackendMessage(msg);
+          throw new Error('Se ha alcanzado el limite de usos. Podras mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
+        }
+        throw new Error(extractBackendErrorMessage(errorPayload, response.status));
+      }
+      return await consumeSseGeminiStream(response, chat, onProgress);
+    }
+
     async function callGemini(chat, signal, allowRetry, retryCount) {
+      if (appState.geminiUseGenLang) {
+        return await callGenLangOnce(chat, signal);
+      }
       if (!codeAssistProject()) {
         try {
           await refreshCodeAssistCredits(false);
         } catch (error) {
+          if (isCloudCodePrivateApiDisabledError(error && error.message)) {
+            appState.geminiUseGenLang = true;
+            return await callGenLangOnce(chat, signal);
+          }
           throw new Error('No se pudo activar Gemini para esta cuenta: ' + (error && error.message ? error.message : error));
         }
       }
       if (!codeAssistProject()) {
-        throw new Error('No se pudo resolver un cloudaicompanionProject para esta cuenta. Si tienes un proyecto GCP con la API "Cloud Code Private" habilitada, ponlo en APP_CONFIG.CODE_ASSIST_PROJECT_ID.');
+        appState.geminiUseGenLang = true;
+        return await callGenLangOnce(chat, signal);
       }
       const requestBody = buildCodeAssistGenerateBody(chat);
       const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
@@ -5188,13 +5280,17 @@
         if (response.status === 429) {
           var backendMessage = extractBackendErrorMessage(data, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
           trackBackendLimit('429', backendMessage, activeModelName(chat));
-          
+
           var waitSec = extractWaitSecondsFromBackendMessage(backendMessage);
-          
+
           throw new Error('Se ha alcanzado el límite de usos. Podrás mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
         }
 
         const message = extractBackendErrorMessage(data, response.status);
+        if (isCloudCodePrivateApiDisabledError(message)) {
+          appState.geminiUseGenLang = true;
+          return await callGenLangOnce(chat, signal);
+        }
         throw new Error(message);
       }
 
@@ -5208,15 +5304,23 @@
     }
 
     async function callGeminiStream(chat, signal, onProgress) {
+      if (appState.geminiUseGenLang) {
+        return await callGenLangStreamOnce(chat, signal, onProgress);
+      }
       if (!codeAssistProject()) {
         try {
           await refreshCodeAssistCredits(false);
         } catch (error) {
+          if (isCloudCodePrivateApiDisabledError(error && error.message)) {
+            appState.geminiUseGenLang = true;
+            return await callGenLangStreamOnce(chat, signal, onProgress);
+          }
           throw new Error('No se pudo activar Gemini para esta cuenta: ' + (error && error.message ? error.message : error));
         }
       }
       if (!codeAssistProject()) {
-        throw new Error('No se pudo resolver un cloudaicompanionProject para esta cuenta. Si tienes un proyecto GCP con la API "Cloud Code Private" habilitada, ponlo en APP_CONFIG.CODE_ASSIST_PROJECT_ID.');
+        appState.geminiUseGenLang = true;
+        return await callGenLangStreamOnce(chat, signal, onProgress);
       }
       ensureOauthConfig();
       if (!appState.accessToken) {
@@ -5244,8 +5348,17 @@
           var waitSec = extractWaitSecondsFromBackendMessage(backendMessage);
           throw new Error('Se ha alcanzado el limite de usos. Podras mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
         }
-        throw new Error(extractBackendErrorMessage(errorPayload, response.status));
+        var streamErrorMsg = extractBackendErrorMessage(errorPayload, response.status);
+        if (isCloudCodePrivateApiDisabledError(streamErrorMsg)) {
+          appState.geminiUseGenLang = true;
+          return await callGenLangStreamOnce(chat, signal, onProgress);
+        }
+        throw new Error(streamErrorMsg);
       }
+      return await consumeSseGeminiStream(response, chat, onProgress);
+    }
+
+    async function consumeSseGeminiStream(response, chat, onProgress) {
       if (!response.body || !response.body.getReader) {
         const fallback = await response.json().catch(() => ({}));
         const parts = extractModelParts(fallback);
@@ -5253,7 +5366,6 @@
         const thinking = extractThoughtTextFromParts(parts);
         if (typeof onProgress === 'function') onProgress({ text, thinking, parts, done: true });
         trackApiUsage(activeModelName(chat), fallback);
-        await refreshCodeAssistUsage(false);
         return { text, thinking, parts };
       }
 
@@ -5329,7 +5441,6 @@
       if (lastPayload) {
         trackApiUsage(activeModelName(chat), lastPayload);
       }
-      await refreshCodeAssistUsage(false);
 
       const finalText = accumulatedText.trim();
       const finalThinking = accumulatedThinking.trim();
