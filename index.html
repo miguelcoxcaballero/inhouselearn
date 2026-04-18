@@ -2582,13 +2582,17 @@
       '       "title": "string",',
       '       "intro": "string",',
       '       "requiredAccuracy": 70,',
+      '       "answerKey": { "id-pregunta": "id exacto o letra de la opcion correcta" },',
       '       "items": [',
       '         {',
       '           "id": "string estable",',
       '           "prompt": "string",',
       '           "correctOptionId": "id exacto de la opcion correcta",',
+      '           "solutionLetter": "A|B|C|D",',
       '           "options": [',
-      '             { "id": "a", "text": "string", "correct": true }',
+      '             { "id": "a", "text": "string", "correct": true },',
+      '             { "id": "b", "text": "string", "correct": false },',
+      '             { "id": "c", "text": "string", "correct": false }',
       '           ],',
       '           "explanation": "string corta"',
       '         }',
@@ -2598,7 +2602,8 @@
       '   }',
       '',
       '10. El mini test debe ser conceptual, corto y util para decidir si puede pasar al siguiente apartado. Usa 2 o 3 preguntas multiple choice, con 3 o 4 opciones y exactamente una correcta.',
-      '    En cada pregunta DEBES incluir "correctOptionId" y marcar ESA misma opcion con "correct": true. La UI usa ambos datos para revelar la correcta.',
+      '    En cada pregunta DEBES incluir "correctOptionId", "solutionLetter" y marcar ESA misma opcion con "correct": true. Ademas, el quiz completo DEBE incluir "answerKey".',
+      '    Si no puedes garantizar la solucion de una pregunta, NO la emitas. Nunca envies un quiz sin solucion verificable.',
       '',
       '11. Si sigues dentro del mismo apartado, reutiliza los mismos ids estables siempre que puedas.'
     ].join('\n');
@@ -3447,9 +3452,11 @@
         correct: !!(option && (
           option.correct === true ||
           option.isCorrect === true ||
+          option.is_correct === true ||
           option.answer === true ||
           String(option.correct || '').trim().toLowerCase() === 'true' ||
-          String(option.isCorrect || '').trim().toLowerCase() === 'true'
+          String(option.isCorrect || '').trim().toLowerCase() === 'true' ||
+          String(option.is_correct || '').trim().toLowerCase() === 'true'
         ))
       };
     }
@@ -3461,7 +3468,72 @@
         .replace(/^[\(\[\{'"`]+|[\)\]\}'"`]+$/g, '');
     }
 
-    function resolveGuidedCorrectOptionId(rawItem, options) {
+    function extractGuidedAnswerKeyRefs(rawQuiz, rawItem, index) {
+      const refs = [];
+      const questionId = rawItem && typeof rawItem.id === 'string' ? rawItem.id.trim() : '';
+      const numericKeys = [index + 1, String(index + 1)];
+      const answerKey = rawQuiz && rawQuiz.answerKey && typeof rawQuiz.answerKey === 'object'
+        ? rawQuiz.answerKey
+        : rawQuiz && rawQuiz.answer_key && typeof rawQuiz.answer_key === 'object'
+          ? rawQuiz.answer_key
+          : null;
+      if (answerKey) {
+        if (questionId && typeof answerKey[questionId] !== 'undefined') refs.push(answerKey[questionId]);
+        numericKeys.forEach((key) => {
+          if (typeof answerKey[key] !== 'undefined') refs.push(answerKey[key]);
+        });
+      }
+      const collections = [
+        rawQuiz && rawQuiz.solutions,
+        rawQuiz && rawQuiz.solutionLetters,
+        rawQuiz && rawQuiz.solution_letters,
+        rawQuiz && rawQuiz.correctOptionIds,
+        rawQuiz && rawQuiz.correct_option_ids,
+        rawQuiz && rawQuiz.correctAnswers,
+        rawQuiz && rawQuiz.correct_answers
+      ];
+      collections.forEach((value) => {
+        if (Array.isArray(value) && typeof value[index] !== 'undefined') {
+          refs.push(value[index]);
+          return;
+        }
+        if (value && typeof value === 'object') {
+          if (questionId && typeof value[questionId] !== 'undefined') refs.push(value[questionId]);
+          numericKeys.forEach((key) => {
+            if (typeof value[key] !== 'undefined') refs.push(value[key]);
+          });
+        }
+      });
+      return refs;
+    }
+
+    function extractGuidedExplanationAnswerRef(rawItem) {
+      const explanation = rawItem && typeof rawItem.explanation === 'string'
+        ? rawItem.explanation.trim()
+        : rawItem && typeof rawItem.feedback === 'string'
+          ? rawItem.feedback.trim()
+          : '';
+      if (!explanation) {
+        return '';
+      }
+      const patterns = [
+        /respuesta correcta\s*[:\-]?\s*([a-d]|\d+)/i,
+        /la correcta es\s*[:\-]?\s*([a-d]|\d+)/i,
+        /correcta\s*[:\-]?\s*([a-d]|\d+)/i,
+        /opcion correcta\s*[:\-]?\s*([a-d]|\d+)/i,
+        /answer\s*[:\-]?\s*([a-d]|\d+)/i,
+        /solution\s*[:\-]?\s*([a-d]|\d+)/i
+      ];
+      for (const pattern of patterns) {
+        const match = explanation.match(pattern);
+        if (match && match[1]) {
+          return match[1];
+        }
+      }
+      return '';
+    }
+
+    function resolveGuidedCorrectOptionId(rawItem, options, rawQuiz, index) {
       if (!Array.isArray(options) || !options.length) {
         return '';
       }
@@ -3476,8 +3548,20 @@
         rawItem && rawItem.correctAnswer,
         rawItem && rawItem.answerId,
         rawItem && rawItem.answer,
-        rawItem && rawItem.solution
-      ].filter((value) => typeof value !== 'undefined' && value !== null && String(value).trim());
+        rawItem && rawItem.solution,
+        rawItem && rawItem.solutionLetter,
+        rawItem && rawItem.solution_letter,
+        rawItem && rawItem.correct_option_id,
+        rawItem && rawItem.correct_answer_id,
+        rawItem && rawItem.correct_option,
+        rawItem && rawItem.correct_answer,
+        rawItem && rawItem.answer_id,
+        rawItem && rawItem.answer_letter,
+        rawItem && rawItem.correctLetter,
+        rawItem && rawItem.correct_letter,
+        extractGuidedExplanationAnswerRef(rawItem)
+      ].concat(extractGuidedAnswerKeyRefs(rawQuiz, rawItem, index))
+        .filter((value) => typeof value !== 'undefined' && value !== null && String(value).trim());
       if (!rawRefs.length) {
         return flagged.length ? flagged[0].id : '';
       }
@@ -3498,14 +3582,14 @@
       return flagged.length ? flagged[0].id : '';
     }
 
-    function normalizeGuidedQuizItem(item, index) {
+    function normalizeGuidedQuizItem(item, index, rawQuiz) {
       const prompt = item && typeof item.prompt === 'string'
         ? item.prompt.trim()
         : '';
       const rawOptions = Array.isArray(item && item.options) && item.options.length
         ? item.options.map((option, optionIndex) => normalizeGuidedOption(option, optionIndex))
         : [];
-      const correctOptionId = resolveGuidedCorrectOptionId(item, rawOptions);
+      const correctOptionId = resolveGuidedCorrectOptionId(item, rawOptions, rawQuiz, index);
       return {
         id: item && typeof item.id === 'string' && item.id.trim()
           ? item.id.trim()
@@ -3532,7 +3616,9 @@
         100
       );
       quiz.items = Array.isArray(raw.items)
-        ? raw.items.map((item, index) => normalizeGuidedQuizItem(item, index)).filter((item) => item.options.length >= 2)
+        ? raw.items
+            .map((item, index) => normalizeGuidedQuizItem(item, index, raw))
+            .filter((item) => item.options.length >= 2 && item.correctOptionId)
         : [];
       quiz.sourceMessageId = typeof raw.sourceMessageId === 'string' ? raw.sourceMessageId : '';
       quiz.updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : '';
