@@ -57,7 +57,7 @@
     }
     .topbar-start { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .hamburger {
-      display: none; width: 36px; height: 36px; border-radius: var(--r-sm);
+      display: flex; width: 36px; height: 36px; border-radius: var(--r-sm);
       align-items: center; justify-content: center; color: var(--muted);
       transition: background 0.18s var(--ease), color 0.18s var(--ease);
     }
@@ -493,7 +493,8 @@
 
     /* ─── LAYOUT ─────────────────────────────────────── */
     #app-container { height: 100vh; padding-top: var(--topbar-h); display: flex; flex-direction: column; }
-    .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--sidebar-w) 1fr; }
+    .layout { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--sidebar-w) 1fr; transition: grid-template-columns 0.28s var(--ease); }
+    .layout.sidebar-collapsed { grid-template-columns: 0px 1fr; }
 
     /* ─── SIDEBAR ────────────────────────────────────── */
     .sidebar-overlay {
@@ -559,6 +560,9 @@
     .sidebar-profile-info { min-width: 0; }
     .sidebar-profile-name { font-size: 0.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sidebar-profile-email { font-size: 0.67rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .sidebar-new-chat { padding: 0 10px 14px; }
+    .sidebar-new-chat .btn { width: 100%; justify-content: flex-start; padding: 0 12px; height: 38px; }
 
     /* ─── CHAT ───────────────────────────────────────── */
     .chat { display: grid; grid-template-rows: 1fr auto; min-height: 0; background: var(--bg); }
@@ -1351,6 +1355,12 @@
         <div class="sidebar-body">
           <div class="sidebar-label">Recientes</div>
           <div class="chat-list" id="chat-list"></div>
+        </div>
+        <div class="sidebar-new-chat">
+          <button class="btn btn-primary" id="new-chat-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span class="btn-label">Nuevo chat</span>
+          </button>
         </div>
         <div class="sidebar-profile hidden" id="profile-card">
           <div class="sidebar-avatar-wrap">
@@ -5112,8 +5122,8 @@
         e.preventDefault();
         handleSend();
       });
-      elements.newChatBtn.addEventListener('click', newChat);
-      elements.clearChatBtn.addEventListener('click', clearActiveChat);
+      if (elements.newChatBtn) elements.newChatBtn.addEventListener('click', newChat);
+      if (elements.clearChatBtn) elements.clearChatBtn.addEventListener('click', clearActiveChat);
       elements.modelMenuBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         toggleModelMenu();
@@ -6443,8 +6453,12 @@
       const overlay = document.getElementById('sidebar-overlay');
       if (!hamburger || !sidebar || !overlay) return;
       hamburger.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
+        if (window.innerWidth <= 768) {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('open');
+        } else {
+          document.querySelector('.layout').classList.toggle('sidebar-collapsed');
+        }
       });
       overlay.addEventListener('click', () => {
         sidebar.classList.remove('open');
