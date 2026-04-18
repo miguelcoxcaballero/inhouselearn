@@ -1356,6 +1356,20 @@
       line-height: 1.45;
       color: var(--muted);
     }
+    .guided-inline-status {
+      font-size: 0.72rem;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+    .guided-inline-status.correct {
+      color: #166534;
+    }
+    .guided-inline-status.wrong {
+      color: #991b1b;
+    }
+    .guided-inline-status.neutral {
+      color: var(--text-secondary);
+    }
     .guided-inline-list {
       display: grid;
       gap: 10px;
@@ -3107,7 +3121,7 @@
       record.lastAccuracy = 0;
       record.updatedAt = nowIso();
       saveState({ skipDrive: true });
-      renderThread({ preserveScroll: true });
+      rerenderGuidedQuizMessage(chat);
     }
 
     function answerGuidedQuizQuestion(questionId, optionId) {
@@ -3136,7 +3150,7 @@
       };
       syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
       saveState({ skipDrive: true });
-      renderThread({ preserveScroll: true });
+      rerenderGuidedQuizMessage(chat);
     }
 
     function guidedWeakAreasText(chatLike) {
@@ -3832,7 +3846,7 @@
     }
 
     function buildStateSnapshot(options) {
-      const opts = options || { includeBinaries: true };
+      const opts = Object.assign({ includeBinaries: true }, options || {});
       return {
         version: 1,
         savedAt: nowIso(),
@@ -5767,6 +5781,24 @@
         session.quiz.intro ? '<div class="guided-inline-note">' + escapeHtml(session.quiz.intro) + '</div>' : '',
         '<div class="guided-inline-list">',
         mastery.itemStates.map((state, index) => {
+          const correctIndex = state.correctOption
+            ? state.item.options.findIndex((option) => option.id === state.correctOption.id)
+            : -1;
+          const correctLabel = state.correctOption
+            ? String.fromCharCode(65 + Math.max(0, correctIndex)) + '. ' + state.correctOption.text
+            : '';
+          const statusText = !state.answered
+            ? ''
+            : (state.correctOption
+              ? (state.correct
+                ? 'Correcta'
+                : 'Incorrecta. Correcta: ' + correctLabel)
+              : 'Respuesta guardada');
+          const statusClass = !state.answered
+            ? ''
+            : (state.correct
+              ? 'correct'
+              : (state.correctOption ? 'wrong' : 'neutral'));
           return [
             '<div class="guided-inline-item">',
             '  <div class="guided-inline-prompt">' + escapeHtml(String(index + 1) + '. ' + state.item.prompt) + '</div>',
@@ -5789,6 +5821,9 @@
               ].join('');
             }).join(''),
             '  </div>',
+            state.answered
+              ? '  <div class="guided-inline-status ' + statusClass + '">' + escapeHtml(statusText) + '</div>'
+              : '',
             state.answered && state.item.explanation
               ? '  <div class="guided-inline-feedback">' + escapeHtml(state.item.explanation) + '</div>'
               : '',
@@ -5960,7 +5995,8 @@
       }) || null;
     }
 
-    function patchThreadMessage(message, chat, isStreaming) {
+    function patchThreadMessage(message, chat, isStreaming, options) {
+      const settings = Object.assign({ scrollToBottom: true }, options);
       const resolvedChat = chat || getActiveChat();
       if (!resolvedChat || !message) {
         return;
@@ -5996,7 +6032,34 @@
         }
       }
       bindThreadActions(currentEl);
-      requestAnimationFrame(scrollThreadToBottom);
+      if (settings.scrollToBottom) {
+        requestAnimationFrame(scrollThreadToBottom);
+      }
+    }
+
+    function rerenderGuidedQuizMessage(chatLike) {
+      const chat = chatLike || getActiveChat();
+      if (!chat || !chat.guidedLearning) {
+        return;
+      }
+      const session = ensureGuidedSession(chat);
+      const messageId = session.quiz && typeof session.quiz.sourceMessageId === 'string'
+        ? session.quiz.sourceMessageId
+        : '';
+      if (!messageId) {
+        renderThread({ preserveScroll: true });
+        return;
+      }
+      const message = (chat.messages || []).find(function(item) {
+        return item && item.id === messageId;
+      }) || null;
+      if (!message || !findMessageElement(messageId)) {
+        renderThread({ preserveScroll: true });
+        return;
+      }
+      patchThreadMessage(message, chat, false, {
+        scrollToBottom: false
+      });
     }
 
     let pendingStreamRender = null;
@@ -6524,7 +6587,9 @@
         return;
       }
 
-      const localSnapshot = buildStateSnapshot();
+      const localSnapshot = buildStateSnapshot({
+        includeBinaries: false
+      });
       const remoteSnapshot = await readDriveSnapshot();
       const localHasContent = snapshotHasMeaningfulContent(localSnapshot);
       const remoteHasContent = snapshotHasMeaningfulContent(remoteSnapshot);
@@ -6540,10 +6605,15 @@
       }
 
       appState.driveReady = true;
-      await persistDriveSnapshot(buildStateSnapshot());
+      scheduleDriveSync({
+        immediate: true
+      });
     }
 
-    function scheduleDriveSync() {
+    function scheduleDriveSync(options) {
+      const settings = Object.assign({
+        immediate: false
+      }, options);
       if (!hasDrivePersistenceReady()) {
         return;
       }
@@ -6568,7 +6638,7 @@
               scheduleDriveSync();
             }
           });
-      }, DRIVE_SYNC_DEBOUNCE_MS);
+      }, settings.immediate ? 0 : DRIVE_SYNC_DEBOUNCE_MS);
     }
 
 
