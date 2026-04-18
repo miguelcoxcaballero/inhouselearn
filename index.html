@@ -565,7 +565,19 @@
     .sidebar-new-chat .btn { width: 100%; justify-content: flex-start; padding: 0 12px; height: 38px; }
 
     /* ─── CHAT ───────────────────────────────────────── */
-    .chat { display: grid; grid-template-rows: 1fr auto; min-height: 0; background: var(--bg); }
+    .chat { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; background: var(--bg); }
+    .guided-banner-slot {
+      padding: 12px 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+    .guided-banner-slot:empty {
+      display: none;
+      padding: 0;
+    }
+    .guided-banner-slot > * {
+      width: min(700px, 100%);
+    }
     .thread-wrap {
       overflow-y: auto; padding: 24px 20px;
       display: flex; justify-content: center;
@@ -1142,6 +1154,11 @@
       box-shadow: var(--shadow-sm);
       overflow: hidden;
       animation: fadeSlideUp 0.26s var(--ease) both;
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
     .guided-banner.empty-state { margin-top: 8px; }
     .guided-banner summary {
@@ -1709,6 +1726,7 @@
       .sidebar.open { transform: translateX(0); }
       .sidebar-overlay.open { display: block; cursor: pointer; }
       .transport-pill { display: none; }
+      .guided-banner-slot { padding: 10px 12px 0; }
       .thread-wrap { padding: 16px 12px; }
       .composer-area { padding: 8px 10px 14px; }
       .message, .message.user-msg { max-width: 92%; }
@@ -1736,6 +1754,7 @@
       .model-trigger-main { font-size: 0.74rem; }
       .btn-primary .btn-label { display: none; }
       .topbar-popover { width: min(320px, calc(100vw - 16px)); left: 0; right: auto; }
+      .guided-banner-slot { padding: 8px 8px 0; }
       .thread-wrap { padding: 12px 8px; }
       .bubble { padding: 10px 13px; font-size: 0.87rem; }
       .composer { font-size: 0.87rem; }
@@ -2201,6 +2220,7 @@
 
       <!-- CHAT -->
       <main class="chat">
+        <div class="guided-banner-slot" id="guided-banner-slot"></div>
         <div class="thread-wrap">
           <section class="thread" id="thread"></section>
         </div>
@@ -2893,11 +2913,7 @@
         };
       }
       const session = ensureGuidedSession(chat);
-      const sectionKey = guidedSectionKey(
-        session.current.topicId,
-        session.current.blockId,
-        session.current.sectionId
-      );
+      const sectionKey = resolveGuidedSectionStorageKey(session);
       return computeGuidedQuizStats(session, sectionKey);
     }
 
@@ -3076,11 +3092,7 @@
         return '';
       }
       const session = ensureGuidedSession(chat);
-      return guidedSectionKey(
-        session.current.topicId,
-        session.current.blockId,
-        session.current.sectionId
-      );
+      return resolveGuidedSectionStorageKey(session);
     }
 
     function resetGuidedQuizState(chatLike) {
@@ -3197,6 +3209,7 @@
 
     const elements = {
       chatList: document.getElementById('chat-list'),
+      guidedBannerSlot: document.getElementById('guided-banner-slot'),
       thread: document.getElementById('thread'),
       composerShell: document.querySelector('.composer-shell'),
       composer: document.getElementById('composer'),
@@ -3674,7 +3687,7 @@
         }
       }
       syncGuidedCurrentTitles(session);
-      const currentKey = guidedSectionKey(session.current.topicId, session.current.blockId, session.current.sectionId);
+      const currentKey = resolveGuidedSectionStorageKey(session);
       if (currentKey) {
         session.sectionStats[currentKey] = normalizeGuidedSectionRecord(
           session.sectionStats[currentKey],
@@ -3697,6 +3710,27 @@
         return '';
       }
       return [topicId, blockId, sectionId].join('::');
+    }
+
+    function resolveGuidedSectionStorageKey(sessionLike) {
+      const session = sessionLike && typeof sessionLike === 'object'
+        ? sessionLike
+        : createEmptyGuidedSession();
+      const currentKey = guidedSectionKey(
+        session.current && session.current.topicId,
+        session.current && session.current.blockId,
+        session.current && session.current.sectionId
+      );
+      if (currentKey) {
+        return currentKey;
+      }
+      if (session.quiz && typeof session.quiz.sourceMessageId === 'string' && session.quiz.sourceMessageId) {
+        return 'quiz::' + session.quiz.sourceMessageId;
+      }
+      if (session.quiz && Array.isArray(session.quiz.items) && session.quiz.items.length) {
+        return 'quiz::current';
+      }
+      return '';
     }
 
     function normalizeChatConfig(chat) {
@@ -5824,6 +5858,18 @@
       ].join('');
     }
 
+    function syncGuidedBannerSlot(chat, options) {
+      if (!elements.guidedBannerSlot) {
+        return;
+      }
+      elements.guidedBannerSlot.innerHTML = chat && chat.guidedLearning
+        ? renderGuidedDashboard(chat, options)
+        : '';
+      if (elements.guidedBannerSlot.innerHTML) {
+        bindThreadActions(elements.guidedBannerSlot);
+      }
+    }
+
     function renderEmptyThread(options) {
       const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
@@ -5863,7 +5909,8 @@
             '  </div>',
             '</section>'
           ].join('');
-      elements.thread.innerHTML = heroMarkup + (guidedActive ? renderGuidedDashboard(chat, { emptyState: true }) : '');
+      syncGuidedBannerSlot(chat, guidedActive ? { emptyState: true } : undefined);
+      elements.thread.innerHTML = heroMarkup;
       bindSuggestionChips();
       bindThreadActions();
       if (!settings.preserveScroll) {
@@ -5937,6 +5984,7 @@
       currentEl.className = nextEl.className;
       currentEl.setAttribute('data-msg-id', message.id);
       currentEl.innerHTML = nextEl.innerHTML;
+      syncGuidedBannerSlot(resolvedChat);
       enhanceRichContent(currentEl, { renderMath: true });
       if (isStreaming) {
         const bubbleContent = currentEl.querySelector('.bubble-content');
@@ -5993,8 +6041,8 @@
       }
 
       const lastAssistantIdx = lastAssistantMessageIndex(chat);
-      const guidedMarkup = chat.guidedLearning ? renderGuidedDashboard(chat) : '';
-      elements.thread.innerHTML = guidedMarkup + chat.messages.map(function(message, idx) {
+      syncGuidedBannerSlot(chat);
+      elements.thread.innerHTML = chat.messages.map(function(message, idx) {
         return renderMessageMarkup(message, idx === lastAssistantIdx);
       }).join('');
 
