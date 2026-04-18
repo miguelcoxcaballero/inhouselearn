@@ -1133,6 +1133,67 @@
     .boot-hint {
       font-size: 0.76rem; color: var(--muted); margin-top: 4px;
     }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 260;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(245, 245, 240, 0.74);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+    }
+    .auth-gate.hidden { display: none !important; }
+    .auth-gate-card {
+      width: min(460px, 100%);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 26px;
+      box-shadow: var(--shadow-lg);
+      padding: 24px 24px 20px;
+    }
+    .auth-gate-kicker {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 10px;
+    }
+    .auth-gate-title {
+      font-family: 'Comfortaa', cursive;
+      font-size: 1.24rem;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .auth-gate-copy {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+    .auth-gate-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .auth-gate-actions .btn {
+      flex: 1 1 180px;
+      justify-content: center;
+    }
+    .auth-gate-status {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+    .auth-gate-status.error {
+      color: #b91c1c;
+    }
   </style>
 </head>
 <body class="boot-pending">
@@ -1171,6 +1232,19 @@
       <div class="boot-extra">
         <button class="boot-link" id="boot-open-localhost" type="button">Abrir localhost</button>
       </div>
+    </div>
+  </div>
+
+  <div class="auth-gate hidden" id="auth-gate" role="dialog" aria-modal="true" aria-labelledby="auth-gate-title">
+    <div class="auth-gate-card">
+      <div class="auth-gate-kicker">Google Drive requerido</div>
+      <h1 class="auth-gate-title" id="auth-gate-title">Inicia sesi&oacute;n para continuar</h1>
+      <p class="auth-gate-copy" id="auth-gate-copy">Esta app necesita una sesi&oacute;n activa de Google para guardar las conversaciones en Drive sin perder datos.</p>
+      <div class="auth-gate-actions">
+        <button class="btn btn-primary" id="auth-gate-login-btn" type="button">Iniciar sesi&oacute;n con Google</button>
+        <button class="btn btn-outline hidden" id="auth-gate-retry-btn" type="button">Reintentar</button>
+      </div>
+      <div class="auth-gate-status hidden" id="auth-gate-status" aria-live="polite"></div>
     </div>
   </div>
 
@@ -1669,6 +1743,7 @@
     const AUTH_SKIP_RESTORE_KEY = STORAGE_KEY + '::manualLogout';
     const AUTH_EXPIRY_SKEW_MS = 30000;
     const AUTH_REFRESH_SKEW_MS = 5 * 60 * 1000;
+    const AUTH_REFRESH_RETRY_MS = 30 * 1000;
     const MAX_INLINE_ATTACHMENT_BYTES = 12 * 1024 * 1024;
     const MAX_TEXT_ATTACHMENT_CHARS = 120000;
     const MAX_PDF_PAGES = 80;
@@ -1708,6 +1783,7 @@
     ];
     let googleTokenClient = null;
     let googleTokenRefreshTimer = 0;
+    let googleSessionPromise = null;
 
     const appState = {
       chats: [],
@@ -1727,6 +1803,7 @@
       driveSyncTimer: 0,
       driveSyncPromise: null,
       driveSyncQueued: false,
+      authGateReason: '',
       composerAttachments: [],
       connectPollingTimer: 0
     };
@@ -1766,6 +1843,11 @@
       profileEmail: document.getElementById('profile-email'),
       profileMenuName: document.getElementById('profile-menu-name'),
       profileMenuEmail: document.getElementById('profile-menu-email'),
+      authGate: document.getElementById('auth-gate'),
+      authGateCopy: document.getElementById('auth-gate-copy'),
+      authGateStatus: document.getElementById('auth-gate-status'),
+      authGateLoginBtn: document.getElementById('auth-gate-login-btn'),
+      authGateRetryBtn: document.getElementById('auth-gate-retry-btn'),
       authCopy: document.getElementById('auth-copy'),
       transportLabel: document.getElementById('transport-label'),
       modelCopy: document.getElementById('model-copy'),
@@ -1888,6 +1970,22 @@
       const parts = Array.isArray(message && message.parts)
         ? message.parts.map((part) => serializePartForStorage(part, attachments)).filter(Boolean)
         : (content ? [{ text: content }] : []);
+      const alternatives = Array.isArray(message && message.alternatives) ? message.alternatives : [];
+      const rawActiveAlternative = Number(message && message.activeAlternative);
+      const versionOrder = message && message.versionOrder === 'chronological'
+        ? 'chronological'
+        : 'legacy-current-first';
+      const normalizedActiveAlternative = (() => {
+        const altCount = alternatives.length;
+        if (!Number.isFinite(rawActiveAlternative)) {
+          return altCount;
+        }
+        const clamped = Math.max(0, Math.min(rawActiveAlternative, altCount));
+        if (versionOrder === 'chronological') {
+          return clamped;
+        }
+        return clamped === 0 ? altCount : clamped - 1;
+      })();
       return {
         id: message && typeof message.id === 'string' ? message.id : uid('msg'),
         role: message && message.role === 'assistant' ? 'assistant' : 'user',
@@ -1895,12 +1993,13 @@
         parts,
         attachments,
         thinking: message && typeof message.thinking === 'string' ? message.thinking : '',
-        alternatives: Array.isArray(message && message.alternatives) ? message.alternatives : [],
-        activeAlternative: Number(message && message.activeAlternative) || 0,
+        alternatives: alternatives,
+        activeAlternative: normalizedActiveAlternative,
         pending: !!(message && message.pending),
         provider: message && typeof message.provider === 'string' ? message.provider : '',
         model: message && typeof message.model === 'string' ? message.model : '',
-        createdAt: message && typeof message.createdAt === 'string' ? message.createdAt : nowIso()
+        createdAt: message && typeof message.createdAt === 'string' ? message.createdAt : nowIso(),
+        versionOrder: 'chronological'
       };
     }
 
@@ -2378,6 +2477,73 @@
       localStorage.removeItem(AUTH_SKIP_RESTORE_KEY);
     }
 
+    function canAttemptSilentGoogleAuth() {
+      if (localStorage.getItem(AUTH_SKIP_RESTORE_KEY) === '1') {
+        return false;
+      }
+      return !!appState.accessToken || hasStoredGoogleRememberSession() || !!getStoredGoogleHintEmail();
+    }
+
+    function hasDriveIdentitySession() {
+      return !!(appState.accessToken && appState.profile);
+    }
+
+    function hasDrivePersistenceReady() {
+      return hasDriveIdentitySession() && !!appState.driveReady && hasFreshGoogleAccessToken();
+    }
+
+    function resolvedAuthGateMessage() {
+      if (!hasOauthConfig()) {
+        return 'Esta build no puede continuar porque falta la configuracion OAuth necesaria para guardar el historial en Google Drive.';
+      }
+      if (appState.authGateReason) {
+        return appState.authGateReason;
+      }
+      if (hasDriveIdentitySession() && !appState.driveReady) {
+        return 'Estamos preparando Google Drive y restaurando tus conversaciones antes de dejarte usar la app.';
+      }
+      return 'Esta app necesita una sesion activa de Google para guardar las conversaciones en Drive. Si el token caduca, se renovara automaticamente en segundo plano.';
+    }
+
+    function setAuthGateStatus(text, options) {
+      if (!elements.authGateStatus) {
+        return;
+      }
+      const message = String(text || '').trim();
+      elements.authGateStatus.textContent = message;
+      elements.authGateStatus.classList.toggle('hidden', !message);
+      elements.authGateStatus.classList.toggle('error', !!(options && options.error));
+    }
+
+    function setAuthGateReason(text) {
+      appState.authGateReason = String(text || '').trim();
+      updateAuthGateUi();
+    }
+
+    function updateAuthGateUi() {
+      if (!elements.authGate) {
+        return;
+      }
+      const locked = !hasDrivePersistenceReady();
+      elements.authGate.classList.toggle('hidden', !locked);
+      if (elements.authGateCopy) {
+        elements.authGateCopy.textContent = resolvedAuthGateMessage();
+      }
+      if (elements.authGateLoginBtn) {
+        elements.authGateLoginBtn.disabled = !hasOauthConfig();
+        elements.authGateLoginBtn.textContent = hasDriveIdentitySession()
+          ? 'Reintentar Google Drive'
+          : 'Iniciar sesion con Google';
+      }
+      if (elements.authGateRetryBtn) {
+        const showRetry = hasOauthConfig() && !hasDriveIdentitySession() && canAttemptSilentGoogleAuth();
+        elements.authGateRetryBtn.classList.toggle('hidden', !showRetry);
+      }
+      if (!locked) {
+        setAuthGateStatus('');
+      }
+    }
+
     function hasStoredGoogleRememberSession() {
       return localStorage.getItem(OAUTH_REMEMBER_KEY) === '1';
     }
@@ -2416,28 +2582,91 @@
       }
     }
 
+    function clearGoogleSessionState(options) {
+      const settings = Object.assign({
+        preserveRemember: true,
+        preserveProfile: false
+      }, options);
+      clearGoogleTokenStorage({
+        preserveRemember: settings.preserveRemember
+      });
+      resetDriveState();
+      appState.accessToken = '';
+      appState.accessTokenExpiresAt = 0;
+      if (!settings.preserveProfile) {
+        appState.profile = null;
+      }
+      appState.codeAssistProjectId = '';
+    }
+
     function hasFreshGoogleAccessToken() {
       return !!appState.accessToken &&
         !!appState.accessTokenExpiresAt &&
         Date.now() < appState.accessTokenExpiresAt - AUTH_EXPIRY_SKEW_MS;
     }
 
-    function scheduleGoogleTokenRefresh() {
+    function scheduleGoogleTokenRefresh(delayMs, options) {
+      const settings = Object.assign({
+        forceRefresh: true
+      }, options);
       clearGoogleTokenRefreshTimer();
       if (!appState.accessToken || !appState.accessTokenExpiresAt) {
         return;
       }
-      const refreshInMs = Math.max(0, appState.accessTokenExpiresAt - Date.now() - AUTH_REFRESH_SKEW_MS);
+      const refreshInMs = Number.isFinite(delayMs)
+        ? Math.max(0, delayMs)
+        : Math.max(0, appState.accessTokenExpiresAt - Date.now() - AUTH_REFRESH_SKEW_MS);
       googleTokenRefreshTimer = window.setTimeout(async function() {
         try {
-          await loginWithGoogle({
+          const refreshed = await loginWithGoogle({
             interactive: false,
             toast: false,
             skipDriveBootstrap: true,
-            prompt: 'none'
+            prompt: 'none',
+            forceRefresh: settings.forceRefresh
           });
+          if (!refreshed) {
+            if (hasFreshGoogleAccessToken()) {
+              scheduleGoogleTokenRefresh(AUTH_REFRESH_RETRY_MS, {
+                forceRefresh: true
+              });
+            } else {
+              clearGoogleSessionState({
+                preserveRemember: true
+              });
+              setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir guardando el historial en Drive.');
+              setAuthGateStatus('No se pudo renovar la sesion automaticamente.', {
+                error: true
+              });
+              updateAuthUi();
+              updateConfigUi();
+              updateSendUi();
+              saveState({
+                skipDrive: true
+              });
+            }
+          }
         } catch (error) {
           console.warn('No se pudo refrescar el token OAuth en segundo plano:', error);
+          if (hasFreshGoogleAccessToken()) {
+            scheduleGoogleTokenRefresh(AUTH_REFRESH_RETRY_MS, {
+              forceRefresh: true
+            });
+          } else {
+            clearGoogleSessionState({
+              preserveRemember: true
+            });
+            setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir guardando el historial en Drive.');
+            setAuthGateStatus('No se pudo renovar la sesion automaticamente.', {
+              error: true
+            });
+            updateAuthUi();
+            updateConfigUi();
+            updateSendUi();
+            saveState({
+              skipDrive: true
+            });
+          }
         }
       }, refreshInMs);
     }
@@ -2460,6 +2689,7 @@
         appState.accessToken = accessToken;
         appState.accessTokenExpiresAt = expiresAt;
         scheduleGoogleTokenRefresh();
+        setAuthGateReason('');
         return true;
       } catch (error) {
         console.warn('No se pudo leer el token OAuth guardado:', error);
@@ -2730,8 +2960,9 @@
     }
 
     function updateSendUi() {
+      const driveLocked = !hasDrivePersistenceReady();
       const hasDraft = !!elements.composer.value.trim() || !!(appState.composerAttachments && appState.composerAttachments.length);
-      elements.sendBtn.disabled = !appState.busy && (!hasDraft || appState.attachmentBusy);
+      elements.sendBtn.disabled = !appState.busy && (driveLocked || !hasDraft || appState.attachmentBusy);
       if (appState.busy) {
         elements.sendBtn.setAttribute('aria-label', 'Cancelar');
         elements.sendIcon.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>';
@@ -2739,11 +2970,23 @@
         elements.sendBtn.setAttribute('aria-label', 'Enviar');
         elements.sendIcon.innerHTML = '<path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>';
       }
+      if (elements.composer) {
+        elements.composer.disabled = driveLocked;
+        elements.composer.placeholder = driveLocked
+          ? 'Inicia sesion con Google para continuar...'
+          : 'Escribe aqui...';
+      }
       if (elements.attachBtn) {
-        elements.attachBtn.disabled = appState.busy || appState.attachmentBusy;
+        elements.attachBtn.disabled = driveLocked || appState.busy || appState.attachmentBusy;
       }
       if (elements.fileInput) {
-        elements.fileInput.disabled = appState.busy || appState.attachmentBusy;
+        elements.fileInput.disabled = driveLocked || appState.busy || appState.attachmentBusy;
+      }
+      if (elements.newChatBtn) {
+        elements.newChatBtn.disabled = driveLocked;
+      }
+      if (elements.clearChatBtn) {
+        elements.clearChatBtn.disabled = driveLocked;
       }
     }
 
@@ -3048,17 +3291,31 @@
       return providerBrandIconSvg(providerId);
     }
 
+    function totalMessageVersions(message) {
+      return ((message && message.alternatives) ? message.alternatives.length : 0) + 1;
+    }
+
+    function activeVersionIndex(message) {
+      const maxIndex = totalMessageVersions(message) - 1;
+      return Math.max(0, Math.min(Number(message && message.activeAlternative) || 0, maxIndex));
+    }
+
+    function isCurrentMessageVersion(message) {
+      const altCount = (message && message.alternatives) ? message.alternatives.length : 0;
+      return activeVersionIndex(message) === altCount;
+    }
+
     function resolveMessageAttribution(message) {
       if (!message) return null;
       const alts = message.alternatives || [];
-      const idx = Math.min(Number(message.activeAlternative) || 0, alts.length);
+      const idx = activeVersionIndex(message);
       let rawProvider = '';
       let rawModel = '';
-      if (idx === 0) {
+      if (idx === alts.length) {
         rawProvider = message.provider || '';
         rawModel = message.model || '';
       } else {
-        const alt = alts[idx - 1];
+        const alt = alts[idx];
         rawProvider = (alt && alt.provider) || '';
         rawModel = (alt && alt.model) || '';
       }
@@ -3089,8 +3346,8 @@
       const ic = msgActionIcons();
       const isUser = message.role === 'user';
       const alts = message.alternatives || [];
-      const totalAlts = alts.length + 1;
-      const activeIdx = Math.min(Number(message.activeAlternative) || 0, totalAlts - 1);
+      const totalAlts = totalMessageVersions(message);
+      const activeIdx = activeVersionIndex(message);
       let navHtml = '';
       if (totalAlts > 1) {
         navHtml = '<span class="msg-nav">' +
@@ -3113,10 +3370,161 @@
 
     function getVisibleContent(message) {
       const alts = message.alternatives || [];
-      const idx = Math.min(Number(message.activeAlternative) || 0, alts.length);
-      if (idx === 0) return message.content;
-      const alt = alts[idx - 1];
+      const idx = activeVersionIndex(message);
+      if (idx === alts.length) {
+        if (typeof message.streamDisplayContent === 'string' && (message._streamAnimating || message.pending)) {
+          return message.streamDisplayContent;
+        }
+        return message.content;
+      }
+      const alt = alts[idx];
       return alt && typeof alt.content === 'string' ? alt.content : message.content;
+    }
+
+    function isProgressiveGeminiRender(chat) {
+      return activeProviderName(chat) === 'gemini' && !!appState.accessToken;
+    }
+
+    function nextStreamRevealIndex(targetText, currentIndex) {
+      const target = String(targetText || '');
+      const current = Math.max(0, Number(currentIndex) || 0);
+      if (current >= target.length) {
+        return target.length;
+      }
+      const remaining = target.slice(current);
+      const minChunk = 18;
+      const maxChunk = 90;
+      if (remaining.length <= minChunk) {
+        return target.length;
+      }
+      const sample = remaining.slice(0, maxChunk);
+      const boundaryPatterns = [
+        /[.!?…]+["')\]»”]*\s+/g,
+        /[,;:]["')\]»”]*\s+/g,
+        /\n+/g
+      ];
+      for (const pattern of boundaryPatterns) {
+        let match;
+        while ((match = pattern.exec(sample))) {
+          const boundaryIndex = match.index + match[0].length;
+          if (boundaryIndex >= minChunk) {
+            return current + boundaryIndex;
+          }
+        }
+      }
+      const nextSpace = sample.indexOf(' ', minChunk);
+      if (nextSpace !== -1) {
+        return current + nextSpace + 1;
+      }
+      return Math.min(target.length, current + maxChunk);
+    }
+
+    function clearMessageStreamState(message) {
+      if (!message) return;
+      if (message._streamTimer) {
+        clearTimeout(message._streamTimer);
+      }
+      if (typeof message._streamResolve === 'function') {
+        message._streamResolve();
+      }
+      message._streamTimer = 0;
+      message._streamResolve = null;
+      message._streamPromise = null;
+      message._streamAnimating = false;
+      delete message.streamTargetContent;
+      delete message.streamDisplayContent;
+      delete message.streamDone;
+    }
+
+    function ensureMessageStreamPromise(message) {
+      if (!message._streamPromise) {
+        message._streamPromise = new Promise(function(resolve) {
+          message._streamResolve = resolve;
+        });
+      }
+      return message._streamPromise;
+    }
+
+    function resolveMessageStreamPromise(message) {
+      if (typeof message._streamResolve === 'function') {
+        const resolve = message._streamResolve;
+        message._streamResolve = null;
+        message._streamPromise = null;
+        resolve();
+      }
+    }
+
+    function finishMessageStream(message, chat) {
+      if (!message) return;
+      if (message._streamTimer) {
+        clearTimeout(message._streamTimer);
+        message._streamTimer = 0;
+      }
+      if (typeof message.streamTargetContent === 'string') {
+        message.streamDisplayContent = message.streamTargetContent;
+        message.content = message.streamTargetContent;
+      }
+      message._streamAnimating = false;
+      scheduleStreamRender(message, chat, false, true);
+      resolveMessageStreamPromise(message);
+    }
+
+    function pumpMessageStream(message, chat) {
+      if (!message || message._streamTimer) {
+        return;
+      }
+      message._streamAnimating = true;
+      const step = function() {
+        message._streamTimer = 0;
+        const target = String(message.streamTargetContent || '');
+        const shown = String(message.streamDisplayContent || '');
+        if (shown.length < target.length) {
+          const nextIndex = nextStreamRevealIndex(target, shown.length);
+          message.streamDisplayContent = target.slice(0, nextIndex);
+          message.content = message.streamDisplayContent;
+          message.pending = false;
+          scheduleStreamRender(message, chat, true, false);
+        }
+
+        const latestShown = String(message.streamDisplayContent || '');
+        if (latestShown.length < target.length) {
+          const backlog = target.length - latestShown.length;
+          const delay = backlog > 240 ? 24 : backlog > 120 ? 40 : 62;
+          message._streamTimer = window.setTimeout(step, delay);
+          return;
+        }
+
+        if (message.streamDone) {
+          finishMessageStream(message, chat);
+          return;
+        }
+
+        message._streamAnimating = false;
+      };
+
+      step();
+    }
+
+    function queueMessageStream(message, chat, targetText, done) {
+      if (!message) return null;
+      if (typeof targetText === 'string') {
+        message.streamTargetContent = targetText;
+      }
+      if (typeof message.streamDisplayContent !== 'string') {
+        message.streamDisplayContent = '';
+      }
+      if (done) {
+        message.streamDone = true;
+        ensureMessageStreamPromise(message);
+      }
+      pumpMessageStream(message, chat);
+      return message._streamPromise || null;
+    }
+
+    async function waitForMessageStream(message) {
+      if (message && message._streamPromise) {
+        await message._streamPromise;
+      }
     }
 
     function renderEmptyThread() {
@@ -3391,7 +3799,22 @@
 
     async function driveFetch(url, options, allowRetry) {
       if (!appState.accessToken) {
-        throw new Error('Inicia sesion con Google para sincronizar con Drive.');
+        const restored = await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          skipDriveBootstrap: true,
+          prompt: 'none'
+        });
+        if (!restored || !appState.accessToken) {
+          setAuthGateReason('Inicia sesion con Google para que la app pueda seguir guardando el historial en Drive.');
+          setAuthGateStatus('Google Drive no esta disponible.', {
+            error: true
+          });
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
+          throw new Error('Inicia sesion con Google para sincronizar con Drive.');
+        }
       }
 
       const requestOptions = Object.assign({}, options);
@@ -3401,12 +3824,30 @@
 
       const response = await fetch(url, requestOptions);
       if (response.status === 401 && allowRetry !== false) {
-        await loginWithGoogle({
+        const refreshed = await loginWithGoogle({
           interactive: false,
           toast: false,
-          skipDriveBootstrap: true
+          skipDriveBootstrap: true,
+          prompt: 'none',
+          forceRefresh: true
         });
-        return driveFetch(url, options, false);
+        if (refreshed && appState.accessToken) {
+          return driveFetch(url, options, false);
+        }
+        clearGoogleSessionState({
+          preserveRemember: true
+        });
+        setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir guardando el historial en Drive.');
+        setAuthGateStatus('La sesion de Google ha caducado.', {
+          error: true
+        });
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        saveState({
+          skipDrive: true
+        });
+        throw new Error('La sesion de Google ha caducado.');
       }
       return response;
     }
@@ -3647,7 +4088,7 @@
     }
 
     function scheduleDriveSync() {
-      if (!appState.accessToken || !appState.driveReady) {
+      if (!hasDrivePersistenceReady()) {
         return;
       }
       if (appState.driveSyncTimer) {
@@ -3681,14 +4122,14 @@
         google.accounts.oauth2.revoke(appState.accessToken, function() {});
       }
       rememberManualLogout();
-      clearGoogleTokenStorage();
-      resetDriveState();
-      appState.accessToken = '';
-      appState.accessTokenExpiresAt = 0;
-      appState.profile = null;
-      appState.codeAssistProjectId = '';
+      clearGoogleSessionState({
+        preserveRemember: false
+      });
+      setAuthGateReason('Has cerrado la sesion. Inicia sesion con Google para volver a usar la app y seguir guardando el historial en Drive.');
+      setAuthGateStatus('');
       updateAuthUi();
       updateConfigUi();
+      updateSendUi();
       saveState({
         skipDrive: true
       });
@@ -3905,7 +4346,8 @@
         pending: !!pending,
         provider: settings.provider || '',
         model: settings.model || '',
-        createdAt: nowIso()
+        createdAt: nowIso(),
+        versionOrder: 'chronological'
       };
     }
 
@@ -4086,7 +4528,7 @@
       }
       msg.pending = true;
       msg.content = '';
-      msg.activeAlternative = 0;
+      msg.activeAlternative = msg.alternatives.length;
       msg.provider = activeProviderName(chat);
       msg.model = activeModelName(chat);
       touchChat(chat);
@@ -4100,7 +4542,7 @@
         msg.pending = false;
         msg.content = reply.text;
         msg.parts = reply.parts;
-        msg.activeAlternative = 0;
+        msg.activeAlternative = msg.alternatives.length;
         touchChat(chat);
         setComposerStatus('');
       } catch (error) {
@@ -4110,10 +4552,12 @@
             var last = msg.alternatives.pop();
             msg.content = last.content;
           }
+          msg.activeAlternative = msg.alternatives.length;
           setComposerStatus('Regeneracion cancelada.');
         } else {
           msg.content = 'Error: ' + error.message;
           msg.parts = [{ text: msg.content }];
+          msg.activeAlternative = msg.alternatives.length;
           setComposerStatus('Error al regenerar.');
         }
         touchChat(chat);
@@ -4682,7 +5126,7 @@
       });
       elements.profileBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
-        const driveConnected = !!(appState.accessToken && appState.profile);
+        const driveConnected = hasDrivePersistenceReady();
         if (driveConnected) {
           toggleProfileMenu();
           return;
@@ -4693,18 +5137,81 @@
         }
         try {
           ensureOauthConfig();
-          await loginWithGoogle({
+          const ready = await loginWithGoogle({
             interactive: true,
             toast: true
           });
+          if (!ready || !hasDrivePersistenceReady()) {
+            throw new Error('Google Drive todavia no esta listo.');
+          }
+          setAuthGateReason('');
+          setAuthGateStatus('');
           setComposerStatus('Google Drive listo.');
           window.setTimeout(() => {
             if (!appState.busy) setComposerStatus('');
           }, 1400);
         } catch (error) {
+          setAuthGateReason(error.message || 'No se pudo conectar Google Drive.');
+          setAuthGateStatus(error.message || 'No se pudo conectar Google Drive.', {
+            error: true
+          });
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
           setComposerStatus(error.message || 'No se pudo conectar Google Drive.');
         }
       });
+      if (elements.authGateLoginBtn) {
+        elements.authGateLoginBtn.addEventListener('click', async () => {
+          try {
+            await loginWithGoogle({
+              interactive: true,
+              toast: true
+            });
+            if (!hasDrivePersistenceReady()) {
+              throw new Error('Google Drive todavia no esta listo.');
+            }
+            setAuthGateReason('');
+            setAuthGateStatus('');
+            updateAuthUi();
+            updateConfigUi();
+            updateSendUi();
+          } catch (error) {
+            setAuthGateReason(error.message || 'No se pudo conectar Google Drive.');
+            setAuthGateStatus(error.message || 'No se pudo conectar Google Drive.', {
+              error: true
+            });
+            updateAuthUi();
+            updateConfigUi();
+            updateSendUi();
+          }
+        });
+      }
+      if (elements.authGateRetryBtn) {
+        elements.authGateRetryBtn.addEventListener('click', async () => {
+          const restored = await loginWithGoogle({
+            interactive: false,
+            toast: false,
+            prompt: 'none',
+            forceRefresh: true
+          });
+          if (!restored || !hasDrivePersistenceReady()) {
+            setAuthGateReason('No se pudo restaurar la sesion automaticamente. Inicia sesion con Google para continuar.');
+            setAuthGateStatus('No se pudo restaurar la sesion automaticamente.', {
+              error: true
+            });
+            updateAuthUi();
+            updateConfigUi();
+            updateSendUi();
+            return;
+          }
+          setAuthGateReason('');
+          setAuthGateStatus('');
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
+        });
+      }
       elements.profilePopup.addEventListener('click', function(e) {
         e.stopPropagation();
       });
@@ -4791,6 +5298,14 @@
           closeProfileMenu();
         }
       });
+      window.addEventListener('focus', function() {
+        refreshGoogleSessionOnWake().catch(function() {});
+      });
+      document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+          refreshGoogleSessionOnWake().catch(function() {});
+        }
+      });
     }
 
 
@@ -4833,15 +5348,18 @@
         : 'Conectar ' + providerLabel;
 
       const hasDriveOauth = hasOauthConfig();
-      const driveConnected = !!(appState.accessToken && appState.profile);
-      elements.profileCard.classList.toggle('hidden', !driveConnected);
-      elements.profileBtn.dataset.connected = driveConnected ? 'true' : 'false';
+      const driveIdentity = hasDriveIdentitySession();
+      const driveConnected = hasDrivePersistenceReady();
+      elements.profileCard.classList.toggle('hidden', !driveIdentity);
+      elements.profileBtn.dataset.connected = driveIdentity ? 'true' : 'false';
       elements.profileBtn.title = !hasDriveOauth
         ? 'Google Drive no esta configurado en esta build'
-        : (driveConnected ? 'Google Drive conectado' : 'Conectar Google Drive');
-      elements.logoutMenuBtn.classList.toggle('hidden', !driveConnected);
+        : (driveConnected
+          ? 'Google Drive conectado'
+          : (driveIdentity ? 'Google Drive reconectando' : 'Conectar Google Drive'));
+      elements.logoutMenuBtn.classList.toggle('hidden', !driveIdentity);
 
-      if (driveConnected) {
+      if (driveIdentity) {
         const picture = String(appState.profile.picture || '').trim();
         if (picture) {
           elements.profileAvatar.src = picture;
@@ -4853,7 +5371,9 @@
         elements.profileName.textContent = String(appState.profile.name || 'Google Drive');
         elements.profileEmail.textContent = String(appState.profile.email || '');
         elements.profileMenuName.textContent = String(appState.profile.name || 'Google Drive');
-        elements.profileMenuEmail.textContent = String(appState.profile.email || 'Sincronizando historial con Drive.');
+        elements.profileMenuEmail.textContent = driveConnected
+          ? String(appState.profile.email || 'Sincronizando historial con Drive.')
+          : 'Reconectando con Google Drive para seguir guardando el historial.';
       } else {
         elements.profileAvatar.removeAttribute('src');
         if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
@@ -4880,9 +5400,12 @@
       const driveCopy = !hasDriveOauth
         ? 'Google Drive no esta configurado en esta build.'
         : driveConnected
-          ? 'Google Drive esta conectado y el historial se puede guardar alli.'
-          : 'Falta iniciar sesion con Google para sincronizar el historial en Drive.';
+          ? 'Google Drive esta conectado y el historial se guarda alli.'
+          : (driveIdentity
+            ? 'Google Drive se esta reconectando antes de habilitar el chat.'
+            : 'La app requiere iniciar sesion con Google para guardar el historial en Drive.');
       elements.authCopy.textContent = providerCopy + ' ' + driveCopy;
+      updateAuthGateUi();
     }
 
     async function refreshDaemonStatus(timeoutMs) {
@@ -5007,8 +5530,11 @@
       };
     }
 
-    async function requestGoogleAccessToken(promptMode) {
-      if (hasFreshGoogleAccessToken()) {
+    async function requestGoogleAccessToken(promptMode, options) {
+      const settings = Object.assign({
+        forceRefresh: false
+      }, options);
+      if (!settings.forceRefresh && hasFreshGoogleAccessToken()) {
         return {
           access_token: appState.accessToken,
           expires_in: Math.max(0, Math.floor((appState.accessTokenExpiresAt - Date.now()) / 1000))
@@ -5027,7 +5553,9 @@
             appState.accessToken = response.access_token;
             appState.accessTokenExpiresAt = expiresAt;
             saveGoogleTokenToStorage(appState.accessToken, appState.accessTokenExpiresAt);
-            scheduleGoogleTokenRefresh();
+            scheduleGoogleTokenRefresh(undefined, {
+              forceRefresh: true
+            });
             clearManualLogoutFlag();
             resolve(response);
             return;
@@ -5054,7 +5582,9 @@
           ? Date.now() + (Number(tokenResponse.expires_in) * 1000)
           : appState.accessTokenExpiresAt;
         saveGoogleTokenToStorage(appState.accessToken, appState.accessTokenExpiresAt);
-        scheduleGoogleTokenRefresh();
+        scheduleGoogleTokenRefresh(undefined, {
+          forceRefresh: true
+        });
       }
       clearManualLogoutFlag();
       appState.profile = await fetchProfile(appState.accessToken);
@@ -5062,20 +5592,16 @@
       if (appState.profile && appState.profile.email) {
         localStorage.setItem(OAUTH_HINT_EMAIL_KEY, String(appState.profile.email).trim());
       }
+      setAuthGateReason('');
       updateAuthUi();
       updateConfigUi();
       if (!options || !options.skipDriveBootstrap) {
-        try {
-          await ensureDriveReady();
-          updateConfigUi();
-          renderHistory();
-          renderThread();
-          updateSendUi();
-        } catch (error) {
-          console.error('Drive bootstrap error:', error);
-          showToast('Drive', 'No se pudo sincronizar con Drive. Revisa que Google Drive API este activada.');
-        }
-      } else {
+        await ensureDriveReady();
+        updateConfigUi();
+        renderHistory();
+        renderThread();
+        updateSendUi();
+      } else if (appState.driveReady) {
         scheduleDriveSync();
       }
       await refreshCodeAssistUsage(false);
@@ -5088,42 +5614,139 @@
     async function loginWithGoogle(options) {
       const settings = Object.assign({
         interactive: true,
-        toast: true
+        toast: true,
+        forceRefresh: false
       }, options);
+      const targetReady = settings.skipDriveBootstrap
+        ? hasDriveIdentitySession()
+        : hasDrivePersistenceReady();
+      if (!settings.forceRefresh && hasFreshGoogleAccessToken() && targetReady) {
+        setAuthGateReason('');
+        setAuthGateStatus('');
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        return true;
+      }
+      if (!settings.interactive && !canAttemptSilentGoogleAuth() && !hasFreshGoogleAccessToken()) {
+        setAuthGateReason('Inicia sesion con Google para continuar. Las conversaciones solo se habilitan cuando Drive esta listo.');
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        return false;
+      }
+      if (googleSessionPromise) {
+        return googleSessionPromise;
+      }
       const promptMode = typeof settings.prompt === 'string'
         ? settings.prompt
         : (settings.interactive
           ? 'consent'
           : 'none');
-      const tokenResponse = await requestGoogleAccessToken(promptMode);
-      await syncGoogleSession(tokenResponse, settings);
+      if (settings.interactive) {
+        setAuthGateStatus('Abriendo Google para iniciar sesion...');
+      } else if (!hasDrivePersistenceReady()) {
+        setAuthGateStatus(hasDriveIdentitySession()
+          ? 'Reconectando con Google Drive...'
+          : 'Restaurando la sesion de Google...');
+      }
+      googleSessionPromise = (async () => {
+        try {
+          const tokenResponse = await requestGoogleAccessToken(promptMode, {
+            forceRefresh: settings.forceRefresh
+          });
+          await syncGoogleSession(tokenResponse, settings);
+          setAuthGateReason('');
+          setAuthGateStatus('');
+          return settings.skipDriveBootstrap ? hasDriveIdentitySession() : hasDrivePersistenceReady();
+        } catch (error) {
+          const message = error && error.message
+            ? error.message
+            : 'No se pudo completar la sesion con Google.';
+          setAuthGateReason(message);
+          setAuthGateStatus(message, {
+            error: true
+          });
+          if (!settings.interactive) {
+            if (!hasFreshGoogleAccessToken()) {
+              clearGoogleSessionState({
+                preserveRemember: true
+              });
+            }
+            return false;
+          }
+          throw error;
+        } finally {
+          googleSessionPromise = null;
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
+        }
+      })();
+      return googleSessionPromise;
     }
 
     async function tryAutoRestoreGoogleSession() {
       if (!shouldAutoRestoreAuth()) {
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        return false;
+      }
+      if (!appState.accessToken && !canAttemptSilentGoogleAuth()) {
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        return false;
+      }
+      try {
+        const restored = await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          prompt: 'none'
+        });
+        if (restored) {
+          setAuthGateReason('');
+          setAuthGateStatus('');
+          return true;
+        }
+      } catch (error) {
+        clearGoogleSessionState({
+          preserveRemember: true
+        });
+        setAuthGateReason('No se pudo restaurar la sesion de Google automaticamente. Inicia sesion para seguir guardando el historial en Drive.');
+        setAuthGateStatus('No se pudo restaurar la sesion automaticamente.', {
+          error: true
+        });
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        console.warn('No se pudo restaurar la sesion OAuth automaticamente:', error);
+        return false;
+      }
+      updateAuthUi();
+      updateConfigUi();
+      updateSendUi();
+      return false;
+    }
+
+    async function refreshGoogleSessionOnWake() {
+      if (!hasOauthConfig() || document.hidden) {
         return;
       }
-      if (!appState.accessToken && !hasStoredGoogleRememberSession()) {
+      const msUntilExpiry = Number(appState.accessTokenExpiresAt || 0) - Date.now();
+      if (hasDrivePersistenceReady() && msUntilExpiry > AUTH_REFRESH_SKEW_MS) {
         return;
       }
       try {
         await loginWithGoogle({
           interactive: false,
           toast: false,
-          prompt: 'none'
+          prompt: 'none',
+          forceRefresh: msUntilExpiry <= AUTH_REFRESH_SKEW_MS
         });
       } catch (error) {
-        clearGoogleTokenStorage({
-          preserveRemember: true
-        });
-        resetDriveState();
-        appState.accessToken = '';
-        appState.accessTokenExpiresAt = 0;
-        appState.profile = null;
-        appState.codeAssistProjectId = '';
-        updateAuthUi();
-        updateConfigUi();
-        console.warn('No se pudo restaurar la sesion OAuth automaticamente:', error);
+        console.warn('No se pudo refrescar la sesion de Google al volver al foco:', error);
       }
     }
 
@@ -5173,7 +5796,22 @@
     async function codeAssistFetchJson(url, body, signal, allowRetry) {
       ensureOauthConfig();
       if (!appState.accessToken) {
-        throw new Error('Inicia sesion con Google para usar Gemini.');
+        const restored = await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          skipDriveBootstrap: true,
+          prompt: 'none'
+        });
+        if (!restored || !appState.accessToken) {
+          setAuthGateReason('Inicia sesion con Google para usar Gemini y guardar el historial en Drive.');
+          setAuthGateStatus('Google no esta disponible.', {
+            error: true
+          });
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
+          throw new Error('Inicia sesion con Google para usar Gemini.');
+        }
       }
 
       const response = await fetch(url, {
@@ -5188,12 +5826,30 @@
 
       const data = await response.json().catch(() => ({}));
       if (response.status === 401 && allowRetry !== false) {
-        await loginWithGoogle({
+        const refreshed = await loginWithGoogle({
           interactive: false,
           toast: false,
-          skipDriveBootstrap: true
+          skipDriveBootstrap: true,
+          prompt: 'none',
+          forceRefresh: true
         });
-        return codeAssistFetchJson(url, body, signal, false);
+        if (refreshed && appState.accessToken) {
+          return codeAssistFetchJson(url, body, signal, false);
+        }
+        clearGoogleSessionState({
+          preserveRemember: true
+        });
+        setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir usando Gemini.');
+        setAuthGateStatus('La sesion de Google ha caducado.', {
+          error: true
+        });
+        updateAuthUi();
+        updateConfigUi();
+        updateSendUi();
+        saveState({
+          skipDrive: true
+        });
+        throw new Error('La sesion de Google ha caducado.');
       }
 
       return {
@@ -5616,6 +6272,37 @@
         return;
       }
 
+      if (!hasDrivePersistenceReady()) {
+        try {
+          const restored = await loginWithGoogle({
+            interactive: false,
+            toast: false,
+            prompt: 'none'
+          });
+          if (!restored || !hasDrivePersistenceReady()) {
+            setAuthGateReason('Inicia sesion con Google para continuar. El chat solo se habilita cuando Drive esta listo para guardar las conversaciones.');
+            setAuthGateStatus('No hay una sesion valida de Google Drive.', {
+              error: true
+            });
+            updateAuthUi();
+            updateConfigUi();
+            updateSendUi();
+            _sendLock = false;
+            return;
+          }
+        } catch (error) {
+          setAuthGateReason(error.message || 'No se pudo restaurar la sesion de Google.');
+          setAuthGateStatus(error.message || 'No se pudo restaurar la sesion de Google.', {
+            error: true
+          });
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
+          _sendLock = false;
+          return;
+        }
+      }
+
       if (!__daemonStatus || !__daemonStatus.ok) {
         const status = await refreshDaemonStatus(1200);
         if (!status) {
@@ -5659,26 +6346,45 @@
       _sendLock = false;
 
       try {
+        const useProgressiveGemini = isProgressiveGeminiRender(chat);
         const onProgress = (chunk) => {
           if (!chunk) return;
           const hasText = typeof chunk.text === 'string' && chunk.text.length > 0;
           const hasThinking = typeof chunk.thinking === 'string' && chunk.thinking.length > 0;
-          if (hasText) assistantMessage.content = chunk.text;
+          if (hasText) {
+            if (useProgressiveGemini) {
+              queueMessageStream(assistantMessage, chat, chunk.text, !!chunk.done);
+            } else {
+              assistantMessage.content = chunk.text;
+            }
+          }
           if (hasThinking) assistantMessage.thinking = chunk.thinking;
           if (Array.isArray(chunk.parts) && chunk.parts.length) assistantMessage.parts = chunk.parts;
           if (hasText || hasThinking) assistantMessage.pending = false;
-          scheduleStreamRender(assistantMessage, chat, !chunk.done, !!chunk.done);
+          if (useProgressiveGemini) {
+            if (hasThinking && !hasText) {
+              scheduleStreamRender(assistantMessage, chat, !chunk.done, !!chunk.done);
+            }
+          } else {
+            scheduleStreamRender(assistantMessage, chat, !chunk.done, !!chunk.done);
+          }
         };
         const reply = await callModel(chat, appState.activeController.signal, onProgress);
+        if (useProgressiveGemini) {
+          queueMessageStream(assistantMessage, chat, reply.text || assistantMessage.streamTargetContent || '', true);
+          await waitForMessageStream(assistantMessage);
+        }
         flushPendingStreamRender();
         assistantMessage.pending = false;
         assistantMessage.content = reply.text;
         assistantMessage.thinking = reply.thinking || assistantMessage.thinking || '';
         assistantMessage.parts = reply.parts;
+        clearMessageStreamState(assistantMessage);
         touchChat(chat);
         setComposerStatus('');
       } catch (error) {
         flushPendingStreamRender();
+        clearMessageStreamState(assistantMessage);
         if (error.name === 'AbortError') {
           chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id);
           setComposerStatus('Solicitud cancelada.');
@@ -5691,6 +6397,7 @@
         }
       } finally {
         flushPendingStreamRender();
+        clearMessageStreamState(assistantMessage);
         appState.busy = false;
         appState.activeController = null;
         saveState();
@@ -5714,12 +6421,18 @@
       bindMobileMenu();
       setComposerStatus('');
       renderUsageDonut();
-      elements.composer.placeholder = 'Escribe aqu\u00ed...';
 
       refreshDaemonStatus(1200);
       window.setTimeout(() => {
         tryAutoRestoreGoogleSession().catch((error) => {
           console.warn('No se pudo restaurar Google Drive automaticamente:', error);
+          setAuthGateReason('Inicia sesion con Google para continuar. Las conversaciones solo se habilitan cuando Drive esta listo.');
+          setAuthGateStatus('No se pudo restaurar Google Drive automaticamente.', {
+            error: true
+          });
+          updateAuthUi();
+          updateConfigUi();
+          updateSendUi();
         });
       }, 0);
     }
