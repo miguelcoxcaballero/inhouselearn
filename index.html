@@ -643,6 +643,16 @@
       line-height: 1.65; font-size: 0.9rem; overflow-wrap: anywhere;
       box-shadow: var(--shadow-sm);
     }
+    .bubble-content {
+      min-width: 0;
+    }
+    .bubble-content.stream-chunk {
+      animation: chunkReveal 0.18s var(--ease) both;
+    }
+    @keyframes chunkReveal {
+      from { opacity: 0.92; transform: translateY(1px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     .reasoning {
       border: 1px dashed var(--border);
       border-radius: 8px;
@@ -3157,7 +3167,7 @@
         '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
         '  <div class="message-body">',
         '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-        '    <div class="bubble">' + thinkingMarkup + body + attachmentMarkup + '</div>',
+        '    <div class="bubble"><div class="bubble-content">' + thinkingMarkup + body + attachmentMarkup + '</div></div>',
         attributionMarkup,
         actionsMarkup,
         '  </div>',
@@ -3195,7 +3205,16 @@
       currentEl.className = nextEl.className;
       currentEl.setAttribute('data-msg-id', message.id);
       currentEl.innerHTML = nextEl.innerHTML;
-      enhanceRichContent(currentEl, { renderMath: !isStreaming });
+      enhanceRichContent(currentEl, { renderMath: true });
+      if (isStreaming) {
+        const bubbleContent = currentEl.querySelector('.bubble-content');
+        if (bubbleContent) {
+          bubbleContent.classList.add('stream-chunk');
+          window.setTimeout(function() {
+            bubbleContent.classList.remove('stream-chunk');
+          }, 220);
+        }
+      }
       bindThreadActions(currentEl);
       requestAnimationFrame(scrollThreadToBottom);
     }
