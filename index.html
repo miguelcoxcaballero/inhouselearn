@@ -2378,13 +2378,20 @@
       const kind = attachmentKindFromMime(mimeType, file.name);
 
       if (kind === 'pdf') {
+        if (file.size <= MAX_INLINE_ATTACHMENT_BYTES) {
+          try {
+            return await buildInlineAttachment(file, mimeType, kind);
+          } catch (error) {
+            console.warn('PDF inline upload failed, falling back to text extraction:', error);
+          }
+        }
         try {
           const text = await readPdfAsText(file);
           if (text) return buildTextAttachment(file, mimeType, kind, text);
         } catch (error) {
           console.warn('PDF text extraction failed:', error);
         }
-        return await buildInlineAttachment(file, mimeType, kind);
+        throw new Error('No pude procesar "' + file.name + '" (PDF demasiado grande o sin texto extraible).');
       }
       if (kind === 'doc') {
         return buildTextAttachment(file, mimeType, kind, await readDocxAsText(file));
@@ -4925,6 +4932,23 @@
       return entries;
     }
 
+    function collectSessionUsageEntries() {
+      var data = getUsageData();
+      var counts = (data && data.models) || {};
+      var entries = [];
+      MODEL_OPTIONS.forEach(function(option) {
+        var n = Number(counts[option.id]);
+        if (!isFinite(n) || n <= 0) return;
+        entries.push({
+          id: option.id,
+          label: option.label,
+          badge: option.badge,
+          count: n
+        });
+      });
+      return entries;
+    }
+
     function formatCompactNumber(value) {
       var n = Number(value);
       if (!isFinite(n)) return '-';
@@ -4935,40 +4959,58 @@
       return String(Math.round(n));
     }
 
+    function renderDonutSegments(svg, entries, valueKey, totalValue, centerLabel, tooltipFormatter) {
+      var radius = 15.915;
+      var circ = 2 * Math.PI * radius;
+      var parts = ['<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="3"/>'];
+      var cumulative = 0;
+      entries.forEach(function(entry, index) {
+        var value = Number(entry[valueKey]);
+        if (!isFinite(value) || value <= 0) return;
+        var frac = value / totalValue;
+        var len = circ * frac;
+        if (len <= 0) return;
+        var offset = 25 - cumulative;
+        parts.push(
+          '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + modelDonutColor(index) + '" stroke-width="3"' +
+          ' stroke-dasharray="' + len.toFixed(2) + ' ' + (circ - len).toFixed(2) + '"' +
+          ' stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="butt">' +
+          '<title>' + escapeHtml(tooltipFormatter(entry)) + '</title>' +
+          '</circle>'
+        );
+        cumulative += len;
+      });
+      parts.push('<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor">' + escapeHtml(centerLabel) + '</text>');
+      svg.innerHTML = parts.join('');
+    }
+
     function renderUsageDonut() {
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
       var radius = 15.915;
       var circ = 2 * Math.PI * radius;
-      var entries = collectQuotaEntries();
+      var quotaEntries = collectQuotaEntries();
 
-      if (entries.length) {
+      if (quotaEntries.length) {
         var totalLimit = 0;
         var totalRemaining = 0;
-        entries.forEach(function(entry) {
+        quotaEntries.forEach(function(entry) {
           totalLimit += entry.limit;
           totalRemaining += entry.remaining;
         });
-        var parts = ['<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="3"/>'];
-        var cumulative = 0;
-        entries.forEach(function(entry, index) {
-          if (entry.remaining <= 0) return;
-          var frac = entry.remaining / totalLimit;
-          var len = circ * frac;
-          if (len <= 0) return;
-          var offset = 25 - cumulative;
-          parts.push(
-            '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + modelDonutColor(index) + '" stroke-width="3"' +
-            ' stroke-dasharray="' + len.toFixed(2) + ' ' + (circ - len).toFixed(2) + '"' +
-            ' stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="butt">' +
-            '<title>' + escapeHtml(entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit)) + '</title>' +
-            '</circle>'
-          );
-          cumulative += len;
+        renderDonutSegments(svg, quotaEntries, 'remaining', totalLimit || 1, formatCompactNumber(totalRemaining), function(entry) {
+          return entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit);
         });
-        var label = formatCompactNumber(totalRemaining);
-        parts.push('<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor">' + escapeHtml(label) + '</text>');
-        svg.innerHTML = parts.join('');
+        return;
+      }
+
+      var sessionEntries = collectSessionUsageEntries();
+      if (sessionEntries.length) {
+        var totalCalls = 0;
+        sessionEntries.forEach(function(entry) { totalCalls += entry.count; });
+        renderDonutSegments(svg, sessionEntries, 'count', totalCalls || 1, formatCompactNumber(totalCalls), function(entry) {
+          return entry.label + ': ' + formatNumber(entry.count) + ' usos';
+        });
         return;
       }
 
@@ -5046,6 +5088,15 @@
           var firstReset = quotaEntries.find(function(entry) { return entry.resetTime; });
           if (firstReset) {
             usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(firstReset.resetTime)) + '</span></div>');
+          }
+        } else {
+          var sessionEntries = collectSessionUsageEntries();
+          if (sessionEntries.length) {
+            usageRows.push('<div class="usage-row" style="margin-top:4px"><span class="usage-row-label" style="font-weight:700">Usos por modelo (sesion)</span><span class="usage-row-value"></span></div>');
+            sessionEntries.forEach(function(entry, index) {
+              var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + modelDonutColor(index) + ';margin-right:6px;vertical-align:middle"></span>';
+              usageRows.push('<div class="usage-row"><span class="usage-row-label">' + dot + escapeHtml(entry.label) + '</span><span class="usage-row-value">' + escapeHtml(formatNumber(entry.count)) + '</span></div>');
+            });
           }
         }
         if (usageData.lastUsageMetadata && usageData.lastUsageMetadata.totalTokenCount) {
