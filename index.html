@@ -3688,8 +3688,7 @@
       const project = codeAssistProject();
       return {
         cloudaicompanionProject: project || undefined,
-        metadata: buildCodeAssistClientMetadata(project),
-        mode: 'HEALTH_CHECK'
+        metadata: buildCodeAssistClientMetadata(project)
       };
     }
 
@@ -5076,64 +5075,70 @@
       if (!appState.accessToken) {
         return;
       }
-      try {
-        var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
-        if (!result.response.ok) {
-          return;
-        }
-        var resolvedProject = result.data && result.data.cloudaicompanionProject
-          ? String(result.data.cloudaicompanionProject)
-          : '';
-        if (!resolvedProject) {
-          resolvedProject = await onboardCodeAssistUser(result.data, allowRetry);
-        }
-        if (resolvedProject && resolvedProject !== appState.codeAssistProjectId) {
-          appState.codeAssistProjectId = resolvedProject;
-          saveState({
-            skipDrive: true
-          });
-        }
-        var tier = result.data && (result.data.paidTier || result.data.currentTier);
-        if (tier && tier.availableCredits) {
-          syncUsageCreditsRemaining(tier.availableCredits);
-        }
-      } catch (error) {
-        console.warn('No se pudo sincronizar creditos de Code Assist:', error);
+      var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
+      if (!result.response.ok) {
+        var loadErr = extractBackendErrorMessage(result.data, result.response.status) || ('HTTP ' + result.response.status);
+        throw new Error('Code Assist :loadCodeAssist respondió error → ' + loadErr);
       }
-    }
-
-    async function onboardCodeAssistUser(loadData, allowRetry) {
-      try {
-        var tierId = '';
-        var tiers = (loadData && Array.isArray(loadData.allowedTiers)) ? loadData.allowedTiers : [];
+      var resolvedProject = extractCloudCompanionProject(result.data);
+      var tiers = (result.data && Array.isArray(result.data.allowedTiers)) ? result.data.allowedTiers : [];
+      var tierId = '';
+      if (result.data && result.data.currentTier && result.data.currentTier.id) {
+        tierId = String(result.data.currentTier.id);
+      }
+      if (!tierId) {
         for (var i = 0; i < tiers.length; i++) {
           if (tiers[i] && tiers[i].isDefault) { tierId = String(tiers[i].id || ''); break; }
         }
-        if (!tierId) tierId = 'free-tier';
-        var onboardBody = {
-          tierId: tierId,
-          cloudaicompanionProject: undefined,
-          metadata: buildCodeAssistClientMetadata('')
-        };
-        for (var attempt = 0; attempt < 6; attempt++) {
-          var result = await codeAssistFetchJson(buildCodeAssistOnboardEndpoint(), onboardBody, null, allowRetry);
-          if (!result.response.ok) return '';
-          var op = result.data || {};
-          if (op.done) {
-            var proj = op.response && op.response.cloudaicompanionProject
-              ? (typeof op.response.cloudaicompanionProject === 'string'
-                  ? op.response.cloudaicompanionProject
-                  : op.response.cloudaicompanionProject.id)
-              : '';
-            return proj ? String(proj) : '';
-          }
-          await new Promise(function(r) { setTimeout(r, 1500); });
-        }
-        return '';
-      } catch (error) {
-        console.warn('Code Assist onboardUser fallo:', error);
-        return '';
       }
+      if (!tierId) tierId = 'legacy-tier';
+
+      resolvedProject = await onboardCodeAssistUser(tierId, resolvedProject, allowRetry);
+
+      if (resolvedProject && resolvedProject !== appState.codeAssistProjectId) {
+        appState.codeAssistProjectId = resolvedProject;
+        saveState({ skipDrive: true });
+      }
+      var tier = result.data && (result.data.paidTier || result.data.currentTier);
+      if (tier && tier.availableCredits) {
+        syncUsageCreditsRemaining(tier.availableCredits);
+      }
+      return resolvedProject;
+    }
+
+    function extractCloudCompanionProject(data) {
+      if (!data) return '';
+      var raw = data.cloudaicompanionProject;
+      if (!raw) return '';
+      if (typeof raw === 'string') return raw;
+      if (typeof raw === 'object' && raw.id) return String(raw.id);
+      return '';
+    }
+
+    async function onboardCodeAssistUser(tierId, existingProject, allowRetry) {
+      var onboardBody = {
+        tierId: tierId || 'legacy-tier',
+        cloudaicompanionProject: existingProject || undefined,
+        metadata: buildCodeAssistClientMetadata(existingProject || '')
+      };
+      var lastError = '';
+      for (var attempt = 0; attempt < 20; attempt++) {
+        var result = await codeAssistFetchJson(buildCodeAssistOnboardEndpoint(), onboardBody, null, allowRetry);
+        if (!result.response.ok) {
+          lastError = extractBackendErrorMessage(result.data, result.response.status) || ('HTTP ' + result.response.status);
+          throw new Error('Code Assist :onboardUser respondió error → ' + lastError);
+        }
+        var op = result.data || {};
+        if (op.done) {
+          var proj = op.response ? extractCloudCompanionProject(op.response) : '';
+          if (!proj && op.response && op.response.cloudaicompanionProject && op.response.cloudaicompanionProject.name) {
+            proj = String(op.response.cloudaicompanionProject.name);
+          }
+          return proj || existingProject || '';
+        }
+        await new Promise(function(r) { setTimeout(r, 2000); });
+      }
+      return existingProject || '';
     }
 
     async function refreshCodeAssistQuota(allowRetry) {
@@ -5156,16 +5161,24 @@
     }
 
     async function refreshCodeAssistUsage(allowRetry) {
-      await refreshCodeAssistCredits(allowRetry);
+      try {
+        await refreshCodeAssistCredits(allowRetry);
+      } catch (error) {
+        console.warn('No se pudo sincronizar creditos de Code Assist:', error);
+      }
       await refreshCodeAssistQuota(allowRetry);
     }
 
     async function callGemini(chat, signal, allowRetry, retryCount) {
       if (!codeAssistProject()) {
-        await refreshCodeAssistCredits(false);
+        try {
+          await refreshCodeAssistCredits(false);
+        } catch (error) {
+          throw new Error('No se pudo activar Gemini para esta cuenta: ' + (error && error.message ? error.message : error));
+        }
       }
       if (!codeAssistProject()) {
-        throw new Error('Gemini no está activo aún en tu cuenta de Google. Abre https://gemini.google.com y acepta los términos con esta misma cuenta, o define APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto con Cloud Code Private API habilitada.');
+        throw new Error('No se pudo resolver un cloudaicompanionProject para esta cuenta. Si tienes un proyecto GCP con la API "Cloud Code Private" habilitada, ponlo en APP_CONFIG.CODE_ASSIST_PROJECT_ID.');
       }
       const requestBody = buildCodeAssistGenerateBody(chat);
       const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
@@ -5196,10 +5209,14 @@
 
     async function callGeminiStream(chat, signal, onProgress) {
       if (!codeAssistProject()) {
-        await refreshCodeAssistCredits(false);
+        try {
+          await refreshCodeAssistCredits(false);
+        } catch (error) {
+          throw new Error('No se pudo activar Gemini para esta cuenta: ' + (error && error.message ? error.message : error));
+        }
       }
       if (!codeAssistProject()) {
-        throw new Error('Gemini no está activo aún en tu cuenta de Google. Abre https://gemini.google.com y acepta los términos con esta misma cuenta, o define APP_CONFIG.CODE_ASSIST_PROJECT_ID con un proyecto con Cloud Code Private API habilitada.');
+        throw new Error('No se pudo resolver un cloudaicompanionProject para esta cuenta. Si tienes un proyecto GCP con la API "Cloud Code Private" habilitada, ponlo en APP_CONFIG.CODE_ASSIST_PROJECT_ID.');
       }
       ensureOauthConfig();
       if (!appState.accessToken) {
