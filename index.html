@@ -1131,6 +1131,292 @@
       color: var(--text);
     }
 
+    /* GUIDED LEARNING COMPACT */
+    .guided-banner {
+      margin: 0 0 14px;
+      border: 1px solid var(--orange-border);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.92)),
+        radial-gradient(circle at top right, rgba(224, 122, 60, 0.12), transparent 34%);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      animation: fadeSlideUp 0.26s var(--ease) both;
+    }
+    .guided-banner.empty-state { margin-top: 8px; }
+    .guided-banner summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px 14px;
+      display: grid;
+      gap: 9px;
+    }
+    .guided-banner summary::-webkit-details-marker { display: none; }
+    .guided-banner-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .guided-banner-current {
+      min-width: 0;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .guided-banner-meta {
+      flex: 0 0 auto;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--orange);
+    }
+    .guided-progress {
+      width: 100%;
+      height: 8px;
+      border-radius: var(--r-full);
+      background: rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+    .guided-progress > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #e07a3c, #f2b46d);
+    }
+    .guided-topic-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .guided-topic-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 22px;
+      padding: 0 9px;
+      border-radius: var(--r-full);
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--muted);
+      background: rgba(0,0,0,0.04);
+    }
+    .guided-topic-pill.done {
+      background: rgba(34,197,94,0.12);
+      color: #166534;
+    }
+    .guided-topic-pill.current {
+      background: var(--orange-soft);
+      color: var(--orange);
+    }
+    .guided-topic-pill.locked,
+    .guided-topic-pill.planned {
+      background: rgba(0,0,0,0.05);
+      color: var(--muted);
+    }
+    .guided-banner-panel {
+      padding: 2px 14px 14px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+      display: grid;
+      gap: 8px;
+    }
+    .guided-detail-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .guided-detail-row strong {
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    .guided-note {
+      font-size: 0.73rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+    .guided-outline {
+      display: grid;
+      gap: 4px;
+      padding-top: 4px;
+    }
+    .guided-outline-line {
+      display: grid;
+      grid-template-columns: 8px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      min-width: 0;
+    }
+    .guided-outline-mark {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.14);
+    }
+    .guided-outline-line.done .guided-outline-mark { background: var(--green); }
+    .guided-outline-line.current .guided-outline-mark { background: var(--orange); }
+    .guided-outline-line.locked .guided-outline-mark { background: rgba(0,0,0,0.18); }
+    .guided-outline-name {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .guided-outline-state {
+      font-size: 0.66rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .guided-banner-actions,
+    .guided-inline-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .guided-mini-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.03);
+      color: var(--text);
+      font-size: 0.71rem;
+      font-weight: 700;
+      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease);
+    }
+    .guided-mini-btn:hover:not(:disabled) {
+      border-color: var(--orange-border);
+      background: rgba(224, 122, 60, 0.08);
+    }
+    .guided-mini-btn.primary {
+      background: var(--orange);
+      border-color: rgba(224, 122, 60, 0.22);
+      color: #fff;
+    }
+    .guided-mini-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .guided-inline-quiz {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      display: grid;
+      gap: 10px;
+    }
+    .guided-inline-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .guided-inline-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .guided-inline-score,
+    .guided-inline-foot,
+    .guided-inline-note,
+    .guided-inline-feedback {
+      font-size: 0.71rem;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .guided-inline-list {
+      display: grid;
+      gap: 10px;
+    }
+    .guided-inline-item {
+      display: grid;
+      gap: 6px;
+    }
+    .guided-inline-prompt {
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: var(--text);
+      font-weight: 700;
+    }
+    .guided-inline-options {
+      display: grid;
+      gap: 6px;
+    }
+    .guided-inline-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: rgba(0,0,0,0.035);
+      color: var(--text-secondary);
+      text-align: left;
+      transition: background 0.18s var(--ease), border-color 0.18s var(--ease), color 0.18s var(--ease);
+    }
+    .guided-inline-option:hover {
+      background: rgba(224, 122, 60, 0.08);
+      border-color: rgba(224, 122, 60, 0.12);
+      color: var(--text);
+    }
+    .guided-inline-option.active {
+      border-color: rgba(224, 122, 60, 0.18);
+      background: rgba(255,247,241,0.92);
+      color: var(--text);
+    }
+    .guided-inline-option.correct {
+      background: rgba(34,197,94,0.1);
+      color: #166534;
+    }
+    .guided-inline-option.wrong {
+      background: rgba(220,38,38,0.08);
+      color: #991b1b;
+    }
+    .guided-inline-key {
+      flex: 0 0 auto;
+      width: 18px;
+      color: inherit;
+      font-weight: 700;
+    }
+    @media (max-width: 768px) {
+      .guided-banner summary { padding: 11px 12px; }
+      .guided-banner-panel { padding: 2px 12px 12px; }
+      .guided-inline-head { flex-direction: column; align-items: flex-start; }
+      .guided-inline-actions,
+      .guided-banner-actions { flex-direction: column; }
+      .guided-mini-btn { width: 100%; }
+    }
+    @media (max-width: 480px) {
+      .guided-banner-line,
+      .guided-detail-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .guided-detail-row strong { text-align: left; }
+      .guided-outline-line {
+        grid-template-columns: 8px minmax(0, 1fr);
+      }
+      .guided-outline-state {
+        grid-column: 2;
+      }
+    }
+
     /* ─── MESSAGES ───────────────────────────────────── */
     .message {
       display: flex; align-items: flex-start; gap: 10px;
@@ -2266,6 +2552,7 @@
       '         {',
       '           "id": "string estable",',
       '           "prompt": "string",',
+      '           "correctOptionId": "id exacto de la opcion correcta",',
       '           "options": [',
       '             { "id": "a", "text": "string", "correct": true }',
       '           ],',
@@ -2277,6 +2564,7 @@
       '   }',
       '',
       '10. El mini test debe ser conceptual, corto y util para decidir si puede pasar al siguiente apartado. Usa 2 o 3 preguntas multiple choice, con 3 o 4 opciones y exactamente una correcta.',
+      '    En cada pregunta DEBES incluir "correctOptionId" y marcar ESA misma opcion con "correct": true. La UI usa ambos datos para revelar la correcta.',
       '',
       '11. Si sigues dentro del mismo apartado, reutiliza los mismos ids estables siempre que puedas.'
     ].join('\n');
@@ -3129,23 +3417,78 @@
           ? option.id.trim()
           : 'opt-' + String(index + 1),
         text: label || ('Opcion ' + String(index + 1)),
-        correct: !!(option && option.correct)
+        correct: !!(option && (
+          option.correct === true ||
+          option.isCorrect === true ||
+          option.answer === true ||
+          String(option.correct || '').trim().toLowerCase() === 'true' ||
+          String(option.isCorrect || '').trim().toLowerCase() === 'true'
+        ))
       };
+    }
+
+    function normalizeGuidedAnswerRef(value) {
+      return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^[\(\[\{'"`]+|[\)\]\}'"`]+$/g, '');
+    }
+
+    function resolveGuidedCorrectOptionId(rawItem, options) {
+      if (!Array.isArray(options) || !options.length) {
+        return '';
+      }
+      const flagged = options.filter((option) => option.correct);
+      if (flagged.length === 1) {
+        return flagged[0].id;
+      }
+      const rawRefs = [
+        rawItem && rawItem.correctOptionId,
+        rawItem && rawItem.correctAnswerId,
+        rawItem && rawItem.correctOption,
+        rawItem && rawItem.correctAnswer,
+        rawItem && rawItem.answerId,
+        rawItem && rawItem.answer,
+        rawItem && rawItem.solution
+      ].filter((value) => typeof value !== 'undefined' && value !== null && String(value).trim());
+      if (!rawRefs.length) {
+        return flagged.length ? flagged[0].id : '';
+      }
+      const normalizedOptionMap = new Map();
+      options.forEach((option, index) => {
+        normalizedOptionMap.set(normalizeGuidedAnswerRef(option.id), option.id);
+        normalizedOptionMap.set(normalizeGuidedAnswerRef(option.text), option.id);
+        normalizedOptionMap.set(String.fromCharCode(97 + index), option.id);
+        normalizedOptionMap.set(String(index + 1), option.id);
+      });
+      for (const rawRef of rawRefs) {
+        const normalizedRef = normalizeGuidedAnswerRef(rawRef);
+        if (!normalizedRef) continue;
+        if (normalizedOptionMap.has(normalizedRef)) {
+          return normalizedOptionMap.get(normalizedRef);
+        }
+      }
+      return flagged.length ? flagged[0].id : '';
     }
 
     function normalizeGuidedQuizItem(item, index) {
       const prompt = item && typeof item.prompt === 'string'
         ? item.prompt.trim()
         : '';
+      const rawOptions = Array.isArray(item && item.options) && item.options.length
+        ? item.options.map((option, optionIndex) => normalizeGuidedOption(option, optionIndex))
+        : [];
+      const correctOptionId = resolveGuidedCorrectOptionId(item, rawOptions);
       return {
         id: item && typeof item.id === 'string' && item.id.trim()
           ? item.id.trim()
           : slugify(prompt || ('pregunta-' + String(index + 1)), 'pregunta-' + String(index + 1)),
         prompt: prompt || ('Pregunta ' + String(index + 1)),
         explanation: item && typeof item.explanation === 'string' ? item.explanation.trim() : '',
-        options: Array.isArray(item && item.options) && item.options.length
-          ? item.options.map((option, optionIndex) => normalizeGuidedOption(option, optionIndex))
-          : []
+        correctOptionId,
+        options: rawOptions.map((option) => Object.assign({}, option, {
+          correct: !!(correctOptionId && option.id === correctOptionId)
+        }))
       };
     }
 
@@ -5307,6 +5650,180 @@
       ].join('');
     }
 
+    function guidedStatusMark(status) {
+      if (status === 'done') return 'done';
+      if (status === 'in_progress') return 'current';
+      if (status === 'locked') return 'locked';
+      return 'planned';
+    }
+
+    function renderGuidedMeter(value, extraClass) {
+      const width = clampNumber(value, 0, 100);
+      const cssClass = extraClass ? 'guided-progress ' + extraClass : 'guided-progress';
+      return '<div class="' + cssClass + '"><span style="width:' + width + '%"></span></div>';
+    }
+
+    function guidedBannerStorageKey(chat) {
+      return 'guided-banner::' + (chat && chat.id ? chat.id : 'active');
+    }
+
+    function isGuidedBannerOpen(chat) {
+      try {
+        return sessionStorage.getItem(guidedBannerStorageKey(chat)) === '1';
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function renderGuidedTopicCards(session) {
+      if (!Array.isArray(session.topics) || !session.topics.length) {
+        return '<div class="guided-topic-strip"><span class="guided-topic-pill planned">Sin indice</span></div>';
+      }
+      return '<div class="guided-topic-strip">' + session.topics.map((topic) => {
+        const status = topic.id === session.current.topicId ? 'current' : guidedStatusMark(topic.status);
+        const emoji = topic.emoji ? escapeHtml(topic.emoji) + ' ' : '';
+        return '<span class="guided-topic-pill ' + status + '">' + emoji + escapeHtml(topic.title) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    function renderGuidedRoadmap(session) {
+      const resolved = getGuidedResolvedCurrent(session);
+      const activeTopic = resolved.topic || (Array.isArray(session.topics) ? session.topics[0] : null);
+      if (!activeTopic) {
+        return '<div class="guided-note">Sube material o pide un indice para empezar.</div>';
+      }
+      const currentBlock = resolved.block || (Array.isArray(activeTopic.blocks) ? activeTopic.blocks[0] : null);
+      if (!currentBlock) {
+        return '<div class="guided-note">Todavia no hay bloques definidos.</div>';
+      }
+      return '<div class="guided-outline">' + currentBlock.sections.map((section) => {
+        const key = guidedSectionKey(activeTopic.id, currentBlock.id, section.id);
+        const record = session.sectionStats && session.sectionStats[key] ? session.sectionStats[key] : null;
+        const status = record && record.mastered ? 'done' : (section.id === session.current.sectionId ? 'current' : guidedStatusMark(section.status));
+        return [
+          '<div class="guided-outline-line ' + status + '">',
+          '  <span class="guided-outline-mark"></span>',
+          '  <span class="guided-outline-name">' + escapeHtml(section.title) + '</span>',
+          '  <span class="guided-outline-state">' + escapeHtml(guidedStatusLabel(status === 'current' ? 'in_progress' : status)) + '</span>',
+          '</div>'
+        ].join('');
+      }).join('') + '</div>';
+    }
+
+    function renderGuidedQuiz(message, chatLike) {
+      const chat = chatLike || getActiveChat();
+      if (!chat || !chat.guidedLearning || !message || message.role !== 'assistant' || message.pending) {
+        return '';
+      }
+      const session = ensureGuidedSession(chat);
+      if (!session.quiz || !Array.isArray(session.quiz.items) || !session.quiz.items.length) {
+        return '';
+      }
+      if (session.quiz.sourceMessageId !== message.id) {
+        return '';
+      }
+      const mastery = getGuidedCurrentMastery(chat);
+      const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
+      return [
+        '<div class="guided-inline-quiz">',
+        '  <div class="guided-inline-head">',
+        '    <div class="guided-inline-title">' + escapeHtml(session.quiz.title || 'Mini test') + '</div>',
+        '    <div class="guided-inline-score">' + escapeHtml((mastery.total ? mastery.correct + '/' + mastery.total + ' · ' + mastery.accuracy + '%' : 'Sin responder') + ' · objetivo ' + mastery.requiredAccuracy + '%') + '</div>',
+        '  </div>',
+        session.quiz.intro ? '<div class="guided-inline-note">' + escapeHtml(session.quiz.intro) + '</div>' : '',
+        '<div class="guided-inline-list">',
+        mastery.itemStates.map((state, index) => {
+          return [
+            '<div class="guided-inline-item">',
+            '  <div class="guided-inline-prompt">' + escapeHtml(String(index + 1) + '. ' + state.item.prompt) + '</div>',
+            '  <div class="guided-inline-options">',
+            state.item.options.map((option, optionIndex) => {
+              let optionClass = 'guided-inline-option';
+              if (state.answered && option.id === state.selectedOptionId) {
+                optionClass += state.correctOption
+                  ? (state.correct ? ' correct active' : ' wrong active')
+                  : ' active';
+              } else if (state.answered && state.correctOption && option.id === state.correctOption.id) {
+                optionClass += ' correct';
+              }
+              const keyLabel = String.fromCharCode(65 + optionIndex);
+              return [
+                '<button class="' + optionClass + '" type="button" data-guided-answer="' + escapeHtml(state.item.id) + '" data-guided-option="' + escapeHtml(option.id) + '">',
+                '  <span class="guided-inline-key">' + escapeHtml(keyLabel) + '</span>',
+                '  <span>' + escapeHtml(option.text) + '</span>',
+                '</button>'
+              ].join('');
+            }).join(''),
+            '  </div>',
+            state.answered && state.item.explanation
+              ? '  <div class="guided-inline-feedback">' + escapeHtml(state.item.explanation) + '</div>'
+              : '',
+            '</div>'
+          ].join('');
+        }).join(''),
+        '</div>',
+        '<div class="guided-inline-actions">',
+        '  <button class="guided-mini-btn" type="button" data-guided-action="reinforce">Otra explicacion</button>',
+        '  <button class="guided-mini-btn" type="button" data-guided-action="reset-quiz">Repetir test</button>',
+        '  <button class="guided-mini-btn primary" type="button" data-guided-action="continue"' + ((!mastery.hasQuiz || !mastery.unlocked) ? ' disabled' : '') + '>Siguiente apartado</button>',
+        '</div>',
+        bestAccuracy
+          ? '<div class="guided-inline-foot">Mejor intento: ' + escapeHtml(String(bestAccuracy)) + '%</div>'
+          : '',
+        '</div>'
+      ].join('');
+    }
+
+    function renderGuidedDashboard(chat, options) {
+      if (!chat || !chat.guidedLearning) {
+        return '';
+      }
+      const settings = Object.assign({ emptyState: false }, options);
+      const session = ensureGuidedSession(chat);
+      const current = getGuidedResolvedCurrent(session);
+      const mastery = getGuidedCurrentMastery(chat);
+      const overallProgress = clampNumber(session.current.overallProgress || guidedAverageProgress(session.topics), 0, 100);
+      const depthPercent = clampNumber(session.current.depthPercent, 0, 100);
+      const masteryPercent = mastery.record
+        ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0)
+        : mastery.accuracy;
+      const currentLabel = current.section
+        ? (current.topic ? current.topic.title + ' · ' : '') + current.section.title
+        : (session.syllabusTitle || 'Ruta guiada');
+      const openAttr = isGuidedBannerOpen(chat) ? ' open' : '';
+      return [
+        '<details class="guided-banner' + (settings.emptyState ? ' empty-state' : '') + '"' + openAttr + ' data-guided-banner="' + escapeHtml(chat.id) + '">',
+        '  <summary class="guided-banner-summary">',
+        '    <div class="guided-banner-line">',
+        '      <span class="guided-banner-current">' + escapeHtml(currentLabel) + '</span>',
+        '      <span class="guided-banner-meta">' + escapeHtml(overallProgress + '%') + '</span>',
+        '    </div>',
+        '    ' + renderGuidedMeter(overallProgress),
+        '    ' + renderGuidedTopicCards(session),
+        '  </summary>',
+        '  <div class="guided-banner-panel">',
+        '    <div class="guided-detail-row"><span>Ruta</span><strong>' + escapeHtml([
+          current.topic ? current.topic.title : 'Tema',
+          current.block ? current.block.title : 'Bloque',
+          current.section ? current.section.title : 'Apartado'
+        ].join(' · ')) + '</strong></div>',
+        '    <div class="guided-detail-row"><span>Profundidad</span><strong>' + escapeHtml(depthPercent + '%') + '</strong></div>',
+        '    <div class="guided-detail-row"><span>Dominio</span><strong>' + escapeHtml(masteryPercent + '%') + '</strong></div>',
+        mastery.hasQuiz
+          ? '<div class="guided-detail-row"><span>Bloqueo</span><strong>' + escapeHtml(mastery.unlocked ? 'Listo para seguir' : 'Objetivo ' + mastery.requiredAccuracy + '%') + '</strong></div>'
+          : '',
+        session.teacherNote
+          ? '<div class="guided-note">' + escapeHtml(session.teacherNote) + '</div>'
+          : '',
+        renderGuidedRoadmap(session),
+        (!current.section && session.topics.length)
+          ? '<div class="guided-banner-actions"><button class="guided-mini-btn" type="button" data-guided-action="confirm-roadmap">Empezar</button></div>'
+          : '',
+        '  </div>',
+        '</details>'
+      ].join('');
+    }
+
     function renderEmptyThread(options) {
       const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
@@ -5324,7 +5841,7 @@
             '  <div class="chips">',
             '    <button class="chip suggestion-chip" data-prompt="Quiero estudiar fuerza desde cero. Proponme primero un indice en Tema > Bloque > Apartado.">Indice para fuerza</button>',
             '    <button class="chip suggestion-chip" data-prompt="Organiza estos apuntes por tema, bloque y apartado antes de explicarme nada.">Organizar apuntes</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Actua como tutor guiado. No pases de apartado hasta que lo domine y pon mini test en la UI.">Activar tutor paso a paso</button>',
+            '    <button class="chip suggestion-chip" data-prompt="Actua como tutor guiado. No pases de apartado hasta que lo domine y pon el mini test dentro del propio mensaje del tutor.">Activar tutor paso a paso</button>',
             '    <button class="chip suggestion-chip" data-prompt="Empieza por el primer apartado del indice y explicamelo con intuicion, muy poco a poco.">Empezar primer apartado</button>',
             '  </div>',
             '</section>'
@@ -5374,6 +5891,7 @@
         ? assistantTypingMarkup()
         : renderMarkdown(visibleContent);
       const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
+      const guidedQuizMarkup = isUser ? '' : renderGuidedQuiz(message, getActiveChat());
       const actionsMarkup = renderMsgActions(message, !!isLastAssistant);
       const attributionMarkup = renderMessageAttribution(message);
       return [
@@ -5381,7 +5899,7 @@
         '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
         '  <div class="message-body">',
         '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-        '    <div class="bubble"><div class="bubble-content">' + thinkingMarkup + body + attachmentMarkup + '</div></div>',
+        '    <div class="bubble"><div class="bubble-content">' + thinkingMarkup + body + attachmentMarkup + guidedQuizMarkup + '</div></div>',
         attributionMarkup,
         actionsMarkup,
         '  </div>',
@@ -5552,6 +6070,15 @@
         btn.dataset.boundClick = '1';
         btn.addEventListener('click', function() {
           handleGuidedAction(btn.dataset.guidedAction);
+        });
+      });
+      scope.querySelectorAll('[data-guided-banner]').forEach(function(el) {
+        if (el.dataset.boundToggle === '1') return;
+        el.dataset.boundToggle = '1';
+        el.addEventListener('toggle', function() {
+          try {
+            sessionStorage.setItem('guided-banner::' + el.dataset.guidedBanner, el.open ? '1' : '0');
+          } catch (_) {}
         });
       });
     }
