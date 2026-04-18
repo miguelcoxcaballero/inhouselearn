@@ -108,18 +108,23 @@
       flex: 1;
       max-width: 520px;
     }
+    :root {
+      --brand-codex: #10a37f;
+      --brand-gemini: #4285f4;
+      --brand-claude: #c96442;
+    }
     .model-trigger {
       width: 100%;
       min-width: 0;
       height: 40px;
-      padding: 0 14px;
+      padding: 0 12px 0 10px;
       display: flex;
       align-items: center;
       gap: 10px;
-      border-radius: 16px;
+      border-radius: 14px;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,0.86);
-      transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), background 0.18s var(--ease);
+      background: rgba(255,255,255,0.82);
+      transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
     }
     .model-trigger:hover {
       border-color: var(--border-strong);
@@ -131,51 +136,72 @@
       box-shadow: 0 0 0 3px var(--orange-soft);
       background: var(--surface);
     }
+    .model-trigger-brand {
+      flex: 0 0 auto;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fff;
+      background: var(--brand-color, var(--muted));
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.2);
+      transition: background 0.2s var(--ease);
+    }
+    .model-trigger-brand svg { width: 12px; height: 12px; display: block; }
+    .model-trigger-brand[data-provider="codex"] { --brand-color: var(--brand-codex); }
+    .model-trigger-brand[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
+    .model-trigger-brand[data-provider="claude"] { --brand-color: var(--brand-claude); }
     .model-trigger-copy {
       flex: 1;
       min-width: 0;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      gap: 1px;
+      gap: 0;
       text-align: left;
-    }
-    .model-trigger-kicker {
-      max-width: 100%;
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      line-height: 1.15;
     }
     .model-trigger-main {
       max-width: 100%;
-      font-size: 0.84rem;
+      font-size: 0.86rem;
       font-weight: 700;
       color: var(--text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: -0.01em;
     }
-    .model-trigger-meta {
+    .model-trigger-kicker {
       max-width: 100%;
-      font-size: 0.69rem;
+      font-size: 0.66rem;
+      font-weight: 600;
       color: var(--muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      letter-spacing: 0.01em;
     }
+    .model-trigger-chip {
+      flex: 0 0 auto;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: var(--orange-soft);
+      color: var(--orange);
+      border: 1px solid var(--orange-border);
+    }
+    .model-trigger-chip.hidden { display: none; }
     .model-trigger-caret {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       flex-shrink: 0;
       color: var(--muted);
-      transition: transform 0.18s var(--ease);
+      transition: transform 0.22s var(--ease);
     }
-    .model-trigger[aria-expanded="true"] .model-trigger-caret { transform: rotate(180deg); }
+    .model-trigger[aria-expanded="true"] .model-trigger-caret { transform: rotate(180deg); color: var(--text); }
+
     .topbar-popover {
       position: absolute;
       top: calc(100% + 10px);
@@ -191,51 +217,218 @@
       z-index: 140;
     }
     .topbar-popover.hidden { display: none; }
-    .topbar-popover-title {
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 8px;
+
+    .model-popover {
+      width: min(420px, calc(100vw - 24px));
+      padding: 14px 14px 12px;
+      animation: model-popover-in 0.18s var(--ease);
     }
-    .topbar-popover-copy {
-      font-size: 0.78rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
+    @keyframes model-popover-in {
+      from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .model-popover-head {
       margin-bottom: 12px;
     }
-    .popover-field {
-      display: block;
-      margin-bottom: 10px;
-    }
-    .popover-field:has(select.hidden) { display: none; }
-    .popover-field-label {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 0.7rem;
+    .model-popover-title {
+      font-size: 0.95rem;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      margin-bottom: 2px;
+    }
+    .model-popover-status {
+      font-size: 0.74rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+    .model-popover-section {
+      margin-bottom: 12px;
+    }
+    .model-popover-section.hidden { display: none; }
+    .model-popover-section-label {
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--muted);
+      margin-bottom: 6px;
     }
-    .topbar-popover .sel-wrap { width: 100%; }
-    .topbar-popover .topbar-select {
-      width: 100%;
-      padding: 8px 30px 8px 10px;
-      font-size: 0.82rem;
+
+    .provider-segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 3px;
+      background: rgba(0,0,0,0.04);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .provider-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 8px;
+      border: none;
+      background: transparent;
+      border-radius: 9px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: background 0.16s var(--ease), color 0.16s var(--ease), box-shadow 0.16s var(--ease);
+      min-width: 0;
+    }
+    .provider-chip:hover:not(.active) {
+      color: var(--text);
+      background: rgba(0,0,0,0.03);
+    }
+    .provider-chip.active {
       background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px var(--border);
     }
-    .popover-actions {
+    .provider-chip-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--brand-color, var(--muted));
+      flex: 0 0 auto;
+    }
+    .provider-chip[data-provider="codex"] { --brand-color: var(--brand-codex); }
+    .provider-chip[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
+    .provider-chip[data-provider="claude"] { --brand-color: var(--brand-claude); }
+
+    .model-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding: 2px;
+      margin: -2px;
+    }
+    .model-list::-webkit-scrollbar { width: 6px; }
+    .model-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+    .model-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 11px;
+      border-radius: 11px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+      width: 100%;
+    }
+    .model-card:hover {
+      background: rgba(0,0,0,0.03);
+    }
+    .model-card.active {
+      background: var(--orange-soft);
+      border-color: var(--orange-border);
+    }
+    .model-card-icon {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: #fff;
+      background: var(--brand-color, var(--muted));
+      flex: 0 0 auto;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+    }
+    .model-card-icon svg { width: 13px; height: 13px; }
+    .model-card[data-provider="codex"] { --brand-color: var(--brand-codex); }
+    .model-card[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
+    .model-card[data-provider="claude"] { --brand-color: var(--brand-claude); }
+    .model-card-main {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .model-card-name {
+      font-size: 0.86rem; font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+    .model-card-sub {
+      font-size: 0.7rem; color: var(--muted);
+      line-height: 1.2;
+    }
+    .model-card-badge {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(0,0,0,0.05);
+      flex: 0 0 auto;
+    }
+    .model-card-badge.preview {
+      color: var(--orange);
+      background: var(--orange-soft);
+    }
+    .model-card-check {
+      width: 16px; height: 16px;
+      color: var(--orange);
+      opacity: 0;
+      flex: 0 0 auto;
+      transition: opacity 0.15s var(--ease);
+    }
+    .model-card.active .model-card-check { opacity: 1; }
+
+    .thinking-segmented {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      gap: 4px;
+      padding: 3px;
+      background: rgba(0,0,0,0.04);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .thinking-pill {
+      height: 28px;
+      border: none;
+      background: transparent;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: background 0.15s var(--ease), color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+      padding: 0 6px;
+      min-width: 0;
+    }
+    .thinking-pill:hover:not(.active) {
+      color: var(--text);
+      background: rgba(0,0,0,0.03);
+    }
+    .thinking-pill.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px var(--border);
+    }
+
+    .model-popover-actions {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 8px;
-      margin-top: 6px;
+      margin-top: 4px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
     }
-    .popover-actions .btn {
+    .model-popover-actions .btn {
       flex: 1;
       min-width: 0;
+    }
+    .btn.btn-sm {
+      height: 30px;
+      padding: 0 10px;
+      font-size: 0.74rem;
+      border-radius: 9px;
     }
     .profile-popover { width: 280px; }
     .profile-menu-name {
@@ -628,10 +821,14 @@
       .hamburger { display: flex; }
       .layout { grid-template-columns: 1fr; }
       .model-trigger-kicker,
-      .model-trigger-meta { display: none; }
-      .model-trigger { height: 36px; padding: 0 12px; }
-      .model-trigger-main { font-size: 0.78rem; }
-      .topbar-popover { right: auto; left: 0; width: min(360px, calc(100vw - 20px)); }
+      .model-trigger-chip { display: none; }
+      .model-trigger { height: 36px; padding: 0 10px 0 8px; gap: 8px; }
+      .model-trigger-main { font-size: 0.8rem; }
+      .model-trigger-brand { width: 20px; height: 20px; }
+      .model-trigger-brand svg { width: 11px; height: 11px; }
+      .topbar-popover { right: auto; left: 0; width: min(380px, calc(100vw - 20px)); }
+      .model-popover { width: min(380px, calc(100vw - 20px)); }
+      .model-list { max-height: 220px; }
       .sidebar {
         position: fixed; inset: var(--topbar-h) auto 0 0; width: 280px; z-index: 60;
         transform: translateX(-100%);
@@ -711,15 +908,19 @@
       padding: 3px 0 0; margin-left: 2px;
       font-size: 0.62rem; letter-spacing: 0.01em;
       color: var(--muted);
-      opacity: 0.45;
+      opacity: 0.5;
       transition: opacity 0.15s var(--ease);
       user-select: none;
     }
-    .message:hover .msg-attribution { opacity: 0.75; }
+    .message:hover .msg-attribution { opacity: 0.85; }
     .msg-attribution svg {
       width: 11px; height: 11px;
       display: block; flex: 0 0 auto;
+      color: var(--brand-color, var(--muted));
     }
+    .msg-attribution[data-provider="codex"] { --brand-color: var(--brand-codex); }
+    .msg-attribution[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
+    .msg-attribution[data-provider="claude"] { --brand-color: var(--brand-claude); }
     .msg-attribution-sep { opacity: 0.5; }
     @media (max-width: 768px) {
       .msg-attribution { opacity: 0.6; }
@@ -956,39 +1157,40 @@
         </div>
         <div class="model-menu-wrap">
           <button class="model-trigger" id="model-menu-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+            <span class="model-trigger-brand" id="model-trigger-brand" data-provider="codex" aria-hidden="true"></span>
             <span class="model-trigger-copy">
-              <span class="model-trigger-kicker" id="model-trigger-kicker">Modelo</span>
               <span class="model-trigger-main" id="model-trigger-main">Selecciona un modelo</span>
-              <span class="model-trigger-meta" id="model-trigger-meta">Configuración local</span>
+              <span class="model-trigger-kicker" id="model-trigger-kicker">Modelo</span>
             </span>
+            <span class="model-trigger-chip hidden" id="model-trigger-meta">Estable</span>
             <svg class="model-trigger-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </button>
-          <div class="topbar-popover hidden" id="model-menu-popup">
-            <div class="topbar-popover-title">Configuración del chat</div>
-            <div class="topbar-popover-copy" id="model-menu-status">Elige compañía, modelo y reasoning para este chat.</div>
-            <label class="popover-field">
-              <span class="popover-field-label">Compañía</span>
-              <div class="sel-wrap">
-                <select id="chat-provider-select" class="topbar-select" aria-label="Provider"></select>
-              </div>
-            </label>
-            <label class="popover-field">
-              <span class="popover-field-label">Modelo</span>
-              <div class="sel-wrap">
-                <select id="chat-model-select" class="topbar-select" aria-label="Modelo"></select>
-              </div>
-            </label>
-            <label class="popover-field">
-              <span class="popover-field-label">Razonamiento</span>
-              <div class="sel-wrap">
-                <select id="chat-thinking-select" class="topbar-select hidden" aria-label="Thinking"></select>
-              </div>
-            </label>
-            <div class="popover-actions">
-              <button class="btn btn-outline" id="open-localhost-btn" type="button">Abrir localhost</button>
-              <button class="btn btn-primary" id="login-btn" type="button">Conectar</button>
+          <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Configuración del modelo">
+            <div class="model-popover-head">
+              <div class="model-popover-title">Modelo del chat</div>
+              <div class="model-popover-status" id="model-menu-status">Elige compañía, modelo y reasoning para este chat.</div>
+            </div>
+
+            <div class="model-popover-section">
+              <div class="model-popover-section-label">Compañía</div>
+              <div class="provider-segmented" id="provider-segmented" role="tablist"></div>
+            </div>
+
+            <div class="model-popover-section">
+              <div class="model-popover-section-label">Modelo</div>
+              <div class="model-list" id="model-list" role="radiogroup"></div>
+            </div>
+
+            <div class="model-popover-section hidden" id="thinking-section">
+              <div class="model-popover-section-label">Razonamiento</div>
+              <div class="thinking-segmented" id="thinking-segmented" role="radiogroup"></div>
+            </div>
+
+            <div class="model-popover-actions">
+              <button class="btn btn-outline btn-sm" id="open-localhost-btn" type="button">Abrir localhost</button>
+              <button class="btn btn-primary btn-sm" id="login-btn" type="button">Conectar</button>
             </div>
           </div>
         </div>
@@ -1476,6 +1678,11 @@
       modelTriggerKicker: document.getElementById('model-trigger-kicker'),
       modelTriggerMain: document.getElementById('model-trigger-main'),
       modelTriggerMeta: document.getElementById('model-trigger-meta'),
+      modelTriggerBrand: document.getElementById('model-trigger-brand'),
+      providerSegmented: document.getElementById('provider-segmented'),
+      modelList: document.getElementById('model-list'),
+      thinkingSegmented: document.getElementById('thinking-segmented'),
+      thinkingSection: document.getElementById('thinking-section'),
       openLocalhostBtn: document.getElementById('open-localhost-btn'),
       loginBtn: document.getElementById('login-btn'),
       profileBtn: document.getElementById('profile-btn'),
@@ -1490,9 +1697,6 @@
       profileMenuEmail: document.getElementById('profile-menu-email'),
       authCopy: document.getElementById('auth-copy'),
       transportLabel: document.getElementById('transport-label'),
-      providerSelect: document.getElementById('chat-provider-select'),
-      modelSelect: document.getElementById('chat-model-select'),
-      thinkingSelect: document.getElementById('chat-thinking-select'),
       modelCopy: document.getElementById('model-copy'),
       configCopy: document.getElementById('config-copy'),
       originCopy: document.getElementById('origin-copy'),
@@ -2425,15 +2629,16 @@
       if (elements.fileInput) {
         elements.fileInput.disabled = appState.busy || appState.attachmentBusy;
       }
-      if (elements.modelSelect) {
-        elements.modelSelect.disabled = appState.busy;
+    }
+
+    function providerBrandIconSvg(providerId) {
+      if (providerId === 'gemini') {
+        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.4 4.3 2.7 7.6 7 10-4.3 2.4-6.6 5.7-7 10-.4-4.3-2.7-7.6-7-10 4.3-2.4 6.6-5.7 7-10z"/></svg>';
       }
-      if (elements.providerSelect) {
-        elements.providerSelect.disabled = appState.busy;
+      if (providerId === 'claude') {
+        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.3 6.8h1.9l3.4 8.6h-1.7l-.8-2.1H7.1L6.3 15.4H4.7L7.3 6.8zm.3 5.1h2.3L8.75 8.9 7.6 11.9zm6.5-5.1h1.6v8.6h-1.6V6.8z"/></svg>';
       }
-      if (elements.thinkingSelect) {
-        elements.thinkingSelect.disabled = appState.busy;
-      }
+      return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3.5a6.5 6.5 0 1 1-6.5 6.5A6.5 6.5 0 0 1 12 5.5zm0 2.5a4 4 0 1 0 4 4 4 4 0 0 0-4-4z"/></svg>';
     }
 
     function renderModelControls() {
@@ -2445,44 +2650,92 @@
       const thinkingLevel = currentThinkingLevel(chat);
       const providerStatus = daemonProviderStatus(providerId);
 
-      if (elements.providerSelect) {
-        elements.providerSelect.innerHTML = PROVIDER_OPTIONS.map((option) => {
-          return '<option value="' + escapeHtml(option.id) + '">' + escapeHtml(option.label) + '</option>';
+      if (elements.providerSegmented) {
+        elements.providerSegmented.innerHTML = PROVIDER_OPTIONS.map((option) => {
+          const isActive = option.id === providerId;
+          return '<button type="button" class="provider-chip' + (isActive ? ' active' : '') + '"' +
+            ' data-provider-id="' + escapeHtml(option.id) + '"' +
+            ' data-provider="' + escapeHtml(option.id) + '"' +
+            ' role="tab" aria-selected="' + (isActive ? 'true' : 'false') + '"' +
+            ' ' + (appState.busy ? 'disabled' : '') + '>' +
+            '<span class="provider-chip-dot"></span>' +
+            '<span>' + escapeHtml(option.label) + '</span>' +
+            '</button>';
         }).join('');
-        elements.providerSelect.value = providerOption.id;
       }
 
-      elements.modelSelect.innerHTML = providerModels.map((option) => {
-        return '<option value="' + escapeHtml(option.id) + '">' + escapeHtml(option.label) + '</option>';
-      }).join('');
-      elements.modelSelect.value = modelOption.id;
-
-      if (modelOption.thinkingLevels.length) {
-        elements.thinkingSelect.classList.remove('hidden');
-        elements.thinkingSelect.innerHTML = modelOption.thinkingLevels.map((level) => {
-          return '<option value="' + escapeHtml(level) + '">' + escapeHtml(thinkingLabel(level)) + '</option>';
+      if (elements.modelList) {
+        elements.modelList.innerHTML = providerModels.map((option) => {
+          const isActive = option.id === modelOption.id;
+          const badge = option.preview
+            ? '<span class="model-card-badge preview">Preview</span>'
+            : '<span class="model-card-badge">Estable</span>';
+          const subParts = [option.badge];
+          if (option.thinkingLevels && option.thinkingLevels.length) {
+            subParts.push('Razona');
+          }
+          return '<button type="button" class="model-card' + (isActive ? ' active' : '') + '"' +
+            ' data-model-id="' + escapeHtml(option.id) + '"' +
+            ' data-provider="' + escapeHtml(option.provider) + '"' +
+            ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
+            ' ' + (appState.busy ? 'disabled' : '') + '>' +
+            '<span class="model-card-icon">' + providerBrandIconSvg(option.provider) + '</span>' +
+            '<span class="model-card-main">' +
+              '<span class="model-card-name">' + escapeHtml(option.label) + '</span>' +
+              '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
+            '</span>' +
+            badge +
+            '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
+            '</button>';
         }).join('');
-        elements.thinkingSelect.value = thinkingLevel;
-      } else {
-        elements.thinkingSelect.classList.add('hidden');
-        elements.thinkingSelect.innerHTML = '';
+      }
+
+      if (elements.thinkingSection && elements.thinkingSegmented) {
+        if (modelOption.thinkingLevels.length) {
+          elements.thinkingSection.classList.remove('hidden');
+          elements.thinkingSegmented.innerHTML = modelOption.thinkingLevels.map((level) => {
+            const isActive = level === thinkingLevel;
+            const shortLabel = level.charAt(0).toUpperCase() + level.slice(1);
+            return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
+              ' data-thinking-level="' + escapeHtml(level) + '"' +
+              ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
+              ' ' + (appState.busy ? 'disabled' : '') + '>' +
+              escapeHtml(shortLabel) +
+              '</button>';
+          }).join('');
+        } else {
+          elements.thinkingSection.classList.add('hidden');
+          elements.thinkingSegmented.innerHTML = '';
+        }
       }
 
       const modeCopy = modelOption.preview ? 'Preview' : 'Estable';
       const thinkingCopy = modelOption.thinkingLevels.length
         ? ' · ' + thinkingLabel(thinkingLevel)
         : '';
-      elements.modelCopy.textContent = providerOption.label + ' · ' + modeCopy + thinkingCopy + '. Se guarda en este chat.';
+      if (elements.modelCopy) {
+        elements.modelCopy.textContent = providerOption.label + ' · ' + modeCopy + thinkingCopy + '. Se guarda en este chat.';
+      }
       if (elements.modelTriggerKicker) {
         elements.modelTriggerKicker.textContent = providerOption.label;
       }
       if (elements.modelTriggerMain) {
         elements.modelTriggerMain.textContent = modelOption.label;
       }
+      if (elements.modelTriggerBrand) {
+        elements.modelTriggerBrand.setAttribute('data-provider', providerId);
+        elements.modelTriggerBrand.innerHTML = providerBrandIconSvg(providerId);
+      }
       if (elements.modelTriggerMeta) {
-        elements.modelTriggerMeta.textContent = modelOption.thinkingLevels.length
-          ? thinkingLabel(thinkingLevel)
-          : modeCopy;
+        if (modelOption.thinkingLevels.length) {
+          elements.modelTriggerMeta.textContent = thinkingLabel(thinkingLevel).replace('Thinking ', '');
+          elements.modelTriggerMeta.classList.remove('hidden');
+        } else if (modelOption.preview) {
+          elements.modelTriggerMeta.textContent = 'Preview';
+          elements.modelTriggerMeta.classList.remove('hidden');
+        } else {
+          elements.modelTriggerMeta.classList.add('hidden');
+        }
       }
       if (elements.modelMenuStatus) {
         let statusCopy = 'El daemon local no responde todavia.';
@@ -2675,23 +2928,26 @@
     }
 
     function providerBrandSvg(providerId) {
-      if (providerId === 'gemini') {
-        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c.4 4.3 2.7 7.6 7 10-4.3 2.4-6.6 5.7-7 10-.4-4.3-2.7-7.6-7-10 4.3-2.4 6.6-5.7 7-10z"/></svg>';
-      }
-      if (providerId === 'claude') {
-        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.3 6.8h1.9l3.4 8.6h-1.7l-.8-2.1H7.1L6.3 15.4H4.7L7.3 6.8zm.3 5.1h2.3L8.75 8.9 7.6 11.9zm6.5-5.1h1.6v8.6h-1.6V6.8z"/></svg>';
-      }
-      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3.5a6.5 6.5 0 1 1-6.5 6.5A6.5 6.5 0 0 1 12 5.5zm0 2.5a4 4 0 1 0 4 4 4 4 0 0 0-4-4z"/></svg>';
+      return providerBrandIconSvg(providerId);
     }
 
-    function resolveMessageAttribution(message, fallbackChat) {
-      const providerId = normalizeProviderId(
-        (message && message.provider) || (fallbackChat && fallbackChat.provider) || APP_CONFIG.DEFAULT_PROVIDER
-      );
-      const modelId = normalizeModelId(
-        (message && message.model) || (fallbackChat && fallbackChat.model) || defaultModelForProvider(providerId),
-        providerId
-      );
+    function resolveMessageAttribution(message) {
+      if (!message) return null;
+      const alts = message.alternatives || [];
+      const idx = Math.min(Number(message.activeAlternative) || 0, alts.length);
+      let rawProvider = '';
+      let rawModel = '';
+      if (idx === 0) {
+        rawProvider = message.provider || '';
+        rawModel = message.model || '';
+      } else {
+        const alt = alts[idx - 1];
+        rawProvider = (alt && alt.provider) || '';
+        rawModel = (alt && alt.model) || '';
+      }
+      if (!rawProvider || !rawModel) return null;
+      const providerId = normalizeProviderId(rawProvider);
+      const modelId = normalizeModelId(rawModel, providerId);
       const providerOption = getProviderOption(providerId);
       const modelOption = getModelOption(modelId, providerId);
       return {
@@ -2701,10 +2957,11 @@
       };
     }
 
-    function renderMessageAttribution(message, chat) {
+    function renderMessageAttribution(message) {
       if (!message || message.role !== 'assistant' || message.pending) return '';
-      const info = resolveMessageAttribution(message, chat);
-      return '<div class="msg-attribution" title="' + escapeHtml(info.providerLabel + ' · ' + info.modelLabel) + '">' +
+      const info = resolveMessageAttribution(message);
+      if (!info) return '';
+      return '<div class="msg-attribution" data-provider="' + escapeHtml(info.providerId) + '" title="' + escapeHtml(info.providerLabel + ' · ' + info.modelLabel) + '">' +
         providerBrandSvg(info.providerId) +
         '<span>' + escapeHtml(info.modelLabel) + '</span>' +
         '</div>';
@@ -2785,15 +3042,15 @@
           : renderMarkdown(visibleContent);
         const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
         const actionsMarkup = renderMsgActions(message, idx === lastAssistantIdx);
-        const attributionMarkup = renderMessageAttribution(message, chat);
+        const attributionMarkup = renderMessageAttribution(message);
         return [
           '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
           '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
           '  <div class="message-body">',
           '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
           '    <div class="bubble">' + thinkingMarkup + body + attachmentMarkup + '</div>',
-          actionsMarkup,
           attributionMarkup,
+          actionsMarkup,
           '  </div>',
           '</article>'
         ].join('');
@@ -3569,7 +3826,12 @@
       var currentContent = getVisibleContent(msg);
       if (!msg.alternatives) msg.alternatives = [];
       if (currentContent && !msg.pending) {
-        msg.alternatives.push({ content: currentContent, createdAt: msg.createdAt });
+        msg.alternatives.push({
+          content: currentContent,
+          createdAt: msg.createdAt,
+          provider: msg.provider || '',
+          model: msg.model || ''
+        });
       }
       msg.pending = true;
       msg.content = '';
@@ -4195,10 +4457,14 @@
       elements.profilePopup.addEventListener('click', function(e) {
         e.stopPropagation();
       });
-      if (elements.providerSelect) {
-        elements.providerSelect.addEventListener('change', () => {
+      if (elements.providerSegmented) {
+        elements.providerSegmented.addEventListener('click', (event) => {
+          const btn = event.target.closest('[data-provider-id]');
+          if (!btn || btn.disabled) return;
           const chat = getActiveChat();
-          chat.provider = normalizeProviderId(elements.providerSelect.value);
+          const nextProvider = normalizeProviderId(btn.getAttribute('data-provider-id'));
+          if (nextProvider === activeProviderName(chat)) return;
+          chat.provider = nextProvider;
           chat.model = normalizeModelId(defaultModelForProvider(chat.provider), chat.provider);
           chat.thinkingLevel = defaultThinkingLevelForModel(chat.provider, chat.model);
           touchChat(chat);
@@ -4207,23 +4473,35 @@
           setComposerStatus('');
         });
       }
-      elements.modelSelect.addEventListener('change', () => {
-        const chat = getActiveChat();
-        chat.model = normalizeModelId(elements.modelSelect.value, activeProviderName(chat));
-        chat.thinkingLevel = defaultThinkingLevelForModel(activeProviderName(chat), chat.model);
-        touchChat(chat);
-        updateConfigUi();
-        renderHistory();
-        setComposerStatus('');
-      });
-      elements.thinkingSelect.addEventListener('change', () => {
-        const chat = getActiveChat();
-        chat.thinkingLevel = normalizeThinkingLevelForModel(activeProviderName(chat), chat.model, elements.thinkingSelect.value);
-        touchChat(chat);
-        updateConfigUi();
-        renderHistory();
-        setComposerStatus('');
-      });
+      if (elements.modelList) {
+        elements.modelList.addEventListener('click', (event) => {
+          const btn = event.target.closest('[data-model-id]');
+          if (!btn || btn.disabled) return;
+          const chat = getActiveChat();
+          const nextModel = normalizeModelId(btn.getAttribute('data-model-id'), activeProviderName(chat));
+          if (nextModel === chat.model) return;
+          chat.model = nextModel;
+          chat.thinkingLevel = defaultThinkingLevelForModel(activeProviderName(chat), chat.model);
+          touchChat(chat);
+          updateConfigUi();
+          renderHistory();
+          setComposerStatus('');
+        });
+      }
+      if (elements.thinkingSegmented) {
+        elements.thinkingSegmented.addEventListener('click', (event) => {
+          const btn = event.target.closest('[data-thinking-level]');
+          if (!btn || btn.disabled) return;
+          const chat = getActiveChat();
+          const nextLevel = normalizeThinkingLevelForModel(activeProviderName(chat), chat.model, btn.getAttribute('data-thinking-level'));
+          if (nextLevel === currentThinkingLevel(chat)) return;
+          chat.thinkingLevel = nextLevel;
+          touchChat(chat);
+          updateConfigUi();
+          renderHistory();
+          setComposerStatus('');
+        });
+      }
       elements.loginBtn.addEventListener('click', async () => {
         try {
           await connectActiveProvider();
