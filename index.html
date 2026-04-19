@@ -3411,11 +3411,45 @@
       }
     }
 
+    function updateGuidedQuizMetaInPlace(chat) {
+      if (!chat || !chat.guidedLearning) return;
+      const mastery = getGuidedCurrentMastery(chat);
+      const quizCards = document.querySelectorAll('.guided-inline-quiz');
+      quizCards.forEach((card) => {
+        const scoreEl = card.querySelector('.guided-inline-score');
+        if (scoreEl) {
+          scoreEl.textContent =
+            (mastery.total ? mastery.correct + '/' + mastery.total + ' · ' + mastery.accuracy + '%' : 'Sin responder')
+            + ' · objetivo ' + mastery.requiredAccuracy + '%';
+        }
+        const continueBtn = card.querySelector('[data-guided-action="continue"]');
+        if (continueBtn) {
+          if (!mastery.hasQuiz || !mastery.unlocked) {
+            continueBtn.setAttribute('disabled', '');
+          } else {
+            continueBtn.removeAttribute('disabled');
+          }
+        }
+        const footEl = card.querySelector('.guided-inline-foot');
+        const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
+        if (bestAccuracy) {
+          if (footEl) {
+            footEl.textContent = 'Mejor intento: ' + bestAccuracy + '%';
+          } else {
+            const newFoot = document.createElement('div');
+            newFoot.className = 'guided-inline-foot';
+            newFoot.textContent = 'Mejor intento: ' + bestAccuracy + '%';
+            card.appendChild(newFoot);
+          }
+        }
+      });
+    }
+
     function answerGuidedQuizQuestion(questionId, optionId) {
       const chat = getActiveChat();
       if (!chat || !chat.guidedLearning) {
         console.warn('[guided] answer ignored: no guided chat active');
-        return;
+        return false;
       }
       const session = ensureGuidedSession(chat);
       const sectionKey = currentGuidedSectionKey(chat)
@@ -3424,17 +3458,17 @@
       const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
       if (!record) {
         console.warn('[guided] answer ignored: could not ensure section record for', sectionKey);
-        return;
+        return false;
       }
       const item = session.quiz.items.find((quizItem) => quizItem.id === questionId);
       if (!item) {
         console.warn('[guided] answer ignored: item not found', { questionId, available: session.quiz.items.map((i) => i.id) });
-        return;
+        return false;
       }
       const selected = item.options.find((option) => option.id === optionId);
       if (!selected) {
         console.warn('[guided] answer ignored: option not found', { optionId, available: item.options.map((o) => o.id) });
-        return;
+        return false;
       }
       const correctOptionId = item.correctOptionId || (item.options.find((o) => o.correct) || {}).id || '';
       const isCorrect = !!(selected.correct || (correctOptionId && selected.id === correctOptionId));
@@ -3445,7 +3479,9 @@
       };
       syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
       saveState({ skipDrive: true });
-      rerenderGuidedQuizMessage(chat);
+      updateGuidedQuizMetaInPlace(chat);
+      syncGuidedBannerSlot(chat);
+      return true;
     }
 
     function guidedWeakAreasText(chatLike) {
@@ -6578,11 +6614,17 @@
         btn.dataset.boundClick = '1';
         btn.addEventListener('click', function(event) {
           event.preventDefault();
-          if (btn.disabled) return;
+          event.stopPropagation();
+          if (btn.disabled) {
+            console.warn('[guided] click on disabled option ignored');
+            return;
+          }
           const questionId = btn.dataset.guidedAnswer || '';
           const optionId = btn.dataset.guidedOption || '';
+          console.log('[guided] option click', { questionId, optionId });
           applyGuidedAnswerVisual(btn, questionId, optionId);
-          answerGuidedQuizQuestion(questionId, optionId);
+          const recorded = answerGuidedQuizQuestion(questionId, optionId);
+          console.log('[guided] answer recorded?', recorded);
         });
       });
       scope.querySelectorAll('[data-guided-action]').forEach(function(btn) {
