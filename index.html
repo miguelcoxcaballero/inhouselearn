@@ -112,6 +112,7 @@
       --brand-codex: #10a37f;
       --brand-gemini: #4285f4;
       --brand-claude: #c96442;
+      --brand-gemma: #7c3aed;
     }
     .model-trigger {
       width: 100%;
@@ -150,6 +151,7 @@
     .model-trigger-brand[data-provider="codex"] { --brand-color: var(--brand-codex); }
     .model-trigger-brand[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
     .model-trigger-brand[data-provider="claude"] { --brand-color: var(--brand-claude); }
+    .model-trigger-brand[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
     .model-trigger-copy {
       flex: 1;
       min-width: 0;
@@ -297,6 +299,7 @@
     .provider-chip[data-provider="codex"] { --brand-color: var(--brand-codex); }
     .provider-chip[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
     .provider-chip[data-provider="claude"] { --brand-color: var(--brand-claude); }
+    .provider-chip[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
 
     .model-list {
       display: flex;
@@ -340,6 +343,7 @@
     .model-card[data-provider="codex"] { --brand-color: var(--brand-codex); }
     .model-card[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
     .model-card[data-provider="claude"] { --brand-color: var(--brand-claude); }
+    .model-card[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
     .model-card-main {
       flex: 1; min-width: 0;
       display: flex; flex-direction: column; gap: 1px;
@@ -2072,6 +2076,7 @@
     .msg-attribution[data-provider="codex"] { --brand-color: var(--brand-codex); }
     .msg-attribution[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
     .msg-attribution[data-provider="claude"] { --brand-color: var(--brand-claude); }
+    .msg-attribution[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
     .msg-attribution-sep { opacity: 0.5; }
     @media (max-width: 768px) {
       .msg-attribution { opacity: 0.6; }
@@ -2843,7 +2848,8 @@
     const PROVIDER_OPTIONS = [
       { id: 'codex', label: 'Codex' },
       { id: 'gemini', label: 'Gemini' },
-      { id: 'claude', label: 'Claude' }
+      { id: 'claude', label: 'Claude' },
+      { id: 'gemma', label: 'Gemma (local)' }
     ];
 
     const MODEL_OPTIONS = [
@@ -2963,6 +2969,42 @@
         preview: false,
         thinkingLevels: [],
         defaultThinkingLevel: ''
+      },
+      {
+        provider: 'gemma',
+        id: 'gemma-4-e2b',
+        label: 'Gemma 4 E2B',
+        badge: 'E2B · WebGPU',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        provider: 'gemma',
+        id: 'gemma-4-e4b',
+        label: 'Gemma 4 E4B',
+        badge: 'E4B · WebGPU',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        provider: 'gemma',
+        id: 'gemma-4-26b-a4b',
+        label: 'Gemma 4 26B A4B',
+        badge: '26B A4B · Ollama',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
+      },
+      {
+        provider: 'gemma',
+        id: 'gemma-4-31b',
+        label: 'Gemma 4 31B',
+        badge: '31B · Ollama',
+        preview: false,
+        thinkingLevels: [],
+        defaultThinkingLevel: ''
       }
     ];
 
@@ -3007,8 +3049,6 @@
     };
     const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
     const CODE_ASSIST_VERSION = 'v1internal';
-    const GENLANG_ENDPOINT = 'https://generativelanguage.googleapis.com';
-    const GENLANG_VERSION = 'v1beta';
     const CODE_ASSIST_CREDIT_TYPE = 'G1_CREDIT_TYPE';
     const CODE_ASSIST_CREDIT_TYPES = ['G1_CREDIT_TYPE', 'GOOGLE_ONE_AI', 'GOOGLE_AI_PRO'];
     const CODE_ASSIST_CREDIT_ELIGIBLE_MODELS = [
@@ -3031,7 +3071,6 @@
       accessTokenExpiresAt: 0,
       profile: null,
       codeAssistProjectId: '',
-      geminiUseGenLang: false,
       activeController: null,
       driveFolderId: '',
       driveSnapshotFileId: '',
@@ -5535,6 +5574,9 @@
       if (providerId === 'claude') {
         return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.3 6.8h1.9l3.4 8.6h-1.7l-.8-2.1H7.1L6.3 15.4H4.7L7.3 6.8zm.3 5.1h2.3L8.75 8.9 7.6 11.9zm6.5-5.1h1.6v8.6h-1.6V6.8z"/></svg>';
       }
+      if (providerId === 'gemma') {
+        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3z"/></svg>';
+      }
       return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3.5a6.5 6.5 0 1 1-6.5 6.5A6.5 6.5 0 0 1 12 5.5zm0 2.5a4 4 0 1 0 4 4 4 4 0 0 0-4-4z"/></svg>';
     }
 
@@ -5636,7 +5678,18 @@
       }
       if (elements.modelMenuStatus) {
         let statusCopy = 'El daemon local no responde todavia.';
-        if (__daemonStatus && __daemonStatus.ok) {
+        if (providerId === 'gemma') {
+          const modelCfg = GEMMA_MODEL_CONFIG[modelOption.id];
+          if (modelCfg && modelCfg.kind === 'webgpu') {
+            statusCopy = navigator.gpu
+              ? 'Gemma corre 100% local en tu navegador (WebGPU). La primera vez descarga los pesos y queda cacheado.'
+              : 'Tu navegador no soporta WebGPU — necesitas Chrome/Edge 113+, Safari 26+ o Firefox 141+.';
+          } else if (modelCfg && modelCfg.kind === 'ollama') {
+            statusCopy = modelOption.label + ' corre local vía Ollama. Si no está instalado, el agente lo arrancará automáticamente.';
+          } else {
+            statusCopy = 'Modelos Gemma locales (WebGPU / Ollama).';
+          }
+        } else if (__daemonStatus && __daemonStatus.ok) {
           if (providerStatus && providerStatus.installed && providerStatus.connected) {
             statusCopy = providerOption.label + ' esta listo en tu ordenador.';
           } else if (providerStatus && providerStatus.installed) {
@@ -7393,12 +7446,6 @@
       return buildCodeAssistBaseUrl() + ':retrieveUserQuota';
     }
 
-    function buildGenLangEndpoint(model, stream) {
-      var modelId = String(model || '').trim();
-      var method = stream ? 'streamGenerateContent?alt=sse' : 'generateContent';
-      return GENLANG_ENDPOINT + '/' + GENLANG_VERSION + '/models/' + encodeURIComponent(modelId) + ':' + method;
-    }
-
     function isCloudCodePrivateApiDisabledError(message) {
       var m = String(message || '').toLowerCase();
       return m.indexOf('cloud code private api') !== -1
@@ -7454,24 +7501,6 @@
 
     function unwrapGenerateContentPayload(data) {
       return data && data.response ? data.response : data;
-    }
-
-    function buildVertexEndpoint() {
-      const location = APP_CONFIG.VERTEX_LOCATION || 'global';
-      const root = location === 'global'
-        ? 'https://aiplatform.googleapis.com/v1'
-        : 'https://' + location + '-aiplatform.googleapis.com/v1';
-      return root +
-        '/projects/' + encodeURIComponent(APP_CONFIG.VERTEX_PROJECT_ID) +
-        '/locations/' + encodeURIComponent(location) +
-        '/publishers/google/models/' + encodeURIComponent(APP_CONFIG.VERTEX_MODEL) +
-        ':generateContent';
-    }
-
-    function buildApiKeyEndpoint() {
-      return 'https://generativelanguage.googleapis.com/v1beta/models/' +
-        encodeURIComponent(APP_CONFIG.GEMINI_API_MODEL) +
-        ':generateContent';
     }
 
     function extractTextFromResponse(data) {
@@ -7686,7 +7715,8 @@
       var msg = chat.messages[idx];
       if (msg.role !== 'assistant') return;
 
-      if (!__daemonStatus || !__daemonStatus.ok) {
+      var _providerId = activeProviderName(chat);
+      if (_providerId !== 'gemma' && (!__daemonStatus || !__daemonStatus.ok)) {
         try {
           await refreshDaemonStatus(1200);
         } catch (e) {}
@@ -8469,7 +8499,7 @@
             usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(firstReset.resetTime)) + '</span></div>');
           }
         } else if (!usageRows.length) {
-          usageRows.push('<div style="font-size:0.7rem;color:var(--muted);line-height:1.45">No hay cuota restante confirmada todavia. Gemini API publica limites por modelo, pero no devuelve "remaining" por respuesta; aqui solo se muestra lo que Google Code Assist expone de forma real.</div>');
+          usageRows.push('<div style="font-size:0.7rem;color:var(--muted);line-height:1.45">No hay cuota restante confirmada todavia. Aqui solo se muestra la cuota real que Google Code Assist expone para esta cuenta.</div>');
         }
         if (usageRows.length) {
           usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">USO GEMINI</div>' + usageRows.join('') + '</div>';
@@ -8856,7 +8886,9 @@
       const providerId = activeProviderName();
       const providerStatus = daemonProviderStatus(providerId);
       let label = 'Agente local offline';
-      if (__daemonStatus && __daemonStatus.ok) {
+      if (providerId === 'gemma') {
+        label = navigator.gpu ? 'Local · Gemma (WebGPU / Ollama)' : 'Gemma · WebGPU no disponible';
+      } else if (__daemonStatus && __daemonStatus.ok) {
         if (providerStatus && providerStatus.installed && providerStatus.connected) {
           label = 'Local · ' + activeProviderLabel() + ' listo';
         } else if (providerStatus && providerStatus.installed) {
@@ -9051,7 +9083,355 @@
       };
     }
 
+    // ================================================================
+    // Gemma 4 local runtime
+    //   E2B / E4B  → transformers.js + WebGPU (in-browser worker)
+    //   26B / 31B  → Ollama (localhost:11434). Si Ollama no está vivo
+    //                pedimos al daemon que lo instale/arranque.
+    // ================================================================
+    const GEMMA_MODEL_CONFIG = {
+      'gemma-4-e2b':     { kind: 'webgpu', hfId: 'onnx-community/gemma-4-E2B-it-ONNX', label: 'Gemma 4 E2B' },
+      'gemma-4-e4b':     { kind: 'webgpu', hfId: 'onnx-community/gemma-4-E4B-it-ONNX', label: 'Gemma 4 E4B' },
+      'gemma-4-26b-a4b': { kind: 'ollama', ollamaTag: 'gemma4:26b-a4b-it',              label: 'Gemma 4 26B A4B' },
+      'gemma-4-31b':     { kind: 'ollama', ollamaTag: 'gemma4:31b-it',                  label: 'Gemma 4 31B' }
+    };
+    const OLLAMA_URL = 'http://localhost:11434';
+
+    const gemmaState = {
+      worker: null,
+      loadedModelId: null,
+      loadingPromise: null,
+      listeners: new Map(),
+      nextRequestId: 1
+    };
+
+    function gemmaCreateWorker() {
+      if (gemmaState.worker) return gemmaState.worker;
+      const workerCode = [
+        'import { AutoTokenizer, AutoModelForCausalLM, TextStreamer, InterruptableStoppingCriteria }',
+        '  from "https://cdn.jsdelivr.net/npm/@huggingface/transformers";',
+        'let tokenizer = null, model = null, loadedId = null;',
+        'const stopping = new InterruptableStoppingCriteria();',
+        'async function load(id, requestId) {',
+        '  if (model && loadedId === id) { self.postMessage({ requestId, type: "ready" }); return; }',
+        '  tokenizer = null; model = null; loadedId = id;',
+        '  self.postMessage({ requestId, type: "stage", stage: "tokenizer" });',
+        '  tokenizer = await AutoTokenizer.from_pretrained(id, {',
+        '    progress_callback: (p) => self.postMessage({ requestId, type: "progress", info: p })',
+        '  });',
+        '  self.postMessage({ requestId, type: "stage", stage: "model" });',
+        '  model = await AutoModelForCausalLM.from_pretrained(id, {',
+        '    dtype: "q4f16", device: "webgpu",',
+        '    progress_callback: (p) => self.postMessage({ requestId, type: "progress", info: p })',
+        '  });',
+        '  self.postMessage({ requestId, type: "stage", stage: "warmup" });',
+        '  try { const warm = tokenizer("ok", { return_tensors: "pt" }); await model.generate({ ...warm, max_new_tokens: 1 }); } catch(_) {}',
+        '  self.postMessage({ requestId, type: "ready" });',
+        '}',
+        'async function generate(payload, requestId) {',
+        '  if (!model || !tokenizer) { self.postMessage({ requestId, type: "error", message: "Modelo no cargado" }); return; }',
+        '  stopping.reset();',
+        '  let inputs;',
+        '  try {',
+        '    inputs = tokenizer.apply_chat_template(payload.messages, { add_generation_prompt: true, return_dict: true });',
+        '  } catch (_) {',
+        '    const prompt = tokenizer.apply_chat_template(payload.messages, { add_generation_prompt: true, tokenize: false });',
+        '    inputs = tokenizer(prompt);',
+        '  }',
+        '  let startTime = null, numTokens = 0, tps = 0;',
+        '  const streamer = new TextStreamer(tokenizer, {',
+        '    skip_prompt: true, skip_special_tokens: true,',
+        '    callback_function: (text) => self.postMessage({ requestId, type: "stream", text, tps, numTokens }),',
+        '    token_callback_function: () => { startTime ??= performance.now(); if (numTokens++ > 0) { tps = (numTokens / (performance.now() - startTime)) * 1000; } }',
+        '  });',
+        '  try {',
+        '    const args = { ...inputs, max_new_tokens: payload.maxTokens || 1024, streamer, stopping_criteria: stopping, do_sample: (payload.temperature || 0) > 0 };',
+        '    if ((payload.temperature || 0) > 0) { args.temperature = payload.temperature; args.top_k = payload.topK || 64; args.top_p = 0.95; }',
+        '    await model.generate(args);',
+        '    self.postMessage({ requestId, type: "complete", tps, numTokens });',
+        '  } catch (e) { self.postMessage({ requestId, type: "error", message: String(e.message || e) }); }',
+        '}',
+        'self.addEventListener("message", async (e) => {',
+        '  const { type, data, requestId } = e.data || {};',
+        '  try {',
+        '    if (type === "load") await load(data.modelId, requestId);',
+        '    else if (type === "generate") await generate(data, requestId);',
+        '    else if (type === "interrupt") stopping.interrupt();',
+        '  } catch (err) { self.postMessage({ requestId, type: "error", message: String(err.message || err) }); }',
+        '});'
+      ].join('\n');
+      const blob = new Blob([workerCode], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      const worker = new Worker(url, { type: 'module' });
+      worker.addEventListener('message', (e) => {
+        const d = e.data || {};
+        const listener = gemmaState.listeners.get(d.requestId);
+        if (listener) listener(d);
+      });
+      worker.addEventListener('error', (e) => {
+        for (const [id, listener] of gemmaState.listeners) {
+          listener({ requestId: id, type: 'error', message: e.message || 'worker error' });
+        }
+      });
+      gemmaState.worker = worker;
+      return worker;
+    }
+
+    function gemmaWorkerRequest(worker, payload, onMessage) {
+      return new Promise((resolve, reject) => {
+        const requestId = gemmaState.nextRequestId++;
+        gemmaState.listeners.set(requestId, (msg) => {
+          try { onMessage(msg, resolve, reject); }
+          catch (e) { gemmaState.listeners.delete(requestId); reject(e); }
+        });
+        worker.postMessage({ ...payload, requestId });
+      });
+    }
+
+    async function gemmaCheckWebGPU() {
+      if (!navigator.gpu) {
+        throw new Error('Tu navegador no soporta WebGPU. Usa Chrome/Edge 113+, Safari 26+ o Firefox 141+.');
+      }
+      const adapter = await navigator.gpu.requestAdapter().catch(() => null);
+      if (!adapter) {
+        throw new Error('WebGPU está presente pero no hay adapter GPU disponible. Revisa chrome://gpu');
+      }
+      return adapter;
+    }
+
+    async function gemmaLoadModelIfNeeded(modelId, onStage) {
+      if (gemmaState.loadedModelId === modelId && gemmaState.worker) return;
+      if (gemmaState.loadingPromise) { try { await gemmaState.loadingPromise; } catch (_) {} }
+      if (gemmaState.loadedModelId === modelId && gemmaState.worker) return;
+      await gemmaCheckWebGPU();
+      const worker = gemmaCreateWorker();
+      gemmaState.loadingPromise = gemmaWorkerRequest(worker, { type: 'load', data: { modelId } }, (msg, resolve, reject) => {
+        if (msg.type === 'stage' || msg.type === 'progress') {
+          if (typeof onStage === 'function') onStage(msg);
+        } else if (msg.type === 'ready') {
+          gemmaState.loadedModelId = modelId;
+          gemmaState.listeners.delete(msg.requestId);
+          resolve();
+        } else if (msg.type === 'error') {
+          gemmaState.listeners.delete(msg.requestId);
+          reject(new Error(msg.message));
+        }
+      });
+      try { await gemmaState.loadingPromise; }
+      finally { gemmaState.loadingPromise = null; }
+    }
+
+    function gemmaBuildMessages(chat) {
+      const out = [];
+      const sys = getActiveSystemPrompt(chat);
+      if (sys) out.push({ role: 'system', content: sys });
+      for (const m of (chat.messages || [])) {
+        if (m.pending) continue;
+        const content = buildDaemonMessageContent(m);
+        if (!content) continue;
+        out.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content });
+      }
+      return out;
+    }
+
+    async function gemmaGenerateWebGPU(chat, modelCfg, signal, onProgress) {
+      await gemmaLoadModelIfNeeded(modelCfg.hfId, (msg) => {
+        if (typeof onProgress !== 'function') return;
+        if (msg.type === 'stage') {
+          const stages = { tokenizer: 'Cargando tokenizer…', model: 'Descargando / compilando modelo…', warmup: 'Compilando shaders WebGPU…' };
+          const text = (stages[msg.stage] || 'Cargando…');
+          onProgress({ text: '', thinking: text, parts: [{ text: '' }], done: false });
+        } else if (msg.type === 'progress' && msg.info && typeof msg.info.progress === 'number') {
+          const pct = Math.round(msg.info.progress || 0);
+          const file = msg.info.file ? (msg.info.file.length > 40 ? '…' + msg.info.file.slice(-38) : msg.info.file) : '';
+          onProgress({ text: '', thinking: 'Descargando ' + file + ' ' + pct + '%', parts: [{ text: '' }], done: false });
+        }
+      });
+
+      const worker = gemmaCreateWorker();
+      let accumulated = '';
+      const onAbort = () => { try { worker.postMessage({ type: 'interrupt' }); } catch (_) {} };
+      if (signal) {
+        if (signal.aborted) throw new DOMException('aborted', 'AbortError');
+        signal.addEventListener('abort', onAbort, { once: true });
+      }
+
+      try {
+        return await gemmaWorkerRequest(worker, {
+          type: 'generate',
+          data: { messages: gemmaBuildMessages(chat), maxTokens: 1024, temperature: 1.0, topK: 64 }
+        }, (msg, resolve, reject) => {
+          if (msg.type === 'stream') {
+            accumulated += (msg.text || '');
+            if (typeof onProgress === 'function') {
+              onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: false });
+            }
+          } else if (msg.type === 'complete') {
+            gemmaState.listeners.delete(msg.requestId);
+            if (typeof onProgress === 'function') {
+              onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: true });
+            }
+            resolve({ text: accumulated, thinking: '', parts: [{ text: accumulated }] });
+          } else if (msg.type === 'error') {
+            gemmaState.listeners.delete(msg.requestId);
+            reject(new Error(msg.message));
+          }
+        });
+      } finally {
+        if (signal) signal.removeEventListener('abort', onAbort);
+      }
+    }
+
+    async function ollamaIsReachable() {
+      try {
+        const r = await fetch(OLLAMA_URL + '/api/version', { method: 'GET' });
+        return r.ok;
+      } catch (_) { return false; }
+    }
+
+    async function ollamaEnsureDaemon(onProgress) {
+      if (await ollamaIsReachable()) return true;
+      if (typeof onProgress === 'function') {
+        onProgress({ text: '', thinking: 'Pidiendo al agente local que instale/arranque Ollama…', parts: [{ text: '' }], done: false });
+      }
+      try {
+        const res = await fetch(DAEMON_CONFIG.URL + '/v1/ollama/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ensure: true })
+        });
+        if (res.ok) {
+          const deadline = Date.now() + 120000;
+          while (Date.now() < deadline) {
+            if (await ollamaIsReachable()) return true;
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
+      } catch (_) { /* daemon no soporta el endpoint todavía */ }
+      return await ollamaIsReachable();
+    }
+
+    async function ollamaHasModel(tag) {
+      try {
+        const r = await fetch(OLLAMA_URL + '/api/show', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: tag })
+        });
+        return r.ok;
+      } catch (_) { return false; }
+    }
+
+    async function ollamaPullModel(tag, onProgress) {
+      const res = await fetch(OLLAMA_URL + '/api/pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: tag, stream: true })
+      });
+      if (!res.ok) throw new Error('No se pudo descargar ' + tag + ' en Ollama (' + res.status + ')');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (typeof onProgress === 'function' && data.status) {
+              const pct = data.total ? ((data.completed || 0) / data.total * 100).toFixed(1) : null;
+              onProgress({ text: '', thinking: 'Ollama · ' + tag + ' · ' + data.status + (pct ? ' (' + pct + '%)' : ''), parts: [{ text: '' }], done: false });
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    async function gemmaGenerateOllama(chat, modelCfg, signal, onProgress) {
+      const reachable = await ollamaEnsureDaemon(onProgress);
+      if (!reachable) {
+        throw new Error(
+          'Ollama no está instalado ni disponible en localhost:11434. ' +
+          'Descárgalo gratis en https://ollama.com/download y vuelve a intentarlo. ' +
+          'El modelo "' + modelCfg.label + '" (tag: ' + modelCfg.ollamaTag + ') corre local vía Ollama — no cabe en WebGPU.'
+        );
+      }
+      if (!(await ollamaHasModel(modelCfg.ollamaTag))) {
+        await ollamaPullModel(modelCfg.ollamaTag, onProgress);
+      }
+
+      const body = {
+        model: modelCfg.ollamaTag,
+        messages: gemmaBuildMessages(chat),
+        stream: true
+      };
+      const res = await fetch(OLLAMA_URL + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal
+      });
+      if (!res.ok) throw new Error('Ollama /api/chat ha devuelto ' + res.status);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let accumulated = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            const chunk = data.message && data.message.content ? data.message.content : '';
+            if (chunk) {
+              accumulated += chunk;
+              if (typeof onProgress === 'function') {
+                onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: false });
+              }
+            }
+            if (data.done) {
+              if (typeof onProgress === 'function') {
+                onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: true });
+              }
+              return { text: accumulated, thinking: '', parts: [{ text: accumulated }] };
+            }
+          } catch (_) {}
+        }
+      }
+      if (typeof onProgress === 'function') {
+        onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: true });
+      }
+      return { text: accumulated, thinking: '', parts: [{ text: accumulated }] };
+    }
+
+    async function callGemmaLocal(chat, signal, onProgress) {
+      const modelId = activeModelName(chat);
+      const cfg = GEMMA_MODEL_CONFIG[modelId];
+      if (!cfg) throw new Error('Modelo Gemma desconocido: ' + modelId);
+      if (cfg.kind === 'webgpu') return await gemmaGenerateWebGPU(chat, cfg, signal, onProgress);
+      if (cfg.kind === 'ollama') return await gemmaGenerateOllama(chat, cfg, signal, onProgress);
+      throw new Error('Backend Gemma no soportado: ' + cfg.kind);
+    }
+
     async function callModel(chat, signal, onProgress) {
+      if (activeProviderName(chat) === 'gemma') {
+        const streamResult = await callGemmaLocal(chat, signal, onProgress);
+        return {
+          text: streamResult.text || '',
+          thinking: streamResult.thinking || '',
+          parts: Array.isArray(streamResult.parts) && streamResult.parts.length
+            ? streamResult.parts
+            : [{ text: streamResult.text || '' }]
+        };
+      }
       if (activeProviderName(chat) === 'gemini' && appState.accessToken) {
         const streamResult = await callGeminiStream(chat, signal, onProgress);
         return {
@@ -9408,9 +9788,6 @@
       if (!appState.accessToken) {
         return;
       }
-      if (appState.geminiUseGenLang) {
-        return;
-      }
       var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
       if (!result.response.ok) {
         var loadErr = extractBackendErrorMessage(result.data, result.response.status) || ('HTTP ' + result.response.status);
@@ -9481,9 +9858,6 @@
       if (!appState.accessToken) {
         return;
       }
-      if (appState.geminiUseGenLang) {
-        return;
-      }
       var project = codeAssistProject();
       if (!project) {
         return;
@@ -9508,8 +9882,35 @@
       await refreshCodeAssistQuota(allowRetry);
     }
 
-    async function callGenLangOnce(chat, signal) {
+    function buildGeminiCodeAssistUnavailableMessage(error) {
+      const detail = error && error.message ? String(error.message) : String(error || '');
+      if (isCloudCodePrivateApiDisabledError(detail)) {
+        return 'Tu cuenta de Google no tiene Google Code Assist disponible, asi que Gemini no se puede usar desde esta app.';
+      }
+      return 'No se pudo activar Gemini con Google Code Assist: ' + detail;
+    }
+
+    async function ensureGeminiCodeAssistReady(allowRetry) {
       ensureOauthConfig();
+      if (!appState.accessToken) {
+        throw new Error('Inicia sesion con Google para usar Gemini.');
+      }
+      if (codeAssistProject()) {
+        return codeAssistProject();
+      }
+      try {
+        await refreshCodeAssistCredits(allowRetry);
+      } catch (error) {
+        throw new Error(buildGeminiCodeAssistUnavailableMessage(error));
+      }
+      if (!codeAssistProject()) {
+        throw new Error('Google Code Assist no devolvio un proyecto valido para esta cuenta.');
+      }
+      return codeAssistProject();
+    }
+
+    async function callGenLangOnce_DISABLED(chat, signal) {
+      throw new Error('Gemini Developer API desactivada.');
       if (!appState.accessToken) {
         throw new Error('Inicia sesion con Google para usar Gemini.');
       }
@@ -9540,8 +9941,8 @@
       };
     }
 
-    async function callGenLangStreamOnce(chat, signal, onProgress) {
-      ensureOauthConfig();
+    async function callGenLangStreamOnce_DISABLED(chat, signal, onProgress) {
+      throw new Error('Gemini Developer API desactivada.');
       if (!appState.accessToken) {
         throw new Error('Inicia sesion con Google para usar Gemini.');
       }
@@ -9571,24 +9972,7 @@
     }
 
     async function callGemini(chat, signal, allowRetry, retryCount) {
-      if (appState.geminiUseGenLang) {
-        return await callGenLangOnce(chat, signal);
-      }
-      if (!codeAssistProject()) {
-        try {
-          await refreshCodeAssistCredits(false);
-        } catch (error) {
-          if (isCloudCodePrivateApiDisabledError(error && error.message)) {
-            appState.geminiUseGenLang = true;
-            return await callGenLangOnce(chat, signal);
-          }
-          throw new Error('No se pudo activar Gemini para esta cuenta: ' + (error && error.message ? error.message : error));
-        }
-      }
-      if (!codeAssistProject()) {
-        appState.geminiUseGenLang = true;
-        return await callGenLangOnce(chat, signal);
-      }
+      await ensureGeminiCodeAssistReady(allowRetry);
       const requestBody = buildCodeAssistGenerateBody(chat);
       const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
       const response = result.response;
@@ -9605,8 +9989,7 @@
 
         const message = extractBackendErrorMessage(data, response.status);
         if (isCloudCodePrivateApiDisabledError(message)) {
-          appState.geminiUseGenLang = true;
-          return await callGenLangOnce(chat, signal);
+          throw new Error(buildGeminiCodeAssistUnavailableMessage(message));
         }
         throw new Error(message);
       }
@@ -9621,29 +10004,7 @@
     }
 
     async function callGeminiStream(chat, signal, onProgress) {
-      if (appState.geminiUseGenLang) {
-        return await callGenLangStreamOnce(chat, signal, onProgress);
-      }
-      if (!codeAssistProject()) {
-        try {
-          await refreshCodeAssistCredits(false);
-        } catch (error) {
-          if (isCloudCodePrivateApiDisabledError(error && error.message)) {
-            appState.geminiUseGenLang = true;
-            return await callGenLangStreamOnce(chat, signal, onProgress);
-          }
-          throw new Error('No se pudo activar Gemini para esta cuenta: ' + (error && error.message ? error.message : error));
-        }
-      }
-      if (!codeAssistProject()) {
-        appState.geminiUseGenLang = true;
-        return await callGenLangStreamOnce(chat, signal, onProgress);
-      }
-      ensureOauthConfig();
-      if (!appState.accessToken) {
-        throw new Error('Inicia sesion con Google para usar Gemini.');
-      }
-
+      await ensureGeminiCodeAssistReady(false);
       const requestBody = buildCodeAssistGenerateBody(chat);
       const response = await fetch(buildCodeAssistStreamEndpoint(), {
         method: 'POST',
@@ -9667,8 +10028,7 @@
         }
         var streamErrorMsg = extractBackendErrorMessage(errorPayload, response.status);
         if (isCloudCodePrivateApiDisabledError(streamErrorMsg)) {
-          appState.geminiUseGenLang = true;
-          return await callGenLangStreamOnce(chat, signal, onProgress);
+          throw new Error(buildGeminiCodeAssistUnavailableMessage(streamErrorMsg));
         }
         throw new Error(streamErrorMsg);
       }
@@ -9852,19 +10212,22 @@
         }
       }
 
-      if (!__daemonStatus || !__daemonStatus.ok) {
-        const status = await refreshDaemonStatus(1200);
-        if (!status) {
-          setComposerStatus('El daemon local no responde.');
+      const _sendProviderId = activeProviderName();
+      if (_sendProviderId !== 'gemma') {
+        if (!__daemonStatus || !__daemonStatus.ok) {
+          const status = await refreshDaemonStatus(1200);
+          if (!status) {
+            setComposerStatus('El daemon local no responde.');
+            _sendLock = false;
+            return;
+          }
+        }
+        const selectedProviderStatus = daemonProviderStatus(_sendProviderId);
+        if (!selectedProviderStatus || !selectedProviderStatus.installed) {
+          setComposerStatus('Instala o conecta ' + activeProviderLabel() + ' antes de enviar.');
           _sendLock = false;
           return;
         }
-      }
-      const selectedProviderStatus = daemonProviderStatus(activeProviderName());
-      if (!selectedProviderStatus || !selectedProviderStatus.installed) {
-        setComposerStatus('Instala o conecta ' + activeProviderLabel() + ' antes de enviar.');
-        _sendLock = false;
-        return;
       }
 
       const chat = getActiveChat();
