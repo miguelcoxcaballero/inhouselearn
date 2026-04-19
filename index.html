@@ -9029,6 +9029,10 @@
         appState.connectPollingTimer = 0;
       }
       const providerId = activeProviderName();
+      if (providerId === 'gemma') {
+        await connectGemmaLocal();
+        return;
+      }
       await daemonFetchJson('/v1/connect', {
         provider: providerId
       });
@@ -9354,10 +9358,10 @@
     async function gemmaGenerateOllama(chat, modelCfg, signal, onProgress) {
       const reachable = await ollamaEnsureDaemon(onProgress);
       if (!reachable) {
+        try { openOllamaInstallModal(modelCfg.label, modelCfg.ollamaTag); } catch (_) {}
         throw new Error(
-          'Ollama no está instalado ni disponible en localhost:11434. ' +
-          'Descárgalo gratis en https://ollama.com/download y vuelve a intentarlo. ' +
-          'El modelo "' + modelCfg.label + '" (tag: ' + modelCfg.ollamaTag + ') corre local vía Ollama — no cabe en WebGPU.'
+          'Ollama no está instalado. Abre el asistente pulsando "Conectar Gemma (local)" — ' +
+          'descarga e instala Ollama y volveremos a intentar automáticamente.'
         );
       }
       if (!(await ollamaHasModel(modelCfg.ollamaTag))) {
@@ -9419,6 +9423,106 @@
       if (cfg.kind === 'webgpu') return await gemmaGenerateWebGPU(chat, cfg, signal, onProgress);
       if (cfg.kind === 'ollama') return await gemmaGenerateOllama(chat, cfg, signal, onProgress);
       throw new Error('Backend Gemma no soportado: ' + cfg.kind);
+    }
+
+    // ------- Connect button for Gemma (no daemon roundtrip) -------
+    function openOllamaInstallModal(modelLabel, ollamaTag) {
+      const existing = document.getElementById('ollama-install-modal');
+      if (existing) existing.remove();
+      const overlay = document.createElement('div');
+      overlay.id = 'ollama-install-modal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(4px);';
+      overlay.innerHTML = '<div style="background:var(--surface);border-radius:16px;padding:24px;max-width:520px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
+        '<h2 style="margin:0 0 10px;font-size:1.1rem;font-weight:700">Instalar Ollama para ejecutar ' + escapeHtml(modelLabel) + '</h2>' +
+        '<p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.5;margin:0 0 14px">Los modelos grandes (' + escapeHtml(ollamaTag) + ') necesitan <strong>Ollama</strong>: un runtime local que gestiona los pesos y la inferencia nativa. El agente local intentó instalarlo automáticamente, pero no lo consiguió.</p>' +
+        '<ol style="color:var(--text-secondary);font-size:0.82rem;line-height:1.65;padding-left:20px;margin:0 0 16px">' +
+          '<li>Pulsa <strong>Descargar Ollama</strong>. Se descargará <code>OllamaSetup.exe</code>.</li>' +
+          '<li>Ejecuta el instalador y acepta los valores por defecto.</li>' +
+          '<li>Vuelve aquí y pulsa <strong>He terminado</strong>. Descargaremos el modelo automáticamente (≈8–12 GB, una sola vez).</li>' +
+        '</ol>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
+          '<button type="button" class="btn btn-outline btn-sm" id="ollama-cancel">Cancelar</button>' +
+          '<a class="btn btn-outline btn-sm" id="ollama-download" href="https://ollama.com/download/OllamaSetup.exe" download rel="noopener" style="text-decoration:none">Descargar Ollama</a>' +
+          '<button type="button" class="btn btn-sm" id="ollama-retry" style="background:var(--orange);color:white">He terminado · Reintentar</button>' +
+        '</div>' +
+      '</div>';
+      document.body.appendChild(overlay);
+      const close = () => overlay.remove();
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+      document.getElementById('ollama-cancel').addEventListener('click', close);
+      document.getElementById('ollama-retry').addEventListener('click', async () => {
+        const btn = document.getElementById('ollama-retry');
+        btn.disabled = true; btn.textContent = 'Comprobando…';
+        const ok = await ollamaEnsureDaemon();
+        if (ok) {
+          btn.textContent = '¡Listo!';
+          setTimeout(close, 400);
+          setComposerStatus('Ollama detectado. Ya puedes enviar mensajes a ' + modelLabel + '.');
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Reintentar';
+          showToast('Ollama', 'Aún no detectamos Ollama en localhost:11434. ¿Se ha instalado y arrancado?');
+        }
+      });
+    }
+
+    async function connectGemmaLocal() {
+      const chat = getActiveChat();
+      const modelId = activeModelName(chat);
+      const cfg = GEMMA_MODEL_CONFIG[modelId];
+      if (!cfg) { setComposerStatus('Modelo Gemma desconocido.'); return; }
+
+      if (cfg.kind === 'webgpu') {
+        if (!navigator.gpu) {
+          showToast('WebGPU', 'Tu navegador no soporta WebGPU. Usa Chrome/Edge 113+, Safari 26+ o Firefox 141+.');
+          return;
+        }
+        setComposerStatus('Preparando ' + cfg.label + ' en WebGPU… (primera vez: descarga ~500 MB–1.5 GB, después queda cacheado)');
+        try {
+          await gemmaLoadModelIfNeeded(cfg.hfId, (msg) => {
+            if (msg.type === 'stage') {
+              const stages = { tokenizer: 'Cargando tokenizer…', model: 'Descargando / compilando modelo…', warmup: 'Compilando shaders WebGPU…' };
+              setComposerStatus(stages[msg.stage] || 'Cargando…');
+            } else if (msg.type === 'progress' && msg.info && typeof msg.info.progress === 'number') {
+              const pct = Math.round(msg.info.progress || 0);
+              const file = msg.info.file ? (msg.info.file.length > 40 ? '…' + msg.info.file.slice(-38) : msg.info.file) : '';
+              setComposerStatus('Descargando ' + file + ' ' + pct + '%');
+            }
+          });
+          setComposerStatus(cfg.label + ' listo. Ya puedes enviar mensajes.');
+          setTimeout(() => { if (!appState.busy) setComposerStatus(''); }, 1500);
+        } catch (e) {
+          setComposerStatus('');
+          showToast('Gemma (WebGPU)', e.message || 'No se pudo cargar el modelo.');
+        }
+        return;
+      }
+
+      if (cfg.kind === 'ollama') {
+        setComposerStatus('Comprobando Ollama en localhost:11434…');
+        const reachable = await ollamaEnsureDaemon((p) => {
+          if (p && p.thinking) setComposerStatus(p.thinking);
+        });
+        if (!reachable) {
+          setComposerStatus('');
+          openOllamaInstallModal(cfg.label, cfg.ollamaTag);
+          return;
+        }
+        if (!(await ollamaHasModel(cfg.ollamaTag))) {
+          setComposerStatus('Descargando ' + cfg.ollamaTag + ' en Ollama… (primera vez)');
+          try {
+            await ollamaPullModel(cfg.ollamaTag, (p) => {
+              if (p && p.thinking) setComposerStatus(p.thinking);
+            });
+          } catch (e) {
+            setComposerStatus('');
+            showToast('Ollama', e.message || 'No se pudo descargar el modelo.');
+            return;
+          }
+        }
+        setComposerStatus(cfg.label + ' listo en Ollama. Ya puedes enviar mensajes.');
+        setTimeout(() => { if (!appState.busy) setComposerStatus(''); }, 1500);
+      }
     }
 
     async function callModel(chat, signal, onProgress) {
