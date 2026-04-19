@@ -1152,7 +1152,6 @@
         linear-gradient(180deg, rgba(255,253,251,0.98), rgba(255,255,255,0.94));
       box-shadow: 0 10px 28px -18px rgba(224, 122, 60, 0.38), 0 1px 2px rgba(0,0,0,0.04);
       overflow: hidden;
-      animation: fadeSlideUp 0.3s var(--ease) both;
       position: sticky;
       top: 0;
       z-index: 8;
@@ -1393,7 +1392,6 @@
       box-shadow: 0 6px 20px -14px rgba(224, 122, 60, 0.3);
       display: grid;
       gap: 14px;
-      animation: fadeSlideUp 0.35s var(--ease) both;
     }
     .guided-inline-head {
       display: flex;
@@ -3351,11 +3349,13 @@
     function resetGuidedQuizState(chatLike) {
       const chat = chatLike || getActiveChat();
       const session = ensureGuidedSession(chat);
-      const sectionKey = currentGuidedSectionKey(chat);
-      if (!sectionKey) {
+      const sectionKey = currentGuidedSectionKey(chat)
+        || resolveGuidedSectionStorageKey(session)
+        || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current');
+      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
+      if (!record) {
         return;
       }
-      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
       record.responses = {};
       record.lastAccuracy = 0;
       record.updatedAt = nowIso();
@@ -3363,33 +3363,89 @@
       rerenderGuidedQuizMessage(chat);
     }
 
+    function applyGuidedAnswerVisual(btn, questionId, optionId) {
+      if (!btn || !questionId || !optionId) return;
+      const itemEl = btn.closest('.guided-inline-item');
+      if (!itemEl) return;
+      const chat = getActiveChat();
+      if (!chat) return;
+      const session = ensureGuidedSession(chat);
+      const quizItem = (session.quiz && Array.isArray(session.quiz.items))
+        ? session.quiz.items.find((it) => it && it.id === questionId)
+        : null;
+      if (!quizItem) return;
+      const selectedOpt = quizItem.options.find((o) => o && o.id === optionId) || null;
+      const correctOptionId = quizItem.correctOptionId || (quizItem.options.find((o) => o && o.correct) || {}).id || '';
+      const isCorrect = !!(selectedOpt && (selectedOpt.correct || (correctOptionId && selectedOpt.id === correctOptionId)));
+      const options = itemEl.querySelectorAll('.guided-inline-option');
+      options.forEach((opt) => {
+        opt.disabled = true;
+        opt.classList.remove('active', 'correct', 'wrong');
+        if (opt === btn) {
+          opt.classList.add('active', isCorrect ? 'correct' : 'wrong');
+        } else if (!isCorrect && correctOptionId && opt.dataset.guidedOption === correctOptionId) {
+          opt.classList.add('correct');
+        }
+      });
+      itemEl.classList.remove('correct', 'wrong');
+      itemEl.classList.add('answered', isCorrect ? 'correct' : 'wrong');
+      const existingStatus = itemEl.querySelector('.guided-inline-status');
+      if (existingStatus) existingStatus.remove();
+      const existingFeedback = itemEl.querySelector('.guided-inline-feedback');
+      if (existingFeedback) existingFeedback.remove();
+      const statusClass = isCorrect ? 'correct' : 'wrong';
+      const statusText = isCorrect
+        ? 'Correcta'
+        : (correctOptionId
+            ? 'Incorrecta. Correcta: ' + String.fromCharCode(65 + Math.max(0, quizItem.options.findIndex((o) => o.id === correctOptionId))) + '. ' + (quizItem.options.find((o) => o.id === correctOptionId) || {}).text
+            : 'Incorrecta');
+      const statusEl = document.createElement('div');
+      statusEl.className = 'guided-inline-status ' + statusClass;
+      statusEl.textContent = statusText;
+      itemEl.appendChild(statusEl);
+      if (quizItem.explanation) {
+        const feedbackEl = document.createElement('div');
+        feedbackEl.className = 'guided-inline-feedback';
+        feedbackEl.textContent = quizItem.explanation;
+        itemEl.appendChild(feedbackEl);
+      }
+    }
+
     function answerGuidedQuizQuestion(questionId, optionId) {
       const chat = getActiveChat();
       if (!chat || !chat.guidedLearning) {
+        console.warn('[guided] answer ignored: no guided chat active');
         return;
       }
       const session = ensureGuidedSession(chat);
-      const sectionKey = currentGuidedSectionKey(chat);
-      if (!sectionKey) {
+      const sectionKey = currentGuidedSectionKey(chat)
+        || resolveGuidedSectionStorageKey(session)
+        || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current');
+      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
+      if (!record) {
+        console.warn('[guided] answer ignored: could not ensure section record for', sectionKey);
         return;
       }
-      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
       const item = session.quiz.items.find((quizItem) => quizItem.id === questionId);
       if (!item) {
+        console.warn('[guided] answer ignored: item not found', { questionId, available: session.quiz.items.map((i) => i.id) });
         return;
       }
       const selected = item.options.find((option) => option.id === optionId);
       if (!selected) {
+        console.warn('[guided] answer ignored: option not found', { optionId, available: item.options.map((o) => o.id) });
         return;
       }
+      const correctOptionId = item.correctOptionId || (item.options.find((o) => o.correct) || {}).id || '';
+      const isCorrect = !!(selected.correct || (correctOptionId && selected.id === correctOptionId));
       record.responses[questionId] = {
         selectedOptionId: optionId,
         answeredAt: nowIso(),
-        correct: !!selected.correct
+        correct: isCorrect
       };
       syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
       saveState({ skipDrive: true });
-      rerenderGuidedQuizMessage(chat);
+      syncGuidedBannerSlot(chat);
     }
 
     function guidedWeakAreasText(chatLike) {
@@ -6515,8 +6571,13 @@
       scope.querySelectorAll('[data-guided-answer]').forEach(function(btn) {
         if (btn.dataset.boundClick === '1') return;
         btn.dataset.boundClick = '1';
-        btn.addEventListener('click', function() {
-          answerGuidedQuizQuestion(btn.dataset.guidedAnswer, btn.dataset.guidedOption);
+        btn.addEventListener('click', function(event) {
+          event.preventDefault();
+          if (btn.disabled) return;
+          const questionId = btn.dataset.guidedAnswer || '';
+          const optionId = btn.dataset.guidedOption || '';
+          applyGuidedAnswerVisual(btn, questionId, optionId);
+          answerGuidedQuizQuestion(questionId, optionId);
         });
       });
       scope.querySelectorAll('[data-guided-action]').forEach(function(btn) {
