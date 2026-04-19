@@ -3265,6 +3265,10 @@
 
     function mergeGuidedStateIntoSession(sessionLike, rawState, sourceMessageId) {
       const session = normalizeGuidedSession(sessionLike);
+      const prevSourceMessageId = session.quiz && typeof session.quiz.sourceMessageId === 'string'
+        ? session.quiz.sourceMessageId
+        : '';
+      const prevQuizSignature = guidedQuizItemsSignature(session.quiz);
       if (!rawState || typeof rawState !== 'object') {
         return session;
       }
@@ -3314,6 +3318,21 @@
       }
       session.lastUpdatedAt = nowIso();
       syncGuidedCurrentTitles(session);
+      const nextQuizSignature = guidedQuizItemsSignature(session.quiz);
+      const incomingQuizChanged = !!(
+        session.quiz
+        && Array.isArray(session.quiz.items)
+        && session.quiz.items.length
+        && (
+          (sourceMessageId && sourceMessageId !== prevSourceMessageId)
+          || (nextQuizSignature && nextQuizSignature !== prevQuizSignature)
+        )
+      );
+      if (incomingQuizChanged) {
+        guidedLinkedSectionKeys(session, session.quiz.sourceMessageId).forEach((key) => {
+          clearGuidedSectionRecord(session, key, session.quiz.requiredAccuracy);
+        });
+      }
       const sectionKey = guidedSectionKey(
         session.current.topicId,
         session.current.blockId,
@@ -3322,6 +3341,7 @@
       if (sectionKey) {
         ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
       }
+      syncGuidedLinkedSectionRecords(session);
       return session;
     }
 
@@ -3349,17 +3369,18 @@
     function resetGuidedQuizState(chatLike) {
       const chat = chatLike || getActiveChat();
       const session = ensureGuidedSession(chat);
-      const sectionKey = resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
-        || currentGuidedSectionKey(chat)
-        || resolveGuidedSectionStorageKey(session)
-        || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current');
-      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
-      if (!record) {
-        return;
+      const keys = guidedLinkedSectionKeys(session, session.quiz && session.quiz.sourceMessageId);
+      if (!keys.length) {
+        keys.push(
+          resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
+          || currentGuidedSectionKey(chat)
+          || resolveGuidedSectionStorageKey(session)
+          || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current')
+        );
       }
-      record.responses = {};
-      record.lastAccuracy = 0;
-      record.updatedAt = nowIso();
+      keys.filter(Boolean).forEach((key) => {
+        clearGuidedSectionRecord(session, key, session.quiz.requiredAccuracy);
+      });
       syncGuidedLinkedSectionRecords(session);
       saveState({ skipDrive: true });
       rerenderGuidedQuizMessage(chat);
@@ -4031,6 +4052,55 @@
       };
     }
 
+    function clearGuidedSectionRecord(sessionLike, sectionKey, requiredAccuracy) {
+      const record = ensureGuidedSectionRecord(sessionLike, sectionKey, requiredAccuracy);
+      if (!record) {
+        return null;
+      }
+      record.responses = {};
+      record.bestAccuracy = 0;
+      record.lastAccuracy = 0;
+      record.mastered = false;
+      record.completedAt = '';
+      record.updatedAt = nowIso();
+      return record;
+    }
+
+    function guidedQuizItemsSignature(quizLike) {
+      const quiz = quizLike && typeof quizLike === 'object' ? quizLike : createEmptyGuidedQuiz();
+      const items = Array.isArray(quiz.items) ? quiz.items : [];
+      if (!items.length) {
+        return '';
+      }
+      return items.map((item, index) => {
+        const itemId = item && typeof item.id === 'string' && item.id.trim()
+          ? item.id.trim()
+          : 'q' + String(index + 1);
+        const optionIds = Array.isArray(item && item.options)
+          ? item.options.map((option, optionIndex) => option && option.id ? option.id : 'o' + String(optionIndex + 1)).join('|')
+          : '';
+        return itemId + '>' + optionIds;
+      }).join('||');
+    }
+
+    function guidedLinkedSectionKeys(sessionLike, messageId) {
+      const session = sessionLike && typeof sessionLike === 'object'
+        ? sessionLike
+        : createEmptyGuidedSession();
+      const currentKey = guidedSectionKey(
+        session.current && session.current.topicId,
+        session.current && session.current.blockId,
+        session.current && session.current.sectionId
+      );
+      const sourceMessageId = typeof messageId === 'string' && messageId
+        ? messageId
+        : session.quiz && typeof session.quiz.sourceMessageId === 'string'
+          ? session.quiz.sourceMessageId
+          : '';
+      const messageKey = sourceMessageId ? 'quiz::' + sourceMessageId : '';
+      return Array.from(new Set([currentKey, messageKey].filter(Boolean)));
+    }
+
     function guidedSectionRecordAnsweredCount(record) {
       if (!record || !record.responses || typeof record.responses !== 'object') {
         return 0;
@@ -4086,15 +4156,7 @@
       if (!session.sectionStats || typeof session.sectionStats !== 'object') {
         session.sectionStats = {};
       }
-      const currentKey = guidedSectionKey(
-        session.current && session.current.topicId,
-        session.current && session.current.blockId,
-        session.current && session.current.sectionId
-      );
-      const messageKey = session.quiz && session.quiz.sourceMessageId
-        ? 'quiz::' + session.quiz.sourceMessageId
-        : '';
-      const keys = Array.from(new Set([currentKey, messageKey].filter(Boolean)));
+      const keys = guidedLinkedSectionKeys(session, session.quiz && session.quiz.sourceMessageId);
       if (keys.length < 2) {
         return session;
       }
