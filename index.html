@@ -3164,7 +3164,7 @@
         };
       }
       const session = ensureGuidedSession(chat);
-      const sectionKey = resolveGuidedSectionStorageKey(session);
+      const sectionKey = resolveGuidedSectionStatsKey(session);
       return computeGuidedQuizStats(session, sectionKey);
     }
 
@@ -3349,7 +3349,8 @@
     function resetGuidedQuizState(chatLike) {
       const chat = chatLike || getActiveChat();
       const session = ensureGuidedSession(chat);
-      const sectionKey = currentGuidedSectionKey(chat)
+      const sectionKey = resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
+        || currentGuidedSectionKey(chat)
         || resolveGuidedSectionStorageKey(session)
         || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current');
       const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
@@ -3359,6 +3360,7 @@
       record.responses = {};
       record.lastAccuracy = 0;
       record.updatedAt = nowIso();
+      syncGuidedLinkedSectionRecords(session);
       saveState({ skipDrive: true });
       rerenderGuidedQuizMessage(chat);
     }
@@ -3413,7 +3415,11 @@
 
     function updateGuidedQuizMetaInPlace(chat) {
       if (!chat || !chat.guidedLearning) return;
-      const mastery = getGuidedCurrentMastery(chat);
+      const session = ensureGuidedSession(chat);
+      const mastery = computeGuidedQuizStats(
+        session,
+        resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
+      );
       const quizCards = document.querySelectorAll('.guided-inline-quiz');
       quizCards.forEach((card) => {
         const scoreEl = card.querySelector('.guided-inline-score');
@@ -3452,7 +3458,8 @@
         return false;
       }
       const session = ensureGuidedSession(chat);
-      const sectionKey = currentGuidedSectionKey(chat)
+      const sectionKey = resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
+        || currentGuidedSectionKey(chat)
         || resolveGuidedSectionStorageKey(session)
         || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current');
       const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
@@ -3478,6 +3485,7 @@
         correct: isCorrect
       };
       syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
+      syncGuidedLinkedSectionRecords(session);
       saveState({ skipDrive: true });
       updateGuidedQuizMetaInPlace(chat);
       syncGuidedBannerSlot(chat);
@@ -4023,6 +4031,95 @@
       };
     }
 
+    function guidedSectionRecordAnsweredCount(record) {
+      if (!record || !record.responses || typeof record.responses !== 'object') {
+        return 0;
+      }
+      return Object.keys(record.responses).reduce((count, questionId) => {
+        const response = record.responses[questionId];
+        return count + (response && response.selectedOptionId ? 1 : 0);
+      }, 0);
+    }
+
+    function guidedSectionRecordHasData(record) {
+      if (!record) {
+        return false;
+      }
+      return !!(
+        guidedSectionRecordAnsweredCount(record) > 0 ||
+        record.bestAccuracy > 0 ||
+        record.lastAccuracy > 0 ||
+        record.mastered
+      );
+    }
+
+    function guidedSectionRecordWeight(record) {
+      if (!record) {
+        return 0;
+      }
+      return (record.mastered ? 1000000 : 0)
+        + (guidedSectionRecordAnsweredCount(record) * 10000)
+        + (clampNumber(record.bestAccuracy, 0, 100) * 100)
+        + clampNumber(record.lastAccuracy, 0, 100);
+    }
+
+    function cloneGuidedSectionRecord(record, requiredAccuracy) {
+      const normalized = normalizeGuidedSectionRecord(record, requiredAccuracy);
+      const responses = {};
+      Object.keys(normalized.responses || {}).forEach((questionId) => {
+        const response = normalized.responses[questionId] || {};
+        responses[questionId] = {
+          selectedOptionId: response.selectedOptionId || '',
+          answeredAt: response.answeredAt || '',
+          correct: typeof response.correct === 'boolean' ? response.correct : null
+        };
+      });
+      return Object.assign({}, normalized, {
+        responses
+      });
+    }
+
+    function syncGuidedLinkedSectionRecords(sessionLike) {
+      const session = sessionLike && typeof sessionLike === 'object'
+        ? sessionLike
+        : createEmptyGuidedSession();
+      if (!session.sectionStats || typeof session.sectionStats !== 'object') {
+        session.sectionStats = {};
+      }
+      const currentKey = guidedSectionKey(
+        session.current && session.current.topicId,
+        session.current && session.current.blockId,
+        session.current && session.current.sectionId
+      );
+      const messageKey = session.quiz && session.quiz.sourceMessageId
+        ? 'quiz::' + session.quiz.sourceMessageId
+        : '';
+      const keys = Array.from(new Set([currentKey, messageKey].filter(Boolean)));
+      if (keys.length < 2) {
+        return session;
+      }
+      const requiredAccuracy = clampNumber(session.quiz && session.quiz.requiredAccuracy, 0, 100);
+      let winnerKey = '';
+      let winnerRecord = null;
+      keys.forEach((key) => {
+        session.sectionStats[key] = normalizeGuidedSectionRecord(session.sectionStats[key], requiredAccuracy);
+        const record = session.sectionStats[key];
+        if (!winnerRecord || guidedSectionRecordWeight(record) > guidedSectionRecordWeight(winnerRecord)) {
+          winnerKey = key;
+          winnerRecord = record;
+        }
+      });
+      if (!winnerRecord || !guidedSectionRecordHasData(winnerRecord)) {
+        return session;
+      }
+      keys.forEach((key) => {
+        if (key !== winnerKey) {
+          session.sectionStats[key] = cloneGuidedSectionRecord(winnerRecord, requiredAccuracy);
+        }
+      });
+      return session;
+    }
+
     function guidedAverageProgress(topics) {
       if (!Array.isArray(topics) || !topics.length) {
         return 0;
@@ -4120,6 +4217,7 @@
           session.quiz.requiredAccuracy
         );
       }
+      syncGuidedLinkedSectionRecords(session);
       return session;
     }
 
@@ -4157,6 +4255,43 @@
         return 'quiz::current';
       }
       return '';
+    }
+
+    function resolveGuidedSectionStatsKey(sessionLike, messageId) {
+      const session = sessionLike && typeof sessionLike === 'object'
+        ? sessionLike
+        : createEmptyGuidedSession();
+      const currentKey = guidedSectionKey(
+        session.current && session.current.topicId,
+        session.current && session.current.blockId,
+        session.current && session.current.sectionId
+      );
+      const sourceMessageId = typeof messageId === 'string' && messageId
+        ? messageId
+        : session.quiz && typeof session.quiz.sourceMessageId === 'string'
+          ? session.quiz.sourceMessageId
+          : '';
+      const messageKey = sourceMessageId ? 'quiz::' + sourceMessageId : '';
+      const keys = Array.from(new Set([currentKey, messageKey].filter(Boolean)));
+      const fallbackKey = currentKey
+        || messageKey
+        || (session.quiz && Array.isArray(session.quiz.items) && session.quiz.items.length ? 'quiz::current' : '');
+      if (!keys.length) {
+        return fallbackKey;
+      }
+      let bestKey = '';
+      let bestWeight = -1;
+      keys.forEach((key) => {
+        const record = session.sectionStats && session.sectionStats[key]
+          ? normalizeGuidedSectionRecord(session.sectionStats[key], session.quiz.requiredAccuracy)
+          : null;
+        const weight = guidedSectionRecordWeight(record);
+        if (weight > bestWeight) {
+          bestWeight = weight;
+          bestKey = key;
+        }
+      });
+      return bestWeight > 0 ? bestKey : fallbackKey;
     }
 
     function normalizeChatConfig(chat) {
@@ -6197,7 +6332,7 @@
         }
         return '';
       }
-      const mastery = getGuidedCurrentMastery(chat);
+      const mastery = computeGuidedQuizStats(session, resolveGuidedSectionStatsKey(session, message.id));
       const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
       return [
         '<div class="guided-inline-quiz">',
