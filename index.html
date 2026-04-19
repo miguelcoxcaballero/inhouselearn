@@ -9293,25 +9293,37 @@
       } catch (_) { return false; }
     }
 
-    async function ollamaEnsureDaemon(onProgress) {
+    async function ollamaEnsureDaemon(onProgress, modelTag) {
       if (await ollamaIsReachable()) return true;
-      if (typeof onProgress === 'function') {
-        onProgress({ text: '', thinking: 'Pidiendo al agente local que instale/arranque Ollama…', parts: [{ text: '' }], done: false });
-      }
+      const report = (thinking) => {
+        if (typeof onProgress === 'function') {
+          onProgress({ text: '', thinking, parts: [{ text: '' }], done: false });
+        }
+      };
+      report('El agente local abrirá una terminal para instalar y arrancar Ollama…');
       try {
         const res = await fetch(DAEMON_CONFIG.URL + '/v1/ollama/setup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ensure: true })
+          body: JSON.stringify(modelTag ? { model: modelTag } : {})
         });
-        if (res.ok) {
-          const deadline = Date.now() + 120000;
-          while (Date.now() < deadline) {
-            if (await ollamaIsReachable()) return true;
-            await new Promise((r) => setTimeout(r, 1500));
-          }
+        if (!res.ok) {
+          report('No pude contactar con el agente local. ¿Está abierto inhouse-agent?');
+          return false;
         }
-      } catch (_) { /* daemon no soporta el endpoint todavía */ }
+      } catch (_) {
+        report('No pude contactar con el agente local. ¿Está abierto inhouse-agent?');
+        return false;
+      }
+      const deadline = Date.now() + 8 * 60 * 1000; // 8 minutos por si descarga el modelo
+      while (Date.now() < deadline) {
+        if (await ollamaIsReachable()) {
+          report('Ollama ya responde. Preparando el modelo…');
+          return true;
+        }
+        report('Instalando Ollama en la terminal abierta por el agente… esto puede tardar unos minutos.');
+        await new Promise((r) => setTimeout(r, 2000));
+      }
       return await ollamaIsReachable();
     }
 
@@ -9356,12 +9368,11 @@
     }
 
     async function gemmaGenerateOllama(chat, modelCfg, signal, onProgress) {
-      const reachable = await ollamaEnsureDaemon(onProgress);
+      const reachable = await ollamaEnsureDaemon(onProgress, modelCfg.ollamaTag);
       if (!reachable) {
-        try { openOllamaInstallModal(modelCfg.label, modelCfg.ollamaTag); } catch (_) {}
         throw new Error(
-          'Ollama no está instalado. Abre el asistente pulsando "Conectar Gemma (local)" — ' +
-          'descarga e instala Ollama y volveremos a intentar automáticamente.'
+          'Ollama no responde en localhost:11434. El agente local ha abierto una terminal para instalarlo; ' +
+          'termina el proceso en esa ventana y vuelve a enviar el mensaje.'
         );
       }
       if (!(await ollamaHasModel(modelCfg.ollamaTag))) {
@@ -9426,46 +9437,6 @@
     }
 
     // ------- Connect button for Gemma (no daemon roundtrip) -------
-    function openOllamaInstallModal(modelLabel, ollamaTag) {
-      const existing = document.getElementById('ollama-install-modal');
-      if (existing) existing.remove();
-      const overlay = document.createElement('div');
-      overlay.id = 'ollama-install-modal';
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(4px);';
-      overlay.innerHTML = '<div style="background:var(--surface);border-radius:16px;padding:24px;max-width:520px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
-        '<h2 style="margin:0 0 10px;font-size:1.1rem;font-weight:700">Instalar Ollama para ejecutar ' + escapeHtml(modelLabel) + '</h2>' +
-        '<p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.5;margin:0 0 14px">Los modelos grandes (' + escapeHtml(ollamaTag) + ') necesitan <strong>Ollama</strong>: un runtime local que gestiona los pesos y la inferencia nativa. El agente local intentó instalarlo automáticamente, pero no lo consiguió.</p>' +
-        '<ol style="color:var(--text-secondary);font-size:0.82rem;line-height:1.65;padding-left:20px;margin:0 0 16px">' +
-          '<li>Pulsa <strong>Descargar Ollama</strong>. Se descargará <code>OllamaSetup.exe</code>.</li>' +
-          '<li>Ejecuta el instalador y acepta los valores por defecto.</li>' +
-          '<li>Vuelve aquí y pulsa <strong>He terminado</strong>. Descargaremos el modelo automáticamente (≈8–12 GB, una sola vez).</li>' +
-        '</ol>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
-          '<button type="button" class="btn btn-outline btn-sm" id="ollama-cancel">Cancelar</button>' +
-          '<a class="btn btn-outline btn-sm" id="ollama-download" href="https://ollama.com/download/OllamaSetup.exe" download rel="noopener" style="text-decoration:none">Descargar Ollama</a>' +
-          '<button type="button" class="btn btn-sm" id="ollama-retry" style="background:var(--orange);color:white">He terminado · Reintentar</button>' +
-        '</div>' +
-      '</div>';
-      document.body.appendChild(overlay);
-      const close = () => overlay.remove();
-      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-      document.getElementById('ollama-cancel').addEventListener('click', close);
-      document.getElementById('ollama-retry').addEventListener('click', async () => {
-        const btn = document.getElementById('ollama-retry');
-        btn.disabled = true; btn.textContent = 'Comprobando…';
-        const ok = await ollamaEnsureDaemon();
-        if (ok) {
-          btn.textContent = '¡Listo!';
-          setTimeout(close, 400);
-          setComposerStatus('Ollama detectado. Ya puedes enviar mensajes a ' + modelLabel + '.');
-        } else {
-          btn.disabled = false;
-          btn.textContent = 'Reintentar';
-          showToast('Ollama', 'Aún no detectamos Ollama en localhost:11434. ¿Se ha instalado y arrancado?');
-        }
-      });
-    }
-
     async function connectGemmaLocal() {
       const chat = getActiveChat();
       const modelId = activeModelName(chat);
@@ -9502,10 +9473,10 @@
         setComposerStatus('Comprobando Ollama en localhost:11434…');
         const reachable = await ollamaEnsureDaemon((p) => {
           if (p && p.thinking) setComposerStatus(p.thinking);
-        });
+        }, cfg.ollamaTag);
         if (!reachable) {
           setComposerStatus('');
-          openOllamaInstallModal(cfg.label, cfg.ollamaTag);
+          showToast('Ollama', 'El agente local abrió una terminal para instalar Ollama. Termina ese proceso y pulsa de nuevo "Conectar".');
           return;
         }
         if (!(await ollamaHasModel(cfg.ollamaTag))) {
