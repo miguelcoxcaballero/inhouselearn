@@ -3445,7 +3445,7 @@
       };
       syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
       saveState({ skipDrive: true });
-      syncGuidedBannerSlot(chat);
+      rerenderGuidedQuizMessage(chat);
     }
 
     function guidedWeakAreasText(chatLike) {
@@ -6296,10 +6296,15 @@
       if (!elements.guidedBannerSlot) {
         return;
       }
-      elements.guidedBannerSlot.innerHTML = chat && chat.guidedLearning
+      const nextHtml = chat && chat.guidedLearning
         ? renderGuidedDashboard(chat, options)
         : '';
-      if (elements.guidedBannerSlot.innerHTML) {
+      if (elements.guidedBannerSlot.dataset.lastHtml === nextHtml) {
+        return;
+      }
+      elements.guidedBannerSlot.innerHTML = nextHtml;
+      elements.guidedBannerSlot.dataset.lastHtml = nextHtml;
+      if (nextHtml) {
         bindThreadActions(elements.guidedBannerSlot);
       }
     }
