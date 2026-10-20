@@ -1,6 +1,6 @@
 # inhouse learn
 
-Chat con IA que corre entero en el navegador. Sin instalador, sin servidor: abres `index.html` (o la URL de GitHub Pages), pegas tu API key de [OpenRouter](https://openrouter.ai/settings/keys) y eliges modelo.
+Chat con IA que corre entero en el navegador. Sin instalador, sin servidor: abres `index.html` (o https://miguelcoxcaballero.github.io/inhouselearn/), pegas tu API key de [OpenRouter](https://openrouter.ai/settings/keys) y eliges modelo.
 
 ## Modelos
 
@@ -8,13 +8,16 @@ Precio en USD por millón de tokens (entrada / salida), según OpenRouter.
 
 | Compañía | Modelo | Precio |
 | --- | --- | --- |
-| DeepSeek | DeepSeek V4.1 Flash (por defecto) | $0.30 / $1.20 |
+| DeepSeek | DeepSeek V4.1 Flash (por defecto) | $0.15 / $0.60 ($0.30 / $1.20 en hora punta*) |
 | Z.ai | GLM-5.3 FlashX | $0.37 / $1.25 |
 | Z.ai | GLM-5.3 Prime | $2.80 / $8.80 |
 | MiniMax | MiniMax M3.1 Flash | gratis |
 | Claude | Haiku 5.5 / Sonnet 5.5 / Opus 5.5 | $0.10 / $0.50 · $2 / $10 · $4 / $20 |
 | OpenAI | GPT-6 Luna / GPT-6 Sol | $0.10 / $0.50 · $2 / $10 |
+| Kimi | Kimi K2.7 Code | $0.67 / $3.35 |
 | Otro | Cualquier ID de [openrouter.ai/models](https://openrouter.ai/models) | — |
+
+\* De lunes a viernes, de 01:00 a 04:00 y de 06:00 a 10:00 UTC.
 
 Los precios cambian; el saldo real y el gasto se ven en el donut junto al botón de enviar.
 
