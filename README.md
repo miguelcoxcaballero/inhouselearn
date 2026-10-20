@@ -2,6 +2,14 @@
 
 Chat con IA para estudiar que corre entero en el navegador. Sin instalador ni servidor: abres https://miguelcoxcaballero.github.io/inhouselearn/ (o `index.html`), pegas tu API key de [OpenRouter](https://openrouter.ai/settings/keys) y eliges modelo. Pagas por tokens con tu saldo de OpenRouter.
 
+## App Android
+
+Hay una APK optimizada para el móvil: una capa nativa mínima (≈180 KB) alrededor de esta misma web, con el logo de la bombilla, pantalla completa, teclado que no tapa el cuadro de texto, botón Atrás, descargas, adjuntos y el inicio de sesión de Google en una Chrome Custom Tab. Cada cambio de la web llega a la app sin APK nueva.
+
+- **Firma:** la misma clave permanente que Inhouse YouTube e Inhouse Instagram (certificado SHA-256 `7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6`), solo desde el secreto de GitHub `EJEMPLO`. Nunca se sube una clave al repositorio.
+- **Actualizaciones:** el actualizador común [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater) (canales A/B en `updates/A.json` y `updates/B.json`, B por defecto). En la app: menú de perfil → «Actualizaciones».
+- **Publicar:** *Actions → Android app → Run workflow* con «publish». Detalles, requisitos (secreto `EJEMPLO`, URI de redirección de OAuth) y reglas en [android/README.md](android/README.md), [AGENTS.md](AGENTS.md) y [UPDATER.md](UPDATER.md).
+
 ## Modelos
 
 No hay lista fija: el selector muestra en vivo todos los modelos de chat de OpenRouter, de todas las compañías, con su precio por millón de tokens (entrada / salida).

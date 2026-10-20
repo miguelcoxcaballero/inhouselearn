@@ -2,8 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#f5f5f0">
   <title>inhouse learn</title>
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
@@ -428,6 +433,7 @@
       margin-bottom: 12px;
       overflow-wrap: anywhere;
     }
+    .profile-menu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
     /* ─── BUTTONS ────────────────────────────────────── */
     .btn {
@@ -2012,7 +2018,7 @@
     @media (max-width: 480px) {
       .topbar { padding: 0 10px; gap: 6px; }
       .brand { font-size: 0.85rem; }
-      .brand svg { width: 22px; height: 13px; }
+      .brand svg { width: 19px; height: 19px; }
       .topbar-mid { max-width: calc(100vw - 146px); }
       .model-menu-wrap { max-width: none; }
       .model-trigger { height: 34px; padding: 0 10px; }
@@ -2339,9 +2345,7 @@
           </svg>
         </button>
         <div class="brand">
-          <svg viewBox="0 0 40 24" width="28" height="17" fill="none">
-            <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <svg width="22" height="22" xmlns="http://www.w3.org/2000/svg" viewBox="25 23.5 58 58" aria-hidden="true"><path d="M54 25 C69 25 77 36 77 47 C77 57 69 62 66 68 H42 C39 62 31 57 31 47 C31 36 39 25 54 25 Z" fill="#F2A900" stroke="#F2A900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 73 H64 M47 79 H61" fill="none" stroke="#A97600" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 52.5 L54 43.5 L63 52.5" fill="none" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           inhouse learn
         </div>
       </div>
@@ -2403,7 +2407,10 @@
           <div class="topbar-popover profile-popover hidden" id="profile-popup">
             <div class="profile-menu-name" id="profile-menu-name">Sin iniciar sesión</div>
             <div class="profile-menu-email" id="profile-menu-email">Entra con Google para guardar el historial en Drive.</div>
-            <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
+            <div class="profile-menu-actions">
+              <button class="btn btn-outline hidden" id="app-updates-btn" type="button">Actualizaciones</button>
+              <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2550,6 +2557,106 @@
       MAX_OUTPUT_TOKENS: 32768,
       TEMPERATURE: 1.0,
       TOP_P: 0.95
+    };
+
+    /* ─── ANDROID APP (android/README.md) ───────────────
+       The APK is a WebView around this same page. Its shell injects
+       window.InhouseLearnApp (origin-restricted) and calls back into
+       inhouseLearnAuth() and inhouseLearnBack(). Google does not allow
+       its sign-in page inside a WebView, so in the app sign-in runs in a
+       Chrome Custom Tab and returns through app-auth.html. That redirect
+       must be listed in the OAuth client's authorized redirect URIs. */
+    const ANDROID_APP = !!(window.InhouseLearnApp && typeof window.InhouseLearnApp.postMessage === 'function');
+    const ANDROID_AUTH_STATE_KEY = 'inhouse-learn-android-auth-state';
+    let androidAuthPending = null;
+    if (ANDROID_APP) document.documentElement.classList.add('in-android-app');
+
+    function androidAppMessage(message) {
+      window.InhouseLearnApp.postMessage(JSON.stringify(message));
+    }
+
+    function requestGoogleAccessTokenInApp(promptMode, loginHint) {
+      if (promptMode === 'none') {
+        // No silent renewal in the app: keep the token until it expires,
+        // then the sign-in gate asks for one tap to sign in again.
+        if (appState.accessToken && appState.accessTokenExpiresAt > Date.now()) {
+          return Promise.resolve({
+            access_token: appState.accessToken,
+            expires_in: Math.floor((appState.accessTokenExpiresAt - Date.now()) / 1000)
+          });
+        }
+        return Promise.reject(new Error('La sesión de Google ha caducado. Vuelve a entrar con Google.'));
+      }
+      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem(ANDROID_AUTH_STATE_KEY, state);
+      const params = new URLSearchParams({
+        client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
+        redirect_uri: new URL('app-auth.html', location.href).href.split('?')[0],
+        response_type: 'token',
+        scope: googleOauthScopes().join(' '),
+        include_granted_scopes: 'true',
+        state: state
+      });
+      if (promptMode) params.set('prompt', promptMode);
+      if (loginHint) params.set('login_hint', loginHint);
+      return new Promise((resolve, reject) => {
+        if (androidAuthPending) androidAuthPending.reject(new Error('OAuth cancelado.'));
+        androidAuthPending = { resolve: resolve, reject: reject };
+        androidAppMessage({ type: 'signIn', url: 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString() });
+      });
+    }
+
+    function applyGoogleTokenResponse(response) {
+      appState.accessToken = response.access_token;
+      appState.accessTokenExpiresAt = response.expires_in ? Date.now() + (Number(response.expires_in) * 1000) : 0;
+      saveGoogleTokenToStorage(appState.accessToken, appState.accessTokenExpiresAt);
+      scheduleGoogleTokenRefresh(undefined, { forceRefresh: true });
+      clearManualLogoutFlag();
+    }
+
+    // Called by the shell with the query app-auth.html received from Google.
+    window.inhouseLearnAuth = function(query) {
+      const params = new URLSearchParams(query || '');
+      const expected = localStorage.getItem(ANDROID_AUTH_STATE_KEY);
+      if (!expected || params.get('state') !== expected) return;
+      localStorage.removeItem(ANDROID_AUTH_STATE_KEY);
+      const pending = androidAuthPending;
+      androidAuthPending = null;
+      if (params.get('error') || !params.get('access_token')) {
+        const error = new Error(params.get('error') === 'access_denied' || !params.get('error')
+          ? 'OAuth cancelado.' : 'Google: ' + params.get('error'));
+        if (pending) pending.reject(error);
+        return;
+      }
+      const response = { access_token: params.get('access_token'), expires_in: Number(params.get('expires_in') || 0) };
+      if (pending) {
+        pending.resolve(response);
+        return;
+      }
+      // Android closed the app while the Custom Tab was open: resume from the token.
+      applyGoogleTokenResponse(response);
+      syncGoogleSession(response, {}).catch((error) => {
+        setAuthGateStatus(error && error.message ? error.message : 'No se pudo completar la sesión con Google.', { error: true });
+      }).finally(() => { updateAuthUi(); updateConfigUi(); updateSendUi(); });
+    };
+
+    // Android's back button: close what is open before leaving the app.
+    window.inhouseLearnBack = function() {
+      const visible = (id) => {
+        const el = document.getElementById(id);
+        return !!el && !el.classList.contains('hidden');
+      };
+      if (visible('confirm-backdrop')) { document.getElementById('confirm-cancel').click(); return true; }
+      if (visible('preview-overlay')) { closeAttachmentPreview(); return true; }
+      if (elements.modelMenuPopup && !elements.modelMenuPopup.classList.contains('hidden')) { closeModelMenu(); return true; }
+      if (elements.profilePopup && !elements.profilePopup.classList.contains('hidden')) { closeProfileMenu(); return true; }
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        document.getElementById('sidebar-overlay').classList.remove('open');
+        return true;
+      }
+      return false;
     };
 
     APP_CONFIG.GUIDED_LEARNING_PROMPT = [
@@ -4916,7 +5023,7 @@
       }
       const refreshInMs = Number.isFinite(delayMs)
         ? Math.max(0, delayMs)
-        : Math.max(0, appState.accessTokenExpiresAt - Date.now() - AUTH_REFRESH_SKEW_MS);
+        : Math.max(0, appState.accessTokenExpiresAt - Date.now() - (ANDROID_APP ? -1000 : AUTH_REFRESH_SKEW_MS));
       googleTokenRefreshTimer = window.setTimeout(async function() {
         try {
           const refreshed = await loginWithGoogle({
@@ -7483,6 +7590,16 @@
     }
 
     function downloadBlob(blob, name) {
+      if (ANDROID_APP) {
+        // blob: links do nothing in a WebView; Android shows its "save as" dialog.
+        const reader = new FileReader();
+        reader.onload = () => androidAppMessage({
+          type: 'save', name: name, mime: blob.type || 'application/octet-stream',
+          data: String(reader.result).split(',')[1] || ''
+        });
+        reader.readAsDataURL(blob);
+        return;
+      }
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -8143,6 +8260,20 @@
       elements.loginBtn.addEventListener('click', () => {
         saveApiKeyFromInput();
       });
+      elements.logoutMenuBtn.addEventListener('click', () => {
+        closeProfileMenu();
+        logoutGoogle();
+      });
+      const appUpdatesBtn = document.getElementById('app-updates-btn');
+      if (ANDROID_APP && appUpdatesBtn) {
+        // APK updates are native (Inhouse services updater): the shell opens its
+        // channel A/B settings and "Check for updates". No install bridge here.
+        appUpdatesBtn.classList.remove('hidden');
+        appUpdatesBtn.addEventListener('click', () => {
+          closeProfileMenu();
+          androidAppMessage({ type: 'updates' });
+        });
+      }
       document.getElementById('preview-close').addEventListener('click', closeAttachmentPreview);
       document.getElementById('preview-overlay').addEventListener('click', function(e) {
         if (e.target.id === 'preview-overlay') closeAttachmentPreview();
@@ -8601,6 +8732,15 @@
           access_token: appState.accessToken,
           expires_in: Math.max(0, Math.floor((appState.accessTokenExpiresAt - Date.now()) / 1000))
         };
+      }
+      if (ANDROID_APP) {
+        ensureOauthConfig();
+        const appLoginHint = (appState.profile && appState.profile.email)
+          ? String(appState.profile.email).trim()
+          : getStoredGoogleHintEmail();
+        const response = await requestGoogleAccessTokenInApp(promptMode, appLoginHint);
+        applyGoogleTokenResponse(response);
+        return response;
       }
       const tokenClient = await getGoogleTokenClient();
       const loginHint = (appState.profile && appState.profile.email)

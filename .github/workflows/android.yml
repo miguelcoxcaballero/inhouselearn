@@ -1,0 +1,327 @@
+name: Android app
+# Inhouse Learn APK (android/README.md). Every run builds the minified release,
+# checks the shared updater copies, signs the APK and opens it on Android 15.
+#
+# - Push / pull request / manual run without "publish": signed with a throwaway
+#   test key. That APK is only evidence; never hand it to users.
+# - Manual run on main with "publish": signed with the permanent Inhouse key from
+#   secret EJEMPLO (the same key as Inhouse YouTube and Instagram), published as
+#   a new GitHub release and, only after its public download is verified, added
+#   to update channel A (updates/A.json). It never replaces an existing release
+#   and never publishes B: B needs the user's explicit request (UPDATER.md).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'vendor/inhouse-services-updater/**'
+      - 'inhouse-updater.lock.json'
+      - '.github/workflows/android.yml'
+      - '.github/scripts/android_smoke.py'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'vendor/inhouse-services-updater/**'
+      - 'inhouse-updater.lock.json'
+      - '.github/workflows/android.yml'
+      - '.github/scripts/android_smoke.py'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Sign with the permanent Inhouse key (secret EJEMPLO) and publish on channel A
+        type: boolean
+        default: false
+      changelog:
+        description: Tiny English changelog shown by the updater (2-10 words, at most 120 characters)
+        type: string
+        default: First Android app.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.publish && 'publish' || 'build' }}
+  cancel-in-progress: false
+
+env:
+  # Certificate of the permanent Inhouse key (shared with YouTube and Instagram).
+  INHOUSE_SIGNER_SHA256: 7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6
+  PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && 'true' || 'false' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      code: ${{ steps.version.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - name: Check the shared updater copies (frozen installer included)
+        run: python3 vendor/inhouse-services-updater/verify.py .
+      - name: Read the version and check the release inputs
+        id: version
+        env:
+          CHANGELOG: ${{ inputs.changelog }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+          from pathlib import Path
+          gradle = Path('android/app/build.gradle.kts').read_text()
+          version = re.search(r'versionName = "([0-9]+\.[0-9]+\.[0-9]+)"', gradle)[1]
+          code = int(re.search(r'versionCode = ([0-9]+)', gradle)[1])
+          if os.environ['PUBLISH'] == 'true':
+              if os.environ['GITHUB_REF'] != 'refs/heads/main':
+                  sys.exit('::error::Publish only from main')
+              if not 1 <= len(os.environ.get('CHANGELOG', '').strip()) <= 120:
+                  sys.exit('::error::The changelog must be 1-120 characters (prefer 2-10 words)')
+              published = [r['versionCode'] for c in 'AB' for r in json.loads(Path(f'updates/{c}.json').read_text())['releases']]
+              if published and code <= max(published):
+                  sys.exit(f'::error::versionCode {code} must be greater than every published one ({max(published)}); raise it in android/app/build.gradle.kts')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'version={version}\ncode={code}\n')
+          print('Inhouse Learn', version, code)
+          PY
+      - name: Refuse to replace an existing release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "android-v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Release android-v$VERSION already exists; raise versionCode and versionName instead of replacing it"
+            exit 1
+          fi
+      - name: Build the minified release
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Prepare the permanent Inhouse key from secret EJEMPLO
+        if: env.PUBLISH == 'true'
+        env:
+          KEYSTORE_SECRET: ${{ secrets.EJEMPLO }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, os, re, subprocess, sys
+          from pathlib import Path
+          def fail(message):
+              print('::error::' + message)
+              sys.exit(1)
+          expected = os.environ['INHOUSE_SIGNER_SHA256']
+          temp = Path(os.environ['RUNNER_TEMP'])
+          text = os.environ.get('KEYSTORE_SECRET', '')
+          # Plain or line-wrapped base64 of the keystore file; armour lines are ignored.
+          body = ''.join(line.strip() for line in text.splitlines() if not line.strip().startswith('-----'))
+          if not body:
+              fail('Repository secret EJEMPLO is missing: add it to this repository with the same value as in youtube-calma')
+          try:
+              raw = base64.b64decode(body, validate=True)
+          except ValueError:
+              fail('Secret EJEMPLO must hold the signing keystore (.p12/.jks) as base64 text')
+          source = temp / 'inhouse-source.keystore'
+          source.touch(mode=0o600)
+          source.write_bytes(raw)
+          env = dict(os.environ, KS_PASS='localbuild')
+          def keytool(*args, check=False, text=True):
+              return subprocess.run(['keytool', '-J-Duser.language=en', *map(str, args)], env=env,
+                                    capture_output=True, text=text, check=check)
+          listing = keytool('-list', '-v', '-keystore', source, '-storepass:env', 'KS_PASS')
+          if listing.returncode:
+              fail("keytool could not open the keystore in EJEMPLO with the build password 'localbuild'")
+          match = None
+          for alias in re.findall(r'^Alias name: (.+)$', listing.stdout, re.M):
+              certificate = keytool('-exportcert', '-keystore', source, '-storepass:env', 'KS_PASS', '-alias', alias, text=False)
+              if certificate.returncode == 0 and hashlib.sha256(certificate.stdout).hexdigest() == expected:
+                  match = alias
+                  break
+          if match is None:
+              fail(f'No entry in EJEMPLO has the permanent Inhouse certificate {expected}')
+          # Normalise to one PKCS#12 entry "inhouse" for apksigner.
+          target = temp / 'inhouse.p12'
+          target.unlink(missing_ok=True)
+          keytool('-importkeystore', '-noprompt', '-srckeystore', source, '-srcstorepass:env', 'KS_PASS', '-srcalias', match,
+                  '-destkeystore', target, '-deststoretype', 'PKCS12', '-destalias', 'inhouse',
+                  '-deststorepass:env', 'KS_PASS', '-destkeypass:env', 'KS_PASS', check=True)
+          source.unlink()
+          print('Permanent Inhouse key ready; certificate SHA-256', expected)
+          PY
+      - name: Prepare a throwaway test key
+        if: env.PUBLISH != 'true'
+        run: |
+          keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/inhouse.p12" -storetype PKCS12 \
+            -storepass localbuild -keypass localbuild -alias inhouse -keyalg RSA -keysize 2048 \
+            -validity 30 -dname 'CN=Inhouse Learn CI test key (not for release)'
+      - name: Sign and verify package, version and signer
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
+        run: |
+          tools="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          mkdir -p build/dist
+          "$tools/zipalign" -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk build/aligned.apk
+          KS_PASS=localbuild "$tools/apksigner" sign --ks "$RUNNER_TEMP/inhouse.p12" --ks-key-alias inhouse \
+            --ks-pass env:KS_PASS --key-pass env:KS_PASS --out "build/dist/inhouse-learn-$VERSION.apk" build/aligned.apk
+          apk="build/dist/inhouse-learn-$VERSION.apk"
+          "$tools/apksigner" verify --print-certs "$apk" | tee build/signers.txt
+          "$tools/aapt2" dump badging "$apk" | head -1 | tee build/badging.txt
+          grep -q "package: name='com.inhouse.learn' versionCode='$CODE' versionName='$VERSION'" build/badging.txt
+          signers=$(grep -o 'certificate SHA-256 digest: [0-9a-f]*' build/signers.txt | awk '{print $4}' | sort -u)
+          if [ "$PUBLISH" = true ] && [ "$signers" != "$INHOUSE_SIGNER_SHA256" ]; then
+            echo "::error::The APK is not signed only by the permanent Inhouse key"; exit 1
+          fi
+          if [ "$PUBLISH" != true ] && [ "$signers" = "$INHOUSE_SIGNER_SHA256" ]; then
+            echo "::error::Test builds must not carry the permanent key"; exit 1
+          fi
+          sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          size=$(stat -c %s "$apk")
+          printf '%s  %s\n' "$sha" "inhouse-learn-$VERSION.apk" > build/dist/SHA256SUMS.txt
+          python3 - "$sha" "$size" <<'PY'
+          import json, os, sys
+          version, code = os.environ['VERSION'], int(os.environ['CODE'])
+          name = f'inhouse-learn-{version}.apk'
+          manifest = {
+              'version': version, 'versionCode': code,
+              'apkUrl': f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/android-v{version}/{name}",
+              'apkSha256': sys.argv[1], 'apkSizeBytes': int(sys.argv[2]),
+              'signerSha256': os.environ['INHOUSE_SIGNER_SHA256'] if os.environ['PUBLISH'] == 'true' else 'test-key',
+          }
+          open('build/dist/android-update.json', 'w').write(json.dumps(manifest, indent=2) + '\n')
+          print(json.dumps(manifest))
+          PY
+      - name: Delete the keys from the runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/inhouse.p12" "$RUNNER_TEMP/inhouse-source.keystore"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PUBLISH == 'true' && 'inhouse-learn-release' || 'inhouse-learn-test-signed' }}
+          path: build/dist/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.PUBLISH == 'true' && 'inhouse-learn-release' || 'inhouse-learn-test-signed' }}
+          path: build/dist
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Use the runner's working DNS servers
+        id: dns
+        run: |
+          servers=$(awk '$1 == "nameserver" && $2 ~ /^[0-9]+\./ && $2 !~ /^127\./ { print $2 }' /etc/resolv.conf | head -n 3 | paste -sd, -)
+          echo "servers=${servers:+$servers,}1.1.1.1" >> "$GITHUB_OUTPUT"
+      - name: Open the APK on Android 15
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server ${{ steps.dns.outputs.servers }}
+          script: python3 -u .github/scripts/android_smoke.py build/dist/inhouse-learn-${{ needs.build.outputs.version }}.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-evidence
+          path: android-evidence/
+          retention-days: 7
+
+  publish:
+    needs: [build, emulator]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: inhouse-learn-release
+          path: build/dist
+      - name: Publish a new release (never replaces one)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build.outputs.version }}
+          CHANGELOG: ${{ inputs.changelog }}
+        run: |
+          cd build/dist
+          sha256sum -c SHA256SUMS.txt
+          if gh release view "android-v$VERSION" >/dev/null 2>&1; then
+            echo "::error::Release android-v$VERSION already exists"; exit 1
+          fi
+          printf '%s\n\nSigned with the permanent Inhouse key (certificate SHA-256 %s). Update channel A.\n' \
+            "$CHANGELOG" "$INHOUSE_SIGNER_SHA256" > notes.txt
+          gh release create "android-v$VERSION" --target "$GITHUB_SHA" --title "Inhouse Learn $VERSION · A" \
+            --notes-file notes.txt --draft
+          gh release upload "android-v$VERSION" "inhouse-learn-$VERSION.apk" SHA256SUMS.txt android-update.json
+          gh release edit "android-v$VERSION" --draft=false --prerelease --latest=false
+
+  catalog:
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: inhouse-learn-release
+          path: build/release
+      - name: Verify the public download before any catalog points to it
+        run: |
+          url=$(python3 -c "import json; print(json.load(open('build/release/android-update.json'))['apkUrl'])")
+          curl -fsSL --retry 5 --retry-delay 10 -o build/public.apk "$url"
+          tools="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          python3 - "$tools" <<'PY'
+          import hashlib, json, os, re, subprocess, sys
+          from pathlib import Path
+          tools = Path(sys.argv[1])
+          manifest = json.loads(Path('build/release/android-update.json').read_text())
+          apk = Path('build/public.apk')
+          assert hashlib.sha256(apk.read_bytes()).hexdigest() == manifest['apkSha256'], 'public APK hash differs'
+          assert apk.stat().st_size == manifest['apkSizeBytes'], 'public APK size differs'
+          signers = re.findall(r'certificate SHA-256 digest: ([0-9a-f]+)',
+                               subprocess.check_output([str(tools / 'apksigner'), 'verify', '--print-certs', str(apk)], text=True))
+          assert set(signers) == {os.environ['INHOUSE_SIGNER_SHA256']}, 'public APK signer differs'
+          badging = subprocess.check_output([str(tools / 'aapt2'), 'dump', 'badging', str(apk)], text=True).splitlines()[0]
+          assert f"package: name='com.inhouse.learn' versionCode='{manifest['versionCode']}' versionName='{manifest['version']}'" in badging, badging
+          print('Public APK verified:', json.dumps(manifest))
+          PY
+      - name: Add the release to channel A
+        env:
+          CHANGELOG: ${{ inputs.changelog }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          python3 vendor/inhouse-services-updater/catalog.py --root . --manifest build/release/android-update.json \
+            --changelog "$CHANGELOG" --channel A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add updates/A.json updates/B.json
+          git commit -m "Publish Inhouse Learn $VERSION on channel A"
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git pull --rebase origin main
+          done
+          exit 1

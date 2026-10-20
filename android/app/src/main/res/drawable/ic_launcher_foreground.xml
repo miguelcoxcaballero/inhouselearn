@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated with the web icons from one definition of the bulb (see android/README.md). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#F2A900" android:strokeColor="#F2A900" android:strokeWidth="2"
+        android:strokeLineJoin="round" android:pathData="M54 25 C69 25 77 36 77 47 C77 57 69 62 66 68 H42 C39 62 31 57 31 47 C31 36 39 25 54 25 Z"/>
+    <path android:strokeColor="#A97600" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M44 73 H64 M47 79 H61"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5.2" android:strokeLineCap="round"
+        android:strokeLineJoin="round" android:pathData="M45 52.5 L54 43.5 L63 52.5"/>
+</vector>

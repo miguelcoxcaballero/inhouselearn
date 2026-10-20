@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The web's own background (the bg variable in index.html), behind the system bars. -->
+    <color name="app_background">#F5F5F0</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

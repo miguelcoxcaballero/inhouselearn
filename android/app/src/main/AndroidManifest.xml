@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Inhouse services updater: hand verified APKs to Android's installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <queries>
+        <!-- Google sign-in and external links open in a Chrome Custom Tab. -->
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
+    <!-- No Android backup: the WebView storage holds the Google token and the
+         OpenRouter key. Chats already sync through Google Drive. -->
+    <application
+        android:allowBackup="false"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.InhouseLearn.Starting">
+
+        <!-- singleTask: Google sign-in returns through inhouselearn://auth into
+             this same activity and its WebView (see app-auth.html). The web
+             keeps its state across rotation, keyboard and dark mode changes. -->
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density|fontScale"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="inhouselearn" android:host="auth" />
+            </intent-filter>
+        </activity>
+
+        <!-- Inhouse services updater (UPDATER.md). The popup and the update settings;
+             MainActivity runs the hidden checker through NativeUpdates. -->
+        <activity
+            android:name="com.inhouse.services.updater.UpdateActivity"
+            android:exported="false"
+            android:theme="@style/Theme.InhouseLearn.Update" />
+
+        <!-- FROZEN (vendor/inhouse-services-updater/FROZEN_INSTALLER.md): the update
+             authority is served by the updater's own UpdateFileProvider class, never
+             androidx.core.content.FileProvider, with cache-path "updates/". -->
+        <provider
+            android:name="com.inhouse.services.updater.UpdateFileProvider"
+            android:authorities="${applicationId}.update-provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/inhouse_update_paths" />
+        </provider>
+    </application>
+</manifest>
