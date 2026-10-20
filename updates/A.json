@@ -1,6 +1,24 @@
 {
   "schemaVersion": 1,
   "channel": "A",
-  "latest": null,
-  "releases": []
+  "latest": {
+    "version": "1.0.0",
+    "versionCode": 1,
+    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.0/inhouse-learn-1.0.0.apk",
+    "apkSha256": "3a738439626ea357b4ba6320fd0ad21d77c8231e0c7e4474e667795a5eb1fe3e",
+    "apkSizeBytes": 180260,
+    "changelog": "First Android app.",
+    "releasedAt": "2026-10-20T23:44:54+00:00"
+  },
+  "releases": [
+    {
+      "version": "1.0.0",
+      "versionCode": 1,
+      "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.0/inhouse-learn-1.0.0.apk",
+      "apkSha256": "3a738439626ea357b4ba6320fd0ad21d77c8231e0c7e4474e667795a5eb1fe3e",
+      "apkSizeBytes": 180260,
+      "changelog": "First Android app.",
+      "releasedAt": "2026-10-20T23:44:54+00:00"
+    }
+  ]
 }
