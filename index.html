@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:opsz,wght@6..72,500&display=swap');
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -191,10 +191,8 @@
     }
     .model-trigger-chip {
       flex: 0 0 auto;
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      font-size: 0.68rem;
+      font-weight: 600;
       padding: 3px 7px;
       border-radius: 999px;
       background: var(--orange-soft);
@@ -256,11 +254,9 @@
     }
     .model-popover-section.hidden { display: none; }
     .model-popover-section-label {
-      font-size: 0.64rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 500;
+      color: var(--text-secondary);
       margin-bottom: 6px;
     }
 
@@ -366,10 +362,8 @@
       line-height: 1.2;
     }
     .model-card-badge {
-      font-size: 0.6rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+      font-size: 0.68rem;
+      font-weight: 600;
       padding: 2px 7px;
       border-radius: 999px;
       color: var(--muted);
@@ -522,8 +516,7 @@
       padding: 14px 10px; gap: 8px; overflow: hidden;
     }
     .sidebar-label {
-      font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: var(--muted); padding: 2px 6px; flex-shrink: 0;
+      font-size: 0.74rem; font-weight: 500; color: var(--muted); padding: 2px 6px; flex-shrink: 0;
     }
     .chat-list {
       flex: 1; min-height: 0; overflow-y: auto;
@@ -576,7 +569,11 @@
     .sidebar-new-chat .btn { width: 100%; justify-content: flex-start; padding: 0 12px; height: 38px; }
 
     /* ─── CHAT ───────────────────────────────────────── */
-    .chat { display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); min-height: 0; min-width: 0; background: var(--bg); }
+    .chat { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); min-height: 0; min-width: 0; background: var(--bg); }
+    /* Filas fijas: si el banner de Guided Learning no se muestra, el compositor sigue abajo. */
+    .chat > .guided-banner-slot { grid-row: 1; }
+    .chat > .thread-wrap { grid-row: 2; }
+    .chat > .composer-area { grid-row: 3; }
     .guided-banner-slot {
       padding: 12px 20px 0;
       display: flex;
@@ -599,41 +596,38 @@
 
     /* ─── HERO ───────────────────────────────────────── */
     .hero {
-      padding: 60px 0 40px; display: flex; flex-direction: column;
-      align-items: center; text-align: center; gap: 16px;
-      animation: fadeIn 0.5s var(--ease) both;
-    }
-    .hero-icon {
-      width: 56px; height: 56px; border-radius: 16px;
-      background: linear-gradient(135deg, var(--orange-soft), var(--orange-glow));
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 4px;
+      width: min(560px, 100%); margin: 0 auto;
+      padding: 12vh 0 32px; display: flex; flex-direction: column;
+      align-items: stretch; gap: 8px;
+      animation: fadeIn 0.4s var(--ease) both;
     }
     .hero h2 {
-      font-family: 'Comfortaa', cursive;
-      font-size: clamp(1.4rem, 3vw, 2rem);
-      font-weight: 700; letter-spacing: -0.02em; line-height: 1.2;
-      max-width: 20ch; color: var(--text);
+      font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+      font-size: clamp(2rem, 4vw, 2.6rem);
+      font-weight: 500; letter-spacing: -0.015em; line-height: 1.08;
+      color: var(--text);
     }
     .hero-sub {
-      font-size: 0.88rem; color: var(--muted); max-width: 36ch; line-height: 1.5;
+      font-size: 0.95rem; color: var(--text-secondary); max-width: 46ch; line-height: 1.5;
     }
     .chips {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-      max-width: 480px; width: 100%; margin-top: 8px;
+      display: flex; flex-direction: column;
+      width: 100%; margin-top: 22px;
+      border-top: 1px solid var(--border-strong);
     }
     .chip {
-      padding: 12px 14px; border-radius: var(--r-md);
-      background: var(--surface); border: 1px solid var(--border);
-      font-size: 0.79rem; font-weight: 500; cursor: pointer; text-align: left;
-      color: var(--text-secondary); line-height: 1.4;
-      transition: all 0.2s var(--ease);
-      box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 13px 2px; border-bottom: 1px solid var(--border-strong);
+      font-size: 0.92rem; font-weight: 400; cursor: pointer; text-align: left;
+      color: var(--text); line-height: 1.4;
+      transition: color 0.15s var(--ease);
     }
-    .chip:hover {
-      border-color: var(--orange-border); box-shadow: var(--shadow);
-      transform: translateY(-1px); color: var(--text);
+    .chip::after {
+      content: '\2192'; color: var(--muted);
+      transition: transform 0.15s var(--ease), color 0.15s var(--ease);
     }
+    .chip:hover { color: var(--orange); }
+    .chip:hover::after { color: var(--orange); transform: translateX(3px); }
 
     /* GUIDED LEARNING */
     .guided-shell {
@@ -1691,14 +1685,15 @@
 
     /* ─── MESSAGES ───────────────────────────────────── */
     .message {
-      display: flex; align-items: flex-start; gap: 10px;
-      padding: 4px 0; max-width: 84%;
+      display: flex; align-items: flex-start; gap: 0;
+      padding: 8px 0; max-width: 100%;
       animation: fadeSlideUp 0.3s var(--ease) both;
     }
     .message.user-msg {
-      align-self: flex-end; flex-direction: row-reverse; max-width: 74%;
+      align-self: flex-end; flex-direction: row-reverse; max-width: 80%;
     }
     .message-badge {
+      display: none !important;
       width: 26px; height: 26px; border-radius: 50%; overflow: hidden;
       flex-shrink: 0; display: flex; align-items: center; justify-content: center;
       font-size: 0.58rem; font-weight: 700;
@@ -1709,6 +1704,7 @@
     .message-badge.user { background: var(--orange-soft); color: var(--orange); }
     .message-badge.assistant { background: rgba(0,0,0,0.04); }
     .message-body { min-width: 0; display: flex; flex-direction: column; }
+    .message:not(.user-msg) .message-body { flex: 1; }
     .message-meta {
       font-size: 0.64rem; font-weight: 500;
       color: var(--muted); margin-bottom: 3px;
@@ -1718,11 +1714,7 @@
     .message:hover .message-meta { opacity: 1; }
     .message.user-msg .message-meta { text-align: right; }
     .bubble {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 4px var(--r-lg) var(--r-lg) var(--r-lg);
-      padding: 12px 16px;
-      line-height: 1.65; font-size: 0.9rem; overflow-wrap: anywhere;
-      box-shadow: var(--shadow-sm);
+      line-height: 1.7; font-size: 0.95rem; overflow-wrap: anywhere;
     }
     .bubble-content {
       min-width: 0;
@@ -1735,28 +1727,26 @@
       to { opacity: 1; transform: translateY(0); }
     }
     .reasoning {
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      background: rgba(0,0,0,0.02);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       font-size: 0.82rem;
     }
-    .reasoning[open] { background: rgba(0,0,0,0.035); }
     .reasoning-summary {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 10px; cursor: pointer; color: var(--muted);
-      font-weight: 600; letter-spacing: 0.02em; list-style: none;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 0; cursor: pointer; color: var(--muted);
+      font-weight: 500; list-style: none;
       user-select: none;
     }
+    .reasoning-summary:hover { color: var(--text-secondary); }
     .reasoning-summary::-webkit-details-marker { display: none; }
     .reasoning-summary::after {
-      content: '▸'; margin-left: auto; font-size: 0.7rem; transition: transform 0.15s;
+      content: '▸'; font-size: 0.7rem; transition: transform 0.15s;
     }
     .reasoning[open] .reasoning-summary::after { transform: rotate(90deg); }
     .reasoning-icon svg { width: 14px; height: 14px; }
     .reasoning-body {
-      padding: 6px 12px 10px;
-      border-top: 1px dashed var(--border);
+      margin: 6px 0 4px;
+      padding: 2px 0 2px 12px;
+      border-left: 2px solid var(--border-strong);
       color: var(--muted);
       line-height: 1.55;
       max-height: 340px; overflow-y: auto;
@@ -1764,8 +1754,10 @@
     .reasoning-body p { margin: 0 0 6px; }
     .reasoning-body p:last-child { margin-bottom: 0; }
     .message.user-msg .bubble {
-      background: var(--orange-soft); border-color: var(--orange-border);
-      border-radius: var(--r-lg) 4px var(--r-lg) var(--r-lg);
+      background: #ebe9e1;
+      border-radius: 18px;
+      padding: 9px 15px;
+      line-height: 1.55;
     }
     .bubble h1, .bubble h2, .bubble h3 { margin: 0 0 8px; line-height: 1.2; }
     .bubble h1 { font-size: 1.2em; }
@@ -1946,7 +1938,7 @@
       box-shadow: var(--shadow-lg); line-height: 1.4; font-size: 0.83rem;
       animation: fadeSlideUp 0.3s var(--ease) both;
     }
-    .toast strong { display: block; margin-bottom: 2px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+    .toast strong { display: block; margin-bottom: 2px; font-size: 0.8rem; font-weight: 600; }
 
     /* ─── ANIMATIONS ────────────────────────────────── */
     @keyframes fadeSlideUp {
@@ -1985,14 +1977,8 @@
       .guided-banner-slot { padding: 10px 12px 0; }
       .thread-wrap { padding: 16px 12px; }
       .composer-area { padding: 8px 10px 14px; }
-      .message, .message.user-msg { max-width: 92%; }
-      .message-badge { width: 22px; height: 22px; }
-      .message-badge svg { width: 12px; height: 7px; }
-      .message { gap: 7px; }
-      .hero { padding: 40px 0 28px; }
-      .hero h2 { font-size: 1.3rem; }
-      .chips { grid-template-columns: 1fr; max-width: 100%; }
-      .chip { padding: 11px 13px; }
+      .message.user-msg { max-width: 88%; }
+      .hero { padding: 8vh 0 24px; }
       .guided-shell { padding: 14px; gap: 12px; }
       .guided-overview-grid { grid-template-columns: 1fr; }
       .guided-topic-list { grid-template-columns: 1fr 1fr; }
@@ -2008,7 +1994,6 @@
       .model-menu-wrap { max-width: none; }
       .model-trigger { height: 34px; padding: 0 10px; }
       .model-trigger-main { font-size: 0.74rem; }
-      .btn-primary .btn-label { display: none; }
       /* La topbar es fixed con backdrop-filter, asi que fixed aqui se ancla a ella (ancho completo). */
       .topbar-popover, .model-popover {
         position: fixed; top: calc(var(--topbar-h) + 6px); left: 8px; right: 8px; width: auto;
@@ -2017,12 +2002,10 @@
       }
       .guided-banner-slot { padding: 8px 8px 0; }
       .thread-wrap { padding: 12px 8px; }
-      .bubble { padding: 10px 13px; font-size: 0.87rem; }
+      .bubble { font-size: 0.92rem; }
       .composer { font-size: 0.87rem; }
-      .message-badge { display: none; }
-      .message, .message.user-msg { gap: 0; max-width: 96%; }
-      .hero { padding: 32px 0 20px; gap: 12px; }
-      .hero-icon { width: 44px; height: 44px; }
+      .message.user-msg { max-width: 92%; }
+      .hero { padding: 5vh 4px 16px; }
       .guided-topic-list { grid-template-columns: 1fr; }
       .guided-head,
       .guided-quiz-head,
@@ -2150,8 +2133,7 @@
     }
     .chat-rename-input:focus { background: rgba(0,0,0,0.06); }
     .sidebar-section-label {
-      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: var(--muted); padding: 8px 6px 3px; flex-shrink: 0;
+      font-size: 0.74rem; font-weight: 500; color: var(--muted); padding: 8px 6px 3px; flex-shrink: 0;
     }
 
     /* ─── USAGE DONUT ───────────────────────────────── */
@@ -2166,14 +2148,20 @@
       position: absolute; bottom: calc(100% + 10px); right: 8px;
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r-md); box-shadow: var(--shadow-lg);
-      padding: 14px 16px; min-width: 220px; z-index: 50;
+      padding: 14px 16px; min-width: 240px; max-width: min(340px, calc(100vw - 32px)); z-index: 50;
       animation: fadeIn 0.15s var(--ease) both;
     }
     .usage-popup.hidden { display: none; }
-    .usage-popup-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
-    .usage-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.82rem; }
-    .usage-row-label { color: var(--muted); }
-    .usage-row-value { font-weight: 600; color: var(--text); }
+    .usage-popup-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .usage-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 3px 0; font-size: 0.8rem; }
+    .usage-row-label { color: var(--text-secondary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .usage-row-label strong { color: var(--text); font-weight: 600; }
+    .usage-row-value { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; flex-shrink: 0; }
+    .usage-section { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+    .usage-section-title { font-size: 0.72rem; color: var(--muted); margin-bottom: 2px; }
+    .usage-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+    .usage-note { margin-top: 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.45; }
+    .usage-note.error { color: #b42318; }
     .usage-row-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
     .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
 
@@ -2284,6 +2272,10 @@
       color: var(--muted);
     }
     .api-key-hint a { color: inherit; text-decoration: underline; }
+    .google-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
+    .google-account-copy { font-size: 0.8rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+    .google-account-row .btn { flex: 0 0 auto; }
+    .model-popover-status.error { color: #b42318; }
     .model-card-badge.price { font-variant-numeric: tabular-nums; }
     .model-card-badge.pick { background: rgba(224, 122, 60, 0.14); color: #c2410c; }
   </style>
@@ -2371,13 +2363,22 @@
               <input class="api-input" id="custom-model-input" type="text" placeholder="moonshotai/kimi-k3" autocomplete="off" spellcheck="false">
             </div>
 
-            <div class="model-popover-section api-key-section">
+            <div class="model-popover-section api-key-section" id="api-key-section">
               <div class="model-popover-section-label">API key de OpenRouter</div>
               <div class="api-key-row">
                 <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
                 <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
               </div>
               <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
+            </div>
+
+            <div class="model-popover-section api-key-section hidden" id="google-section">
+              <div class="model-popover-section-label">Cuenta de Google</div>
+              <div class="google-account-row">
+                <div class="google-account-copy" id="google-account-copy"></div>
+                <button class="btn btn-primary btn-sm" id="google-login-btn" type="button">Entrar con Google</button>
+              </div>
+              <div class="api-key-hint" id="google-hint">Gemini usa la cuota gratuita de tu cuenta, la misma que Gemini CLI. No hace falta API key.</div>
             </div>
           </div>
         </div>
@@ -2389,9 +2390,8 @@
             <img id="profile-avatar" alt="">
           </button>
           <div class="topbar-popover profile-popover hidden" id="profile-popup">
-            <div class="topbar-popover-title">Google Drive</div>
-            <div class="profile-menu-name" id="profile-menu-name">Sin conectar</div>
-            <div class="profile-menu-email" id="profile-menu-email">Haz clic en la foto para iniciar sesión y guardar el historial en Drive.</div>
+            <div class="profile-menu-name" id="profile-menu-name">Sin iniciar sesión</div>
+            <div class="profile-menu-email" id="profile-menu-email">Entra con Google para guardar el historial en Drive y usar Gemini.</div>
             <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
           </div>
         </div>
@@ -2445,7 +2445,7 @@
                   <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>
                 </svg>
               </button>
-              <textarea id="composer" class="composer" rows="1" placeholder="Escribe aquí..."></textarea>
+              <textarea id="composer" class="composer" rows="1" placeholder="Pregunta lo que quieras"></textarea>
               <button class="send-btn" id="send-btn" aria-label="Enviar">
                 <svg id="send-icon" viewBox="0 0 24 24" width="15" height="15" fill="none">
                   <path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -2456,7 +2456,7 @@
               </button>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
-              <div class="usage-popup-title">Cuota y Estado</div>
+              <div class="usage-popup-title">Uso</div>
               <div id="usage-popup-content"></div>
             </div>
             <div class="composer-status-row">
@@ -2642,6 +2642,7 @@
     const REASONING_LEVELS = ['auto', 'low', 'medium', 'high'];
 
     const PROVIDER_OPTIONS = [
+      { id: 'gemini', label: 'Gemini' },
       { id: 'deepseek', label: 'DeepSeek' },
       { id: 'zai', label: 'Z.ai' },
       { id: 'minimax', label: 'MiniMax' },
@@ -2656,7 +2657,7 @@
         provider: 'deepseek',
         id: 'deepseek/deepseek-v4.1-flash-1017',
         label: 'DeepSeek V4.1 Flash',
-        badge: 'Recomendado',
+        badge: 'Por defecto',
         price: '$0.15 / $0.60',
         priceNote: 'Lun-vie de 01:00 a 04:00 y de 06:00 a 10:00 UTC sube a $0.30 / $1.20',
         pick: true,
@@ -2667,7 +2668,7 @@
         provider: 'zai',
         id: 'z-ai/glm-5.3-flashx',
         label: 'GLM-5.3 FlashX',
-        badge: 'Barato',
+        badge: 'Rápido',
         price: '$0.37 / $1.25',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2676,7 +2677,7 @@
         provider: 'zai',
         id: 'z-ai/glm-5.3-prime',
         label: 'GLM-5.3 Prime',
-        badge: 'Potente',
+        badge: 'Más capaz',
         price: '$2.80 / $8.80',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2694,7 +2695,7 @@
         provider: 'anthropic',
         id: 'anthropic/claude-haiku-5.5',
         label: 'Claude Haiku 5.5',
-        badge: 'Barato',
+        badge: 'Rápido',
         price: '$0.10 / $0.50',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2703,7 +2704,7 @@
         provider: 'anthropic',
         id: 'anthropic/claude-sonnet-5.5',
         label: 'Claude Sonnet 5.5',
-        badge: 'Potente',
+        badge: 'Equilibrado',
         price: '$2 / $10',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2712,7 +2713,7 @@
         provider: 'anthropic',
         id: 'anthropic/claude-opus-5.5',
         label: 'Claude Opus 5.5',
-        badge: 'Tope de gama',
+        badge: 'El más capaz',
         price: '$4 / $20',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2721,7 +2722,7 @@
         provider: 'openai',
         id: 'openai/gpt-6-luna',
         label: 'GPT-6 Luna',
-        badge: 'Barato',
+        badge: 'Rápido',
         price: '$0.10 / $0.50',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2730,7 +2731,7 @@
         provider: 'openai',
         id: 'openai/gpt-6-sol',
         label: 'GPT-6 Sol',
-        badge: 'Potente',
+        badge: 'Más capaz',
         price: '$2 / $10',
         thinkingLevels: REASONING_LEVELS,
         defaultThinkingLevel: 'auto'
@@ -2740,7 +2741,7 @@
         provider: 'kimi',
         id: 'moonshotai/kimi-k2.7-code',
         label: 'Kimi K2.7 Code',
-        badge: 'Codigo',
+        badge: 'Para programar',
         price: '$0.67 / $3.35',
         thinkingLevels: [],
         defaultThinkingLevel: ''
@@ -2755,6 +2756,50 @@
         defaultThinkingLevel: 'auto'
       }
     ];
+
+    // Gemini va por Code Assist con la cuenta de Google. La lista buena sale de
+    // retrieveUserQuota (modelos con cuota en esa cuenta); esta es la de partida.
+    const GEMINI_DEFAULT_MODELS = [
+      'gemini-3.1-pro-preview',
+      'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-pro',
+      'gemini-2.5-flash'
+    ];
+
+    function geminiModelLabel(modelId) {
+      return String(modelId).split('-').map((word) => {
+        if (word === 'gemini') return 'Gemini';
+        return /^\d/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1);
+      }).join(' ').replace('Flash Lite', 'Flash-Lite');
+    }
+
+    function isGemini3Model(modelId) {
+      return /^gemini-3(\.|-)/.test(String(modelId));
+    }
+
+    function geminiModelOption(modelId) {
+      return {
+        provider: 'gemini',
+        id: modelId,
+        label: geminiModelLabel(modelId),
+        badge: 'Cuota de tu cuenta',
+        price: '',
+        // Gemini 3 solo acepta thinkingLevel low/high; 2.5 va por presupuesto de tokens.
+        thinkingLevels: isGemini3Model(modelId) ? ['auto', 'low', 'high'] : REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
+      };
+    }
+
+    function setGeminiModels(modelIds) {
+      const ids = modelIds && modelIds.length ? modelIds : GEMINI_DEFAULT_MODELS;
+      for (let i = MODEL_OPTIONS.length - 1; i >= 0; i--) {
+        if (MODEL_OPTIONS[i].provider === 'gemini') MODEL_OPTIONS.splice(i, 1);
+      }
+      MODEL_OPTIONS.unshift.apply(MODEL_OPTIONS, ids.map(geminiModelOption));
+    }
+
+    setGeminiModels(GEMINI_DEFAULT_MODELS);
 
     const STORAGE_KEY = 'inhouseGeminiStandaloneV1';
     const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -3330,7 +3375,7 @@
         return;
       }
       if (action === 'confirm-roadmap') {
-        sendGuidedActionPrompt('Indice confirmado. Empecemos por el primer apartado, paso a paso y sin saltar nada.');
+        sendGuidedActionPrompt('Índice confirmado. Empecemos por el primer apartado, paso a paso y sin saltar nada.');
         return;
       }
       if (action === 'continue') {
@@ -3340,7 +3385,7 @@
         if (!mastery.hasQuiz) {
           showToast(
             'Guided Learning',
-            'Todavia no hay mini test para este apartado. Espera a que el tutor lo genere antes de seguir.'
+            'Todavía no hay mini test para este apartado. Espera a que el tutor lo genere antes de seguir.'
           );
           return;
         }
@@ -3387,6 +3432,10 @@
       customModelSection: document.getElementById('custom-model-section'),
       customModelInput: document.getElementById('custom-model-input'),
       loginBtn: document.getElementById('login-btn'),
+      apiKeySection: document.getElementById('api-key-section'),
+      googleSection: document.getElementById('google-section'),
+      googleAccountCopy: document.getElementById('google-account-copy'),
+      googleLoginBtn: document.getElementById('google-login-btn'),
       profileBtn: document.getElementById('profile-btn'),
       profilePopup: document.getElementById('profile-popup'),
       logoutMenuBtn: document.getElementById('logout-menu-btn'),
@@ -3461,7 +3510,8 @@
     }
 
     function getProviderOption(providerId) {
-      return PROVIDER_OPTIONS.find((option) => option.id === providerId) || PROVIDER_OPTIONS[0];
+      return PROVIDER_OPTIONS.find((option) => option.id === providerId)
+        || PROVIDER_OPTIONS.find((option) => option.id === APP_CONFIG.DEFAULT_PROVIDER);
     }
 
     function normalizeProviderId(providerId) {
@@ -4787,7 +4837,7 @@
       if (hasDriveIdentitySession() && !appState.driveReady) {
         return 'Estamos preparando Google Drive y restaurando tus conversaciones antes de dejarte usar la app.';
       }
-      return 'Esta app necesita una sesion activa de Google para guardar las conversaciones en Drive. Si el token caduca, se renovara automaticamente en segundo plano.';
+      return 'Esta app necesita una sesión activa de Google para guardar las conversaciones en Drive. Si el token caduca, se renovará automáticamente en segundo plano.';
     }
 
     function setAuthGateStatus(text, options) {
@@ -4818,7 +4868,7 @@
         elements.authGateLoginBtn.disabled = !hasOauthConfig();
         elements.authGateLoginBtn.textContent = hasDriveIdentitySession()
           ? 'Reintentar Google Drive'
-          : 'Iniciar sesion con Google';
+          : 'Iniciar sesión con Google';
       }
       if (elements.authGateRetryBtn) {
         const showRetry = hasOauthConfig() && !hasDriveIdentitySession() && canAttemptSilentGoogleAuth();
@@ -4881,7 +4931,7 @@
       if (!settings.preserveProfile) {
         appState.profile = null;
       }
-      appState.codeAssistProjectId = '';
+      resetGeminiSession();
     }
 
     function hasFreshGoogleAccessToken() {
@@ -4919,8 +4969,8 @@
               clearGoogleSessionState({
                 preserveRemember: true
               });
-              setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir guardando el historial en Drive.');
-              setAuthGateStatus('No se pudo renovar la sesion automaticamente.', {
+              setAuthGateReason('La sesión de Google ha caducado y no se pudo renovar automáticamente. Vuelve a iniciar sesión para seguir guardando el historial en Drive.');
+              setAuthGateStatus('No se pudo renovar la sesión automáticamente.', {
                 error: true
               });
               updateAuthUi();
@@ -4941,8 +4991,8 @@
             clearGoogleSessionState({
               preserveRemember: true
             });
-            setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir guardando el historial en Drive.');
-            setAuthGateStatus('No se pudo renovar la sesion automaticamente.', {
+            setAuthGateReason('La sesión de Google ha caducado y no se pudo renovar automáticamente. Vuelve a iniciar sesión para seguir guardando el historial en Drive.');
+            setAuthGateStatus('No se pudo renovar la sesión automáticamente.', {
               error: true
             });
             updateAuthUi();
@@ -5038,15 +5088,10 @@
       return normalizeThinkingLevelForModel(providerId, modelId, chat && typeof chat.thinkingLevel !== 'undefined' ? chat.thinkingLevel : APP_CONFIG.DEFAULT_THINKING_LEVEL);
     }
 
+    const THINKING_LABELS = { auto: 'Auto', minimal: 'Mínimo', low: 'Bajo', medium: 'Medio', high: 'Alto' };
+
     function thinkingLabel(level) {
-      const labels = {
-        auto: 'Thinking auto',
-        minimal: 'Thinking minimal',
-        low: 'Thinking low',
-        medium: 'Thinking medium',
-        high: 'Thinking high'
-      };
-      return labels[level] || level;
+      return THINKING_LABELS[level] || level;
     }
 
     function cloneParts(parts) {
@@ -5085,8 +5130,9 @@
     }
 
     function createChat(title) {
-      const provider = normalizeProviderId(APP_CONFIG.DEFAULT_PROVIDER);
-      const model = normalizeModelId(defaultModelForProvider(provider), provider);
+      const recent = appState.chats[0];
+      const provider = normalizeProviderId(recent && recent.provider ? recent.provider : APP_CONFIG.DEFAULT_PROVIDER);
+      const model = normalizeModelId(recent && recent.provider === provider ? recent.model : defaultModelForProvider(provider), provider);
       return {
         id: uid('chat'),
         title: title || 'Nuevo chat',
@@ -5095,7 +5141,7 @@
         messages: [],
         provider,
         model,
-        thinkingLevel: normalizeThinkingLevelForModel(provider, model, APP_CONFIG.DEFAULT_THINKING_LEVEL),
+        thinkingLevel: normalizeThinkingLevelForModel(provider, model, recent ? recent.thinkingLevel : APP_CONFIG.DEFAULT_THINKING_LEVEL),
         guidedLearning: !!appState.guidedLearning,
         guidedSession: createEmptyGuidedSession()
       };
@@ -5270,10 +5316,10 @@
       if (elements.composer) {
         elements.composer.disabled = driveLocked;
         elements.composer.placeholder = driveLocked
-          ? 'Inicia sesion con Google para continuar...'
+          ? 'Inicia sesión con Google para continuar...'
           : (guidedActive
-            ? 'Sube apuntes, pide un indice o responde al apartado actual...'
-            : 'Escribe aqui...');
+            ? 'Sube apuntes, pide un índice o responde al apartado actual'
+            : 'Pregunta lo que quieras');
       }
       if (elements.attachBtn) {
         elements.attachBtn.disabled = driveLocked || appState.busy || appState.attachmentBusy;
@@ -5355,7 +5401,9 @@
           const badge = option.price
             ? '<span class="model-card-badge price' + (option.pick ? ' pick' : '') + '"' + (option.priceNote ? ' title="' + escapeHtml(option.priceNote) + '"' : '') + '>' + escapeHtml(option.price) + '</span>'
             : '';
-          const subParts = [option.id === CUSTOM_MODEL_ID && apiSettings.customModel ? apiSettings.customModel : option.badge];
+          const subParts = [option.provider === 'gemini'
+            ? (geminiQuotaLabel(option.id) || option.badge)
+            : (option.id === CUSTOM_MODEL_ID && apiSettings.customModel ? apiSettings.customModel : option.badge)];
           if (option.thinkingLevels && option.thinkingLevels.length) {
             subParts.push('Razona');
           }
@@ -5380,7 +5428,7 @@
           elements.thinkingSection.classList.remove('hidden');
           elements.thinkingSegmented.innerHTML = modelOption.thinkingLevels.map((level) => {
             const isActive = level === thinkingLevel;
-            const shortLabel = level.charAt(0).toUpperCase() + level.slice(1);
+            const shortLabel = thinkingLabel(level);
             return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
               ' data-thinking-level="' + escapeHtml(level) + '"' +
               ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
@@ -5399,7 +5447,7 @@
         ? apiSettings.customModel.split('/').pop()
         : modelOption.label;
       const thinkingCopy = modelOption.thinkingLevels.length
-        ? ' · ' + thinkingLabel(thinkingLevel)
+        ? ' · razonamiento ' + thinkingLabel(thinkingLevel).toLowerCase()
         : '';
       if (elements.modelCopy) {
         elements.modelCopy.textContent = providerOption.label + thinkingCopy + '. Se guarda en este chat.';
@@ -5416,14 +5464,31 @@
       }
       if (elements.modelTriggerMeta) {
         if (modelOption.thinkingLevels.length && thinkingLevel && thinkingLevel !== 'auto') {
-          elements.modelTriggerMeta.textContent = thinkingLabel(thinkingLevel).replace('Thinking ', '');
+          elements.modelTriggerMeta.textContent = thinkingLabel(thinkingLevel);
           elements.modelTriggerMeta.classList.remove('hidden');
         } else {
           elements.modelTriggerMeta.classList.add('hidden');
         }
       }
+      const isGemini = providerId === 'gemini';
+      const googleSignedIn = hasDriveIdentitySession();
       if (elements.customModelSection) {
         elements.customModelSection.classList.toggle('hidden', !isCustom);
+      }
+      if (elements.apiKeySection) {
+        elements.apiKeySection.classList.toggle('hidden', isGemini);
+      }
+      if (elements.googleSection) {
+        elements.googleSection.classList.toggle('hidden', !isGemini);
+      }
+      if (elements.googleAccountCopy) {
+        const email = googleSignedIn && appState.profile ? String(appState.profile.email || '') : '';
+        elements.googleAccountCopy.textContent = email
+          ? email + (geminiState.tierName ? ' · ' + geminiState.tierName : '')
+          : 'Sin iniciar sesión';
+      }
+      if (elements.googleLoginBtn) {
+        elements.googleLoginBtn.classList.toggle('hidden', googleSignedIn);
       }
       if (elements.customModelInput && document.activeElement !== elements.customModelInput) {
         elements.customModelInput.value = apiSettings.customModel;
@@ -5436,14 +5501,23 @@
       }
       if (elements.modelMenuStatus) {
         let statusCopy;
-        if (!apiSettings.apiKey) {
-          statusCopy = 'Pega tu API key de OpenRouter abajo para empezar.';
+        if (isGemini) {
+          if (!googleSignedIn) {
+            statusCopy = 'Entra con tu cuenta de Google y usa Gemini sin pagar nada.';
+          } else if (geminiState.error) {
+            statusCopy = geminiState.error;
+          } else {
+            statusCopy = 'Gastas la cuota de tu cuenta de Google, no saldo.';
+          }
+        } else if (!apiSettings.apiKey) {
+          statusCopy = 'Pega tu API key de OpenRouter, o elige Gemini y entra con Google.';
         } else if (isCustom && !apiSettings.customModel) {
           statusCopy = 'Escribe el ID exacto del modelo tal como aparece en openrouter.ai/models.';
         } else {
-          statusCopy = 'Todo corre en el navegador: los mensajes van directos a OpenRouter.';
+          statusCopy = 'Pagas por tokens con tu saldo de OpenRouter.';
         }
-        elements.modelMenuStatus.textContent = statusCopy + ' El modelo se guarda por chat.';
+        elements.modelMenuStatus.textContent = statusCopy;
+        elements.modelMenuStatus.classList.toggle('error', isGemini && googleSignedIn && !!geminiState.error);
       }
     }
 
@@ -5881,7 +5955,7 @@
 
     function renderGuidedTopicCards(session) {
       if (!Array.isArray(session.topics) || !session.topics.length) {
-        return '<div class="guided-empty"><strong>Sin indice aun.</strong> Sube apuntes o describe el tema y el chat te propondra una ruta completa en formato tema, bloque y apartado.</div>';
+        return '<div class="guided-empty"><strong>Sin índice aún.</strong> Sube apuntes o describe el tema y el chat te propondrá una ruta completa en formato tema, bloque y apartado.</div>';
       }
       return '<div class="guided-topic-list">' + session.topics.map((topic) => {
         const currentClass = topic.id === session.current.topicId ? ' current' : '';
@@ -5930,7 +6004,7 @@
               const effectiveStatus = record && record.mastered ? 'done' : section.status;
               const sectionMeta = record && record.mastered
                 ? 'Superado'
-                : section.summary || 'Sin resumen todavia';
+                : section.summary || 'Sin resumen todavía';
               return [
                 '<div class="guided-section' + (section.id === session.current.sectionId ? ' current' : '') + '">',
                 '  <div class="guided-section-main">',
@@ -5959,9 +6033,9 @@
         : 'Esperando mini test';
       let body = '';
       if (!session.topics.length) {
-        body = '<div class="guided-empty"><strong>Paso 1.</strong> Activa este modo, sube tus documentos o describe la asignatura y el chat te devolvera primero el indice.</div>';
+        body = '<div class="guided-empty"><strong>Paso 1.</strong> Activa este modo, sube tus documentos o describe la asignatura y el chat te devolverá primero el índice.</div>';
       } else if (!currentSectionTitle) {
-        body = '<div class="guided-empty"><strong>Indice listo.</strong> Confirma la ruta y empezamos por el primer apartado sin saltos.</div>';
+        body = '<div class="guided-empty"><strong>Índice listo.</strong> Confirma la ruta y empezamos por el primer apartado sin saltos.</div>';
       } else if (!mastery.hasQuiz) {
         body = '<div class="guided-empty"><strong>Sin mini test aun.</strong> El siguiente mensaje del tutor deberia traer preguntas de comprobacion para este apartado.</div>';
       } else {
@@ -5998,7 +6072,7 @@
         ? (mastery.unlocked
           ? 'Desbloqueado para seguir.'
           : 'Necesitas ' + mastery.requiredAccuracy + '% para desbloquear el siguiente apartado.')
-        : 'El avance se abrira cuando haya indice y mini test.';
+        : 'El avance se abrirá cuando haya índice y mini test.';
       return [
         '<section class="guided-quiz">',
         '  <div class="guided-quiz-head">',
@@ -6011,9 +6085,9 @@
         body,
         '  <div class="guided-actions">',
         currentSectionTitle
-          ? '<button class="guided-action secondary" type="button" data-guided-action="reinforce">Necesito otra explicacion</button>'
+          ? '<button class="guided-action secondary" type="button" data-guided-action="reinforce">Necesito otra explicación</button>'
           : (session.topics.length
-            ? '<button class="guided-action secondary" type="button" data-guided-action="confirm-roadmap">Confirmar indice y empezar</button>'
+            ? '<button class="guided-action secondary" type="button" data-guided-action="confirm-roadmap">Confirmar índice y empezar</button>'
             : ''),
         mastery.hasQuiz
           ? '<button class="guided-action secondary" type="button" data-guided-action="reset-quiz">Resetear test</button>'
@@ -6046,13 +6120,13 @@
       const subtitle = current.section
         ? 'Ahora mismo estas en ' + current.section.title + '. No se avanza hasta dominarlo.'
         : session.topics.length
-          ? 'La ruta ya esta montada. Confirma el indice o pide el primer apartado.'
+          ? 'La ruta ya está montada. Confirma el índice o pide el primer apartado.'
           : 'Sube documentos o describe el temario y el chat lo convertira en una ruta guiada.';
       const lockCopy = mastery.hasQuiz
         ? (mastery.unlocked
           ? 'Mini test superado. Puedes pasar al siguiente apartado.'
           : 'Paso bloqueado hasta llegar al ' + mastery.requiredAccuracy + '% de acierto.')
-        : 'Todavia no hay bloqueo activo porque falta indice o mini test.';
+        : 'Todavía no hay bloqueo activo porque falta índice o mini test.';
       return [
         '<section class="guided-shell' + (settings.emptyState ? ' empty-state' : '') + '">',
         '  <div class="guided-head">',
@@ -6133,7 +6207,7 @@
 
     function renderGuidedTopicCards(session) {
       if (!Array.isArray(session.topics) || !session.topics.length) {
-        return '<div class="guided-topic-strip"><span class="guided-topic-pill planned">Sin indice</span></div>';
+        return '<div class="guided-topic-strip"><span class="guided-topic-pill planned">Sin índice</span></div>';
       }
       return '<div class="guided-topic-strip">' + session.topics.map((topic) => {
         const status = topic.id === session.current.topicId ? 'current' : guidedStatusMark(topic.status);
@@ -6146,11 +6220,11 @@
       const resolved = getGuidedResolvedCurrent(session);
       const activeTopic = resolved.topic || (Array.isArray(session.topics) ? session.topics[0] : null);
       if (!activeTopic) {
-        return '<div class="guided-note">Sube material o pide un indice para empezar.</div>';
+        return '<div class="guided-note">Sube material o pide un índice para empezar.</div>';
       }
       const currentBlock = resolved.block || (Array.isArray(activeTopic.blocks) ? activeTopic.blocks[0] : null);
       if (!currentBlock) {
-        return '<div class="guided-note">Todavia no hay bloques definidos.</div>';
+        return '<div class="guided-note">Todavía no hay bloques definidos.</div>';
       }
       return '<div class="guided-outline">' + currentBlock.sections.map((section) => {
         const key = guidedSectionKey(activeTopic.id, currentBlock.id, section.id);
@@ -6263,7 +6337,7 @@
         }).join(''),
         '</div>',
         '<div class="guided-inline-actions">',
-        '  <button class="guided-mini-btn" type="button" data-guided-action="reinforce">Otra explicacion</button>',
+        '  <button class="guided-mini-btn" type="button" data-guided-action="reinforce">Otra explicación</button>',
         '  <button class="guided-mini-btn" type="button" data-guided-action="reset-quiz">Repetir test</button>',
         '  <button class="guided-mini-btn primary" type="button" data-guided-action="continue"' + ((!mastery.hasQuiz || !mastery.unlocked) ? ' disabled' : '') + '>Siguiente apartado</button>',
         '</div>',
@@ -6345,41 +6419,29 @@
       const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
       const guidedActive = !!(chat && chat.guidedLearning);
-      const heroMarkup = guidedActive
+      const suggestions = guidedActive
         ? [
-            '<section class="hero">',
-            '  <div class="hero-icon" aria-hidden="true">',
-            '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
-            '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
-            '    </svg>',
-            '  </div>',
-            '  <h2>Construye tu ruta de estudio</h2>',
-            '  <p class="hero-sub">Sube documentos o di el tema y te lo organizo por tema, bloque y apartado antes de empezar.</p>',
-            '  <div class="chips">',
-            '    <button class="chip suggestion-chip" data-prompt="Quiero estudiar fuerza desde cero. Proponme primero un indice en Tema > Bloque > Apartado.">Indice para fuerza</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Organiza estos apuntes por tema, bloque y apartado antes de explicarme nada.">Organizar apuntes</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Actua como tutor guiado. No pases de apartado hasta que lo domine y pon el mini test dentro del propio mensaje del tutor.">Activar tutor paso a paso</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Empieza por el primer apartado del indice y explicamelo con intuicion, muy poco a poco.">Empezar primer apartado</button>',
-            '  </div>',
-            '</section>'
-          ].join('')
+            ['Organiza mis apuntes en temas', 'Te voy a pasar mis apuntes. Antes de explicarme nada, organízalos en Tema > Bloque > Apartado y proponme un índice.'],
+            ['Quiero estudiar un tema desde cero', 'Quiero estudiar un tema desde cero. Pregúntame cuál es y proponme un índice en Tema > Bloque > Apartado.'],
+            ['Empieza por el primer apartado', 'Empieza por el primer apartado del índice y explícamelo con intuición, poco a poco.']
+          ]
         : [
-            '<section class="hero">',
-            '  <div class="hero-icon" aria-hidden="true">',
-            '    <svg viewBox="0 0 40 24" width="30" height="18" fill="none">',
-            '      <path d="M4 22 L20 6 L36 22" stroke="#E07A3C" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"></path>',
-            '    </svg>',
-            '  </div>',
-            '  <h2>\u00bfQue quieres aprender hoy?</h2>',
-            '  <p class="hero-sub">Pregunta lo que quieras. Adjunta documentos, PDFs o imagenes.</p>',
-            '  <div class="chips">',
-            '    <button class="chip suggestion-chip" data-prompt="Resume el proyecto y propon un plan de trabajo en 5 puntos.">\ud83d\udccb Resumir proyecto y plan</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Redacta un correo corto y profesional para un cliente.">\u2709\ufe0f Redactar correo profesional</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Convierte estas notas en un briefing ejecutivo.">\ud83d\udcdd Notas \u2192 briefing ejecutivo</button>',
-            '    <button class="chip suggestion-chip" data-prompt="Ayudame a depurar un error de JavaScript paso a paso.">\ud83d\udc1b Depurar JavaScript</button>',
-            '  </div>',
-            '</section>'
-          ].join('');
+            ['Explícame un tema desde cero', 'Explícame desde cero un tema que me cuesta. Pregúntame primero cuál es y qué sé ya.'],
+            ['Hazme un test con mis apuntes', 'Voy a pegarte mis apuntes. Hazme un test de 5 preguntas para ver qué domino y qué no.'],
+            ['Convierte un PDF en apuntes', 'Te voy a subir un PDF. Conviértelo en apuntes claros, con lo importante destacado.'],
+            ['Plan de estudio para un examen', 'Tengo un examen pronto. Ayúdame a hacer un plan de estudio realista, día a día.']
+          ];
+      const heroMarkup = [
+        '<section class="hero">',
+        '  <h2>' + (guidedActive ? 'Construye tu ruta de estudio' : '¿Qué estudiamos hoy?') + '</h2>',
+        '  <p class="hero-sub">' + (guidedActive
+          ? 'Sube tus apuntes o dime el tema. Primero te lo ordeno en temas, bloques y apartados, y luego vamos uno a uno.'
+          : 'Pregunta lo que sea, pega tus apuntes o sube un PDF o una foto.') + '</p>',
+        '  <div class="chips">',
+        suggestions.map((item) => '    <button class="chip suggestion-chip" data-prompt="' + escapeHtml(item[1]) + '">' + escapeHtml(item[0]) + '</button>').join(''),
+        '  </div>',
+        '</section>'
+      ].join('');
       syncGuidedBannerSlot(chat, guidedActive ? { emptyState: true } : undefined);
       elements.thread.innerHTML = heroMarkup;
       bindSuggestionChips();
@@ -6668,7 +6730,6 @@
       return [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/generative-language.retriever',
         'https://www.googleapis.com/auth/cloud-platform',
         DRIVE_SCOPE
       ];
@@ -6715,14 +6776,14 @@
           prompt: 'none'
         });
         if (!restored || !appState.accessToken) {
-          setAuthGateReason('Inicia sesion con Google para que la app pueda seguir guardando el historial en Drive.');
+          setAuthGateReason('Inicia sesión con Google para que la app pueda seguir guardando el historial en Drive.');
           setAuthGateStatus('Google Drive no esta disponible.', {
             error: true
           });
           updateAuthUi();
           updateConfigUi();
           updateSendUi();
-          throw new Error('Inicia sesion con Google para sincronizar con Drive.');
+          throw new Error('Inicia sesión con Google para sincronizar con Drive.');
         }
       }
 
@@ -6746,8 +6807,8 @@
         clearGoogleSessionState({
           preserveRemember: true
         });
-        setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir guardando el historial en Drive.');
-        setAuthGateStatus('La sesion de Google ha caducado.', {
+        setAuthGateReason('La sesión de Google ha caducado y no se pudo renovar automáticamente. Vuelve a iniciar sesión para seguir guardando el historial en Drive.');
+        setAuthGateStatus('La sesión de Google ha caducado.', {
           error: true
         });
         updateAuthUi();
@@ -6756,7 +6817,7 @@
         saveState({
           skipDrive: true
         });
-        throw new Error('La sesion de Google ha caducado.');
+        throw new Error('La sesión de Google ha caducado.');
       }
       return response;
     }
@@ -7076,7 +7137,7 @@
         appState.driveSyncPromise = persistDriveSnapshot(buildStateSnapshot())
           .catch((error) => {
             console.error('Drive sync error:', error);
-            showToast('Drive', 'No se pudo guardar el chat en Drive. Revisa que Google Drive API este activada.');
+            showToast('Drive', 'No se pudo guardar el chat en Drive. Revisa que la API de Google Drive esté activada.');
           })
           .finally(() => {
             appState.driveSyncPromise = null;
@@ -7098,7 +7159,7 @@
       clearGoogleSessionState({
         preserveRemember: false
       });
-      setAuthGateReason('Has cerrado la sesion. Inicia sesion con Google para volver a usar la app y seguir guardando el historial en Drive.');
+      setAuthGateReason('Has cerrado la sesión. Inicia sesión con Google para volver a usar la app y seguir guardando el historial en Drive.');
       setAuthGateStatus('');
       updateAuthUi();
       updateConfigUi();
@@ -7106,7 +7167,7 @@
       saveState({
         skipDrive: true
       });
-      showToast('Sesion cerrada', 'Se elimino el token local del navegador.');
+      showToast('Sesión cerrada', 'El historial sigue en este navegador.');
     }
 
     function touchChat(chat) {
@@ -7298,11 +7359,7 @@
       var msg = chat.messages[idx];
       if (msg.role !== 'assistant') return;
 
-      if (!getApiSettings().apiKey) {
-        showToast('OpenRouter', 'Pega tu API key de OpenRouter para regenerar.');
-        openModelMenuForKey();
-        return;
-      }
+      if (!ensureProviderReady(chat)) return;
 
       var currentContent = getVisibleContent(msg);
       if (!msg.alternatives) msg.alternatives = [];
@@ -7547,7 +7604,7 @@
       } catch (_) {}
     }
 
-    function recordOpenRouterUsage(modelId, usage) {
+    function recordModelUsage(modelId, usage) {
       if (!usage) return;
       const data = getUsageData();
       const prompt = Number(usage.prompt_tokens) || 0;
@@ -7600,7 +7657,7 @@
     function renderDonutSegments(svg, entries, valueKey, totalValue, centerLabel, tooltipFormatter) {
       var radius = 15.915;
       var circ = 2 * Math.PI * radius;
-      var parts = ['<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="3"/>'];
+      var parts = ['<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="3.5"/>'];
       var cumulative = 0;
       entries.forEach(function(entry, index) {
         var value = Number(entry[valueKey]);
@@ -7609,7 +7666,7 @@
         if (len <= 0) return;
         var offset = 25 - cumulative;
         parts.push(
-          '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + (entry.color || modelDonutColor(index)) + '" stroke-width="3"' +
+          '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + (entry.color || modelDonutColor(index)) + '" stroke-width="3.5"' +
           ' stroke-dasharray="' + len.toFixed(2) + ' ' + (circ - len).toFixed(2) + '"' +
           ' stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="butt">' +
           '<title>' + escapeHtml(tooltipFormatter(entry)) + '</title>' +
@@ -7617,8 +7674,9 @@
         );
         cumulative += len;
       });
-      parts.push('<text x="18" y="19.5" text-anchor="middle" font-size="' + (String(centerLabel).length > 4 ? 6.5 : 8) + '" font-weight="700" fill="currentColor">' + escapeHtml(centerLabel) + '</text>');
       svg.innerHTML = parts.join('');
+      var usageBtn = document.getElementById('usage-btn');
+      if (usageBtn) usageBtn.title = centerLabel;
     }
 
     async function refreshOpenRouterCredits() {
@@ -7651,9 +7709,30 @@
       return appState.openRouterCredits;
     }
 
+    function quotaColor(ratio) {
+      return ratio > 0.25 ? '#22c55e' : ratio > 0.1 ? '#eab308' : '#ef4444';
+    }
+
     function renderUsageDonut() {
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
+      if (activeProviderName() === 'gemini') {
+        var modelId = activeModelName();
+        var quota = geminiState.quota[modelId];
+        if (hasDriveIdentitySession() && quota && quota.fraction !== null) {
+          renderDonutSegments(svg, [{
+            label: geminiModelLabel(modelId),
+            fraction: quota.fraction,
+            color: quotaColor(quota.fraction)
+          }], 'fraction', 1, 'Queda el ' + Math.round(quota.fraction * 100) + ' % de la cuota de ' + geminiModelLabel(modelId), function(entry) {
+            return entry.label + ': queda el ' + Math.round(entry.fraction * 100) + ' % de la cuota';
+          });
+          return;
+        }
+        svg.innerHTML = '<circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="3.5"/>';
+        document.getElementById('usage-btn').title = hasDriveIdentitySession() ? 'Cuota de Gemini' : 'Entra con Google para usar Gemini';
+        return;
+      }
       var credits = appState.openRouterCredits;
       if (credits && credits.total > 0) {
         var remaining = Math.max(0, credits.total - credits.used);
@@ -7661,8 +7740,8 @@
         renderDonutSegments(svg, [{
           label: 'Saldo OpenRouter',
           remaining: remaining,
-          color: ratio > 0.25 ? '#22c55e' : ratio > 0.1 ? '#eab308' : '#ef4444'
-        }], 'remaining', credits.total, formatUsd(remaining), function(entry) {
+          color: quotaColor(ratio)
+        }], 'remaining', credits.total, formatUsd(remaining) + ' de saldo en OpenRouter', function(entry) {
           return entry.label + ': ' + formatUsd(entry.remaining) + ' de ' + formatUsd(credits.total);
         });
         return;
@@ -7670,55 +7749,101 @@
       var usage = getUsageData();
       var hasKey = !!getApiSettings().apiKey;
       var color = hasKey ? '#22c55e' : '#ef4444';
-      var label = hasKey ? (usage.cost > 0 ? formatUsd(usage.cost) : 'API') : 'key';
       svg.innerHTML = [
-        '<circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="3"/>',
-        '<circle cx="18" cy="18" r="15.915" fill="none" stroke="' + color + '" stroke-width="3" stroke-dasharray="' + (hasKey ? '100 0' : '0 100') + '" stroke-dashoffset="25"/>',
-        '<text x="18" y="19.5" text-anchor="middle" font-size="' + (label.length > 4 ? 6.5 : 8) + '" font-weight="700" fill="' + color + '">' + escapeHtml(label) + '</text>'
+        '<circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="3.5"/>',
+        '<circle cx="18" cy="18" r="15.915" fill="none" stroke="' + color + '" stroke-width="3.5" stroke-dasharray="' + (hasKey ? '100 0' : '0 100') + '" stroke-dashoffset="25"/>'
       ].join('');
+      document.getElementById('usage-btn').title = hasKey
+        ? 'Gastado en este navegador: ' + formatUsd(usage.cost)
+        : 'Falta la API key de OpenRouter';
+    }
+
+    function usageRow(label, value) {
+      return '<div class="usage-row"><span class="usage-row-label">' + label + '</span><span class="usage-row-value">' + escapeHtml(value) + '</span></div>';
+    }
+
+    function usageSection(title, body) {
+      return '<div class="usage-section"><div class="usage-section-title">' + escapeHtml(title) + '</div>' + body + '</div>';
+    }
+
+    function usageDot(color) {
+      return '<span class="usage-dot" style="background:' + color + '"></span>';
+    }
+
+    function renderGeminiUsagePopup(content) {
+      var signedIn = hasDriveIdentitySession();
+      var html = [
+        usageRow('Cuenta', signedIn && appState.profile ? String(appState.profile.email || '') : 'sin iniciar sesión')
+      ];
+      if (geminiState.tierName) html.push(usageRow('Plan', geminiState.tierName));
+      var activeId = activeModelName();
+      var quotaRows = sortGeminiModels(Object.keys(geminiState.quota)).map(function(id) {
+        var quota = geminiState.quota[id];
+        var value = quota.fraction === null ? '—' : Math.round(quota.fraction * 100) + ' %';
+        var reset = formatQuotaReset(quota.resetTime);
+        if (reset && quota.fraction !== null && quota.fraction < 1) value += ' · se renueva ' + reset;
+        var label = usageDot(quota.fraction === null ? 'var(--muted)' : quotaColor(quota.fraction)) + escapeHtml(geminiModelLabel(id));
+        return usageRow(id === activeId ? '<strong>' + label + '</strong>' : label, value);
+      }).join('');
+      html.push(usageSection('Cuota que te queda', quotaRows || '<div class="usage-note">Aparece al entrar con Google.</div>'));
+      var usage = getUsageData();
+      var geminiIds = Object.keys(usage.byModel).filter(function(id) { return id.indexOf('gemini-') === 0; });
+      if (geminiIds.length) {
+        var totals = geminiIds.reduce(function(acc, id) {
+          var item = usage.byModel[id];
+          acc.requests += item.requests || 0;
+          acc.tokens += (item.promptTokens || 0) + (item.completionTokens || 0);
+          return acc;
+        }, { requests: 0, tokens: 0 });
+        html.push(usageSection('En este navegador', [
+          usageRow('Mensajes', formatNumber(totals.requests)),
+          usageRow('Tokens', formatCompactNumber(totals.tokens))
+        ].join('')));
+      }
+      if (signedIn && geminiState.error) {
+        html.push('<div class="usage-note error">' + escapeHtml(geminiState.error) + '</div>');
+      }
+      content.innerHTML = html.join('');
     }
 
     function renderUsagePopup() {
       var content = document.getElementById('usage-popup-content');
       if (!content) return;
+      if (activeProviderName() === 'gemini') {
+        renderGeminiUsagePopup(content);
+        return;
+      }
       var hasKey = !!getApiSettings().apiKey;
       var credits = appState.openRouterCredits;
       var usage = getUsageData();
-      var row = function(label, value) {
-        return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(label) + '</span><span class="usage-row-value">' + escapeHtml(value) + '</span></div>';
-      };
-      var section = function(title, body) {
-        return '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">' + escapeHtml(title) + '</div>' + body + '</div>';
-      };
-      var keyState = !hasKey ? 'sin configurar' : (credits && credits.keyValid === false ? 'no valida' : 'guardada');
+      var keyState = !hasKey ? 'sin configurar' : (credits && credits.keyValid === false ? 'no válida' : 'guardada');
       var html = [
-        row('API key', keyState),
-        row('Modelo', activeModelBadge()),
-        row('ID', resolveRequestModelId(getActiveChat()) || '-')
+        usageRow('API key', keyState),
+        usageRow('Modelo', activeModelBadge())
       ];
       if (credits && credits.total > 0) {
-        html.push(section('SALDO OPENROUTER', [
-          row('Restante', formatUsd(Math.max(0, credits.total - credits.used))),
-          row('Gastado', formatUsd(credits.used)),
-          row('Recargado', formatUsd(credits.total))
+        html.push(usageSection('Saldo en OpenRouter', [
+          usageRow('Te queda', formatUsd(Math.max(0, credits.total - credits.used))),
+          usageRow('Gastado', formatUsd(credits.used)),
+          usageRow('Recargado', formatUsd(credits.total))
         ].join('')));
       }
-      var modelRows = Object.keys(usage.byModel).sort(function(a, b) {
+      var paidIds = Object.keys(usage.byModel).filter(function(id) { return id.indexOf('gemini-') !== 0; });
+      var modelRows = paidIds.sort(function(a, b) {
         return (usage.byModel[b].cost || 0) - (usage.byModel[a].cost || 0);
       }).slice(0, 6).map(function(id, index) {
         var item = usage.byModel[id];
-        var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + modelDonutColor(index) + ';margin-right:6px;vertical-align:middle"></span>';
-        return '<div class="usage-row"><span class="usage-row-label">' + dot + escapeHtml(id.split('/').pop()) + '</span><span class="usage-row-value">' + escapeHtml(formatUsd(item.cost) + ' · ' + item.requests + ' msg') + '</span></div>';
+        return usageRow(usageDot(modelDonutColor(index)) + escapeHtml(id.split('/').pop()), formatUsd(item.cost) + ' · ' + item.requests + ' msg');
       }).join('');
-      html.push(section('USO EN ESTE NAVEGADOR', [
-        row('Mensajes', formatNumber(usage.requests)),
-        row('Tokens entrada', formatCompactNumber(usage.promptTokens)),
-        row('Tokens salida', formatCompactNumber(usage.completionTokens)),
-        row('Coste', formatUsd(usage.cost)),
+      html.push(usageSection('En este navegador', [
+        usageRow('Mensajes', formatNumber(usage.requests)),
+        usageRow('Tokens de entrada', formatCompactNumber(usage.promptTokens)),
+        usageRow('Tokens de salida', formatCompactNumber(usage.completionTokens)),
+        usageRow('Coste', formatUsd(usage.cost)),
         modelRows
       ].join('')));
       if (!hasKey) {
-        html.push('<div style="margin-top:8px;font-size:0.7rem;color:var(--muted);line-height:1.45">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>');
+        html.push('<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>');
       }
       content.innerHTML = html.join('');
     }
@@ -7729,7 +7854,8 @@
       popup.classList.toggle('hidden');
       if (isHidden) {
         renderUsagePopup();
-        refreshOpenRouterCredits().then(function() {
+        var refresh = activeProviderName() === 'gemini' ? prepareGemini() : refreshOpenRouterCredits();
+        refresh.then(function() {
           if (!popup.classList.contains('hidden')) {
             renderUsagePopup();
           }
@@ -7886,39 +8012,31 @@
       }
       elements.profileBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
-        const driveConnected = hasDrivePersistenceReady();
-        if (driveConnected) {
+        if (hasDriveIdentitySession()) {
           toggleProfileMenu();
           return;
         }
         if (!hasOauthConfig()) {
-          showToast('Drive', 'Configura GOOGLE_CLIENT_ID para activar Google Drive.');
+          showToast('Google', 'Configura GOOGLE_CLIENT_ID para activar el login con Google.');
           return;
         }
         try {
           ensureOauthConfig();
-          const ready = await loginWithGoogle({
+          await loginWithGoogle({
             interactive: true,
             toast: true
           });
-          if (!ready || !hasDrivePersistenceReady()) {
-            throw new Error('Google Drive todavia no esta listo.');
-          }
           setAuthGateReason('');
           setAuthGateStatus('');
-          setComposerStatus('Google Drive listo.');
-          window.setTimeout(() => {
-            if (!appState.busy) setComposerStatus('');
-          }, 1400);
         } catch (error) {
-          setAuthGateReason(error.message || 'No se pudo conectar Google Drive.');
-          setAuthGateStatus(error.message || 'No se pudo conectar Google Drive.', {
-            error: true
-          });
+          if (hasDriveIdentitySession()) {
+            showToast('Google Drive', 'Has entrado, pero Drive no responde. El historial se queda en este navegador.');
+          } else {
+            showToast('Google', error.message || 'No se pudo iniciar sesión.');
+          }
           updateAuthUi();
           updateConfigUi();
           updateSendUi();
-          setComposerStatus(error.message || 'No se pudo conectar Google Drive.');
         }
       });
       if (elements.authGateLoginBtn) {
@@ -7929,7 +8047,7 @@
               toast: true
             });
             if (!hasDrivePersistenceReady()) {
-              throw new Error('Google Drive todavia no esta listo.');
+              throw new Error('Google Drive todavía no está listo.');
             }
             setAuthGateReason('');
             setAuthGateStatus('');
@@ -7956,8 +8074,8 @@
             forceRefresh: true
           });
           if (!restored || !hasDrivePersistenceReady()) {
-            setAuthGateReason('No se pudo restaurar la sesion automaticamente. Inicia sesion con Google para continuar.');
-            setAuthGateStatus('No se pudo restaurar la sesion automaticamente.', {
+            setAuthGateReason('No se pudo restaurar la sesión automáticamente. Inicia sesión con Google para continuar.');
+            setAuthGateStatus('No se pudo restaurar la sesión automáticamente.', {
               error: true
             });
             updateAuthUi();
@@ -7989,6 +8107,9 @@
           updateConfigUi();
           renderHistory();
           setComposerStatus('');
+          if (nextProvider === 'gemini' && !appState.codeAssistProjectId) {
+            prepareGemini();
+          }
         });
       }
       if (elements.modelList) {
@@ -8023,6 +8144,18 @@
       elements.loginBtn.addEventListener('click', () => {
         saveApiKeyFromInput();
       });
+      if (elements.googleLoginBtn) {
+        elements.googleLoginBtn.addEventListener('click', async () => {
+          try {
+            await loginWithGoogle({ interactive: true, toast: false });
+          } catch (error) {
+            if (!hasDriveIdentitySession()) {
+              showToast('Google', error.message || 'No se pudo iniciar sesión.');
+            }
+          }
+          updateConfigUi();
+        });
+      }
       elements.logoutMenuBtn.addEventListener('click', () => {
         closeProfileMenu();
         logoutGoogle();
@@ -8086,6 +8219,7 @@
       elements.originCopy.textContent = '';
       updateGuidedLearningUi();
       updateAuthUi();
+      renderUsageDonut();
     }
 
     function updateAuthUi() {
@@ -8095,10 +8229,8 @@
       elements.profileCard.classList.toggle('hidden', !driveIdentity);
       elements.profileBtn.dataset.connected = driveIdentity ? 'true' : 'false';
       elements.profileBtn.title = !hasDriveOauth
-        ? 'Google Drive no esta configurado en esta build'
-        : (driveConnected
-          ? 'Google Drive conectado'
-          : (driveIdentity ? 'Google Drive reconectando' : 'Conectar Google Drive'));
+        ? 'El login con Google no está configurado'
+        : (driveIdentity ? 'Cuenta de Google' : 'Entrar con Google');
       elements.logoutMenuBtn.classList.toggle('hidden', !driveIdentity);
 
       if (driveIdentity) {
@@ -8110,21 +8242,21 @@
           elements.profileAvatar.removeAttribute('src');
           if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
         }
-        elements.profileName.textContent = String(appState.profile.name || 'Google Drive');
+        elements.profileName.textContent = String(appState.profile.name || '');
         elements.profileEmail.textContent = String(appState.profile.email || '');
-        elements.profileMenuName.textContent = String(appState.profile.name || 'Google Drive');
-        elements.profileMenuEmail.textContent = driveConnected
-          ? String(appState.profile.email || 'Sincronizando historial con Drive.')
-          : 'Reconectando con Google Drive para seguir guardando el historial.';
+        elements.profileMenuName.textContent = String(appState.profile.name || appState.profile.email || '');
+        elements.profileMenuEmail.textContent = String(appState.profile.email || '') + (driveConnected
+          ? ' · historial guardado en Drive'
+          : ' · historial en este navegador');
       } else {
         elements.profileAvatar.removeAttribute('src');
         if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
         elements.profileName.textContent = '';
         elements.profileEmail.textContent = '';
-        elements.profileMenuName.textContent = hasDriveOauth ? 'Google Drive' : 'OAuth no configurado';
+        elements.profileMenuName.textContent = hasDriveOauth ? 'Sin iniciar sesión' : 'OAuth no configurado';
         elements.profileMenuEmail.textContent = hasDriveOauth
-          ? 'Haz clic en la foto para iniciar sesión y guardar el historial en Drive.'
-          : 'Configura GOOGLE_CLIENT_ID para activar el guardado en Drive.';
+          ? 'Entra con Google para guardar el historial en Drive y usar Gemini.'
+          : 'Configura GOOGLE_CLIENT_ID para activar el login con Google.';
         closeProfileMenu();
       }
 
@@ -8183,6 +8315,26 @@
       return modelId;
     }
 
+    function ensureProviderReady(chat) {
+      if (activeProviderName(chat) === 'gemini') {
+        if (hasDriveIdentitySession()) return true;
+        showToast('Gemini', 'Entra con tu cuenta de Google para usar Gemini.');
+        openModelMenuForKey(elements.googleLoginBtn);
+        return false;
+      }
+      if (!getApiSettings().apiKey) {
+        showToast('OpenRouter', 'Pega tu API key de OpenRouter, o elige Gemini y entra con Google.');
+        openModelMenuForKey();
+        return false;
+      }
+      if (activeModelName(chat) === CUSTOM_MODEL_ID && !getApiSettings().customModel.trim()) {
+        showToast('Modelo personalizado', 'Escribe el ID del modelo de OpenRouter en el selector.');
+        openModelMenuForKey(elements.customModelInput);
+        return false;
+      }
+      return true;
+    }
+
     function openModelMenuForKey(focusTarget) {
       // Diferido: el click que lo dispara no debe cerrarlo al burbujear a document.
       window.setTimeout(() => {
@@ -8209,9 +8361,9 @@
       }
       const credits = await refreshOpenRouterCredits();
       if (credits && credits.keyValid === false) {
-        showToast('OpenRouter', 'OpenRouter ha rechazado la key. Revisa que este copiada entera.');
+        showToast('OpenRouter', 'OpenRouter ha rechazado la key. Revisa que esté copiada entera.');
       } else {
-        showToast('OpenRouter', 'API key guardada. Ya puedes chatear.');
+        showToast('OpenRouter', 'API key guardada.');
         closeModelMenu();
         elements.composer.focus();
       }
@@ -8275,7 +8427,7 @@
       return message;
     }
 
-    async function callModel(chat, signal, onProgress) {
+    async function callOpenRouter(chat, signal, onProgress) {
       const settings = getApiSettings();
       if (!settings.apiKey) {
         throw new Error('Falta tu API key de OpenRouter. Pegala en el selector de modelo.');
@@ -8361,7 +8513,7 @@
       }
       if (buffer) handleLine(buffer);
 
-      if (usage) recordOpenRouterUsage(model, usage);
+      if (usage) recordModelUsage(model, usage);
       if (!text.trim() && !thinking.trim()) {
         throw new Error('El modelo no ha devuelto respuesta. Prueba otra vez o cambia de modelo.');
       }
@@ -8371,6 +8523,429 @@
       return { text, thinking, parts: [{ text }] };
     }
 
+
+    function callModel(chat, signal, onProgress) {
+      return activeProviderName(chat) === 'gemini'
+        ? callGemini(chat, signal, onProgress)
+        : callOpenRouter(chat, signal, onProgress);
+    }
+
+    // ─── GEMINI (Code Assist con la cuenta de Google) ──
+    // Es el backend que usa Gemini CLI al entrar con Google, así que la cuota es
+    // la de la propia cuenta (gratis en el plan individual). Se llama desde el
+    // navegador con el token del login (scope cloud-platform).
+    const CODE_ASSIST_BASE_URL = 'https://cloudcode-pa.googleapis.com/v1internal';
+    const CODE_ASSIST_METADATA = { ideType: 'IDE_UNSPECIFIED', platform: 'PLATFORM_UNSPECIFIED', pluginType: 'GEMINI' };
+    const GEMINI_CACHE_KEY = STORAGE_KEY + '::gemini';
+    const GEMINI_THINKING_BUDGETS = { low: 1024, medium: 8192, high: 24576 };
+    const geminiState = { tierName: '', quota: {}, error: '', setupPromise: null };
+
+    function readGeminiCache() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(GEMINI_CACHE_KEY) || 'null');
+        return raw && typeof raw === 'object' ? raw : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeGeminiCache(patch) {
+      try {
+        localStorage.setItem(GEMINI_CACHE_KEY, JSON.stringify(Object.assign(readGeminiCache(), patch)));
+      } catch (_) {}
+    }
+
+    function restoreGeminiCache() {
+      const cache = readGeminiCache();
+      setGeminiModels(Array.isArray(cache.models) ? cache.models : null);
+      geminiState.quota = cache.quota && typeof cache.quota === 'object' ? cache.quota : {};
+      geminiState.tierName = String(cache.tierName || '');
+    }
+
+    function resetGeminiSession() {
+      appState.codeAssistProjectId = '';
+      geminiState.tierName = '';
+      geminiState.quota = {};
+      geminiState.error = '';
+      geminiState.setupPromise = null;
+      writeGeminiCache({ quota: {}, tierName: '' });
+    }
+
+    function formatQuotaReset(value) {
+      const date = value ? new Date(value) : null;
+      if (!date || isNaN(date.getTime())) return '';
+      const time = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      if (date.toDateString() === new Date().toDateString()) return 'a las ' + time;
+      return 'el ' + date.toLocaleDateString('es-ES', { weekday: 'long' }) + ' a las ' + time;
+    }
+
+    function resetTimeFromMessage(message) {
+      const match = String(message || '').match(/reset after\s+((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)/i);
+      if (!match || !match[1]) return '';
+      const part = (re) => Number((match[1].match(re) || [])[1] || 0);
+      const seconds = part(/(\d+)h/) * 3600 + part(/(\d+)m/) * 60 + part(/([\d.]+)s/);
+      return seconds > 0 ? new Date(Date.now() + seconds * 1000).toISOString() : '';
+    }
+
+    function codeAssistErrorMessage(payload, status) {
+      let message = payload && payload.error && payload.error.message ? String(payload.error.message) : '';
+      try {
+        const nested = JSON.parse(message);
+        if (nested && nested.error && nested.error.message) message = String(nested.error.message);
+      } catch (_) {}
+      return message || ('HTTP ' + status);
+    }
+
+    function describeCodeAssistError(status, payload, modelId) {
+      const message = codeAssistErrorMessage(payload, status);
+      const lower = message.toLowerCase();
+      const label = modelId ? geminiModelLabel(modelId) : 'Gemini';
+      if (status === 401) {
+        return 'La sesión de Google ha caducado. Vuelve a entrar con Google.';
+      }
+      if (lower.indexOf('cloud code private api') !== -1 || lower.indexOf('cloudcode-pa') !== -1 || lower.indexOf('has not been used in project') !== -1) {
+        return 'El proyecto de Google Cloud de esta app (' + googleProjectRef() + ') no tiene activada la API de Code Assist (cloudcode-pa.googleapis.com). Hay que activarla en la consola de Google Cloud.';
+      }
+      if (status === 403 && lower.indexOf('scope') !== -1) {
+        return 'Tu sesión de Google no tiene permiso para usar Gemini. Cierra sesión y vuelve a entrar aceptando todos los permisos.';
+      }
+      if (status === 429) {
+        const known = modelId && geminiState.quota[modelId];
+        const reset = formatQuotaReset(resetTimeFromMessage(message) || (known && known.fraction === 0 ? known.resetTime : ''));
+        return reset
+          ? 'Se ha acabado la cuota de ' + label + '. Se renueva ' + reset + '. Mientras, prueba con otro modelo de Gemini.'
+          : 'Google está limitando las peticiones a ' + label + '. Espera un minuto o prueba con otro modelo de Gemini.';
+      }
+      if (status === 404) {
+        return label + ' no está disponible para tu cuenta. Elige otro modelo de Gemini.';
+      }
+      return message;
+    }
+
+    async function codeAssistFetch(path, options, allowRetry) {
+      const opts = options || {};
+      if (!appState.accessToken) {
+        throw new Error('Entra con Google para usar Gemini.');
+      }
+      const headers = { Authorization: 'Bearer ' + appState.accessToken };
+      if (opts.body) headers['Content-Type'] = 'application/json';
+      const response = await fetch(CODE_ASSIST_BASE_URL + path, {
+        method: opts.body ? 'POST' : 'GET',
+        headers,
+        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        signal: opts.signal
+      });
+      if (response.status === 401 && allowRetry !== false) {
+        const refreshed = await loginWithGoogle({
+          interactive: false,
+          toast: false,
+          skipDriveBootstrap: true,
+          prompt: 'none',
+          forceRefresh: true
+        }).catch(() => false);
+        if (refreshed && appState.accessToken) {
+          return codeAssistFetch(path, opts, false);
+        }
+      }
+      return response;
+    }
+
+    async function codeAssistJson(path, body, signal) {
+      const response = await codeAssistFetch(path, { body, signal });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(describeCodeAssistError(response.status, payload));
+      }
+      return payload || {};
+    }
+
+    function cloudCompanionProjectId(value) {
+      if (!value) return '';
+      return typeof value === 'string' ? value : String(value.id || '');
+    }
+
+    function ineligibleTiersMessage(tiers) {
+      const reasons = (tiers || []).map((tier) => tier && tier.reasonMessage).filter(Boolean);
+      return reasons.length
+        ? 'Tu cuenta de Google no puede usar Gemini Code Assist: ' + reasons.join(' ')
+        : 'Esta cuenta de Google necesita un proyecto de Google Cloud propio para usar Code Assist (suele pasar con cuentas de empresa o de centro educativo). Prueba con una cuenta personal o usa un modelo de OpenRouter.';
+    }
+
+    // Mismo flujo que setupUser() de Gemini CLI: loadCodeAssist y, si la cuenta
+    // aún no tiene plan, onboardUser con el plan por defecto.
+    async function setupCodeAssist() {
+      const load = await codeAssistJson(':loadCodeAssist', { metadata: CODE_ASSIST_METADATA });
+      const ineligible = Array.isArray(load.ineligibleTiers) ? load.ineligibleTiers : [];
+      if (load.currentTier) {
+        geminiState.tierName = (load.paidTier && load.paidTier.name) || load.currentTier.name || '';
+        const project = cloudCompanionProjectId(load.cloudaicompanionProject);
+        if (project) return project;
+        throw new Error(ineligibleTiersMessage(ineligible));
+      }
+      const validation = ineligible.find((tier) => tier && tier.validationUrl && tier.reasonCode === 'VALIDATION_REQUIRED');
+      if (validation) {
+        throw new Error('Google pide verificar tu cuenta antes de usar Gemini: ' + validation.validationUrl);
+      }
+      const tier = (load.allowedTiers || []).find((item) => item && item.isDefault) || { id: 'legacy-tier', name: '' };
+      geminiState.tierName = tier.name || '';
+      // El plan gratuito usa un proyecto gestionado por Google, así que no se manda proyecto.
+      let operation = await codeAssistJson(':onboardUser', { tierId: tier.id, metadata: CODE_ASSIST_METADATA });
+      for (let attempt = 0; !operation.done && operation.name && attempt < 20; attempt++) {
+        await new Promise((resolve) => window.setTimeout(resolve, 3000));
+        operation = await codeAssistJson('/' + operation.name);
+      }
+      const project = operation.response ? cloudCompanionProjectId(operation.response.cloudaicompanionProject) : '';
+      if (project) return project;
+      throw new Error(ineligibleTiersMessage(ineligible));
+    }
+
+    function ensureCodeAssistProject() {
+      if (appState.codeAssistProjectId) {
+        return Promise.resolve(appState.codeAssistProjectId);
+      }
+      if (!geminiState.setupPromise) {
+        geminiState.setupPromise = setupCodeAssist().then((project) => {
+          appState.codeAssistProjectId = project;
+          geminiState.error = '';
+          return project;
+        }, (error) => {
+          geminiState.error = error.message || String(error);
+          throw error;
+        }).finally(() => {
+          geminiState.setupPromise = null;
+        });
+      }
+      return geminiState.setupPromise;
+    }
+
+    function isChatGeminiModel(modelId) {
+      return /^gemini-\d/.test(modelId) &&
+        modelId.indexOf('_') === -1 &&
+        !/embedding|image|tts|live|audio|customtools/.test(modelId);
+    }
+
+    function sortGeminiModels(modelIds) {
+      const rank = (modelId) => {
+        const match = String(modelId).match(/^gemini-(\d+)(?:\.(\d+))?-(.+)$/);
+        if (!match) return [0, 0, 9];
+        const family = match[3].replace(/-preview.*$/, '');
+        const tier = { pro: 0, flash: 1, 'flash-lite': 2 }[family];
+        return [Number(match[1]), Number(match[2] || 0), tier === undefined ? 3 : tier];
+      };
+      return modelIds.slice().sort((a, b) => {
+        const ra = rank(a);
+        const rb = rank(b);
+        return (rb[0] - ra[0]) || (ra[2] - rb[2]) || (rb[1] - ra[1]) || a.localeCompare(b);
+      });
+    }
+
+    async function refreshGeminiQuota() {
+      if (!hasDriveIdentitySession()) return null;
+      const project = await ensureCodeAssistProject();
+      const data = await codeAssistJson(':retrieveUserQuota', { project });
+      const quota = {};
+      (data.buckets || []).forEach((bucket) => {
+        const modelId = bucket && bucket.modelId ? String(bucket.modelId) : '';
+        if (!modelId || !isChatGeminiModel(modelId)) return;
+        const raw = Number(bucket.remainingFraction);
+        const entry = {
+          fraction: Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : null,
+          resetTime: String(bucket.resetTime || '')
+        };
+        const previous = quota[modelId];
+        if (!previous || (entry.fraction !== null && (previous.fraction === null || entry.fraction < previous.fraction))) {
+          quota[modelId] = entry;
+        }
+      });
+      const models = sortGeminiModels(Object.keys(quota));
+      geminiState.quota = quota;
+      if (models.length) setGeminiModels(models);
+      writeGeminiCache({ models, quota, tierName: geminiState.tierName });
+      renderModelControls();
+      renderUsageDonut();
+      renderUsagePopup();
+      return quota;
+    }
+
+    function prepareGemini() {
+      if (!hasDriveIdentitySession()) return Promise.resolve(null);
+      return refreshGeminiQuota().catch((error) => {
+        console.warn('Gemini no está listo:', error);
+        geminiState.error = error.message || String(error);
+        return null;
+      }).finally(() => {
+        renderModelControls();
+      });
+    }
+
+    function geminiQuotaLabel(modelId) {
+      const quota = geminiState.quota[modelId];
+      if (!hasDriveIdentitySession() || !quota || quota.fraction === null) return '';
+      if (quota.fraction === 0) {
+        const reset = formatQuotaReset(quota.resetTime);
+        return 'Sin cuota' + (reset ? ', se renueva ' + reset : '');
+      }
+      return 'Queda el ' + Math.round(quota.fraction * 100) + ' %';
+    }
+
+    function geminiMessageParts(message) {
+      const parts = Array.isArray(message.parts) && message.parts.length
+        ? message.parts
+        : [{ text: String(message.content || '') }];
+      const isAssistant = message.role === 'assistant';
+      const hasPdfText = parts.some((part) => part && typeof part.text === 'string' && part.text.indexOf('Tipo: application/pdf') !== -1);
+      const out = [];
+      parts.forEach((part) => {
+        if (!part || part.thought) return;
+        if (typeof part.text === 'string') {
+          const text = isAssistant ? parseGuidedAssistantPayload(part.text).visibleText : part.text;
+          if (text && text.trim()) out.push({ text });
+          return;
+        }
+        if (isAssistant || !part.inlineData || !part.inlineData.data) return;
+        const mimeType = part.inlineData.mimeType || '';
+        if (mimeType.indexOf('image/') === 0 || (mimeType === 'application/pdf' && !hasPdfText)) {
+          out.push({ inlineData: { mimeType, data: part.inlineData.data } });
+        }
+      });
+      return out;
+    }
+
+    function buildGeminiContents(chat) {
+      const contents = [];
+      (chat.messages || []).forEach((message) => {
+        if (!message || message.pending) return;
+        if (message.role === 'assistant' && /^Error: /.test(String(message.content || ''))) return;
+        const role = message.role === 'assistant' ? 'model' : 'user';
+        const parts = geminiMessageParts(message);
+        if (!parts.length) return;
+        // Si se salta un error quedan dos turnos seguidos del mismo rol: se juntan.
+        const last = contents[contents.length - 1];
+        if (last && last.role === role) {
+          last.parts = last.parts.concat(parts);
+        } else {
+          contents.push({ role, parts });
+        }
+      });
+      return contents;
+    }
+
+    function geminiGenerationConfig(chat, modelId) {
+      const level = currentThinkingLevel(chat);
+      const thinkingConfig = { includeThoughts: true };
+      if (level && level !== 'auto') {
+        if (isGemini3Model(modelId)) {
+          thinkingConfig.thinkingLevel = level.toUpperCase();
+        } else if (GEMINI_THINKING_BUDGETS[level]) {
+          thinkingConfig.thinkingBudget = GEMINI_THINKING_BUDGETS[level];
+        }
+      }
+      return {
+        temperature: APP_CONFIG.TEMPERATURE,
+        topP: APP_CONFIG.TOP_P,
+        maxOutputTokens: APP_CONFIG.MAX_OUTPUT_TOKENS,
+        thinkingConfig
+      };
+    }
+
+    async function callGemini(chat, signal, onProgress) {
+      if (!hasDriveIdentitySession()) {
+        throw new Error('Entra con Google para usar Gemini.');
+      }
+      const project = await ensureCodeAssistProject();
+      const model = activeModelName(chat);
+      const body = {
+        model,
+        project,
+        user_prompt_id: uid('prompt'),
+        request: {
+          contents: buildGeminiContents(chat),
+          systemInstruction: { role: 'user', parts: [{ text: getActiveSystemPrompt(chat) }] },
+          generationConfig: geminiGenerationConfig(chat, model),
+          session_id: chat.id
+        }
+      };
+      const response = await codeAssistFetch(':streamGenerateContent?alt=sse', { body, signal });
+      if (!response.ok || !response.body) {
+        const payload = await response.json().catch(() => null);
+        if (response.status === 429) refreshGeminiQuota().catch(() => {});
+        throw new Error(describeCodeAssistError(response.status, payload, model));
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let text = '';
+      let thinking = '';
+      let usage = null;
+      let blockReason = '';
+      const handleEvent = (rawEvent) => {
+        const data = rawEvent.split(/\r?\n/)
+          .filter((line) => line.indexOf('data:') === 0)
+          .map((line) => line.slice(5).trim())
+          .join('\n');
+        if (!data) return;
+        let payload;
+        try {
+          payload = JSON.parse(data);
+        } catch (_) {
+          return;
+        }
+        if (payload.error) {
+          throw new Error(describeCodeAssistError(Number(payload.error.code) || 500, payload, model));
+        }
+        const chunk = payload.response || payload;
+        if (chunk.usageMetadata) usage = chunk.usageMetadata;
+        if (chunk.promptFeedback && chunk.promptFeedback.blockReason) blockReason = chunk.promptFeedback.blockReason;
+        const candidate = chunk.candidates && chunk.candidates[0];
+        if (candidate && candidate.finishReason === 'SAFETY') blockReason = 'SAFETY';
+        const parts = candidate && candidate.content && Array.isArray(candidate.content.parts) ? candidate.content.parts : [];
+        let changed = false;
+        parts.forEach((part) => {
+          if (!part || typeof part.text !== 'string' || !part.text) return;
+          if (part.thought) {
+            thinking += part.text;
+          } else {
+            text += part.text;
+          }
+          changed = true;
+        });
+        if (changed && typeof onProgress === 'function') {
+          onProgress({ text, thinking, parts: [{ text }], done: false });
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let match;
+        while ((match = /\r?\n\r?\n/.exec(buffer))) {
+          handleEvent(buffer.slice(0, match.index));
+          buffer = buffer.slice(match.index + match[0].length);
+        }
+      }
+      buffer += decoder.decode();
+      if (buffer.trim()) handleEvent(buffer);
+
+      if (usage) {
+        recordModelUsage(model, {
+          prompt_tokens: usage.promptTokenCount,
+          completion_tokens: (Number(usage.candidatesTokenCount) || 0) + (Number(usage.thoughtsTokenCount) || 0),
+          cost: 0
+        });
+      }
+      refreshGeminiQuota().catch(() => {});
+      if (!text.trim() && !thinking.trim()) {
+        throw new Error(blockReason
+          ? 'Gemini ha bloqueado la respuesta (' + blockReason + '). Reformula la pregunta o prueba otro modelo.'
+          : 'Gemini no ha devuelto respuesta. Prueba otra vez o cambia de modelo.');
+      }
+      if (typeof onProgress === 'function') {
+        onProgress({ text, thinking, parts: [{ text }], done: true });
+      }
+      return { text, thinking, parts: [{ text }] };
+    }
 
     async function requestGoogleAccessToken(promptMode, options) {
       const settings = Object.assign({
@@ -8437,6 +9012,7 @@
       setAuthGateReason('');
       updateAuthUi();
       updateConfigUi();
+      prepareGemini();
       if (!options || !options.skipDriveBootstrap) {
         await ensureDriveReady();
         updateConfigUi();
@@ -8447,7 +9023,7 @@
         scheduleDriveSync();
       }
       if (!options || options.toast !== false) {
-        showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
+        showToast('Sesión iniciada', 'Historial en Drive y Gemini con tu cuenta.');
       }
       saveState();
     }
@@ -8470,7 +9046,7 @@
         return true;
       }
       if (!settings.interactive && !canAttemptSilentGoogleAuth() && !hasFreshGoogleAccessToken()) {
-        setAuthGateReason('Inicia sesion con Google para continuar. Las conversaciones solo se habilitan cuando Drive esta listo.');
+        setAuthGateReason('Inicia sesión con Google para continuar. Las conversaciones solo se habilitan cuando Drive está listo.');
         updateAuthUi();
         updateConfigUi();
         updateSendUi();
@@ -8485,11 +9061,11 @@
           ? ''
           : 'none');
       if (settings.interactive) {
-        setAuthGateStatus('Abriendo Google para iniciar sesion...');
+        setAuthGateStatus('Abriendo Google para iniciar sesión...');
       } else if (!hasDrivePersistenceReady()) {
         setAuthGateStatus(hasDriveIdentitySession()
           ? 'Reconectando con Google Drive...'
-          : 'Restaurando la sesion de Google...');
+          : 'Restaurando la sesión de Google...');
       }
       googleSessionPromise = (async () => {
         try {
@@ -8503,7 +9079,7 @@
         } catch (error) {
           const message = error && error.message
             ? error.message
-            : 'No se pudo completar la sesion con Google.';
+            : 'No se pudo completar la sesión con Google.';
           setAuthGateReason(message);
           setAuthGateStatus(message, {
             error: true
@@ -8555,14 +9131,14 @@
         clearGoogleSessionState({
           preserveRemember: true
         });
-        setAuthGateReason('No se pudo restaurar la sesion de Google automaticamente. Inicia sesion para seguir guardando el historial en Drive.');
-        setAuthGateStatus('No se pudo restaurar la sesion automaticamente.', {
+        setAuthGateReason('No se pudo restaurar la sesión de Google automáticamente. Inicia sesión para seguir guardando el historial en Drive.');
+        setAuthGateStatus('No se pudo restaurar la sesión automáticamente.', {
           error: true
         });
         updateAuthUi();
         updateConfigUi();
         updateSendUi();
-        console.warn('No se pudo restaurar la sesion OAuth automaticamente:', error);
+        console.warn('No se pudo restaurar la sesión OAuth automáticamente:', error);
         return false;
       }
       updateAuthUi();
@@ -8587,7 +9163,7 @@
           forceRefresh: msUntilExpiry <= AUTH_REFRESH_SKEW_MS
         });
       } catch (error) {
-        console.warn('No se pudo refrescar la sesion de Google al volver al foco:', error);
+        console.warn('No se pudo refrescar la sesión de Google al volver al foco:', error);
       }
     }
 
@@ -8636,20 +9212,12 @@
         return;
       }
 
-      if (!getApiSettings().apiKey) {
-        showToast('OpenRouter', 'Pega tu API key de OpenRouter para empezar.');
-        openModelMenuForKey();
-        _sendLock = false;
-        return;
-      }
-      if (activeModelName() === CUSTOM_MODEL_ID && !getApiSettings().customModel.trim()) {
-        showToast('Modelo personalizado', 'Escribe el ID del modelo de OpenRouter en el selector.');
-        openModelMenuForKey(elements.customModelInput);
+      const chat = getActiveChat();
+      if (!ensureProviderReady(chat)) {
         _sendLock = false;
         return;
       }
 
-      const chat = getActiveChat();
       const parts = buildUserMessageParts(prompt, attachments);
       const fallbackContent = prompt || attachments.map((item) => item.name).join(', ');
       const userMessage = createMessage('user', fallbackContent, false, {
@@ -8745,6 +9313,7 @@
     }
 
     function boot() {
+      restoreGeminiCache();
       loadState();
       loadGoogleTokenFromStorage();
       updateConfigUi();
@@ -8761,12 +9330,12 @@
       renderUsageDonut();
 
       refreshOpenRouterCredits();
-      if (!getApiSettings().apiKey) {
+      if (!getApiSettings().apiKey && activeProviderName() !== 'gemini') {
         openModelMenuForKey();
       }
       window.setTimeout(() => {
         tryAutoRestoreGoogleSession().catch((error) => {
-          console.warn('No se pudo restaurar Google Drive automaticamente:', error);
+          console.warn('No se pudo restaurar Google Drive automáticamente:', error);
           updateAuthUi();
           updateConfigUi();
           updateSendUi();
