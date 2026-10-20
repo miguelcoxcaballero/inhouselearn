@@ -123,42 +123,24 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.82);
-      transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
+      border-radius: 12px;
+      border: none;
+      background: transparent;
+      transition: background 0.18s var(--ease);
     }
-    .model-trigger:hover {
-      border-color: var(--border-strong);
-      background: var(--surface);
-      box-shadow: var(--shadow-sm);
-    }
-    .model-trigger[aria-expanded="true"] {
-      border-color: var(--orange-border);
-      box-shadow: 0 0 0 3px var(--orange-soft);
-      background: var(--surface);
-    }
-    .model-trigger-brand {
+    .model-trigger:hover,
+    .model-trigger[aria-expanded="true"] { background: rgba(0,0,0,0.05); }
+    /* Company mark: the bare logo, or the company's initial in its colour. */
+    .model-trigger-brand, .model-card-icon {
       flex: 0 0 auto;
-      width: 22px; height: 22px;
-      border-radius: 50%;
+      width: 18px; height: 18px;
       display: inline-flex; align-items: center; justify-content: center;
-      color: #fff;
-      background: var(--brand-color, var(--muted));
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.2);
-      transition: background 0.2s var(--ease);
+      color: var(--brand-color, var(--muted));
     }
-    .model-trigger-brand svg { width: 12px; height: 12px; display: block; }
-    .brand-logo { display: block; width: 62%; height: 62%; object-fit: contain; }
-    .model-trigger-brand:has(.brand-logo), .model-card-icon:has(.brand-logo) {
-      background: #fff;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.09);
-    }
+    .model-trigger-brand svg, .model-card-icon svg { width: 100%; height: 100%; display: block; }
+    .brand-logo { display: block; width: 100%; height: 100%; object-fit: contain; }
     .msg-attribution .brand-logo { width: 12px; height: 12px; flex: 0 0 auto; }
-    .company-chip-logo {
-      width: 16px; height: 16px; margin: 0 6px 0 -4px; padding: 2px; box-sizing: border-box;
-      border-radius: 50%; background: #fff; object-fit: contain; flex: 0 0 auto;
-    }
+    .company-chip-logo { width: 14px; height: 14px; margin-right: 6px; object-fit: contain; flex: 0 0 auto; }
     .model-trigger-copy {
       flex: 1;
       min-width: 0;
@@ -270,12 +252,12 @@
     }
     .model-search input {
       width: 100%; height: 36px; padding: 0 12px 0 32px;
-      border: 1px solid var(--border-strong); border-radius: 10px;
-      background: var(--surface); color: var(--text);
+      border: none; border-radius: 10px;
+      background: rgba(0,0,0,0.045); color: var(--text);
       font: inherit; font-size: 0.85rem; outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: background 0.15s, box-shadow 0.15s;
     }
-    .model-search input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.15); }
+    .model-search input:focus { background: rgba(0,0,0,0.06); box-shadow: 0 0 0 2px var(--orange-soft); }
     .model-search input::-webkit-search-cancel-button { cursor: pointer; }
     .company-chips {
       display: flex; gap: 6px; overflow-x: auto;
@@ -285,14 +267,14 @@
     .company-chips::-webkit-scrollbar { display: none; }
     .company-chip {
       flex-shrink: 0; height: 28px; padding: 0 10px;
-      border-radius: 999px; border: 1px solid var(--border-strong);
-      background: var(--surface); color: var(--text-secondary);
+      border-radius: 8px; border: none;
+      background: transparent; color: var(--text-secondary);
       font: inherit; font-size: 0.76rem; font-weight: 500; cursor: pointer;
       display: inline-flex; align-items: center;
-      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      transition: color 0.15s, background 0.15s;
     }
-    .company-chip:hover { color: var(--text); border-color: rgba(0,0,0,0.2); }
-    .company-chip.active { background: var(--text); border-color: var(--text); color: #fff; }
+    .company-chip:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+    .company-chip.active { background: rgba(0,0,0,0.07); color: var(--text); font-weight: 600; }
     .model-list-heading {
       display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px;
       padding: 8px 4px 4px; font-size: 0.74rem; font-weight: 500; color: var(--text-secondary);
@@ -307,16 +289,18 @@
       gap: 2px;
       max-height: 320px;
       overflow-y: auto;
-      padding: 2px;
-      margin: -2px;
+      padding: 2px 2px 18px;
+      margin: -2px -2px -16px;
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
     }
     .model-list::-webkit-scrollbar { width: 6px; }
     .model-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
     .model-card {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 11px;
-      border-radius: 11px;
-      border: 1px solid transparent;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: none;
       background: transparent;
       cursor: pointer;
       font-family: inherit;
@@ -327,19 +311,8 @@
     .model-card:hover {
       background: rgba(0,0,0,0.03);
     }
-    .model-card.active {
-      background: var(--orange-soft);
-      border-color: var(--orange-border);
-    }
-    .model-card-icon {
-      width: 24px; height: 24px; border-radius: 50%;
-      display: inline-flex; align-items: center; justify-content: center;
-      color: #fff;
-      background: var(--brand-color, var(--muted));
-      flex: 0 0 auto;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
-    }
-    .model-card-icon svg { width: 13px; height: 13px; }
+    .model-card.active { background: rgba(0,0,0,0.05); }
+    .model-card-icon { width: 20px; height: 20px; }
     .model-card-main {
       flex: 1; min-width: 0;
       display: flex; flex-direction: column; gap: 1px;
@@ -357,18 +330,12 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .model-card-badge {
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 500;
       color: var(--muted);
-      background: rgba(0,0,0,0.05);
       flex: 0 0 auto;
     }
-    .model-card-badge.preview {
-      color: var(--orange);
-      background: var(--orange-soft);
-    }
+    .model-card-badge.preview { color: var(--orange); }
     .model-card-check {
       width: 16px; height: 16px;
       color: var(--orange);
@@ -383,10 +350,6 @@
       grid-auto-flow: column;
       grid-auto-columns: 1fr;
       gap: 4px;
-      padding: 3px;
-      background: rgba(0,0,0,0.04);
-      border-radius: 10px;
-      border: 1px solid var(--border);
     }
     .thinking-pill {
       height: 28px;
@@ -407,9 +370,8 @@
       background: rgba(0,0,0,0.03);
     }
     .thinking-pill.active {
-      background: var(--surface);
+      background: rgba(0,0,0,0.07);
       color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px var(--border);
     }
 
     .model-popover-actions {
@@ -444,7 +406,13 @@
       margin-bottom: 12px;
       overflow-wrap: anywhere;
     }
-    .profile-menu-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .profile-menu-actions { display: flex; flex-direction: column; margin: 0 -8px -6px; }
+    .profile-menu-actions .btn {
+      justify-content: flex-start; width: 100%; height: 36px; padding: 0 8px;
+      border: none; background: transparent; font-weight: 500;
+    }
+    .profile-menu-actions .btn:hover { background: rgba(0,0,0,0.05); }
+    .profile-menu-actions .btn.hidden { display: none; }
 
     /* ─── BUTTONS ────────────────────────────────────── */
     .btn {
@@ -1999,8 +1967,7 @@
       .model-trigger-chip { display: none; }
       .model-trigger { height: 36px; padding: 0 10px 0 8px; gap: 8px; }
       .model-trigger-main { font-size: 0.8rem; }
-      .model-trigger-brand { width: 20px; height: 20px; }
-      .model-trigger-brand svg { width: 11px; height: 11px; }
+      .model-trigger-brand { width: 16px; height: 16px; }
       .topbar-popover { right: auto; left: 0; width: min(380px, calc(100vw - 20px)); }
       .model-popover { width: min(380px, calc(100vw - 20px)); }
       .profile-popover { left: auto; right: 0; }
@@ -2215,9 +2182,10 @@
     .usage-note a { color: inherit; }
     .usage-key-form { display: flex; gap: 6px; margin-top: 8px; }
     .usage-key-form input {
-      flex: 1; min-width: 0; height: 30px; padding: 0 9px; border: 1px solid var(--border);
-      border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; font-size: 0.76rem;
+      flex: 1; min-width: 0; height: 30px; padding: 0 9px; border: none; outline: none;
+      border-radius: 9px; background: rgba(0,0,0,0.045); color: var(--text); font: inherit; font-size: 0.76rem;
     }
+    .usage-key-form input:focus { background: rgba(0,0,0,0.06); box-shadow: 0 0 0 2px var(--orange-soft); }
     .usage-link { border: none; background: none; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
     .usage-row-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
     .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
@@ -2301,18 +2269,18 @@
       width: 100%;
       height: 30px;
       padding: 0 10px;
-      border: 1px solid var(--border);
+      border: none;
       border-radius: 9px;
-      background: var(--surface, #fff);
+      background: rgba(0,0,0,0.045);
       color: var(--text);
       font: inherit;
       font-size: 0.78rem;
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: background 0.15s, box-shadow 0.15s;
     }
     .api-input:focus {
-      border-color: #E07A3C;
-      box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.15);
+      background: rgba(0,0,0,0.06);
+      box-shadow: 0 0 0 2px var(--orange-soft);
     }
     .api-key-row .btn { flex: 0 0 auto; }
     .api-key-hint {
@@ -2327,7 +2295,7 @@
     .google-account-row .btn { flex: 0 0 auto; }
     .model-popover-status.error { color: #b42318; }
     .model-card-badge.price { font-variant-numeric: tabular-nums; }
-    .model-card-badge.pick { background: rgba(224, 122, 60, 0.14); color: #c2410c; }
+    .model-card-badge.pick { color: #c2410c; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -8092,13 +8060,18 @@
         html.push(usageSection('Gastado con esta key', spent.join('')));
       }
       if (hasKey && credits && credits.source !== 'account') {
-        html.push('<div class="usage-note">OpenRouter solo da el saldo de la cuenta a una key de gestión. '
-          + 'Créala en <a href="https://openrouter.ai/settings/management-keys" target="_blank" rel="noopener">openrouter.ai/settings/management-keys</a> '
-          + 'y pégala aquí: solo se usa para leer el saldo y se queda en este navegador.</div>'
+        // The account balance needs a management key: offered behind a link.
+        var balanceOpen = !!credits.managementError;
+        html.push('<div class="usage-note"><button type="button" class="usage-link" id="usage-balance-toggle"'
+          + (balanceOpen ? ' hidden' : '') + '>Ver el saldo de la cuenta</button></div>'
+          + '<div id="usage-balance-form"' + (balanceOpen ? '' : ' hidden') + '>'
+          + '<div class="usage-note">OpenRouter solo lo da a una <a href="https://openrouter.ai/settings/management-keys" target="_blank" rel="noopener">key de gestión</a>. '
+          + 'Se usa solo para leer el saldo y se queda en este navegador.</div>'
           + '<form class="usage-key-form" id="usage-management-form">'
           + '<input type="password" id="usage-management-key" autocomplete="off" spellcheck="false" placeholder="Key de gestión (sk-or-…)" aria-label="Key de gestión de OpenRouter">'
-          + '<button class="btn btn-sm btn-primary" type="submit">Ver saldo</button></form>');
-        if (credits.managementError) html.push('<div class="usage-note error">' + escapeHtml(credits.managementError) + '</div>');
+          + '<button class="btn btn-sm btn-primary" type="submit">Ver saldo</button></form>'
+          + (credits.managementError ? '<div class="usage-note error">' + escapeHtml(credits.managementError) + '</div>' : '')
+          + '</div>');
       }
       if (getApiSettings().managementKey) {
         html.push('<div class="usage-note">Saldo leído con tu key de gestión. '
@@ -8121,6 +8094,14 @@
         html.push('<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>');
       }
       content.innerHTML = html.join('');
+      var balanceToggle = document.getElementById('usage-balance-toggle');
+      if (balanceToggle) {
+        balanceToggle.addEventListener('click', function() {
+          balanceToggle.hidden = true;
+          document.getElementById('usage-balance-form').hidden = false;
+          document.getElementById('usage-management-key').focus();
+        });
+      }
       var managementForm = document.getElementById('usage-management-form');
       if (managementForm) {
         managementForm.addEventListener('submit', function(event) {
