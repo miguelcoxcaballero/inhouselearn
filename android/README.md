@@ -26,13 +26,18 @@ https://miguelcoxcaballero.github.io/inhouselearn/. Cada cambio en `index.html` 
 
 1. La web (bloque `ANDROID APP` de `index.html`) pide a la app abrir
    `accounts.google.com/o/oauth2/v2/auth` con `response_type=token` y un `state` aleatorio.
-2. Google redirige la Custom Tab a `app-auth.html`, que pasa el resultado a la app con
-   `intent://auth?...;package=com.inhouse.learn` (solo puede abrirlo esta app).
+2. Google redirige la Custom Tab a `https://miguelcoxcaballero.github.io/inhouselearn`
+   (la única URI de redirección autorizada en el cliente OAuth; sin barra final) con el token
+   en el fragmento. Un script al principio de `index.html` ve `state=android.…` y pasa el
+   fragmento a `app-auth.html`, que lo entrega a la app con
+   `intent://auth?...;package=com.inhouse.learn` (solo puede abrirlo esta app) y deja un botón
+   «Volver a la app» por si Chrome no abre el intent solo.
 3. La app llama a `window.inhouseLearnAuth(query)`; la web comprueba el `state` y guarda el token.
 
-**Requisito en Google Cloud:** el cliente OAuth `435784295430-…` debe tener
-`https://miguelcoxcaballero.github.io/inhouselearn/app-auth.html` en **URI de redirección
-autorizados**. Sin eso Google responde `redirect_uri_mismatch` al entrar desde la app.
+**Google Cloud:** el cliente OAuth `435784295430-cmug…` ya tiene
+`https://miguelcoxcaballero.github.io/inhouselearn` como URI de redirección autorizada; la
+app usa exactamente esa (`redirect_uri` en `requestGoogleAccessTokenInApp`). Si cambia el
+cliente o la URL de la web, Google responde `redirect_uri_mismatch` hasta registrar la nueva.
 El token dura una hora; al caducar, la app pide volver a entrar con un toque.
 
 ## Firma (importante para el futuro)

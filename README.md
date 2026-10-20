@@ -8,7 +8,7 @@ Hay una APK optimizada para el móvil: una capa nativa mínima (≈180 KB) alred
 
 - **Firma:** la misma clave permanente que Inhouse YouTube e Inhouse Instagram (certificado SHA-256 `7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6`). La clave está solo en el secreto `EJEMPLO` de `youtube-calma`, así que la APK se firma allí (workflow *Sign Inhouse Learn*) y este repositorio la verifica y la publica. Nunca se sube una clave al repositorio.
 - **Actualizaciones:** el actualizador común [Inhouse services updater](https://github.com/miguelcoxcaballero/inhouse-services-updater) (canales A/B en `updates/A.json` y `updates/B.json`, B por defecto). En la app: menú de perfil → «Actualizaciones».
-- **Publicar:** en `youtube-calma`, *Sign Inhouse Learn* con el SHA del commit; después, aquí, *Android app → Run workflow* con «publish». Detalles, requisitos (URI de redirección de OAuth) y reglas en [android/README.md](android/README.md), [AGENTS.md](AGENTS.md) y [UPDATER.md](UPDATER.md).
+- **Publicar:** en `youtube-calma`, *Sign Inhouse Learn* con el SHA del commit; después, aquí, *Android app → Run workflow* con «publish». Detalles y reglas en [android/README.md](android/README.md), [AGENTS.md](AGENTS.md) y [UPDATER.md](UPDATER.md).
 
 ## Modelos
 

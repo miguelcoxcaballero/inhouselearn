@@ -2,6 +2,17 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <script>
+    // Android app sign-in return (android/README.md): Google redirects the Chrome
+    // Custom Tab to this page's registered URI with the token in the fragment.
+    // Hand it to app-auth.html (and from there to the app) before the app boots.
+    (function () {
+      var h = location.hash;
+      if (h.indexOf('state=android.') !== -1 && (h.indexOf('access_token=') !== -1 || h.indexOf('error=') !== -1)) {
+        location.replace('app-auth.html' + h);
+      }
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#f5f5f0">
   <title>inhouse learn</title>
@@ -2551,8 +2562,8 @@
        window.InhouseLearnApp (origin-restricted) and calls back into
        inhouseLearnAuth() and inhouseLearnBack(). Google does not allow
        its sign-in page inside a WebView, so in the app sign-in runs in a
-       Chrome Custom Tab and returns through app-auth.html. That redirect
-       must be listed in the OAuth client's authorized redirect URIs. */
+       Chrome Custom Tab and returns through the page's registered redirect
+       URI (see requestGoogleAccessTokenInApp) and app-auth.html. */
     const ANDROID_APP = !!(window.InhouseLearnApp && typeof window.InhouseLearnApp.postMessage === 'function');
     const ANDROID_AUTH_STATE_KEY = 'inhouse-learn-android-auth-state';
     let androidAuthPending = null;
@@ -2574,11 +2585,16 @@
         }
         return Promise.reject(new Error('La sesión de Google ha caducado. Vuelve a entrar con Google.'));
       }
-      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+      // "android." marks the return for the early script at the top of this page.
+      const state = 'android.' + Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
       localStorage.setItem(ANDROID_AUTH_STATE_KEY, state);
+      // Must be an authorized redirect URI of the OAuth client, byte for byte: the
+      // registered one is this page's URL without index.html and without the
+      // trailing slash (https://miguelcoxcaballero.github.io/inhouselearn).
+      const redirectUri = location.origin + location.pathname.replace(/\/(index\.html)?$/, '');
       const params = new URLSearchParams({
         client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
-        redirect_uri: new URL('app-auth.html', location.href).href.split('?')[0],
+        redirect_uri: redirectUri,
         response_type: 'token',
         scope: googleOauthScopes().join(' '),
         include_granted_scopes: 'true',

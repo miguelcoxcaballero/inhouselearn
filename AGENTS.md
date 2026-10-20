@@ -20,11 +20,11 @@ Mandatory guidance for every AI and developer working in this repository.
 - **Package and versions:** the package ID `com.inhouse.learn` is permanent. Every new APK
   raises `versionCode` (and `versionName`) in `android/app/build.gradle.kts`; never reuse or
   lower a versionCode and never replace an already published release.
-- **Google sign-in in the app** runs in a Chrome Custom Tab and returns through
-  `app-auth.html` → `inhouselearn://auth`. Keep `app-auth.html`, the `ANDROID APP` block in
-  `index.html` and `MainActivity` in step. The OAuth client must list
-  `https://miguelcoxcaballero.github.io/inhouselearn/app-auth.html` as an authorized
-  redirect URI.
+- **Google sign-in in the app** runs in a Chrome Custom Tab and returns through the OAuth
+  client's registered redirect URI `https://miguelcoxcaballero.github.io/inhouselearn`
+  (exactly that, no trailing slash) → the early script at the top of `index.html` →
+  `app-auth.html` → `inhouselearn://auth`. Keep those three and `MainActivity` in step, and
+  keep `redirect_uri` equal to a URI registered on the client.
 - **Updates** come from the shared Inhouse services updater below: the native
   `MainActivity` calls `NativeUpdates`, and the popup and settings are `UpdateActivity`.
   The web page never receives an install bridge; it only asks the shell to open the
