@@ -113,6 +113,12 @@
       --brand-gemini: #4285f4;
       --brand-claude: #c96442;
       --brand-gemma: #7c3aed;
+      --brand-deepseek: #4d6bfe;
+      --brand-zai: #3d3d4e;
+      --brand-minimax: #e5484d;
+      --brand-anthropic: #c96442;
+      --brand-openai: #10a37f;
+      --brand-custom: #7c3aed;
     }
     .model-trigger {
       width: 100%;
@@ -2165,82 +2171,6 @@
     .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
 
     /* ─── BOOT / INSTALL OVERLAY ─────────────────────── */
-    .boot {
-      position: fixed; inset: 0; z-index: 2000;
-      display: flex; align-items: center; justify-content: center;
-      background: var(--bg);
-      padding: 24px;
-      opacity: 1; transition: opacity 0.25s var(--ease);
-    }
-    .boot[hidden] { display: none !important; }
-    .boot.fade-out { opacity: 0; pointer-events: none; }
-    body.boot-pending { overflow: hidden; }
-    body.boot-pending #app-container { visibility: hidden; }
-    .boot-card {
-      width: 100%; max-width: 440px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow-lg);
-      padding: 34px 30px 28px;
-      text-align: center;
-    }
-    .boot-brand {
-      font-family: 'Comfortaa', cursive; font-weight: 700; font-size: 1.05rem;
-      display: flex; align-items: center; justify-content: center; gap: 9px;
-      margin-bottom: 22px;
-      color: var(--text);
-    }
-    .boot-brand-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--orange);
-      box-shadow: 0 0 12px var(--orange-glow);
-    }
-    .boot-phase { display: none; flex-direction: column; align-items: center; gap: 14px; }
-    .boot-phase[data-active="true"] { display: flex; }
-    .boot-h {
-      font-family: 'Comfortaa', cursive; font-weight: 700; font-size: 1.18rem;
-      margin: 0; color: var(--text);
-    }
-    .boot-p {
-      font-size: 0.9rem; color: var(--text-secondary); line-height: 1.55;
-      max-width: 36ch; margin: 0;
-    }
-    .boot-spinner {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 2.5px solid var(--border);
-      border-top-color: var(--orange);
-      animation: boot-spin 0.8s linear infinite;
-    }
-    @keyframes boot-spin { to { transform: rotate(360deg); } }
-    .boot-btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 12px 22px;
-      background: var(--orange); color: #fff;
-      border-radius: var(--r-full);
-      font-weight: 600; font-size: 0.92rem;
-      text-decoration: none;
-      transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), background 0.15s var(--ease);
-      box-shadow: 0 4px 14px var(--orange-glow);
-      margin-top: 6px; border: 0; cursor: pointer;
-    }
-    .boot-btn:hover { transform: translateY(-1px); background: #d26a2e; box-shadow: 0 6px 18px var(--orange-glow); }
-    .boot-btn:active { transform: translateY(0); }
-    .boot-link {
-      color: var(--muted); font-size: 0.82rem;
-      text-decoration: underline; text-underline-offset: 3px;
-      background: none; padding: 4px 8px; border: 0; cursor: pointer;
-    }
-    .boot-link:hover { color: var(--text-secondary); }
-    .boot-extra {
-      margin-top: 16px;
-      display: flex;
-      justify-content: center;
-    }
-    .boot-hint {
-      font-size: 0.76rem; color: var(--muted); margin-top: 4px;
-    }
-
     .auth-gate {
       position: fixed;
       inset: 0;
@@ -2301,46 +2231,56 @@
     .auth-gate-status.error {
       color: #b91c1c;
     }
+
+    [data-provider="deepseek"] { --brand-color: var(--brand-deepseek); }
+    [data-provider="zai"] { --brand-color: var(--brand-zai); }
+    [data-provider="minimax"] { --brand-color: var(--brand-minimax); }
+    [data-provider="anthropic"] { --brand-color: var(--brand-anthropic); }
+    [data-provider="openai"] { --brand-color: var(--brand-openai); }
+    [data-provider="custom"] { --brand-color: var(--brand-custom); }
+    .api-key-section {
+      margin-top: 4px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+    .api-key-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .api-input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface, #fff);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.78rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .api-input:focus {
+      border-color: #E07A3C;
+      box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.15);
+    }
+    .api-key-row .btn { flex: 0 0 auto; }
+    .api-key-hint {
+      margin-top: 6px;
+      font-size: 0.7rem;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .api-key-hint a { color: inherit; text-decoration: underline; }
+    .model-card-badge.price { font-variant-numeric: tabular-nums; }
+    .model-card-badge.pick { background: rgba(224, 122, 60, 0.14); color: #c2410c; }
   </style>
 </head>
-<body class="boot-pending">
-
-  <!-- ─── BOOT / INSTALL OVERLAY ───────────────────── -->
-  <div class="boot" id="boot" role="dialog" aria-modal="true" aria-live="polite">
-    <div class="boot-card">
-      <div class="boot-brand">
-        <span class="boot-brand-dot" aria-hidden="true"></span>
-        <span>inhouse learn</span>
-      </div>
-
-      <div class="boot-phase" data-phase="detecting" data-active="true">
-        <div class="boot-spinner" aria-hidden="true"></div>
-        <p class="boot-p">Buscando el agente local...</p>
-      </div>
-
-      <div class="boot-phase" data-phase="not-installed">
-        <h1 class="boot-h">Descarga el agente</h1>
-        <p class="boot-p">Un solo archivo. Descarga, doble click y listo. Conecta con Claude Code, Gemini y Codex sin API keys.</p>
-        <a class="boot-btn" id="boot-download" href="#" download>Descargar para Windows</a>
-        <p class="boot-hint">Si Windows muestra un aviso, pulsa "Más información" → "Ejecutar de todas formas".</p>
-      </div>
-
-      <div class="boot-phase" data-phase="installing">
-        <div class="boot-spinner" aria-hidden="true"></div>
-        <p class="boot-p">Esperando a que el agente arranque...</p>
-        <button class="boot-link" id="boot-retry" type="button">Reintentar</button>
-      </div>
-
-      <div class="boot-phase" data-phase="error">
-        <h1 class="boot-h">No hemos podido conectar</h1>
-        <p class="boot-p" id="boot-error-msg">El agente local no responde. Comprueba que esté en ejecución.</p>
-        <button class="boot-btn" id="boot-error-retry" type="button">Reintentar</button>
-      </div>
-      <div class="boot-extra">
-        <button class="boot-link" id="boot-open-localhost" type="button">Abrir localhost</button>
-      </div>
-    </div>
-  </div>
+<body>
 
   <div class="auth-gate hidden" id="auth-gate" role="dialog" aria-modal="true" aria-labelledby="auth-gate-title">
     <div class="auth-gate-card">
@@ -2400,7 +2340,7 @@
           <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Configuración del modelo">
             <div class="model-popover-head">
               <div class="model-popover-title">Modelo del chat</div>
-              <div class="model-popover-status" id="model-menu-status">Elige compañía, modelo y reasoning para este chat.</div>
+              <div class="model-popover-status" id="model-menu-status">Elige compañía, modelo y razonamiento para este chat.</div>
             </div>
 
             <div class="model-popover-section">
@@ -2418,9 +2358,18 @@
               <div class="thinking-segmented" id="thinking-segmented" role="radiogroup"></div>
             </div>
 
-            <div class="model-popover-actions">
-              <button class="btn btn-outline btn-sm" id="open-localhost-btn" type="button">Abrir localhost</button>
-              <button class="btn btn-primary btn-sm" id="login-btn" type="button">Conectar</button>
+            <div class="model-popover-section hidden" id="custom-model-section">
+              <div class="model-popover-section-label">ID del modelo en OpenRouter</div>
+              <input class="api-input" id="custom-model-input" type="text" placeholder="moonshotai/kimi-k2.7-code" autocomplete="off" spellcheck="false">
+            </div>
+
+            <div class="model-popover-section api-key-section">
+              <div class="model-popover-section-label">API key de OpenRouter</div>
+              <div class="api-key-row">
+                <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
+                <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
+              </div>
+              <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
             </div>
           </div>
         </div>
@@ -2538,177 +2487,12 @@
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
-    // ─── DAEMON BOOT ──────────────────────────────────
-    // Detecta el agente local; si no está, muestra la pantalla de descarga.
-    // Cuando el daemon responde a /v1/ping, arranca la app llamando a boot().
-    const DAEMON_CONFIG = {
-      URL: 'http://localhost:7823',
-      PING_PATH: '/v1/ping',
-      PING_TIMEOUT_MS: 900,
-      POLL_INTERVAL_MS: 1500,
-      POLL_MAX_MS: 10 * 60 * 1000,
-      RELEASE_BASE: '',
-      INSTALLERS: {
-        win: './downloads/windows/inhouse-agent-setup.exe'
-      }
-    };
-
-    const SKIP_DAEMON = /(?:[?&])skipDaemon=1\b/.test(location.search);
-    let __daemonStatus = null;
-    let __daemonPollingAbort = false;
-
-    function installerUrl() {
-      const file = DAEMON_CONFIG.INSTALLERS.win;
-      return (DAEMON_CONFIG.RELEASE_BASE || '') + file;
-    }
-
-    function daemonBrowserUrl() {
-      return DAEMON_CONFIG.URL + DAEMON_CONFIG.PING_PATH;
-    }
-
-    function openDaemonInBrowser() {
-      const target = daemonBrowserUrl();
-      const win = window.open(target, '_blank', 'noopener,noreferrer');
-      if (!win) {
-        window.location.href = target;
-      }
-    }
-
-    async function pingDaemon(timeoutMs) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs || DAEMON_CONFIG.PING_TIMEOUT_MS);
-      try {
-        const response = await fetch(DAEMON_CONFIG.URL + DAEMON_CONFIG.PING_PATH, {
-          method: 'GET',
-          signal: controller.signal,
-          cache: 'no-store',
-          credentials: 'omit'
-        });
-        if (!response.ok) return null;
-        const data = await response.json().catch(() => ({}));
-        return data && data.ok !== false ? data : { ok: true };
-      } catch (_) {
-        return null;
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-
-    function setBootPhase(phase) {
-      const boot = document.getElementById('boot');
-      if (!boot) return;
-      boot.querySelectorAll('.boot-phase').forEach((node) => {
-        node.setAttribute('data-active', node.getAttribute('data-phase') === phase ? 'true' : 'false');
-      });
-    }
-
-    function hideBoot() {
-      const boot = document.getElementById('boot');
-      document.body.classList.remove('boot-pending');
-      if (!boot) return;
-      boot.classList.add('fade-out');
-      setTimeout(() => { boot.hidden = true; }, 280);
-    }
-
-    async function pollUntilReady() {
-      const stopAt = Date.now() + DAEMON_CONFIG.POLL_MAX_MS;
-      while (Date.now() < stopAt && !__daemonPollingAbort) {
-        const r = await pingDaemon();
-        if (r) return r;
-        await new Promise((resolve) => setTimeout(resolve, DAEMON_CONFIG.POLL_INTERVAL_MS));
-      }
-      return null;
-    }
-
-    function continueBoot(status) {
-      __daemonStatus = status || { ok: true };
-      window.__daemonStatus = __daemonStatus;
-      hideBoot();
-      try {
-        if (typeof boot === 'function') boot();
-      } catch (err) {
-        console.error('Error al arrancar la app:', err);
-      }
-    }
-
-    function wireBootUi() {
-      const boot = document.getElementById('boot');
-      const downloadBtn = document.getElementById('boot-download');
-      const retryBtn = document.getElementById('boot-retry');
-      const errorRetry = document.getElementById('boot-error-retry');
-      const openLocalhostBtn = document.getElementById('boot-open-localhost');
-
-      if (boot) {
-        const notInstalledPhase = boot.querySelector('[data-phase="not-installed"] .boot-p');
-        const notInstalledHint = boot.querySelector('[data-phase="not-installed"] .boot-hint');
-        const installingCopy = boot.querySelector('[data-phase="installing"] .boot-p');
-        if (notInstalledPhase) {
-          notInstalledPhase.innerHTML = 'Descarga el instalador de Windows y ejec&uacute;talo. El propio instalador bajar&aacute; el runtime y dejar&aacute; el agente listo en tu ordenador.';
-        }
-        if (notInstalledHint) {
-          notInstalledHint.textContent = 'Por ahora solo hay instalador para Windows. No hace falta extraer ningun ZIP.';
-        }
-        if (installingCopy) {
-          installingCopy.innerHTML = 'Esperando a que el agente arranque... Si ya has descargado el instalador, ejec&uacute;talo ahora y esta web avanzar&aacute; sola cuando detecte el daemon.';
-        }
-      }
-
-      if (downloadBtn) {
-        downloadBtn.href = installerUrl();
-        downloadBtn.textContent = 'Descargar para Windows';
-        downloadBtn.addEventListener('click', () => {
-          setTimeout(() => {
-            setBootPhase('installing');
-            __daemonPollingAbort = false;
-            pollUntilReady().then((r) => {
-              if (r) continueBoot(r);
-              else setBootPhase('not-installed');
-            });
-          }, 500);
-        });
-      }
-
-      if (retryBtn) {
-        retryBtn.addEventListener('click', async () => {
-          const r = await pingDaemon(1500);
-          if (r) continueBoot(r);
-          else setBootPhase('not-installed');
-        });
-      }
-
-      if (errorRetry) {
-        errorRetry.addEventListener('click', () => { startDaemonBoot(); });
-      }
-
-      if (openLocalhostBtn) {
-        openLocalhostBtn.addEventListener('click', () => {
-          openDaemonInBrowser();
-        });
-      }
-    }
-
-    async function startDaemonBoot() {
-      if (SKIP_DAEMON) { continueBoot({ ok: true, skipped: true }); return; }
-      setBootPhase('detecting');
-      const r = await pingDaemon();
-      if (r) { continueBoot(r); return; }
-      setBootPhase('not-installed');
-    }
-
-    function __onDomReady(fn) {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', fn, { once: true });
-      } else { fn(); }
-    }
-    __onDomReady(() => { wireBootUi(); startDaemonBoot(); });
-    // ──────────────────────────────────────────────────
-
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
       GOOGLE_CLOUD_PROJECT: '',
-      DEFAULT_PROVIDER: 'codex',
-      DEFAULT_MODEL: 'gpt-5.4',
-      DEFAULT_THINKING_LEVEL: '',
+      DEFAULT_PROVIDER: 'deepseek',
+      DEFAULT_MODEL: 'deepseek/deepseek-v4.1-flash-1017',
+      DEFAULT_THINKING_LEVEL: 'auto',
       SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension, but never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
       GUIDED_LEARNING_PROMPT: [
         'Estás en modo "Guided Learning" de inhouse learn. El usuario está estudiando: quiere entender en profundidad, no correr. Habla siempre en español, tuteo informal, tono cercano.',
@@ -2845,166 +2629,110 @@
       'RECORDATORIO FINAL: si no cierras con <guided-state>{...}</guided-state> el producto se rompe. Ese bloque es obligatorio en TODOS tus mensajes mientras Guided Learning este activo.'
     ].join('\n');
 
+    // Catalogo de modelos via OpenRouter. Precio = USD por 1M tokens (entrada / salida).
+    const CUSTOM_MODEL_ID = 'custom';
+    const REASONING_LEVELS = ['auto', 'low', 'medium', 'high'];
+
     const PROVIDER_OPTIONS = [
-      { id: 'codex', label: 'Codex' },
-      { id: 'gemini', label: 'Gemini' },
-      { id: 'claude', label: 'Claude' },
-      { id: 'gemma', label: 'Gemma (local)' }
+      { id: 'deepseek', label: 'DeepSeek' },
+      { id: 'zai', label: 'Z.ai' },
+      { id: 'minimax', label: 'MiniMax' },
+      { id: 'anthropic', label: 'Claude' },
+      { id: 'openai', label: 'OpenAI' },
+      { id: 'custom', label: 'Otro' }
     ];
 
     const MODEL_OPTIONS = [
       {
-        provider: 'codex',
-        id: 'gpt-5.4',
-        label: 'GPT-5.4',
-        badge: '5.4',
-        preview: false,
+        provider: 'deepseek',
+        id: 'deepseek/deepseek-v4.1-flash-1017',
+        label: 'DeepSeek V4.1 Flash',
+        badge: 'Recomendado',
+        price: '$0.30 / $1.20',
+        pick: true,
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
+      },
+      {
+        provider: 'zai',
+        id: 'z-ai/glm-5.3-flashx',
+        label: 'GLM-5.3 FlashX',
+        badge: 'Barato',
+        price: '$0.37 / $1.25',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
+      },
+      {
+        provider: 'zai',
+        id: 'z-ai/glm-5.3-prime',
+        label: 'GLM-5.3 Prime',
+        badge: 'Potente',
+        price: '$2.80 / $8.80',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
+      },
+      {
+        provider: 'minimax',
+        id: 'minimax/minimax-m3.1-flash:free',
+        label: 'MiniMax M3.1 Flash',
+        badge: 'Gratis',
+        price: 'Gratis',
         thinkingLevels: [],
         defaultThinkingLevel: ''
       },
       {
-        provider: 'codex',
-        id: 'gpt-5.4-mini',
-        label: 'GPT-5.4 Mini',
-        badge: '5.4 Mini',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
+        provider: 'anthropic',
+        id: 'anthropic/claude-haiku-5.5',
+        label: 'Claude Haiku 5.5',
+        badge: 'Barato',
+        price: '$0.10 / $0.50',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
       },
       {
-        provider: 'codex',
-        id: 'gpt-5.3-codex',
-        label: 'GPT-5.3 Codex',
-        badge: '5.3 Codex',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
+        provider: 'anthropic',
+        id: 'anthropic/claude-sonnet-5.5',
+        label: 'Claude Sonnet 5.5',
+        badge: 'Potente',
+        price: '$2 / $10',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
       },
       {
-        provider: 'gemini',
-        id: 'gemini-2.5-flash-lite',
-        label: 'Gemini 2.5 Flash Lite',
-        badge: '2.5 Flash Lite',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
+        provider: 'anthropic',
+        id: 'anthropic/claude-opus-5.5',
+        label: 'Claude Opus 5.5',
+        badge: 'Tope de gama',
+        price: '$4 / $20',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
       },
       {
-        provider: 'gemini',
-        id: 'gemini-2.5-flash',
-        label: 'Gemini 2.5 Flash',
-        badge: '2.5 Flash',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
+        provider: 'openai',
+        id: 'openai/gpt-6-luna',
+        label: 'GPT-6 Luna',
+        badge: 'Barato',
+        price: '$0.10 / $0.50',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
       },
       {
-        provider: 'gemini',
-        id: 'gemini-2.5-pro',
-        label: 'Gemini 2.5 Pro',
-        badge: '2.5 Pro',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
+        provider: 'openai',
+        id: 'openai/gpt-6-sol',
+        label: 'GPT-6 Sol',
+        badge: 'Potente',
+        price: '$2 / $10',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
       },
       {
-        provider: 'gemini',
-        id: 'gemini-3.1-flash-lite-preview',
-        label: 'Gemini 3.1 Flash Lite Preview',
-        badge: '3.1 Flash Lite (P)',
-        preview: true,
-        thinkingLevels: ['minimal', 'low', 'medium', 'high'],
-        defaultThinkingLevel: 'minimal'
-      },
-      {
-        provider: 'gemini',
-        id: 'gemini-3-flash-preview',
-        label: 'Gemini 3 Flash Preview',
-        badge: '3 Flash (P)',
-        preview: true,
-        thinkingLevels: ['minimal', 'low', 'medium', 'high'],
-        defaultThinkingLevel: 'minimal'
-      },
-      {
-        provider: 'gemini',
-        id: 'gemini-3-pro-preview',
-        label: 'Gemini 3 Pro Preview',
-        badge: '3 Pro (P)',
-        preview: true,
-        thinkingLevels: ['low', 'medium', 'high'],
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'gemini',
-        id: 'gemini-3.1-pro-preview',
-        label: 'Gemini 3.1 Pro Preview',
-        badge: '3.1 Pro (P)',
-        preview: true,
-        thinkingLevels: ['low', 'high'],
-        defaultThinkingLevel: 'high'
-      },
-      {
-        provider: 'claude',
-        id: 'sonnet',
-        label: 'Claude Sonnet 4.6',
-        badge: 'Sonnet 4.6',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
-      },
-      {
-        provider: 'claude',
-        id: 'opus',
-        label: 'Claude Opus 4.7',
-        badge: 'Opus 4.7',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
-      },
-      {
-        provider: 'claude',
-        id: 'haiku',
-        label: 'Claude Haiku 4.5',
-        badge: 'Haiku 4.5',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
-      },
-      {
-        provider: 'gemma',
-        id: 'gemma-4-e2b',
-        label: 'Gemma 4 E2B',
-        badge: 'E2B · WebGPU',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
-      },
-      {
-        provider: 'gemma',
-        id: 'gemma-4-e4b',
-        label: 'Gemma 4 E4B',
-        badge: 'E4B · WebGPU',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
-      },
-      {
-        provider: 'gemma',
-        id: 'gemma-4-26b-a4b',
-        label: 'Gemma 4 26B A4B',
-        badge: '26B A4B · Ollama',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
-      },
-      {
-        provider: 'gemma',
-        id: 'gemma-4-31b',
-        label: 'Gemma 4 31B',
-        badge: '31B · Ollama',
-        preview: false,
-        thinkingLevels: [],
-        defaultThinkingLevel: ''
+        provider: 'custom',
+        id: CUSTOM_MODEL_ID,
+        label: 'Modelo personalizado',
+        badge: 'Cualquier ID de OpenRouter',
+        price: '',
+        thinkingLevels: REASONING_LEVELS,
+        defaultThinkingLevel: 'auto'
       }
     ];
 
@@ -3047,16 +2775,6 @@
       ods: 'application/vnd.oasis.opendocument.spreadsheet',
       odt: 'application/vnd.oasis.opendocument.text'
     };
-    const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
-    const CODE_ASSIST_VERSION = 'v1internal';
-    const CODE_ASSIST_CREDIT_TYPE = 'G1_CREDIT_TYPE';
-    const CODE_ASSIST_CREDIT_TYPES = ['G1_CREDIT_TYPE', 'GOOGLE_ONE_AI', 'GOOGLE_AI_PRO'];
-    const CODE_ASSIST_CREDIT_ELIGIBLE_MODELS = [
-      'gemini-3-flash-preview',
-      'gemini-3-pro-preview',
-      'gemini-3.1-flash-lite-preview',
-      'gemini-3.1-pro-preview'
-    ];
     let googleTokenClient = null;
     let googleTokenRefreshTimer = 0;
     let googleSessionPromise = null;
@@ -3080,7 +2798,7 @@
       driveSyncQueued: false,
       authGateReason: '',
       composerAttachments: [],
-      connectPollingTimer: 0,
+      openRouterCredits: null,
       guidedLearning: false
     };
 
@@ -3645,7 +3363,9 @@
       modelList: document.getElementById('model-list'),
       thinkingSegmented: document.getElementById('thinking-segmented'),
       thinkingSection: document.getElementById('thinking-section'),
-      openLocalhostBtn: document.getElementById('open-localhost-btn'),
+      apiKeyInput: document.getElementById('api-key-input'),
+      customModelSection: document.getElementById('custom-model-section'),
+      customModelInput: document.getElementById('custom-model-input'),
       loginBtn: document.getElementById('login-btn'),
       profileBtn: document.getElementById('profile-btn'),
       profilePopup: document.getElementById('profile-popup'),
@@ -5069,7 +4789,7 @@
       if (!elements.authGate) {
         return;
       }
-      const locked = !hasDrivePersistenceReady();
+      const locked = false; // Drive opcional: nunca bloquea la app.
       elements.authGate.classList.toggle('hidden', !locked);
       if (elements.authGateCopy) {
         elements.authGateCopy.textContent = resolvedAuthGateMessage();
@@ -5263,15 +4983,9 @@
       return activeChat ? normalizeChatConfig(activeChat) : null;
     }
 
-    function daemonProviderStatus(providerId) {
-      return __daemonStatus && __daemonStatus.providerDetails
-        ? __daemonStatus.providerDetails[providerId] || null
-        : null;
-    }
-
     function activeProviderName(chatLike) {
       const chat = getResolvedChat(chatLike);
-      return normalizeProviderId(chat && chat.provider ? chat.provider : (__daemonStatus && __daemonStatus.defaultProvider) || APP_CONFIG.DEFAULT_PROVIDER);
+      return normalizeProviderId(chat && chat.provider ? chat.provider : APP_CONFIG.DEFAULT_PROVIDER);
     }
 
     function activeProviderLabel(chatLike) {
@@ -5289,11 +5003,12 @@
     }
 
     function activeModelBadge(chatLike) {
-      return getModelOption(activeModelName(chatLike), activeProviderName(chatLike)).badge;
-    }
-
-    function isGemini3Model(chatLike) {
-      return activeProviderName(chatLike) === 'gemini' && activeModelName(chatLike).startsWith('gemini-3');
+      const modelId = activeModelName(chatLike);
+      if (modelId === CUSTOM_MODEL_ID) {
+        const custom = getApiSettings().customModel.trim();
+        return custom ? custom.split('/').pop() : 'Modelo personalizado';
+      }
+      return getModelOption(modelId, activeProviderName(chatLike)).label;
     }
 
     function currentThinkingLevel(chatLike) {
@@ -5305,6 +5020,7 @@
 
     function thinkingLabel(level) {
       const labels = {
+        auto: 'Thinking auto',
         minimal: 'Thinking minimal',
         low: 'Thinking low',
         medium: 'Thinking medium',
@@ -5349,7 +5065,7 @@
     }
 
     function createChat(title) {
-      const provider = normalizeProviderId((__daemonStatus && __daemonStatus.defaultProvider) || APP_CONFIG.DEFAULT_PROVIDER);
+      const provider = normalizeProviderId(APP_CONFIG.DEFAULT_PROVIDER);
       const model = normalizeModelId(defaultModelForProvider(provider), provider);
       return {
         id: uid('chat'),
@@ -5519,7 +5235,7 @@
     }
 
     function updateSendUi() {
-      const driveLocked = !hasDrivePersistenceReady();
+      const driveLocked = false; // Drive es opcional: sin login se guarda en este navegador.
       const activeChat = getActiveChat();
       const guidedActive = !!(activeChat && activeChat.guidedLearning);
       const hasDraft = !!elements.composer.value.trim() || !!(appState.composerAttachments && appState.composerAttachments.length);
@@ -5567,7 +5283,16 @@
         : 'Guided Learning: activa el modo tutor paso a paso.';
     }
 
+    function providerLetterIcon(letter) {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="19.2" text-anchor="middle" font-size="19" font-weight="800" fill="currentColor" font-family="inherit">' + letter + '</text></svg>';
+    }
+
     function providerBrandIconSvg(providerId) {
+      if (providerId === 'deepseek') return providerLetterIcon('D');
+      if (providerId === 'zai') return providerLetterIcon('Z');
+      if (providerId === 'minimax') return providerLetterIcon('M');
+      if (providerId === 'anthropic') providerId = 'claude';
+      if (providerId === 'custom') providerId = 'gemma';
       if (providerId === 'gemini') {
         return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.4 4.3 2.7 7.6 7 10-4.3 2.4-6.6 5.7-7 10-.4-4.3-2.7-7.6-7-10 4.3-2.4 6.6-5.7 7-10z"/></svg>';
       }
@@ -5587,7 +5312,7 @@
       const providerModels = modelOptionsForProvider(providerId);
       const modelOption = getModelOption(chat.model, providerId);
       const thinkingLevel = currentThinkingLevel(chat);
-      const providerStatus = daemonProviderStatus(providerId);
+      const apiSettings = getApiSettings();
 
       if (elements.providerSegmented) {
         elements.providerSegmented.innerHTML = PROVIDER_OPTIONS.map((option) => {
@@ -5606,10 +5331,10 @@
       if (elements.modelList) {
         elements.modelList.innerHTML = providerModels.map((option) => {
           const isActive = option.id === modelOption.id;
-          const badge = option.preview
-            ? '<span class="model-card-badge preview">Preview</span>'
-            : '<span class="model-card-badge">Estable</span>';
-          const subParts = [option.badge];
+          const badge = option.price
+            ? '<span class="model-card-badge price' + (option.pick ? ' pick' : '') + '">' + escapeHtml(option.price) + '</span>'
+            : '';
+          const subParts = [option.id === CUSTOM_MODEL_ID && apiSettings.customModel ? apiSettings.customModel : option.badge];
           if (option.thinkingLevels && option.thinkingLevels.length) {
             subParts.push('Razona');
           }
@@ -5648,57 +5373,56 @@
         }
       }
 
-      const modeCopy = modelOption.preview ? 'Preview' : 'Estable';
+      const isCustom = modelOption.id === CUSTOM_MODEL_ID;
+      const triggerLabel = isCustom && apiSettings.customModel
+        ? apiSettings.customModel.split('/').pop()
+        : modelOption.label;
       const thinkingCopy = modelOption.thinkingLevels.length
         ? ' · ' + thinkingLabel(thinkingLevel)
         : '';
       if (elements.modelCopy) {
-        elements.modelCopy.textContent = providerOption.label + ' · ' + modeCopy + thinkingCopy + '. Se guarda en este chat.';
+        elements.modelCopy.textContent = providerOption.label + thinkingCopy + '. Se guarda en este chat.';
       }
       if (elements.modelTriggerKicker) {
         elements.modelTriggerKicker.textContent = providerOption.label;
       }
       if (elements.modelTriggerMain) {
-        elements.modelTriggerMain.textContent = modelOption.label;
+        elements.modelTriggerMain.textContent = triggerLabel;
       }
       if (elements.modelTriggerBrand) {
         elements.modelTriggerBrand.setAttribute('data-provider', providerId);
         elements.modelTriggerBrand.innerHTML = providerBrandIconSvg(providerId);
       }
       if (elements.modelTriggerMeta) {
-        if (modelOption.thinkingLevels.length) {
+        if (modelOption.thinkingLevels.length && thinkingLevel && thinkingLevel !== 'auto') {
           elements.modelTriggerMeta.textContent = thinkingLabel(thinkingLevel).replace('Thinking ', '');
-          elements.modelTriggerMeta.classList.remove('hidden');
-        } else if (modelOption.preview) {
-          elements.modelTriggerMeta.textContent = 'Preview';
           elements.modelTriggerMeta.classList.remove('hidden');
         } else {
           elements.modelTriggerMeta.classList.add('hidden');
         }
       }
+      if (elements.customModelSection) {
+        elements.customModelSection.classList.toggle('hidden', !isCustom);
+      }
+      if (elements.customModelInput && document.activeElement !== elements.customModelInput) {
+        elements.customModelInput.value = apiSettings.customModel;
+      }
+      if (elements.apiKeyInput && document.activeElement !== elements.apiKeyInput) {
+        elements.apiKeyInput.value = apiSettings.apiKey;
+      }
+      if (elements.loginBtn) {
+        elements.loginBtn.textContent = apiSettings.apiKey ? 'Actualizar' : 'Guardar';
+      }
       if (elements.modelMenuStatus) {
-        let statusCopy = 'El daemon local no responde todavia.';
-        if (providerId === 'gemma') {
-          const modelCfg = GEMMA_MODEL_CONFIG[modelOption.id];
-          if (modelCfg && modelCfg.kind === 'webgpu') {
-            statusCopy = navigator.gpu
-              ? 'Gemma corre 100% local en tu navegador (WebGPU). La primera vez descarga los pesos y queda cacheado.'
-              : 'Tu navegador no soporta WebGPU — necesitas Chrome/Edge 113+, Safari 26+ o Firefox 141+.';
-          } else if (modelCfg && modelCfg.kind === 'ollama') {
-            statusCopy = modelOption.label + ' corre local vía Ollama. Si no está instalado, el agente lo arrancará automáticamente.';
-          } else {
-            statusCopy = 'Modelos Gemma locales (WebGPU / Ollama).';
-          }
-        } else if (__daemonStatus && __daemonStatus.ok) {
-          if (providerStatus && providerStatus.installed && providerStatus.connected) {
-            statusCopy = providerOption.label + ' esta listo en tu ordenador.';
-          } else if (providerStatus && providerStatus.installed) {
-            statusCopy = providerOption.label + ' esta instalado, pero falta completar el login.';
-          } else {
-            statusCopy = providerOption.label + ' no esta instalado todavia.';
-          }
+        let statusCopy;
+        if (!apiSettings.apiKey) {
+          statusCopy = 'Pega tu API key de OpenRouter abajo para empezar.';
+        } else if (isCustom && !apiSettings.customModel) {
+          statusCopy = 'Escribe el ID exacto del modelo tal como aparece en openrouter.ai/models.';
+        } else {
+          statusCopy = 'Todo corre en el navegador: los mensajes van directos a OpenRouter.';
         }
-        elements.modelMenuStatus.textContent = statusCopy + ' La configuracion se guarda por chat.';
+        elements.modelMenuStatus.textContent = statusCopy + ' El modelo se guarda por chat.';
       }
     }
 
@@ -5915,10 +5639,11 @@
       const modelId = normalizeModelId(rawModel, providerId);
       const providerOption = getProviderOption(providerId);
       const modelOption = getModelOption(modelId, providerId);
+      const exactOption = MODEL_OPTIONS.find((option) => option.id === rawModel);
       return {
         providerId,
         providerLabel: providerOption.label,
-        modelLabel: modelOption.label
+        modelLabel: exactOption ? exactOption.label : (providerId === 'custom' ? String(rawModel).split('/').pop() : modelOption.label)
       };
     }
 
@@ -5975,7 +5700,7 @@
     }
 
     function isProgressiveGeminiRender(chat) {
-      return activeProviderName(chat) === 'gemini' && !!appState.accessToken;
+      return false;
     }
 
     function nextStreamRevealIndex(targetText, currentIndex) {
@@ -7363,169 +7088,6 @@
       showToast('Sesion cerrada', 'Se elimino el token local del navegador.');
     }
 
-    function buildContents(messages) {
-      return messages
-        .filter((message) => {
-          if (message.pending) {
-            return false;
-          }
-          if (Array.isArray(message.parts) && message.parts.length) {
-            return true;
-          }
-          return !!(message.content && message.content.trim());
-        })
-        .map((message) => ({
-          role: message.role === 'assistant' ? 'model' : 'user',
-          parts: Array.isArray(message.parts) && message.parts.length
-            ? cloneParts(message.parts).map((part) => {
-                if (part && typeof part.text === 'string') {
-                  const cleanText = parseGuidedAssistantPayload(part.text).visibleText;
-                  return Object.assign({}, part, { text: cleanText });
-                }
-                return part;
-              }).filter((part) => !(part && typeof part.text === 'string') || part.text.trim())
-            : [{ text: parseGuidedAssistantPayload(message.content).visibleText }]
-        }));
-    }
-
-    function buildRequestBody(messages, chat) {
-      const generationConfig = {
-        temperature: APP_CONFIG.TEMPERATURE,
-        topP: APP_CONFIG.TOP_P,
-        maxOutputTokens: APP_CONFIG.MAX_OUTPUT_TOKENS
-      };
-      const thinkingLevel = currentThinkingLevel(chat);
-      if (thinkingLevel) {
-        generationConfig.thinkingConfig = {
-          thinkingLevel,
-          includeThoughts: true
-        };
-      }
-
-      return {
-        systemInstruction: {
-          parts: [{ text: getActiveSystemPrompt(chat) }]
-        },
-        contents: buildContents(messages),
-        generationConfig
-      };
-    }
-
-    function configuredCodeAssistProject() {
-      if (isConfigured(APP_CONFIG.CODE_ASSIST_PROJECT_ID)) {
-        return String(APP_CONFIG.CODE_ASSIST_PROJECT_ID).trim();
-      }
-      return '';
-    }
-
-    function codeAssistProject() {
-      return String(appState.codeAssistProjectId || configuredCodeAssistProject() || '').trim();
-    }
-
-    function buildCodeAssistBaseUrl() {
-      return CODE_ASSIST_ENDPOINT + '/' + CODE_ASSIST_VERSION;
-    }
-
-    function buildCodeAssistGenerateEndpoint() {
-      return buildCodeAssistBaseUrl() + ':generateContent';
-    }
-
-    function buildCodeAssistStreamEndpoint() {
-      return buildCodeAssistBaseUrl() + ':streamGenerateContent?alt=sse';
-    }
-
-    function buildCodeAssistLoadEndpoint() {
-      return buildCodeAssistBaseUrl() + ':loadCodeAssist';
-    }
-
-    function buildCodeAssistOnboardEndpoint() {
-      return buildCodeAssistBaseUrl() + ':onboardUser';
-    }
-
-    function buildCodeAssistQuotaEndpoint() {
-      return buildCodeAssistBaseUrl() + ':retrieveUserQuota';
-    }
-
-    function isCloudCodePrivateApiDisabledError(message) {
-      var m = String(message || '').toLowerCase();
-      return m.indexOf('cloud code private api') !== -1
-          || m.indexOf('cloudcode-pa.googleapis.com') !== -1
-          || (m.indexOf('has not been used in project') !== -1 && m.indexOf('enable it') !== -1);
-    }
-
-    function buildCodeAssistClientMetadata(project) {
-      return {
-        ideType: 'IDE_UNSPECIFIED',
-        platform: 'PLATFORM_UNSPECIFIED',
-        pluginType: 'GEMINI',
-        duetProject: project || undefined
-      };
-    }
-
-    function isCodeAssistCreditEligibleModel(model) {
-      return CODE_ASSIST_CREDIT_ELIGIBLE_MODELS.indexOf(String(model || '')) !== -1;
-    }
-
-    function buildCodeAssistGenerateBody(chat) {
-      const model = activeModelName(chat);
-      const project = codeAssistProject();
-      const body = {
-        model: model,
-        project: project || undefined,
-        user_prompt_id: uid('prompt'),
-        request: Object.assign(buildRequestBody(chat.messages, chat), {
-          session_id: chat && chat.id ? String(chat.id) : undefined
-        })
-      };
-      if (isCodeAssistCreditEligibleModel(model)) {
-        body.enabled_credit_types = [CODE_ASSIST_CREDIT_TYPE];
-      }
-      return body;
-    }
-
-    function buildCodeAssistLoadBody() {
-      const project = codeAssistProject();
-      return {
-        cloudaicompanionProject: project || undefined,
-        metadata: buildCodeAssistClientMetadata(project)
-      };
-    }
-
-    function buildCodeAssistQuotaBody() {
-      const project = codeAssistProject();
-      return {
-        project: project,
-        userAgent: navigator.userAgent || 'inhouse-learn'
-      };
-    }
-
-    function unwrapGenerateContentPayload(data) {
-      return data && data.response ? data.response : data;
-    }
-
-    function extractTextFromResponse(data) {
-      const payload = unwrapGenerateContentPayload(data);
-      const parts = payload && payload.candidates && payload.candidates[0] && payload.candidates[0].content && payload.candidates[0].content.parts;
-      if (Array.isArray(parts)) {
-        const text = extractVisibleTextFromParts(parts);
-        if (text) {
-          return text;
-        }
-      }
-      if (payload && payload.promptFeedback && payload.promptFeedback.blockReason) {
-        return 'La respuesta fue bloqueada: ' + payload.promptFeedback.blockReason;
-      }
-      return 'No llego texto util desde Gemini.';
-    }
-
-    function extractModelParts(data) {
-      const payload = unwrapGenerateContentPayload(data);
-      const parts = payload && payload.candidates && payload.candidates[0] && payload.candidates[0].content && payload.candidates[0].content.parts;
-      return Array.isArray(parts) ? cloneParts(parts) : [];
-    }
-
-
-
     function touchChat(chat) {
       chat.updatedAt = nowIso();
       chat.title = deriveTitle(chat.messages, chat);
@@ -7715,15 +7277,10 @@
       var msg = chat.messages[idx];
       if (msg.role !== 'assistant') return;
 
-      var _providerId = activeProviderName(chat);
-      if (_providerId !== 'gemma' && (!__daemonStatus || !__daemonStatus.ok)) {
-        try {
-          await refreshDaemonStatus(1200);
-        } catch (e) {}
-        if (!__daemonStatus || !__daemonStatus.ok) {
-          setComposerStatus('El daemon local no responde.');
-          return;
-        }
+      if (!getApiSettings().apiKey) {
+        showToast('OpenRouter', 'Pega tu API key de OpenRouter para regenerar.');
+        openModelMenuForKey();
+        return;
       }
 
       var currentContent = getVisibleContent(msg);
@@ -7740,7 +7297,7 @@
       msg.content = '';
       msg.activeAlternative = msg.alternatives.length;
       msg.provider = activeProviderName(chat);
-      msg.model = activeModelName(chat);
+      msg.model = resolveRequestModelId(chat);
       touchChat(chat);
       appState.busy = true;
       appState.activeController = new AbortController();
@@ -7941,419 +7498,82 @@
     var USAGE_KEY = STORAGE_KEY + '::dailyUsage';
     var USAGE_SOFT_LIMIT = 1500;
 
-    function createDefaultUsageData() {
-      return {
-        date: new Date().toISOString().slice(0, 10),
-        total: 0,
-        models: {},
-        quotaByModel: {},
-        providerRateLimits: {},
-        creditsRemaining: null,
-        creditsLastConsumed: 0,
-        creditsSessionConsumed: 0,
-        lastUsageMetadata: null,
-        lastQuotaSyncAt: '',
-        lastBackendError: null
-      };
-    }
-
-    function normalizeUsageData(data) {
-      var normalized = data && typeof data === 'object' ? data : createDefaultUsageData();
-      if (normalized.date !== new Date().toISOString().slice(0, 10)) {
-        normalized = createDefaultUsageData();
-      }
-      if (!normalized.models || typeof normalized.models !== 'object') normalized.models = {};
-      if (!normalized.quotaByModel || typeof normalized.quotaByModel !== 'object') normalized.quotaByModel = {};
-      if (!normalized.providerRateLimits || typeof normalized.providerRateLimits !== 'object') normalized.providerRateLimits = {};
-      if (typeof normalized.total !== 'number') normalized.total = 0;
-      if (typeof normalized.creditsLastConsumed !== 'number') normalized.creditsLastConsumed = 0;
-      if (typeof normalized.creditsSessionConsumed !== 'number') normalized.creditsSessionConsumed = 0;
-      if (typeof normalized.creditsRemaining !== 'number' && normalized.creditsRemaining !== null) normalized.creditsRemaining = null;
-      if (!normalized.lastUsageMetadata || typeof normalized.lastUsageMetadata !== 'object') normalized.lastUsageMetadata = null;
-      if (typeof normalized.lastQuotaSyncAt !== 'string') normalized.lastQuotaSyncAt = '';
-      if (!normalized.lastBackendError || typeof normalized.lastBackendError !== 'object') normalized.lastBackendError = null;
-      return normalized;
-    }
-
-    function getUsageData() {
-      try {
-        var raw = localStorage.getItem(USAGE_KEY);
-        return normalizeUsageData(raw ? JSON.parse(raw) : null);
-      } catch (e) {
-        return createDefaultUsageData();
-      }
-    }
-
-    function saveUsageData(data) {
-      try { localStorage.setItem(USAGE_KEY, JSON.stringify(data)); } catch (e) {}
-    }
-
-    function toFiniteUsageNumber(value) {
-      if (value == null || value === '') {
-        return null;
-      }
-      if (typeof value === 'number') {
-        return isFinite(value) ? value : null;
-      }
-      var normalized = String(value).trim().replace(/,/g, '');
-      if (!normalized) {
-        return null;
-      }
-      var matched = normalized.match(/-?\d+(?:\.\d+)?/);
-      if (!matched) {
-        return null;
-      }
-      var num = Number(matched[0]);
-      return isFinite(num) ? num : null;
-    }
-
-    function firstUsageValue(source, keys) {
-      if (!source || typeof source !== 'object' || !Array.isArray(keys)) {
-        return undefined;
-      }
-      for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        if (key in source && source[key] != null && source[key] !== '') {
-          return source[key];
-        }
-      }
-      return undefined;
-    }
-
-    function usageHeaderMap(headers) {
-      if (!headers || typeof headers !== 'object') {
-        return null;
-      }
-      var map = {};
-      Object.keys(headers).forEach(function(key) {
-        map[String(key).toLowerCase()] = headers[key];
-      });
-      return map;
-    }
-
-    function extractUsageHeaders(payload) {
-      if (!payload || typeof payload !== 'object') {
-        return null;
-      }
-      var candidates = [
-        payload.responseHeaders,
-        payload.headers,
-        payload.rateLimitHeaders,
-        payload.usageHeaders,
-        payload.meta && payload.meta.headers,
-        payload.usage && payload.usage.headers,
-        payload.usage && payload.usage.responseHeaders
-      ];
-      for (var i = 0; i < candidates.length; i++) {
-        if (candidates[i] && typeof candidates[i] === 'object') {
-          return usageHeaderMap(candidates[i]);
-        }
-      }
-      return null;
-    }
-
-    function usageHeaderValue(headers, keys) {
-      if (!headers || !Array.isArray(keys)) {
-        return undefined;
-      }
-      for (var i = 0; i < keys.length; i++) {
-        var value = headers[String(keys[i]).toLowerCase()];
-        if (value != null && value !== '') {
-          return value;
-        }
-      }
-      return undefined;
-    }
-
-    function extractUsageRateLimitPayload(payload) {
-      if (!payload || typeof payload !== 'object') {
-        return null;
-      }
-      var candidates = [
-        payload.rateLimits,
-        payload.rateLimit,
-        payload.usage && payload.usage.rateLimits,
-        payload.usage && payload.usage.rateLimit,
-        payload.meta && payload.meta.rateLimits
-      ];
-      for (var i = 0; i < candidates.length; i++) {
-        if (candidates[i] && typeof candidates[i] === 'object') {
-          return candidates[i];
-        }
-      }
-      return null;
-    }
-
-    function parseProviderRateLimitSnapshot(providerId, modelId, payload) {
-      if (!payload || typeof payload !== 'object') {
-        return null;
-      }
-      var raw = extractUsageRateLimitPayload(payload) || {};
-      var headers = extractUsageHeaders(payload);
-      var snapshot = {
-        providerId: String(providerId || ''),
-        modelId: String(modelId || ''),
-        requestsRemaining: null,
-        requestsLimit: null,
-        requestsReset: '',
-        tokensRemaining: null,
-        tokensLimit: null,
-        tokensReset: '',
-        inputTokensRemaining: null,
-        inputTokensLimit: null,
-        inputTokensReset: '',
-        outputTokensRemaining: null,
-        outputTokensLimit: null,
-        outputTokensReset: '',
-        source: '',
-        updatedAt: nowIso()
-      };
-      if (providerId === 'codex') {
-        snapshot.requestsRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['requestsRemaining', 'remainingRequests']) || usageHeaderValue(headers, ['x-ratelimit-remaining-requests']));
-        snapshot.requestsLimit = toFiniteUsageNumber(firstUsageValue(raw, ['requestsLimit', 'limitRequests']) || usageHeaderValue(headers, ['x-ratelimit-limit-requests']));
-        snapshot.requestsReset = String(firstUsageValue(raw, ['requestsReset', 'resetRequests']) || usageHeaderValue(headers, ['x-ratelimit-reset-requests']) || '');
-        snapshot.tokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['tokensRemaining', 'remainingTokens']) || usageHeaderValue(headers, ['x-ratelimit-remaining-tokens']));
-        snapshot.tokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['tokensLimit', 'limitTokens']) || usageHeaderValue(headers, ['x-ratelimit-limit-tokens']));
-        snapshot.tokensReset = String(firstUsageValue(raw, ['tokensReset', 'resetTokens']) || usageHeaderValue(headers, ['x-ratelimit-reset-tokens']) || '');
-      } else if (providerId === 'claude') {
-        snapshot.requestsRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['requestsRemaining', 'remainingRequests']) || usageHeaderValue(headers, ['anthropic-ratelimit-requests-remaining', 'x-ratelimit-remaining-requests']));
-        snapshot.requestsLimit = toFiniteUsageNumber(firstUsageValue(raw, ['requestsLimit', 'limitRequests']) || usageHeaderValue(headers, ['anthropic-ratelimit-requests-limit', 'x-ratelimit-limit-requests']));
-        snapshot.requestsReset = String(firstUsageValue(raw, ['requestsReset', 'resetRequests']) || usageHeaderValue(headers, ['anthropic-ratelimit-requests-reset', 'x-ratelimit-reset-requests']) || '');
-        snapshot.tokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['tokensRemaining', 'remainingTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-tokens-remaining', 'x-ratelimit-remaining-tokens']));
-        snapshot.tokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['tokensLimit', 'limitTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-tokens-limit', 'x-ratelimit-limit-tokens']));
-        snapshot.tokensReset = String(firstUsageValue(raw, ['tokensReset', 'resetTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-tokens-reset', 'x-ratelimit-reset-tokens']) || '');
-        snapshot.inputTokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['inputTokensRemaining', 'remainingInputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-input-tokens-remaining']));
-        snapshot.inputTokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['inputTokensLimit', 'limitInputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-input-tokens-limit']));
-        snapshot.inputTokensReset = String(firstUsageValue(raw, ['inputTokensReset', 'resetInputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-input-tokens-reset']) || '');
-        snapshot.outputTokensRemaining = toFiniteUsageNumber(firstUsageValue(raw, ['outputTokensRemaining', 'remainingOutputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-output-tokens-remaining', 'anthropic-priority-output-tokens-remaining']));
-        snapshot.outputTokensLimit = toFiniteUsageNumber(firstUsageValue(raw, ['outputTokensLimit', 'limitOutputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-output-tokens-limit', 'anthropic-priority-output-tokens-limit']));
-        snapshot.outputTokensReset = String(firstUsageValue(raw, ['outputTokensReset', 'resetOutputTokens']) || usageHeaderValue(headers, ['anthropic-ratelimit-output-tokens-reset', 'anthropic-priority-output-tokens-reset']) || '');
-      } else {
-        return null;
-      }
-      var hasData =
-        snapshot.requestsRemaining !== null ||
-        snapshot.requestsLimit !== null ||
-        snapshot.tokensRemaining !== null ||
-        snapshot.tokensLimit !== null ||
-        snapshot.inputTokensRemaining !== null ||
-        snapshot.outputTokensRemaining !== null;
-      if (!hasData) {
-        return null;
-      }
-      snapshot.source = headers ? 'headers' : 'payload';
-      return snapshot;
-    }
-
-    function syncProviderRateLimits(providerId, modelId, payload) {
-      var snapshot = parseProviderRateLimitSnapshot(providerId, modelId, payload);
-      if (!snapshot) {
-        return;
-      }
-      var data = getUsageData();
-      if (!data.providerRateLimits || typeof data.providerRateLimits !== 'object') {
-        data.providerRateLimits = {};
-      }
-      data.providerRateLimits[String(providerId || '')] = snapshot;
-      saveUsageData(data);
-      renderUsageDonut();
-      renderUsagePopup();
-    }
-
-    function getProviderRateLimitSnapshot(providerId) {
-      var data = getUsageData();
-      var snapshots = data && data.providerRateLimits ? data.providerRateLimits : {};
-      var key = String(providerId || '');
-      return snapshots && snapshots[key] ? snapshots[key] : null;
-    }
-
-    function syncProviderRateLimitsFromStatus(status) {
-      var details = status && status.providerDetails;
-      if (!details || typeof details !== 'object') {
-        return;
-      }
-      Object.keys(details).forEach(function(providerId) {
-        var providerStatus = details[providerId];
-        if (!providerStatus || typeof providerStatus !== 'object') {
-          return;
-        }
-        syncProviderRateLimits(providerId, providerStatus.modelId || providerStatus.model || '', providerStatus);
-      });
-    }
-
-    function sumCreditAmount(entries) {
-      if (!Array.isArray(entries) || !entries.length) {
-        return null;
-      }
-      var total = 0;
-      var matched = false;
-      entries.forEach(function(entry) {
-        if (!entry) return;
-        var amount = parseInt(entry.creditAmount, 10);
-        if (!isFinite(amount)) return;
-        var type = String(entry.creditType || '');
-        if (type && CODE_ASSIST_CREDIT_TYPES.indexOf(type) === -1) return;
-        total += amount;
-        matched = true;
-      });
-      return matched ? total : null;
-    }
-
-    function syncUsageCreditsRemaining(entries) {
-      var remaining = sumCreditAmount(entries);
-      if (remaining === null) {
-        return;
-      }
-      var data = getUsageData();
-      data.creditsRemaining = remaining;
-      saveUsageData(data);
-      renderUsageDonut();
-      renderUsagePopup();
-    }
-
-    function syncUsageQuotaBuckets(buckets) {
-      if (!Array.isArray(buckets)) {
-        return;
-      }
-      var data = getUsageData();
-      var nextQuotaByModel = {};
-      buckets.forEach(function(bucket) {
-        if (!bucket || !bucket.modelId || !bucket.remainingAmount || bucket.remainingFraction == null) {
-          return;
-        }
-        var remaining = parseInt(bucket.remainingAmount, 10);
-        var limit = bucket.remainingFraction > 0
-          ? Math.round(remaining / bucket.remainingFraction)
-          : 0;
-        if (!isFinite(remaining) || !isFinite(limit) || limit <= 0) {
-          return;
-        }
-        nextQuotaByModel[String(bucket.modelId)] = {
-          remaining: remaining,
-          limit: limit,
-          tokenType: String(bucket.tokenType || 'REQUESTS'),
-          resetTime: String(bucket.resetTime || '')
-        };
-      });
-      data.quotaByModel = nextQuotaByModel;
-      data.lastQuotaSyncAt = nowIso();
-      saveUsageData(data);
-      renderUsageDonut();
-      renderUsagePopup();
-    }
-
-    function getActiveQuotaInfo(data) {
-      var model = activeModelName();
-      var quotaByModel = data && data.quotaByModel ? data.quotaByModel : {};
-      return quotaByModel[model] || null;
-    }
-
-    function formatUsageResetTime(value) {
-      if (!value) {
-        return '';
-      }
-      try {
-        return new Date(value).toLocaleString();
-      } catch (e) {
-        return String(value);
-      }
-    }
-
-    function trackApiUsage(model, responseData) {
-      var data = getUsageData();
-      var usagePayload = unwrapGenerateContentPayload(responseData);
-      var consumedCredits = sumCreditAmount(responseData && responseData.consumedCredits);
-      var remainingCredits = sumCreditAmount(responseData && responseData.remainingCredits);
-      data.total = (data.total || 0) + 1;
-      if (!data.models) data.models = {};
-      data.models[model] = (data.models[model] || 0) + 1;
-      data.creditsLastConsumed = consumedCredits === null ? 0 : consumedCredits;
-      if (consumedCredits !== null) {
-        data.creditsSessionConsumed = (data.creditsSessionConsumed || 0) + consumedCredits;
-      }
-      if (remainingCredits !== null) {
-        data.creditsRemaining = remainingCredits;
-      }
-      data.lastUsageMetadata = usagePayload && usagePayload.usageMetadata
-        ? {
-            model: String(model || ''),
-            promptTokenCount: Number(usagePayload.usageMetadata.promptTokenCount || 0),
-            candidatesTokenCount: Number(usagePayload.usageMetadata.candidatesTokenCount || 0),
-            totalTokenCount: Number(usagePayload.usageMetadata.totalTokenCount || 0)
-          }
-        : null;
-      data.lastBackendError = null;
-      saveUsageData(data);
-      renderUsageDonut();
-      renderUsagePopup();
-    }
-
-    function trackBackendLimit(status, message, model) {
-      var data = getUsageData();
-      data.lastBackendError = {
-        at: nowIso(),
-        status: String(status || ''),
-        model: String(model || activeModelName() || ''),
-        message: String(message || '')
-      };
-      saveUsageData(data);
-      renderUsageDonut();
-      renderUsagePopup();
-    }
-
+    // ─── USO Y SALDO (OpenRouter) ─────────────────────
+    const USAGE_STORAGE_KEY = STORAGE_KEY + '::openrouterUsage';
     var MODEL_DONUT_PALETTE = ['#22c55e', '#3b82f6', '#eab308', '#a855f7', '#06b6d4', '#f97316', '#14b8a6', '#ef4444'];
 
     function modelDonutColor(index) {
       return MODEL_DONUT_PALETTE[index % MODEL_DONUT_PALETTE.length];
     }
 
-    function collectQuotaEntries() {
-      var data = getUsageData();
-      var quotaByModel = (data && data.quotaByModel) || {};
-      var entries = [];
-      MODEL_OPTIONS.forEach(function(option) {
-        var q = quotaByModel[option.id];
-        if (!q) return;
-        var remaining = Number(q.remaining);
-        var limit = Number(q.limit);
-        if (!isFinite(remaining) || !isFinite(limit) || limit <= 0) return;
-        entries.push({
-          id: option.id,
-          label: option.label,
-          badge: option.badge,
-          remaining: Math.max(0, remaining),
-          limit: limit,
-          resetTime: q.resetTime || ''
-        });
-      });
-      return entries;
+    function createDefaultUsageData() {
+      return { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0, byModel: {} };
     }
 
-    function collectSessionUsageEntries() {
-      var data = getUsageData();
-      var counts = (data && data.models) || {};
-      var entries = [];
-      MODEL_OPTIONS.forEach(function(option) {
-        var n = Number(counts[option.id]);
-        if (!isFinite(n) || n <= 0) return;
-        entries.push({
-          id: option.id,
-          label: option.label,
-          badge: option.badge,
-          count: n
-        });
-      });
-      return entries;
+    function getUsageData() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(USAGE_STORAGE_KEY) || 'null');
+        if (raw && typeof raw === 'object') {
+          return Object.assign(createDefaultUsageData(), raw, { byModel: raw.byModel || {} });
+        }
+      } catch (_) {}
+      return createDefaultUsageData();
+    }
+
+    function saveUsageData(data) {
+      try {
+        localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(data));
+      } catch (_) {}
+    }
+
+    function recordOpenRouterUsage(modelId, usage) {
+      if (!usage) return;
+      const data = getUsageData();
+      const prompt = Number(usage.prompt_tokens) || 0;
+      const completion = Number(usage.completion_tokens) || 0;
+      const cost = Number(usage.cost) || 0;
+      data.requests += 1;
+      data.promptTokens += prompt;
+      data.completionTokens += completion;
+      data.cost += cost;
+      const entry = data.byModel[modelId] || { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0 };
+      entry.requests += 1;
+      entry.promptTokens += prompt;
+      entry.completionTokens += completion;
+      entry.cost += cost;
+      data.byModel[modelId] = entry;
+      saveUsageData(data);
+      if (appState.openRouterCredits) {
+        appState.openRouterCredits.used += cost;
+      }
+      renderUsageDonut();
+    }
+
+    function formatUsd(value) {
+      const n = Number(value) || 0;
+      if (n === 0) return '$0';
+      if (n < 0.01) return '$' + n.toFixed(4);
+      if (n < 10) return '$' + n.toFixed(2);
+      return '$' + n.toFixed(0);
     }
 
     function formatCompactNumber(value) {
       var n = Number(value);
       if (!isFinite(n)) return '-';
+      if (n >= 1000000) {
+        return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      }
       if (n >= 1000) {
         var k = n / 1000;
         return (k >= 10 ? Math.round(k) : k.toFixed(1).replace(/\.0$/, '')) + 'K';
       }
       return String(Math.round(n));
+    }
+
+    function formatNumber(value) {
+      var n = Number(value);
+      if (!isFinite(n)) return '-';
+      return n.toLocaleString();
     }
 
     function renderDonutSegments(svg, entries, valueKey, totalValue, centerLabel, tooltipFormatter) {
@@ -8364,12 +7584,11 @@
       entries.forEach(function(entry, index) {
         var value = Number(entry[valueKey]);
         if (!isFinite(value) || value <= 0) return;
-        var frac = value / totalValue;
-        var len = circ * frac;
+        var len = circ * Math.min(1, value / totalValue);
         if (len <= 0) return;
         var offset = 25 - cumulative;
         parts.push(
-          '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + modelDonutColor(index) + '" stroke-width="3"' +
+          '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + (entry.color || modelDonutColor(index)) + '" stroke-width="3"' +
           ' stroke-dasharray="' + len.toFixed(2) + ' ' + (circ - len).toFixed(2) + '"' +
           ' stroke-dashoffset="' + offset.toFixed(2) + '" stroke-linecap="butt">' +
           '<title>' + escapeHtml(tooltipFormatter(entry)) + '</title>' +
@@ -8377,171 +7596,110 @@
         );
         cumulative += len;
       });
-      parts.push('<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor">' + escapeHtml(centerLabel) + '</text>');
+      parts.push('<text x="18" y="19.5" text-anchor="middle" font-size="' + (String(centerLabel).length > 4 ? 6.5 : 8) + '" font-weight="700" fill="currentColor">' + escapeHtml(centerLabel) + '</text>');
       svg.innerHTML = parts.join('');
+    }
+
+    async function refreshOpenRouterCredits() {
+      const apiKey = getApiSettings().apiKey;
+      if (!apiKey) {
+        appState.openRouterCredits = null;
+        renderUsageDonut();
+        return null;
+      }
+      try {
+        const response = await fetch(OPENROUTER_BASE_URL + '/credits', {
+          headers: { Authorization: 'Bearer ' + apiKey },
+          cache: 'no-store'
+        });
+        if (response.ok) {
+          const payload = await response.json();
+          const data = payload && payload.data ? payload.data : {};
+          appState.openRouterCredits = {
+            total: Number(data.total_credits) || 0,
+            used: Number(data.total_usage) || 0,
+            keyValid: true
+          };
+        } else if (response.status === 401) {
+          appState.openRouterCredits = { total: 0, used: 0, keyValid: false };
+        }
+      } catch (error) {
+        console.warn('No se pudo leer el saldo de OpenRouter:', error);
+      }
+      renderUsageDonut();
+      return appState.openRouterCredits;
     }
 
     function renderUsageDonut() {
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
-      var radius = 15.915;
-      var circ = 2 * Math.PI * radius;
-      var quotaEntries = collectQuotaEntries();
-
-      if (quotaEntries.length) {
-        var totalLimit = 0;
-        var totalRemaining = 0;
-        quotaEntries.forEach(function(entry) {
-          totalLimit += entry.limit;
-          totalRemaining += entry.remaining;
-        });
-        renderDonutSegments(svg, quotaEntries, 'remaining', totalLimit || 1, formatCompactNumber(totalRemaining), function(entry) {
-          return entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit);
-        });
-        return;
-      }
-      var activeRateLimit = getProviderRateLimitSnapshot(activeProviderName());
-      if (activeRateLimit && activeRateLimit.requestsRemaining !== null && activeRateLimit.requestsLimit) {
-        var requestRemaining = Math.max(0, Number(activeRateLimit.requestsRemaining) || 0);
-        var requestLimit = Math.max(1, Number(activeRateLimit.requestsLimit) || 1);
+      var credits = appState.openRouterCredits;
+      if (credits && credits.total > 0) {
+        var remaining = Math.max(0, credits.total - credits.used);
+        var ratio = remaining / credits.total;
         renderDonutSegments(svg, [{
-          label: activeProviderLabel(),
-          remaining: requestRemaining,
-          limit: requestLimit
-        }], 'remaining', requestLimit, formatCompactNumber(requestRemaining), function(entry) {
-          return entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit) + ' peticiones restantes';
+          label: 'Saldo OpenRouter',
+          remaining: remaining,
+          color: ratio > 0.25 ? '#22c55e' : ratio > 0.1 ? '#eab308' : '#ef4444'
+        }], 'remaining', credits.total, formatUsd(remaining), function(entry) {
+          return entry.label + ': ' + formatUsd(entry.remaining) + ' de ' + formatUsd(credits.total);
         });
         return;
       }
-      if (activeRateLimit && activeRateLimit.tokensRemaining !== null && activeRateLimit.tokensLimit) {
-        var tokenRemaining = Math.max(0, Number(activeRateLimit.tokensRemaining) || 0);
-        var tokenLimit = Math.max(1, Number(activeRateLimit.tokensLimit) || 1);
-        renderDonutSegments(svg, [{
-          label: activeProviderLabel(),
-          remaining: tokenRemaining,
-          limit: tokenLimit
-        }], 'remaining', tokenLimit, formatCompactNumber(tokenRemaining), function(entry) {
-          return entry.label + ': ' + formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit) + ' tokens restantes';
-        });
-        return;
-      }
-
-      var status = __daemonStatus || {};
-      var providerDetails = status.providerDetails || {};
-      var readyCount = Object.keys(providerDetails).filter(function(providerId) {
-        var item = providerDetails[providerId];
-        return item && item.installed && item.connected;
-      }).length;
-      var totalCount = PROVIDER_OPTIONS.length;
-      var pct = totalCount ? readyCount / totalCount : 0;
-      var filled = circ * pct;
-      var remaining = circ - filled;
-      var color = readyCount === totalCount ? '#22c55e' : readyCount > 0 ? '#eab308' : '#ef4444';
+      var usage = getUsageData();
+      var hasKey = !!getApiSettings().apiKey;
+      var color = hasKey ? '#22c55e' : '#ef4444';
+      var label = hasKey ? (usage.cost > 0 ? formatUsd(usage.cost) : 'API') : 'key';
       svg.innerHTML = [
-        '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="3"/>',
-        '<circle cx="18" cy="18" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="3"',
-        '  stroke-dasharray="' + filled.toFixed(2) + ' ' + remaining.toFixed(2) + '"',
-        '  stroke-dashoffset="25" stroke-linecap="round" style="transition:stroke-dasharray 0.4s"/>',
-        '<text x="18" y="19.5" text-anchor="middle" font-size="8" font-weight="700" fill="' + color + '">' + readyCount + '/' + totalCount + '</text>'
+        '<circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="3"/>',
+        '<circle cx="18" cy="18" r="15.915" fill="none" stroke="' + color + '" stroke-width="3" stroke-dasharray="' + (hasKey ? '100 0' : '0 100') + '" stroke-dashoffset="25"/>',
+        '<text x="18" y="19.5" text-anchor="middle" font-size="' + (label.length > 4 ? 6.5 : 8) + '" font-weight="700" fill="' + color + '">' + escapeHtml(label) + '</text>'
       ].join('');
-    }
-
-    function formatNumber(value) {
-      var n = Number(value);
-      if (!isFinite(n)) return '-';
-      return n.toLocaleString();
     }
 
     function renderUsagePopup() {
       var content = document.getElementById('usage-popup-content');
       if (!content) return;
-      var status = __daemonStatus || {};
-      var providerDetails = status.providerDetails || {};
-      var rows = PROVIDER_OPTIONS.map(function(option) {
-        var item = providerDetails[option.id];
-        var state = !status.ok
-          ? 'daemon offline'
-          : item && item.installed && item.connected
-            ? 'listo'
-            : item && item.installed
-              ? 'instalado, falta login'
-              : 'sin instalar';
-        return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(option.label) + '</span><span class="usage-row-value">' + escapeHtml(state) + '</span></div>';
-      }).join('');
-      var providerId = activeProviderName();
-      var activeStatus = providerDetails[providerId];
-      var detailBlock = activeStatus
-        ? '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">' +
-            '<div class="usage-row"><span class="usage-row-label">Provider activo</span><span class="usage-row-value">' + escapeHtml(activeProviderLabel()) + '</span></div>' +
-            '<div class="usage-row"><span class="usage-row-label">Modelo</span><span class="usage-row-value">' + escapeHtml(activeModelLabel()) + '</span></div>' +
-            '<div class="usage-row"><span class="usage-row-label">CLI</span><span class="usage-row-value">' + escapeHtml(activeStatus.command || '-') + '</span></div>' +
-            '<div class="usage-row"><span class="usage-row-label">Instalado</span><span class="usage-row-value">' + (activeStatus.installed ? 'si' : 'no') + '</span></div>' +
-            '<div class="usage-row"><span class="usage-row-label">Login detectado</span><span class="usage-row-value">' + (activeStatus.connected ? 'si' : 'no') + '</span></div>' +
-          '</div>'
-        : '';
-
-      var usageBlock = '';
-      if (activeProviderName() === 'gemini') {
-        var usageData = getUsageData();
-        var usageRows = [];
-        if (typeof usageData.creditsRemaining === 'number' && usageData.creditsRemaining !== null) {
-          usageRows.push('<div class="usage-row"><span class="usage-row-label">Creditos Google AI</span><span class="usage-row-value">' + escapeHtml(formatNumber(usageData.creditsRemaining)) + '</span></div>');
-        }
-        var quotaEntries = collectQuotaEntries();
-        if (quotaEntries.length) {
-          usageRows.push('<div class="usage-row" style="margin-top:4px"><span class="usage-row-label" style="font-weight:700">Usos restantes por modelo</span><span class="usage-row-value"></span></div>');
-          quotaEntries.forEach(function(entry, index) {
-            var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + modelDonutColor(index) + ';margin-right:6px;vertical-align:middle"></span>';
-            usageRows.push('<div class="usage-row"><span class="usage-row-label">' + dot + escapeHtml(entry.label) + '</span><span class="usage-row-value">' + escapeHtml(formatNumber(entry.remaining) + ' / ' + formatNumber(entry.limit)) + '</span></div>');
-          });
-          var firstReset = quotaEntries.find(function(entry) { return entry.resetTime; });
-          if (firstReset) {
-            usageRows.push('<div class="usage-row"><span class="usage-row-label">Se renueva</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(firstReset.resetTime)) + '</span></div>');
-          }
-        } else if (!usageRows.length) {
-          usageRows.push('<div style="font-size:0.7rem;color:var(--muted);line-height:1.45">No hay cuota restante confirmada todavia. Aqui solo se muestra la cuota real que Google Code Assist expone para esta cuenta.</div>');
-        }
-        if (usageRows.length) {
-          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">USO GEMINI</div>' + usageRows.join('') + '</div>';
-        } else {
-          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:0.7rem;color:var(--muted)">Envia un mensaje para ver los creditos y cuota actuales.</div>';
-        }
-      } else {
-        var providerId = activeProviderName();
-        var snapshot = getProviderRateLimitSnapshot(providerId);
-        var providerRows = [];
-        if (snapshot && snapshot.requestsRemaining !== null && snapshot.requestsLimit !== null) {
-          providerRows.push('<div class="usage-row"><span class="usage-row-label">Peticiones restantes</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.requestsRemaining) + ' / ' + formatNumber(snapshot.requestsLimit)) + '</span></div>');
-          if (snapshot.requestsReset) {
-            providerRows.push('<div class="usage-row"><span class="usage-row-label">Reset peticiones</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(snapshot.requestsReset)) + '</span></div>');
-          }
-        }
-        if (snapshot && snapshot.tokensRemaining !== null && snapshot.tokensLimit !== null) {
-          providerRows.push('<div class="usage-row"><span class="usage-row-label">Tokens restantes</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.tokensRemaining) + ' / ' + formatNumber(snapshot.tokensLimit)) + '</span></div>');
-          if (snapshot.tokensReset) {
-            providerRows.push('<div class="usage-row"><span class="usage-row-label">Reset tokens</span><span class="usage-row-value">' + escapeHtml(formatUsageResetTime(snapshot.tokensReset)) + '</span></div>');
-          }
-        }
-        if (snapshot && snapshot.inputTokensRemaining !== null && snapshot.inputTokensLimit !== null) {
-          providerRows.push('<div class="usage-row"><span class="usage-row-label">Input restante</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.inputTokensRemaining) + ' / ' + formatNumber(snapshot.inputTokensLimit)) + '</span></div>');
-        }
-        if (snapshot && snapshot.outputTokensRemaining !== null && snapshot.outputTokensLimit !== null) {
-          providerRows.push('<div class="usage-row"><span class="usage-row-label">Output restante</span><span class="usage-row-value">' + escapeHtml(formatNumber(snapshot.outputTokensRemaining) + ' / ' + formatNumber(snapshot.outputTokensLimit)) + '</span></div>');
-        }
-        if (providerRows.length) {
-          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">CUOTA RESTANTE</div>' + providerRows.join('') + '</div>';
-        } else {
-          usageBlock = '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:0.7rem;color:var(--muted);line-height:1.45">Este provider no esta devolviendo cuota restante al cliente. La UI ya no usa contadores de sesion como sustituto. Si el daemon expone los headers de rate limit de OpenAI o Anthropic, aqui se mostraran automaticamente.</div>';
-        }
+      var hasKey = !!getApiSettings().apiKey;
+      var credits = appState.openRouterCredits;
+      var usage = getUsageData();
+      var row = function(label, value) {
+        return '<div class="usage-row"><span class="usage-row-label">' + escapeHtml(label) + '</span><span class="usage-row-value">' + escapeHtml(value) + '</span></div>';
+      };
+      var section = function(title, body) {
+        return '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">' + escapeHtml(title) + '</div>' + body + '</div>';
+      };
+      var keyState = !hasKey ? 'sin configurar' : (credits && credits.keyValid === false ? 'no valida' : 'guardada');
+      var html = [
+        row('API key', keyState),
+        row('Modelo', activeModelBadge()),
+        row('ID', resolveRequestModelId(getActiveChat()) || '-')
+      ];
+      if (credits && credits.total > 0) {
+        html.push(section('SALDO OPENROUTER', [
+          row('Restante', formatUsd(Math.max(0, credits.total - credits.used))),
+          row('Gastado', formatUsd(credits.used)),
+          row('Recargado', formatUsd(credits.total))
+        ].join('')));
       }
-
-      content.innerHTML = [
-        '<div class="usage-row"><span class="usage-row-label">Daemon</span><span class="usage-row-value">' + escapeHtml(status.ok ? 'online' : 'offline') + '</span></div>',
-        '<div class="usage-row"><span class="usage-row-label">Version</span><span class="usage-row-value">' + escapeHtml(status.version || '-') + '</span></div>',
-        '<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px"><div style="font-size:0.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">PROVIDERS</div>' + rows + '</div>',
-        detailBlock,
-        usageBlock
-      ].join('');
+      var modelRows = Object.keys(usage.byModel).sort(function(a, b) {
+        return (usage.byModel[b].cost || 0) - (usage.byModel[a].cost || 0);
+      }).slice(0, 6).map(function(id, index) {
+        var item = usage.byModel[id];
+        var dot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + modelDonutColor(index) + ';margin-right:6px;vertical-align:middle"></span>';
+        return '<div class="usage-row"><span class="usage-row-label">' + dot + escapeHtml(id.split('/').pop()) + '</span><span class="usage-row-value">' + escapeHtml(formatUsd(item.cost) + ' · ' + item.requests + ' msg') + '</span></div>';
+      }).join('');
+      html.push(section('USO EN ESTE NAVEGADOR', [
+        row('Mensajes', formatNumber(usage.requests)),
+        row('Tokens entrada', formatCompactNumber(usage.promptTokens)),
+        row('Tokens salida', formatCompactNumber(usage.completionTokens)),
+        row('Coste', formatUsd(usage.cost)),
+        modelRows
+      ].join('')));
+      if (!hasKey) {
+        html.push('<div style="margin-top:8px;font-size:0.7rem;color:var(--muted);line-height:1.45">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>');
+      }
+      content.innerHTML = html.join('');
     }
 
     function toggleUsagePopup() {
@@ -8550,13 +7708,11 @@
       popup.classList.toggle('hidden');
       if (isHidden) {
         renderUsagePopup();
-        if (appState.accessToken && activeProviderName() === 'gemini') {
-          refreshCodeAssistUsage(true).catch(function() {}).then(function() {
-            if (!popup.classList.contains('hidden')) {
-              renderUsagePopup();
-            }
-          });
-        }
+        refreshOpenRouterCredits().then(function() {
+          if (!popup.classList.contains('hidden')) {
+            renderUsagePopup();
+          }
+        });
       }
     }
 
@@ -8693,9 +7849,20 @@
       elements.modelMenuPopup.addEventListener('click', function(e) {
         e.stopPropagation();
       });
-      elements.openLocalhostBtn.addEventListener('click', () => {
-        openDaemonInBrowser();
-      });
+      if (elements.apiKeyInput) {
+        elements.apiKeyInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            saveApiKeyFromInput();
+          }
+        });
+      }
+      if (elements.customModelInput) {
+        elements.customModelInput.addEventListener('input', () => {
+          saveApiSettings({ customModel: elements.customModelInput.value.trim() });
+          renderModelControls();
+        });
+      }
       elements.profileBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
         const driveConnected = hasDrivePersistenceReady();
@@ -8832,12 +7999,8 @@
           setComposerStatus('');
         });
       }
-      elements.loginBtn.addEventListener('click', async () => {
-        try {
-          await connectActiveProvider();
-        } catch (error) {
-          showToast('Provider', error.message);
-        }
+      elements.loginBtn.addEventListener('click', () => {
+        saveApiKeyFromInput();
       });
       elements.logoutMenuBtn.addEventListener('click', () => {
         closeProfileMenu();
@@ -8883,29 +8046,21 @@
 
 
     function updateConfigUi() {
-      const providerId = activeProviderName();
-      const providerStatus = daemonProviderStatus(providerId);
-      let label = 'Agente local offline';
-      if (providerId === 'gemma') {
-        label = navigator.gpu ? 'Local · Gemma (WebGPU / Ollama)' : 'Gemma · WebGPU no disponible';
-      } else if (__daemonStatus && __daemonStatus.ok) {
-        if (providerStatus && providerStatus.installed && providerStatus.connected) {
-          label = 'Local · ' + activeProviderLabel() + ' listo';
-        } else if (providerStatus && providerStatus.installed) {
-          label = 'Local · ' + activeProviderLabel() + ' necesita login';
-        } else {
-          label = 'Local · ' + activeProviderLabel() + ' no instalado';
-        }
-      }
+      const hasKey = !!getApiSettings().apiKey;
       if (elements.transportLabel) {
-        elements.transportLabel.textContent = label;
+        elements.transportLabel.textContent = hasKey ? 'OpenRouter' : 'Falta API key';
+      }
+      const transportPill = document.querySelector('.transport-pill');
+      if (transportPill) {
+        transportPill.setAttribute('data-ready', hasKey ? 'true' : 'false');
+        transportPill.title = hasKey ? 'Conectado a OpenRouter desde el navegador' : 'Pega tu API key en el selector de modelo';
       }
       elements.modelBadge.textContent = activeModelBadge();
       renderModelControls();
       elements.configCopy.style.display = 'block';
-      elements.configCopy.textContent = __daemonStatus && __daemonStatus.ok
-        ? 'Daemon local en ' + DAEMON_CONFIG.URL + '.'
-        : 'El daemon local no responde en ' + DAEMON_CONFIG.URL + '.';
+      elements.configCopy.textContent = hasKey
+        ? 'Conectado a OpenRouter desde el navegador.'
+        : 'Falta la API key de OpenRouter.';
       elements.originCopy.style.display = 'none';
       elements.originCopy.textContent = '';
       updateGuidedLearningUi();
@@ -8913,15 +8068,6 @@
     }
 
     function updateAuthUi() {
-      const providerId = activeProviderName();
-      const providerLabel = activeProviderLabel();
-      const providerStatus = daemonProviderStatus(providerId);
-      const isReady = !!(providerStatus && providerStatus.installed && providerStatus.connected);
-      elements.loginBtn.classList.remove('hidden');
-      elements.loginBtn.textContent = isReady
-        ? 'Reabrir ' + providerLabel
-        : 'Conectar ' + providerLabel;
-
       const hasDriveOauth = hasOauthConfig();
       const driveIdentity = hasDriveIdentitySession();
       const driveConnected = hasDrivePersistenceReady();
@@ -8961,575 +8107,249 @@
         closeProfileMenu();
       }
 
-      let providerCopy = '';
-      if (!__daemonStatus || !__daemonStatus.ok) {
-        providerCopy = 'El daemon local no responde todavia.';
-      } else if (providerStatus && providerStatus.installed && providerStatus.connected) {
-        providerCopy = providerLabel + ' esta listo en tu ordenador.';
-      } else if (providerStatus && providerStatus.installed) {
-        providerCopy = providerLabel + ' esta instalado, pero falta completar el login del CLI.';
-      } else {
-        providerCopy = providerLabel + ' no esta instalado todavia. Abre el selector del modelo para iniciar la instalacion o el login.';
-      }
+      const providerCopy = getApiSettings().apiKey
+        ? 'OpenRouter listo.'
+        : 'Falta la API key de OpenRouter.';
 
       const driveCopy = !hasDriveOauth
         ? 'Google Drive no esta configurado en esta build.'
         : driveConnected
           ? 'Google Drive esta conectado y el historial se guarda alli.'
           : (driveIdentity
-            ? 'Google Drive se esta reconectando antes de habilitar el chat.'
-            : 'La app requiere iniciar sesion con Google para guardar el historial en Drive.');
+            ? 'Google Drive se esta reconectando.'
+            : 'Sin Google Drive: el historial se guarda en este navegador.');
       elements.authCopy.textContent = providerCopy + ' ' + driveCopy;
       updateAuthGateUi();
     }
 
-    async function refreshDaemonStatus(timeoutMs) {
-      const status = await pingDaemon(timeoutMs || 1200);
-      if (status) {
-        __daemonStatus = status;
-        window.__daemonStatus = status;
-        syncProviderRateLimitsFromStatus(status);
-      } else {
-        __daemonStatus = null;
-        window.__daemonStatus = null;
+    // ─── OPENROUTER (todo en el navegador) ────────────
+    // Las peticiones salen directamente del navegador a OpenRouter con la
+    // API key del usuario. No hay backend ni agente local.
+    const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+    const API_SETTINGS_KEY = STORAGE_KEY + '::openrouterSettings';
+    let apiSettingsCache = null;
+
+    function getApiSettings() {
+      if (!apiSettingsCache) {
+        let stored = {};
+        try {
+          stored = JSON.parse(localStorage.getItem(API_SETTINGS_KEY) || '{}') || {};
+        } catch (_) {}
+        apiSettingsCache = {
+          apiKey: String(stored.apiKey || ''),
+          customModel: String(stored.customModel || '')
+        };
       }
+      return apiSettingsCache;
+    }
+
+    function saveApiSettings(patch) {
+      const next = Object.assign({}, getApiSettings(), patch || {});
+      apiSettingsCache = next;
+      try {
+        localStorage.setItem(API_SETTINGS_KEY, JSON.stringify(next));
+      } catch (error) {
+        console.warn('No se pudo guardar la configuracion de la API:', error);
+      }
+      return next;
+    }
+
+    function resolveRequestModelId(chatLike) {
+      const modelId = activeModelName(chatLike);
+      if (modelId === CUSTOM_MODEL_ID) {
+        return getApiSettings().customModel.trim();
+      }
+      return modelId;
+    }
+
+    function openModelMenuForKey(focusTarget) {
+      // Diferido: el click que lo dispara no debe cerrarlo al burbujear a document.
+      window.setTimeout(() => {
+        if (elements.modelMenuPopup && elements.modelMenuPopup.classList.contains('hidden')) {
+          toggleModelMenu();
+        }
+        const target = focusTarget || elements.apiKeyInput;
+        if (target) target.focus();
+      }, 0);
+    }
+
+    async function saveApiKeyFromInput() {
+      const value = String(elements.apiKeyInput && elements.apiKeyInput.value || '').trim();
+      saveApiSettings({ apiKey: value });
+      appState.openRouterCredits = null;
       updateConfigUi();
-      updateAuthUi();
       renderUsageDonut();
-      return status;
-    }
-
-    async function daemonFetchJson(pathName, body, signal) {
-      const response = await fetch(DAEMON_CONFIG.URL + pathName, {
-        method: body ? 'POST' : 'GET',
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
-        signal,
-        cache: 'no-store'
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (payload && payload.ping) {
-        __daemonStatus = payload.ping;
-        window.__daemonStatus = payload.ping;
-        syncProviderRateLimitsFromStatus(payload.ping);
-        updateConfigUi();
-        updateAuthUi();
-        renderUsageDonut();
-      }
-      if (!response.ok || payload.ok === false) {
-        throw new Error((payload && (payload.error || payload.message)) || ('HTTP ' + response.status));
-      }
-      return payload;
-    }
-
-    async function connectActiveProvider() {
-      // Clear any previous polling timer to prevent terminal spam
-      if (appState.connectPollingTimer) {
-        window.clearInterval(appState.connectPollingTimer);
-        appState.connectPollingTimer = 0;
-      }
-      const providerId = activeProviderName();
-      if (providerId === 'gemma') {
-        await connectGemmaLocal();
+      if (!value) {
+        showToast('OpenRouter', 'API key borrada de este navegador.');
         return;
       }
-      await daemonFetchJson('/v1/connect', {
-        provider: providerId
-      });
-      setComposerStatus('Abriendo ' + activeProviderLabel() + ' en una terminal nueva...');
-      let attempts = 0;
-      appState.connectPollingTimer = window.setInterval(async () => {
-        attempts += 1;
-        const status = await refreshDaemonStatus(1200);
-        const providerStatus = status && status.providerDetails ? status.providerDetails[providerId] : null;
-        if (providerStatus && providerStatus.installed && providerStatus.connected) {
-          window.clearInterval(appState.connectPollingTimer);
-          appState.connectPollingTimer = 0;
-          setComposerStatus(activeProviderLabel() + ' listo.');
-          window.setTimeout(() => {
-            if (!appState.busy) setComposerStatus('');
-          }, 1200);
+      if (!/^sk-or-/.test(value)) {
+        showToast('OpenRouter', 'Guardada, pero no parece una key de OpenRouter (suelen empezar por sk-or-).');
+      }
+      const credits = await refreshOpenRouterCredits();
+      if (credits && credits.keyValid === false) {
+        showToast('OpenRouter', 'OpenRouter ha rechazado la key. Revisa que este copiada entera.');
+      } else {
+        showToast('OpenRouter', 'API key guardada. Ya puedes chatear.');
+        closeModelMenu();
+        elements.composer.focus();
+      }
+      updateConfigUi();
+    }
+
+    function openRouterMessageContent(message) {
+      const parts = Array.isArray(message && message.parts) && message.parts.length
+        ? message.parts
+        : [{ text: String(message && message.content || '') }];
+      const isAssistant = message.role === 'assistant';
+      const hasPdfText = parts.some((part) => part && typeof part.text === 'string' && part.text.indexOf('Tipo: application/pdf') !== -1);
+      const out = [];
+      parts.forEach((part) => {
+        if (!part) return;
+        if (typeof part.text === 'string') {
+          const text = isAssistant ? parseGuidedAssistantPayload(part.text).visibleText : part.text;
+          if (text && text.trim()) out.push({ type: 'text', text });
           return;
         }
-        if (attempts >= 40) {
-          window.clearInterval(appState.connectPollingTimer);
-          appState.connectPollingTimer = 0;
-        }
-      }, 2000);
-    }
-
-    function buildDaemonMessageContent(message) {
-      const partsText = Array.isArray(message && message.parts)
-        ? message.parts
-            .map((part) => part && typeof part.text === 'string' ? part.text.trim() : '')
-            .filter(Boolean)
-            .join('\n\n')
-        : '';
-      if (partsText) {
-        return parseGuidedAssistantPayload(partsText).visibleText;
-      }
-      return parseGuidedAssistantPayload(String(message && message.content || '').trim()).visibleText;
-    }
-
-    function buildDaemonChatBody(chat) {
-      return {
-        provider: activeProviderName(chat),
-        model: activeModelName(chat),
-        thinkingLevel: currentThinkingLevel(chat),
-        systemPrompt: getActiveSystemPrompt(chat),
-        messages: (chat.messages || [])
-          .filter((message) => !message.pending)
-          .map((message) => ({
-            role: message.role === 'assistant' ? 'assistant' : 'user',
-            content: buildDaemonMessageContent(message)
-          }))
-          .filter((message) => message.content)
-      };
-    }
-
-    // ================================================================
-    // Gemma 4 local runtime
-    //   E2B / E4B  → transformers.js + WebGPU (in-browser worker)
-    //   26B / 31B  → Ollama (localhost:11434). Si Ollama no está vivo
-    //                pedimos al daemon que lo instale/arranque.
-    // ================================================================
-    const GEMMA_MODEL_CONFIG = {
-      'gemma-4-e2b':     { kind: 'webgpu', hfId: 'onnx-community/gemma-4-E2B-it-ONNX', label: 'Gemma 4 E2B' },
-      'gemma-4-e4b':     { kind: 'webgpu', hfId: 'onnx-community/gemma-4-E4B-it-ONNX', label: 'Gemma 4 E4B' },
-      'gemma-4-26b-a4b': { kind: 'ollama', ollamaTag: 'gemma4:26b-a4b-it',              label: 'Gemma 4 26B A4B' },
-      'gemma-4-31b':     { kind: 'ollama', ollamaTag: 'gemma4:31b-it',                  label: 'Gemma 4 31B' }
-    };
-    const OLLAMA_URL = 'http://localhost:11434';
-
-    const gemmaState = {
-      worker: null,
-      loadedModelId: null,
-      loadingPromise: null,
-      listeners: new Map(),
-      nextRequestId: 1
-    };
-
-    function gemmaCreateWorker() {
-      if (gemmaState.worker) return gemmaState.worker;
-      const workerCode = [
-        'import { AutoTokenizer, AutoModelForCausalLM, TextStreamer, InterruptableStoppingCriteria }',
-        '  from "https://cdn.jsdelivr.net/npm/@huggingface/transformers";',
-        'let tokenizer = null, model = null, loadedId = null;',
-        'const stopping = new InterruptableStoppingCriteria();',
-        'async function load(id, requestId) {',
-        '  if (model && loadedId === id) { self.postMessage({ requestId, type: "ready" }); return; }',
-        '  tokenizer = null; model = null; loadedId = id;',
-        '  self.postMessage({ requestId, type: "stage", stage: "tokenizer" });',
-        '  tokenizer = await AutoTokenizer.from_pretrained(id, {',
-        '    progress_callback: (p) => self.postMessage({ requestId, type: "progress", info: p })',
-        '  });',
-        '  self.postMessage({ requestId, type: "stage", stage: "model" });',
-        '  model = await AutoModelForCausalLM.from_pretrained(id, {',
-        '    dtype: "q4f16", device: "webgpu",',
-        '    progress_callback: (p) => self.postMessage({ requestId, type: "progress", info: p })',
-        '  });',
-        '  self.postMessage({ requestId, type: "stage", stage: "warmup" });',
-        '  try { const warm = tokenizer("ok", { return_tensors: "pt" }); await model.generate({ ...warm, max_new_tokens: 1 }); } catch(_) {}',
-        '  self.postMessage({ requestId, type: "ready" });',
-        '}',
-        'async function generate(payload, requestId) {',
-        '  if (!model || !tokenizer) { self.postMessage({ requestId, type: "error", message: "Modelo no cargado" }); return; }',
-        '  stopping.reset();',
-        '  let inputs;',
-        '  try {',
-        '    inputs = tokenizer.apply_chat_template(payload.messages, { add_generation_prompt: true, return_dict: true });',
-        '  } catch (_) {',
-        '    const prompt = tokenizer.apply_chat_template(payload.messages, { add_generation_prompt: true, tokenize: false });',
-        '    inputs = tokenizer(prompt);',
-        '  }',
-        '  let startTime = null, numTokens = 0, tps = 0;',
-        '  const streamer = new TextStreamer(tokenizer, {',
-        '    skip_prompt: true, skip_special_tokens: true,',
-        '    callback_function: (text) => self.postMessage({ requestId, type: "stream", text, tps, numTokens }),',
-        '    token_callback_function: () => { startTime ??= performance.now(); if (numTokens++ > 0) { tps = (numTokens / (performance.now() - startTime)) * 1000; } }',
-        '  });',
-        '  try {',
-        '    const args = { ...inputs, max_new_tokens: payload.maxTokens || 1024, streamer, stopping_criteria: stopping, do_sample: (payload.temperature || 0) > 0 };',
-        '    if ((payload.temperature || 0) > 0) { args.temperature = payload.temperature; args.top_k = payload.topK || 64; args.top_p = 0.95; }',
-        '    await model.generate(args);',
-        '    self.postMessage({ requestId, type: "complete", tps, numTokens });',
-        '  } catch (e) { self.postMessage({ requestId, type: "error", message: String(e.message || e) }); }',
-        '}',
-        'self.addEventListener("message", async (e) => {',
-        '  const { type, data, requestId } = e.data || {};',
-        '  try {',
-        '    if (type === "load") await load(data.modelId, requestId);',
-        '    else if (type === "generate") await generate(data, requestId);',
-        '    else if (type === "interrupt") stopping.interrupt();',
-        '  } catch (err) { self.postMessage({ requestId, type: "error", message: String(err.message || err) }); }',
-        '});'
-      ].join('\n');
-      const blob = new Blob([workerCode], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
-      const worker = new Worker(url, { type: 'module' });
-      worker.addEventListener('message', (e) => {
-        const d = e.data || {};
-        const listener = gemmaState.listeners.get(d.requestId);
-        if (listener) listener(d);
-      });
-      worker.addEventListener('error', (e) => {
-        for (const [id, listener] of gemmaState.listeners) {
-          listener({ requestId: id, type: 'error', message: e.message || 'worker error' });
+        if (isAssistant || !part.inlineData || !part.inlineData.data) return;
+        const mimeType = part.inlineData.mimeType || 'application/octet-stream';
+        const dataUrl = 'data:' + mimeType + ';base64,' + part.inlineData.data;
+        if (mimeType.indexOf('image/') === 0) {
+          out.push({ type: 'image_url', image_url: { url: dataUrl } });
+        } else if (mimeType === 'application/pdf' && !hasPdfText) {
+          out.push({ type: 'file', file: { filename: 'documento.pdf', file_data: dataUrl } });
         }
       });
-      gemmaState.worker = worker;
-      return worker;
-    }
-
-    function gemmaWorkerRequest(worker, payload, onMessage) {
-      return new Promise((resolve, reject) => {
-        const requestId = gemmaState.nextRequestId++;
-        gemmaState.listeners.set(requestId, (msg) => {
-          try { onMessage(msg, resolve, reject); }
-          catch (e) { gemmaState.listeners.delete(requestId); reject(e); }
-        });
-        worker.postMessage({ ...payload, requestId });
-      });
-    }
-
-    async function gemmaCheckWebGPU() {
-      if (!navigator.gpu) {
-        throw new Error('Tu navegador no soporta WebGPU. Usa Chrome/Edge 113+, Safari 26+ o Firefox 141+.');
-      }
-      const adapter = await navigator.gpu.requestAdapter().catch(() => null);
-      if (!adapter) {
-        throw new Error('WebGPU está presente pero no hay adapter GPU disponible. Revisa chrome://gpu');
-      }
-      return adapter;
-    }
-
-    async function gemmaLoadModelIfNeeded(modelId, onStage) {
-      if (gemmaState.loadedModelId === modelId && gemmaState.worker) return;
-      if (gemmaState.loadingPromise) { try { await gemmaState.loadingPromise; } catch (_) {} }
-      if (gemmaState.loadedModelId === modelId && gemmaState.worker) return;
-      await gemmaCheckWebGPU();
-      const worker = gemmaCreateWorker();
-      gemmaState.loadingPromise = gemmaWorkerRequest(worker, { type: 'load', data: { modelId } }, (msg, resolve, reject) => {
-        if (msg.type === 'stage' || msg.type === 'progress') {
-          if (typeof onStage === 'function') onStage(msg);
-        } else if (msg.type === 'ready') {
-          gemmaState.loadedModelId = modelId;
-          gemmaState.listeners.delete(msg.requestId);
-          resolve();
-        } else if (msg.type === 'error') {
-          gemmaState.listeners.delete(msg.requestId);
-          reject(new Error(msg.message));
-        }
-      });
-      try { await gemmaState.loadingPromise; }
-      finally { gemmaState.loadingPromise = null; }
-    }
-
-    function gemmaBuildMessages(chat) {
-      const out = [];
-      const sys = getActiveSystemPrompt(chat);
-      if (sys) out.push({ role: 'system', content: sys });
-      for (const m of (chat.messages || [])) {
-        if (m.pending) continue;
-        const content = buildDaemonMessageContent(m);
-        if (!content) continue;
-        out.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content });
-      }
       return out;
     }
 
-    async function gemmaGenerateWebGPU(chat, modelCfg, signal, onProgress) {
-      await gemmaLoadModelIfNeeded(modelCfg.hfId, (msg) => {
-        if (typeof onProgress !== 'function') return;
-        if (msg.type === 'stage') {
-          const stages = { tokenizer: 'Cargando tokenizer…', model: 'Descargando / compilando modelo…', warmup: 'Compilando shaders WebGPU…' };
-          const text = (stages[msg.stage] || 'Cargando…');
-          onProgress({ text: '', thinking: text, parts: [{ text: '' }], done: false });
-        } else if (msg.type === 'progress' && msg.info && typeof msg.info.progress === 'number') {
-          const pct = Math.round(msg.info.progress || 0);
-          const file = msg.info.file ? (msg.info.file.length > 40 ? '…' + msg.info.file.slice(-38) : msg.info.file) : '';
-          onProgress({ text: '', thinking: 'Descargando ' + file + ' ' + pct + '%', parts: [{ text: '' }], done: false });
+    function buildOpenRouterMessages(chat) {
+      const messages = [{ role: 'system', content: getActiveSystemPrompt(chat) }];
+      (chat.messages || []).forEach((message) => {
+        if (!message || message.pending) return;
+        const role = message.role === 'assistant' ? 'assistant' : 'user';
+        if (role === 'assistant' && /^Error: /.test(String(message.content || ''))) return;
+        const content = openRouterMessageContent(message);
+        if (!content.length) return;
+        if (role === 'assistant' || content.every((item) => item.type === 'text')) {
+          messages.push({ role, content: content.map((item) => item.text).join('\n\n') });
+        } else {
+          messages.push({ role, content });
         }
       });
-
-      const worker = gemmaCreateWorker();
-      let accumulated = '';
-      const onAbort = () => { try { worker.postMessage({ type: 'interrupt' }); } catch (_) {} };
-      if (signal) {
-        if (signal.aborted) throw new DOMException('aborted', 'AbortError');
-        signal.addEventListener('abort', onAbort, { once: true });
-      }
-
-      try {
-        return await gemmaWorkerRequest(worker, {
-          type: 'generate',
-          data: { messages: gemmaBuildMessages(chat), maxTokens: 1024, temperature: 1.0, topK: 64 }
-        }, (msg, resolve, reject) => {
-          if (msg.type === 'stream') {
-            accumulated += (msg.text || '');
-            if (typeof onProgress === 'function') {
-              onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: false });
-            }
-          } else if (msg.type === 'complete') {
-            gemmaState.listeners.delete(msg.requestId);
-            if (typeof onProgress === 'function') {
-              onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: true });
-            }
-            resolve({ text: accumulated, thinking: '', parts: [{ text: accumulated }] });
-          } else if (msg.type === 'error') {
-            gemmaState.listeners.delete(msg.requestId);
-            reject(new Error(msg.message));
-          }
-        });
-      } finally {
-        if (signal) signal.removeEventListener('abort', onAbort);
-      }
+      return messages;
     }
 
-    async function ollamaIsReachable() {
-      try {
-        const r = await fetch(OLLAMA_URL + '/api/version', { method: 'GET' });
-        return r.ok;
-      } catch (_) { return false; }
-    }
-
-    async function ollamaEnsureDaemon(onProgress, modelTag) {
-      if (await ollamaIsReachable()) return true;
-      const report = (thinking) => {
-        if (typeof onProgress === 'function') {
-          onProgress({ text: '', thinking, parts: [{ text: '' }], done: false });
-        }
-      };
-      report('El agente local abrirá una terminal para instalar y arrancar Ollama…');
-      try {
-        const res = await fetch(DAEMON_CONFIG.URL + '/v1/ollama/setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(modelTag ? { model: modelTag } : {})
-        });
-        if (!res.ok) {
-          report('No pude contactar con el agente local. ¿Está abierto inhouse-agent?');
-          return false;
-        }
-      } catch (_) {
-        report('No pude contactar con el agente local. ¿Está abierto inhouse-agent?');
-        return false;
+    function describeOpenRouterError(status, payload) {
+      const error = payload && payload.error ? payload.error : null;
+      let message = error && error.message ? String(error.message) : '';
+      if (error && error.metadata && error.metadata.raw && message.length < 40) {
+        message += ' (' + String(error.metadata.raw).slice(0, 200) + ')';
       }
-      const deadline = Date.now() + 8 * 60 * 1000; // 8 minutos por si descarga el modelo
-      while (Date.now() < deadline) {
-        if (await ollamaIsReachable()) {
-          report('Ollama ya responde. Preparando el modelo…');
-          return true;
-        }
-        report('Instalando Ollama en la terminal abierta por el agente… esto puede tardar unos minutos.');
-        await new Promise((r) => setTimeout(r, 2000));
-      }
-      return await ollamaIsReachable();
-    }
-
-    async function ollamaHasModel(tag) {
-      try {
-        const r = await fetch(OLLAMA_URL + '/api/show', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: tag })
-        });
-        return r.ok;
-      } catch (_) { return false; }
-    }
-
-    async function ollamaPullModel(tag, onProgress) {
-      const res = await fetch(OLLAMA_URL + '/api/pull', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: tag, stream: true })
-      });
-      if (!res.ok) throw new Error('No se pudo descargar ' + tag + ' en Ollama (' + res.status + ')');
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            if (typeof onProgress === 'function' && data.status) {
-              const pct = data.total ? ((data.completed || 0) / data.total * 100).toFixed(1) : null;
-              onProgress({ text: '', thinking: 'Ollama · ' + tag + ' · ' + data.status + (pct ? ' (' + pct + '%)' : ''), parts: [{ text: '' }], done: false });
-            }
-          } catch (_) {}
-        }
-      }
-    }
-
-    async function gemmaGenerateOllama(chat, modelCfg, signal, onProgress) {
-      const reachable = await ollamaEnsureDaemon(onProgress, modelCfg.ollamaTag);
-      if (!reachable) {
-        throw new Error(
-          'Ollama no responde en localhost:11434. El agente local ha abierto una terminal para instalarlo; ' +
-          'termina el proceso en esa ventana y vuelve a enviar el mensaje.'
-        );
-      }
-      if (!(await ollamaHasModel(modelCfg.ollamaTag))) {
-        await ollamaPullModel(modelCfg.ollamaTag, onProgress);
-      }
-
-      const body = {
-        model: modelCfg.ollamaTag,
-        messages: gemmaBuildMessages(chat),
-        stream: true
-      };
-      const res = await fetch(OLLAMA_URL + '/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal
-      });
-      if (!res.ok) throw new Error('Ollama /api/chat ha devuelto ' + res.status);
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-      let accumulated = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() || '';
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-            const chunk = data.message && data.message.content ? data.message.content : '';
-            if (chunk) {
-              accumulated += chunk;
-              if (typeof onProgress === 'function') {
-                onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: false });
-              }
-            }
-            if (data.done) {
-              if (typeof onProgress === 'function') {
-                onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: true });
-              }
-              return { text: accumulated, thinking: '', parts: [{ text: accumulated }] };
-            }
-          } catch (_) {}
-        }
-      }
-      if (typeof onProgress === 'function') {
-        onProgress({ text: accumulated, thinking: '', parts: [{ text: accumulated }], done: true });
-      }
-      return { text: accumulated, thinking: '', parts: [{ text: accumulated }] };
-    }
-
-    async function callGemmaLocal(chat, signal, onProgress) {
-      const modelId = activeModelName(chat);
-      const cfg = GEMMA_MODEL_CONFIG[modelId];
-      if (!cfg) throw new Error('Modelo Gemma desconocido: ' + modelId);
-      if (cfg.kind === 'webgpu') return await gemmaGenerateWebGPU(chat, cfg, signal, onProgress);
-      if (cfg.kind === 'ollama') return await gemmaGenerateOllama(chat, cfg, signal, onProgress);
-      throw new Error('Backend Gemma no soportado: ' + cfg.kind);
-    }
-
-    // ------- Connect button for Gemma (no daemon roundtrip) -------
-    async function connectGemmaLocal() {
-      const chat = getActiveChat();
-      const modelId = activeModelName(chat);
-      const cfg = GEMMA_MODEL_CONFIG[modelId];
-      if (!cfg) { setComposerStatus('Modelo Gemma desconocido.'); return; }
-
-      if (cfg.kind === 'webgpu') {
-        if (!navigator.gpu) {
-          showToast('WebGPU', 'Tu navegador no soporta WebGPU. Usa Chrome/Edge 113+, Safari 26+ o Firefox 141+.');
-          return;
-        }
-        setComposerStatus('Preparando ' + cfg.label + ' en WebGPU… (primera vez: descarga ~500 MB–1.5 GB, después queda cacheado)');
-        try {
-          await gemmaLoadModelIfNeeded(cfg.hfId, (msg) => {
-            if (msg.type === 'stage') {
-              const stages = { tokenizer: 'Cargando tokenizer…', model: 'Descargando / compilando modelo…', warmup: 'Compilando shaders WebGPU…' };
-              setComposerStatus(stages[msg.stage] || 'Cargando…');
-            } else if (msg.type === 'progress' && msg.info && typeof msg.info.progress === 'number') {
-              const pct = Math.round(msg.info.progress || 0);
-              const file = msg.info.file ? (msg.info.file.length > 40 ? '…' + msg.info.file.slice(-38) : msg.info.file) : '';
-              setComposerStatus('Descargando ' + file + ' ' + pct + '%');
-            }
-          });
-          setComposerStatus(cfg.label + ' listo. Ya puedes enviar mensajes.');
-          setTimeout(() => { if (!appState.busy) setComposerStatus(''); }, 1500);
-        } catch (e) {
-          setComposerStatus('');
-          showToast('Gemma (WebGPU)', e.message || 'No se pudo cargar el modelo.');
-        }
-        return;
-      }
-
-      if (cfg.kind === 'ollama') {
-        setComposerStatus('Comprobando Ollama en localhost:11434…');
-        const reachable = await ollamaEnsureDaemon((p) => {
-          if (p && p.thinking) setComposerStatus(p.thinking);
-        }, cfg.ollamaTag);
-        if (!reachable) {
-          setComposerStatus('');
-          showToast('Ollama', 'El agente local abrió una terminal para instalar Ollama. Termina ese proceso y pulsa de nuevo "Conectar".');
-          return;
-        }
-        if (!(await ollamaHasModel(cfg.ollamaTag))) {
-          setComposerStatus('Descargando ' + cfg.ollamaTag + ' en Ollama… (primera vez)');
-          try {
-            await ollamaPullModel(cfg.ollamaTag, (p) => {
-              if (p && p.thinking) setComposerStatus(p.thinking);
-            });
-          } catch (e) {
-            setComposerStatus('');
-            showToast('Ollama', e.message || 'No se pudo descargar el modelo.');
-            return;
-          }
-        }
-        setComposerStatus(cfg.label + ' listo en Ollama. Ya puedes enviar mensajes.');
-        setTimeout(() => { if (!appState.busy) setComposerStatus(''); }, 1500);
-      }
+      if (!message) message = 'HTTP ' + status;
+      if (status === 401) return 'OpenRouter rechaza la API key: ' + message;
+      if (status === 402) return 'No te queda saldo en OpenRouter. Recarga en openrouter.ai/settings/credits.';
+      if (status === 404) return 'Modelo no disponible en OpenRouter: ' + message;
+      if (status === 429) return 'Limite de peticiones alcanzado, prueba en un momento: ' + message;
+      return message;
     }
 
     async function callModel(chat, signal, onProgress) {
-      if (activeProviderName(chat) === 'gemma') {
-        const streamResult = await callGemmaLocal(chat, signal, onProgress);
-        return {
-          text: streamResult.text || '',
-          thinking: streamResult.thinking || '',
-          parts: Array.isArray(streamResult.parts) && streamResult.parts.length
-            ? streamResult.parts
-            : [{ text: streamResult.text || '' }]
-        };
+      const settings = getApiSettings();
+      if (!settings.apiKey) {
+        throw new Error('Falta tu API key de OpenRouter. Pegala en el selector de modelo.');
       }
-      if (activeProviderName(chat) === 'gemini' && appState.accessToken) {
-        const streamResult = await callGeminiStream(chat, signal, onProgress);
-        return {
-          text: streamResult.text || '',
-          thinking: streamResult.thinking || '',
-          parts: Array.isArray(streamResult.parts) && streamResult.parts.length
-            ? streamResult.parts
-            : [{ text: streamResult.text || '' }]
-        };
+      const model = resolveRequestModelId(chat);
+      if (!model) {
+        throw new Error('Escribe el ID del modelo personalizado (p. ej. moonshotai/kimi-k2.7-code).');
       }
-      const payload = buildDaemonChatBody(chat);
-      const result = await daemonFetchJson('/v1/chat', payload, signal);
-      syncProviderRateLimits(activeProviderName(chat), activeModelName(chat), result);
-      const text = result.text || '';
-      if (typeof onProgress === 'function') {
-        onProgress({ text, thinking: '', parts: [{ text }], done: true });
-      }
-      return {
-        text,
-        thinking: '',
-        parts: [{ text }]
+      const level = currentThinkingLevel(chat);
+      const body = {
+        model,
+        messages: buildOpenRouterMessages(chat),
+        stream: true,
+        max_tokens: APP_CONFIG.MAX_OUTPUT_TOKENS,
+        usage: { include: true }
       };
+      if (level && level !== 'auto') {
+        body.reasoning = { effort: level };
+      }
+      const response = await fetch(OPENROUTER_BASE_URL + '/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer ' + settings.apiKey,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': location.origin && location.origin !== 'null' ? location.origin : 'https://github.com/miguelcoxcaballero/inhouselearn',
+          'X-Title': 'inhouse learn'
+        },
+        body: JSON.stringify(body),
+        signal
+      });
+      if (!response.ok || !response.body) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(describeOpenRouterError(response.status, payload));
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let text = '';
+      let thinking = '';
+      let usage = null;
+      const handleLine = (rawLine) => {
+        const line = rawLine.trim();
+        if (!line || line.indexOf('data:') !== 0) return;
+        const data = line.slice(5).trim();
+        if (!data || data === '[DONE]') return;
+        let payload;
+        try {
+          payload = JSON.parse(data);
+        } catch (_) {
+          return;
+        }
+        if (payload.error) {
+          throw new Error(describeOpenRouterError(Number(payload.error.code) || 500, payload));
+        }
+        if (payload.usage) usage = payload.usage;
+        const choice = payload.choices && payload.choices[0] ? payload.choices[0] : null;
+        const delta = choice && choice.delta ? choice.delta : {};
+        let changed = false;
+        if (typeof delta.content === 'string' && delta.content) {
+          text += delta.content;
+          changed = true;
+        }
+        if (typeof delta.reasoning === 'string' && delta.reasoning) {
+          thinking += delta.reasoning;
+          changed = true;
+        }
+        if (changed && typeof onProgress === 'function') {
+          onProgress({ text, thinking, parts: [{ text }], done: false });
+        }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let index;
+        while ((index = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, index);
+          buffer = buffer.slice(index + 1);
+          handleLine(line);
+        }
+      }
+      if (buffer) handleLine(buffer);
+
+      if (usage) recordOpenRouterUsage(model, usage);
+      if (!text.trim() && !thinking.trim()) {
+        throw new Error('El modelo no ha devuelto respuesta. Prueba otra vez o cambia de modelo.');
+      }
+      if (typeof onProgress === 'function') {
+        onProgress({ text, thinking, parts: [{ text }], done: true });
+      }
+      return { text, thinking, parts: [{ text }] };
     }
+
 
     async function requestGoogleAccessToken(promptMode, options) {
       const settings = Object.assign({
@@ -9605,7 +8425,6 @@
       } else if (appState.driveReady) {
         scheduleDriveSync();
       }
-      refreshCodeAssistUsage(false).catch(function() {});
       if (!options || options.toast !== false) {
         showToast('Sesion iniciada', 'La cuenta Google ya esta lista.');
       }
@@ -9751,466 +8570,6 @@
       }
     }
 
-    function extractBackendErrorMessage(data, status) {
-      var fallback = 'Error HTTP ' + status;
-      if (!data) {
-        return fallback;
-      }
-      var message = data.error && data.error.message
-        ? data.error.message
-        : (data.message || '');
-      if (typeof message !== 'string' || !message) {
-        return fallback;
-      }
-      try {
-        var parsed = JSON.parse(message);
-        if (parsed && parsed.error && parsed.error.message) {
-          return String(parsed.error.message);
-        }
-      } catch (e) {}
-      return message;
-    }
-
-    function extractWaitSecondsFromBackendMessage(message) {
-      if (!message) {
-        return 60;
-      }
-      var retryMatch = message.match(/retry in ([\d.]+)s/i);
-      if (retryMatch) {
-        return Math.ceil(parseFloat(retryMatch[1])) || 60;
-      }
-      var durationMatch = message.match(/after\s+((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)/i);
-      if (!durationMatch || !durationMatch[1]) {
-        return 60;
-      }
-      var value = durationMatch[1];
-      var hours = (value.match(/(\d+)h/i) || [])[1];
-      var minutes = (value.match(/(\d+)m/i) || [])[1];
-      var seconds = (value.match(/([\d.]+)s/i) || [])[1];
-      var total = 0;
-      if (hours) total += parseInt(hours, 10) * 3600;
-      if (minutes) total += parseInt(minutes, 10) * 60;
-      if (seconds) total += Math.ceil(parseFloat(seconds));
-      return total || 60;
-    }
-
-    async function codeAssistFetchJson(url, body, signal, allowRetry) {
-      ensureOauthConfig();
-      if (!appState.accessToken) {
-        const restored = await loginWithGoogle({
-          interactive: false,
-          toast: false,
-          skipDriveBootstrap: true,
-          prompt: 'none'
-        });
-        if (!restored || !appState.accessToken) {
-          setAuthGateReason('Inicia sesion con Google para usar Gemini y guardar el historial en Drive.');
-          setAuthGateStatus('Google no esta disponible.', {
-            error: true
-          });
-          updateAuthUi();
-          updateConfigUi();
-          updateSendUi();
-          throw new Error('Inicia sesion con Google para usar Gemini.');
-        }
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken
-        },
-        body: JSON.stringify(body),
-        signal
-      });
-
-      const data = await response.json().catch(() => ({}));
-      if (response.status === 401 && allowRetry !== false) {
-        const refreshed = await loginWithGoogle({
-          interactive: false,
-          toast: false,
-          skipDriveBootstrap: true,
-          prompt: 'none',
-          forceRefresh: true
-        });
-        if (refreshed && appState.accessToken) {
-          return codeAssistFetchJson(url, body, signal, false);
-        }
-        clearGoogleSessionState({
-          preserveRemember: true
-        });
-        setAuthGateReason('La sesion de Google ha caducado y no se pudo renovar automaticamente. Vuelve a iniciar sesion para seguir usando Gemini.');
-        setAuthGateStatus('La sesion de Google ha caducado.', {
-          error: true
-        });
-        updateAuthUi();
-        updateConfigUi();
-        updateSendUi();
-        saveState({
-          skipDrive: true
-        });
-        throw new Error('La sesion de Google ha caducado.');
-      }
-
-      return {
-        response: response,
-        data: data
-      };
-    }
-
-    async function refreshCodeAssistCredits(allowRetry) {
-      if (!appState.accessToken) {
-        return;
-      }
-      var result = await codeAssistFetchJson(buildCodeAssistLoadEndpoint(), buildCodeAssistLoadBody(), null, allowRetry);
-      if (!result.response.ok) {
-        var loadErr = extractBackendErrorMessage(result.data, result.response.status) || ('HTTP ' + result.response.status);
-        throw new Error('Code Assist :loadCodeAssist respondió error → ' + loadErr);
-      }
-      var resolvedProject = extractCloudCompanionProject(result.data);
-      var tiers = (result.data && Array.isArray(result.data.allowedTiers)) ? result.data.allowedTiers : [];
-      var tierId = '';
-      if (result.data && result.data.currentTier && result.data.currentTier.id) {
-        tierId = String(result.data.currentTier.id);
-      }
-      if (!tierId) {
-        for (var i = 0; i < tiers.length; i++) {
-          if (tiers[i] && tiers[i].isDefault) { tierId = String(tiers[i].id || ''); break; }
-        }
-      }
-      if (!tierId) tierId = 'legacy-tier';
-
-      resolvedProject = await onboardCodeAssistUser(tierId, resolvedProject, allowRetry);
-
-      if (resolvedProject && resolvedProject !== appState.codeAssistProjectId) {
-        appState.codeAssistProjectId = resolvedProject;
-        saveState({ skipDrive: true });
-      }
-      var tier = result.data && (result.data.paidTier || result.data.currentTier);
-      if (tier && tier.availableCredits) {
-        syncUsageCreditsRemaining(tier.availableCredits);
-      }
-      return resolvedProject;
-    }
-
-    function extractCloudCompanionProject(data) {
-      if (!data) return '';
-      var raw = data.cloudaicompanionProject;
-      if (!raw) return '';
-      if (typeof raw === 'string') return raw;
-      if (typeof raw === 'object' && raw.id) return String(raw.id);
-      return '';
-    }
-
-    async function onboardCodeAssistUser(tierId, existingProject, allowRetry) {
-      var onboardBody = {
-        tierId: tierId || 'legacy-tier',
-        cloudaicompanionProject: existingProject || undefined,
-        metadata: buildCodeAssistClientMetadata(existingProject || '')
-      };
-      var lastError = '';
-      for (var attempt = 0; attempt < 20; attempt++) {
-        var result = await codeAssistFetchJson(buildCodeAssistOnboardEndpoint(), onboardBody, null, allowRetry);
-        if (!result.response.ok) {
-          lastError = extractBackendErrorMessage(result.data, result.response.status) || ('HTTP ' + result.response.status);
-          throw new Error('Code Assist :onboardUser respondió error → ' + lastError);
-        }
-        var op = result.data || {};
-        if (op.done) {
-          var proj = op.response ? extractCloudCompanionProject(op.response) : '';
-          if (!proj && op.response && op.response.cloudaicompanionProject && op.response.cloudaicompanionProject.name) {
-            proj = String(op.response.cloudaicompanionProject.name);
-          }
-          return proj || existingProject || '';
-        }
-        await new Promise(function(r) { setTimeout(r, 2000); });
-      }
-      return existingProject || '';
-    }
-
-    async function refreshCodeAssistQuota(allowRetry) {
-      if (!appState.accessToken) {
-        return;
-      }
-      var project = codeAssistProject();
-      if (!project) {
-        return;
-      }
-      try {
-        var result = await codeAssistFetchJson(buildCodeAssistQuotaEndpoint(), buildCodeAssistQuotaBody(), null, allowRetry);
-        if (!result.response.ok) {
-          return;
-        }
-        syncUsageQuotaBuckets(result.data && result.data.buckets);
-      } catch (error) {
-        console.warn('No se pudo sincronizar la cuota real de Code Assist:', error);
-      }
-    }
-
-    async function refreshCodeAssistUsage(allowRetry) {
-      try {
-        await refreshCodeAssistCredits(allowRetry);
-      } catch (error) {
-        console.warn('No se pudo sincronizar creditos de Code Assist:', error);
-      }
-      await refreshCodeAssistQuota(allowRetry);
-    }
-
-    function buildGeminiCodeAssistUnavailableMessage(error) {
-      const detail = error && error.message ? String(error.message) : String(error || '');
-      if (isCloudCodePrivateApiDisabledError(detail)) {
-        return 'Tu cuenta de Google no tiene Google Code Assist disponible, asi que Gemini no se puede usar desde esta app.';
-      }
-      return 'No se pudo activar Gemini con Google Code Assist: ' + detail;
-    }
-
-    async function ensureGeminiCodeAssistReady(allowRetry) {
-      ensureOauthConfig();
-      if (!appState.accessToken) {
-        throw new Error('Inicia sesion con Google para usar Gemini.');
-      }
-      if (codeAssistProject()) {
-        return codeAssistProject();
-      }
-      try {
-        await refreshCodeAssistCredits(allowRetry);
-      } catch (error) {
-        throw new Error(buildGeminiCodeAssistUnavailableMessage(error));
-      }
-      if (!codeAssistProject()) {
-        throw new Error('Google Code Assist no devolvio un proyecto valido para esta cuenta.');
-      }
-      return codeAssistProject();
-    }
-
-    async function callGenLangOnce_DISABLED(chat, signal) {
-      throw new Error('Gemini Developer API desactivada.');
-      if (!appState.accessToken) {
-        throw new Error('Inicia sesion con Google para usar Gemini.');
-      }
-      const requestBody = buildRequestBody(chat.messages, chat);
-      const response = await fetch(buildGenLangEndpoint(activeModelName(chat), false), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken
-        },
-        body: JSON.stringify(requestBody),
-        signal
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        if (response.status === 429) {
-          var msg = extractBackendErrorMessage(data, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
-          trackBackendLimit('429', msg, activeModelName(chat));
-          var waitSec = extractWaitSecondsFromBackendMessage(msg);
-          throw new Error('Se ha alcanzado el límite de usos. Podrás mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
-        }
-        throw new Error(extractBackendErrorMessage(data, response.status));
-      }
-      trackApiUsage(activeModelName(chat), data);
-      return {
-        text: extractTextFromResponse(data),
-        parts: extractModelParts(data)
-      };
-    }
-
-    async function callGenLangStreamOnce_DISABLED(chat, signal, onProgress) {
-      throw new Error('Gemini Developer API desactivada.');
-      if (!appState.accessToken) {
-        throw new Error('Inicia sesion con Google para usar Gemini.');
-      }
-      const requestBody = buildRequestBody(chat.messages, chat);
-      const response = await fetch(buildGenLangEndpoint(activeModelName(chat), true), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken,
-          Accept: 'text/event-stream'
-        },
-        body: JSON.stringify(requestBody),
-        signal
-      });
-      if (!response.ok) {
-        var errorPayload = {};
-        try { errorPayload = await response.json(); } catch (_) { errorPayload = {}; }
-        if (response.status === 429) {
-          var msg = extractBackendErrorMessage(errorPayload, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
-          trackBackendLimit('429', msg, activeModelName(chat));
-          var waitSec = extractWaitSecondsFromBackendMessage(msg);
-          throw new Error('Se ha alcanzado el limite de usos. Podras mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
-        }
-        throw new Error(extractBackendErrorMessage(errorPayload, response.status));
-      }
-      return await consumeSseGeminiStream(response, chat, onProgress);
-    }
-
-    async function callGemini(chat, signal, allowRetry, retryCount) {
-      await ensureGeminiCodeAssistReady(allowRetry);
-      const requestBody = buildCodeAssistGenerateBody(chat);
-      const result = await codeAssistFetchJson(buildCodeAssistGenerateEndpoint(), requestBody, signal, allowRetry);
-      const response = result.response;
-      const data = result.data;
-      if (!response.ok) {
-        if (response.status === 429) {
-          var backendMessage = extractBackendErrorMessage(data, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
-          trackBackendLimit('429', backendMessage, activeModelName(chat));
-
-          var waitSec = extractWaitSecondsFromBackendMessage(backendMessage);
-
-          throw new Error('Se ha alcanzado el límite de usos. Podrás mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
-        }
-
-        const message = extractBackendErrorMessage(data, response.status);
-        if (isCloudCodePrivateApiDisabledError(message)) {
-          throw new Error(buildGeminiCodeAssistUnavailableMessage(message));
-        }
-        throw new Error(message);
-      }
-
-      trackApiUsage(activeModelName(chat), data);
-      await refreshCodeAssistUsage(false);
-
-      return {
-        text: extractTextFromResponse(data),
-        parts: extractModelParts(data)
-      };
-    }
-
-    async function callGeminiStream(chat, signal, onProgress) {
-      await ensureGeminiCodeAssistReady(false);
-      const requestBody = buildCodeAssistGenerateBody(chat);
-      const response = await fetch(buildCodeAssistStreamEndpoint(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + appState.accessToken,
-          Accept: 'text/event-stream'
-        },
-        body: JSON.stringify(requestBody),
-        signal
-      });
-
-      if (!response.ok) {
-        var errorPayload = {};
-        try { errorPayload = await response.json(); } catch (_) { errorPayload = {}; }
-        if (response.status === 429) {
-          var backendMessage = extractBackendErrorMessage(errorPayload, response.status) || 'Google ha limitado temporalmente este modelo o esta cuenta.';
-          trackBackendLimit('429', backendMessage, activeModelName(chat));
-          var waitSec = extractWaitSecondsFromBackendMessage(backendMessage);
-          throw new Error('Se ha alcanzado el limite de usos. Podras mandar un mensaje de nuevo en ' + waitSec + ' segundos.');
-        }
-        var streamErrorMsg = extractBackendErrorMessage(errorPayload, response.status);
-        if (isCloudCodePrivateApiDisabledError(streamErrorMsg)) {
-          throw new Error(buildGeminiCodeAssistUnavailableMessage(streamErrorMsg));
-        }
-        throw new Error(streamErrorMsg);
-      }
-      return await consumeSseGeminiStream(response, chat, onProgress);
-    }
-
-    async function consumeSseGeminiStream(response, chat, onProgress) {
-      if (!response.body || !response.body.getReader) {
-        const fallback = await response.json().catch(() => ({}));
-        const parts = extractModelParts(fallback);
-        const text = extractVisibleTextFromParts(parts);
-        const thinking = extractThoughtTextFromParts(parts);
-        if (typeof onProgress === 'function') onProgress({ text, thinking, parts, done: true });
-        trackApiUsage(activeModelName(chat), fallback);
-        return { text, thinking, parts };
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
-      let accumulatedText = '';
-      let accumulatedThinking = '';
-      const accumulatedParts = [];
-      let lastPayload = null;
-
-      function flushEvent(rawEvent) {
-        const lines = rawEvent.split(/\r?\n/);
-        const dataLines = [];
-        for (const line of lines) {
-          if (line.startsWith('data:')) {
-            dataLines.push(line.slice(5).replace(/^\s/, ''));
-          }
-        }
-        if (!dataLines.length) return;
-        const payloadText = dataLines.join('\n').trim();
-        if (!payloadText || payloadText === '[DONE]') return;
-        let payload;
-        try {
-          payload = JSON.parse(payloadText);
-        } catch (_) {
-          return;
-        }
-        lastPayload = payload;
-        const chunkParts = extractModelParts(payload);
-        if (chunkParts.length) {
-          for (const part of chunkParts) {
-            accumulatedParts.push(part);
-            if (!part || typeof part.text !== 'string') continue;
-            if (part.thought) {
-              accumulatedThinking += part.text;
-            } else {
-              accumulatedText += part.text;
-            }
-          }
-          if (typeof onProgress === 'function') {
-            onProgress({
-              text: accumulatedText.trim(),
-              thinking: accumulatedThinking.trim(),
-              parts: accumulatedParts.slice(),
-              done: false
-            });
-          }
-        }
-      }
-
-      const drainBuffer = () => {
-        const re = /\r?\n\r?\n/;
-        while (true) {
-          const match = re.exec(buffer);
-          if (!match) return;
-          const rawEvent = buffer.slice(0, match.index);
-          buffer = buffer.slice(match.index + match[0].length);
-          flushEvent(rawEvent);
-        }
-      };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        drainBuffer();
-      }
-      buffer += decoder.decode();
-      drainBuffer();
-      if (buffer.trim()) flushEvent(buffer);
-
-      if (lastPayload) {
-        trackApiUsage(activeModelName(chat), lastPayload);
-      }
-
-      const finalText = accumulatedText.trim();
-      const finalThinking = accumulatedThinking.trim();
-      if (typeof onProgress === 'function') {
-        onProgress({
-          text: finalText,
-          thinking: finalThinking,
-          parts: accumulatedParts.slice(),
-          done: true
-        });
-      }
-      return {
-        text: finalText,
-        thinking: finalThinking,
-        parts: accumulatedParts
-      };
-    }
-
     function buildUserMessageParts(prompt, attachments) {
       const parts = [];
       if (prompt) {
@@ -10256,53 +8615,17 @@
         return;
       }
 
-      if (!hasDrivePersistenceReady()) {
-        try {
-          const restored = await loginWithGoogle({
-            interactive: false,
-            toast: false,
-            prompt: 'none'
-          });
-          if (!restored || !hasDrivePersistenceReady()) {
-            setAuthGateReason('Inicia sesion con Google para continuar. El chat solo se habilita cuando Drive esta listo para guardar las conversaciones.');
-            setAuthGateStatus('No hay una sesion valida de Google Drive.', {
-              error: true
-            });
-            updateAuthUi();
-            updateConfigUi();
-            updateSendUi();
-            _sendLock = false;
-            return;
-          }
-        } catch (error) {
-          setAuthGateReason(error.message || 'No se pudo restaurar la sesion de Google.');
-          setAuthGateStatus(error.message || 'No se pudo restaurar la sesion de Google.', {
-            error: true
-          });
-          updateAuthUi();
-          updateConfigUi();
-          updateSendUi();
-          _sendLock = false;
-          return;
-        }
+      if (!getApiSettings().apiKey) {
+        showToast('OpenRouter', 'Pega tu API key de OpenRouter para empezar.');
+        openModelMenuForKey();
+        _sendLock = false;
+        return;
       }
-
-      const _sendProviderId = activeProviderName();
-      if (_sendProviderId !== 'gemma') {
-        if (!__daemonStatus || !__daemonStatus.ok) {
-          const status = await refreshDaemonStatus(1200);
-          if (!status) {
-            setComposerStatus('El daemon local no responde.');
-            _sendLock = false;
-            return;
-          }
-        }
-        const selectedProviderStatus = daemonProviderStatus(_sendProviderId);
-        if (!selectedProviderStatus || !selectedProviderStatus.installed) {
-          setComposerStatus('Instala o conecta ' + activeProviderLabel() + ' antes de enviar.');
-          _sendLock = false;
-          return;
-        }
+      if (activeModelName() === CUSTOM_MODEL_ID && !getApiSettings().customModel.trim()) {
+        showToast('Modelo personalizado', 'Escribe el ID del modelo de OpenRouter en el selector.');
+        openModelMenuForKey(elements.customModelInput);
+        _sendLock = false;
+        return;
       }
 
       const chat = getActiveChat();
@@ -10314,7 +8637,7 @@
       });
       const assistantMessage = createMessage('assistant', '', true, {
         provider: activeProviderName(chat),
-        model: activeModelName(chat)
+        model: resolveRequestModelId(chat)
       });
 
       chat.messages.push(userMessage, assistantMessage);
@@ -10416,14 +8739,13 @@
       setComposerStatus('');
       renderUsageDonut();
 
-      refreshDaemonStatus(1200);
+      refreshOpenRouterCredits();
+      if (!getApiSettings().apiKey) {
+        openModelMenuForKey();
+      }
       window.setTimeout(() => {
         tryAutoRestoreGoogleSession().catch((error) => {
           console.warn('No se pudo restaurar Google Drive automaticamente:', error);
-          setAuthGateReason('Inicia sesion con Google para continuar. Las conversaciones solo se habilitan cuando Drive esta listo.');
-          setAuthGateStatus('No se pudo restaurar Google Drive automaticamente.', {
-            error: true
-          });
           updateAuthUi();
           updateConfigUi();
           updateSendUi();
@@ -10450,7 +8772,11 @@
       });
     }
 
-    // boot() lo invoca continueBoot() una vez el agente local responde a /v1/ping.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot, { once: true });
+    } else {
+      boot();
+    }
   </script>
 </body>
 </html>
