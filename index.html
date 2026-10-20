@@ -2187,6 +2187,7 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r-md); box-shadow: var(--shadow-lg);
       padding: 14px 16px; min-width: 240px; max-width: min(340px, calc(100vw - 32px)); z-index: 50;
+      max-height: calc(100dvh - 160px); overflow-y: auto;
       animation: fadeIn 0.15s var(--ease) both;
     }
     .usage-popup.hidden { display: none; }
@@ -2200,6 +2201,13 @@
     .usage-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
     .usage-note { margin-top: 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.45; }
     .usage-note.error { color: #b42318; }
+    .usage-note a { color: inherit; }
+    .usage-key-form { display: flex; gap: 6px; margin-top: 8px; }
+    .usage-key-form input {
+      flex: 1; min-width: 0; height: 30px; padding: 0 9px; border: 1px solid var(--border);
+      border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; font-size: 0.76rem;
+    }
+    .usage-link { border: none; background: none; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
     .usage-row-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
     .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
 
@@ -7784,7 +7792,15 @@
       data.byModel[modelId] = entry;
       saveUsageData(data);
       if (appState.openRouterCredits) {
-        appState.openRouterCredits.used += cost;
+        const credits = appState.openRouterCredits;
+        credits.used += cost;
+        if (credits.key) {
+          credits.key.usage += cost;
+          ['daily', 'weekly', 'monthly'].forEach((period) => {
+            if (credits.key[period] !== null) credits.key[period] += cost;
+          });
+          if (credits.key.remaining !== null) credits.key.remaining = Math.max(0, credits.key.remaining - cost);
+        }
       }
       renderUsageDonut();
     }
@@ -7795,6 +7811,11 @@
       if (n < 0.01) return '$' + n.toFixed(4);
       if (n < 10) return '$' + n.toFixed(2);
       return '$' + n.toFixed(0);
+    }
+
+    // Balances read better to the cent ($12.75, not $13).
+    function formatBalance(value) {
+      return '$' + (Number(value) || 0).toFixed(2);
     }
 
     function formatCompactNumber(value) {
@@ -7841,34 +7862,80 @@
       if (usageBtn) usageBtn.title = centerLabel;
     }
 
+    /* OpenRouter balance. GET /credits (account balance) only accepts a
+       management key; a normal API key gets 403. GET /key works with the
+       normal key: what it has spent and, if it has a credit limit, what is
+       left of that limit. With an optional management key the panel shows the
+       real account balance. */
+    async function fetchOpenRouterJson(path, key) {
+      const response = await fetch(OPENROUTER_BASE_URL + path, {
+        headers: { Authorization: 'Bearer ' + key },
+        cache: 'no-store'
+      });
+      let payload = null;
+      try { payload = await response.json(); } catch (_) {}
+      return { status: response.status, ok: response.ok, data: payload && payload.data ? payload.data : null };
+    }
+
     async function refreshOpenRouterCredits() {
-      const apiKey = getApiSettings().apiKey;
+      const settings = getApiSettings();
+      const apiKey = settings.apiKey;
       if (!apiKey) {
         appState.openRouterCredits = null;
         renderUsageDonut();
         return null;
       }
-      try {
-        const response = await fetch(OPENROUTER_BASE_URL + '/credits', {
-          headers: { Authorization: 'Bearer ' + apiKey },
-          cache: 'no-store'
-        });
-        if (response.ok) {
-          const payload = await response.json();
-          const data = payload && payload.data ? payload.data : {};
-          appState.openRouterCredits = {
-            total: Number(data.total_credits) || 0,
-            used: Number(data.total_usage) || 0,
-            keyValid: true
+      const previous = appState.openRouterCredits || {};
+      const next = { total: 0, used: 0, source: '', keyValid: previous.keyValid, key: previous.key || null, managementError: '' };
+      const accountRequest = settings.managementKey
+        ? fetchOpenRouterJson('/credits', settings.managementKey)
+        : fetchOpenRouterJson('/credits', apiKey);
+      const [account, key] = await Promise.allSettled([accountRequest, fetchOpenRouterJson('/key', apiKey)]);
+      if (key.status === 'fulfilled') {
+        if (key.value.status === 401) next.keyValid = false;
+        else if (key.value.ok && key.value.data) {
+          const d = key.value.data;
+          const number = (value) => (value === null || value === undefined || value === '') ? null : Number(value);
+          next.keyValid = true;
+          next.key = {
+            limit: number(d.limit),
+            remaining: number(d.limit_remaining),
+            reset: d.limit_reset || '',
+            usage: number(d.usage) || 0,
+            daily: number(d.usage_daily),
+            weekly: number(d.usage_weekly),
+            monthly: number(d.usage_monthly),
+            freeTier: d.is_free_tier === true
           };
-        } else if (response.status === 401) {
-          appState.openRouterCredits = { total: 0, used: 0, keyValid: false };
         }
-      } catch (error) {
-        console.warn('No se pudo leer el saldo de OpenRouter:', error);
+      } else {
+        console.warn('No se pudo leer la key de OpenRouter:', key.reason);
       }
+      if (account.status === 'fulfilled' && account.value.ok && account.value.data) {
+        next.total = Number(account.value.data.total_credits) || 0;
+        next.used = Number(account.value.data.total_usage) || 0;
+        next.source = 'account';
+      } else if (settings.managementKey) {
+        const status = account.status === 'fulfilled' ? account.value.status : 0;
+        next.managementError = status === 401 || status === 403
+          ? 'OpenRouter no acepta esa key de gestión.'
+          : 'No se pudo leer el saldo de la cuenta.';
+      }
+      if (next.source !== 'account' && next.key && next.key.limit > 0 && next.key.remaining !== null) {
+        // No account balance: show what is left of this key's own credit limit.
+        next.total = next.key.limit;
+        next.used = Math.max(0, next.key.limit - next.key.remaining);
+        next.source = 'key';
+      }
+      appState.openRouterCredits = next;
       renderUsageDonut();
-      return appState.openRouterCredits;
+      return next;
+    }
+
+    function saveOpenRouterManagementKey(value) {
+      saveApiSettings({ managementKey: String(value || '').trim() });
+      renderUsagePopup();
+      refreshOpenRouterCredits().then(renderUsagePopup);
     }
 
     function quotaColor(ratio) {
@@ -7882,12 +7949,13 @@
       if (credits && credits.total > 0) {
         var remaining = Math.max(0, credits.total - credits.used);
         var ratio = remaining / credits.total;
+        var ringLabel = credits.source === 'key' ? 'Límite de la key' : 'Saldo OpenRouter';
         renderDonutSegments(svg, [{
-          label: 'Saldo OpenRouter',
+          label: ringLabel,
           remaining: remaining,
           color: quotaColor(ratio)
-        }], 'remaining', credits.total, formatUsd(remaining) + ' de saldo en OpenRouter', function(entry) {
-          return entry.label + ': ' + formatUsd(entry.remaining) + ' de ' + formatUsd(credits.total);
+        }], 'remaining', credits.total, formatBalance(remaining) + (credits.source === 'key' ? ' de límite en la key' : ' de saldo en OpenRouter'), function(entry) {
+          return entry.label + ': ' + formatBalance(entry.remaining) + ' de ' + formatBalance(credits.total);
         });
         return;
       }
@@ -7926,12 +7994,39 @@
         usageRow('API key', keyState),
         usageRow('Modelo', activeModelBadge())
       ];
-      if (credits && credits.total > 0) {
+      if (credits && credits.source === 'account') {
         html.push(usageSection('Saldo en OpenRouter', [
-          usageRow('Te queda', formatUsd(Math.max(0, credits.total - credits.used))),
-          usageRow('Gastado', formatUsd(credits.used)),
-          usageRow('Recargado', formatUsd(credits.total))
+          usageRow('Te queda', formatBalance(Math.max(0, credits.total - credits.used))),
+          usageRow('Gastado', formatBalance(credits.used)),
+          usageRow('Recargado', formatBalance(credits.total))
         ].join('')));
+      } else if (credits && credits.source === 'key') {
+        html.push(usageSection('Límite de esta key', [
+          usageRow('Te queda', formatBalance(credits.key.remaining)),
+          usageRow('Límite', formatBalance(credits.key.limit)
+            + ({ daily: ' cada día', weekly: ' cada semana', monthly: ' cada mes' }[credits.key.reset] || ''))
+        ].join('')));
+      }
+      if (credits && credits.key) {
+        var spent = [];
+        if (credits.key.daily !== null) spent.push(usageRow('Hoy', formatUsd(credits.key.daily)));
+        if (credits.key.weekly !== null) spent.push(usageRow('Esta semana', formatUsd(credits.key.weekly)));
+        if (credits.key.monthly !== null) spent.push(usageRow('Este mes', formatUsd(credits.key.monthly)));
+        spent.push(usageRow('Total', formatUsd(credits.key.usage)));
+        html.push(usageSection('Gastado con esta key', spent.join('')));
+      }
+      if (hasKey && credits && credits.source !== 'account') {
+        html.push('<div class="usage-note">OpenRouter solo da el saldo de la cuenta a una key de gestión. '
+          + 'Créala en <a href="https://openrouter.ai/settings/management-keys" target="_blank" rel="noopener">openrouter.ai/settings/management-keys</a> '
+          + 'y pégala aquí: solo se usa para leer el saldo y se queda en este navegador.</div>'
+          + '<form class="usage-key-form" id="usage-management-form">'
+          + '<input type="password" id="usage-management-key" autocomplete="off" spellcheck="false" placeholder="Key de gestión (sk-or-…)" aria-label="Key de gestión de OpenRouter">'
+          + '<button class="btn btn-sm btn-primary" type="submit">Ver saldo</button></form>');
+        if (credits.managementError) html.push('<div class="usage-note error">' + escapeHtml(credits.managementError) + '</div>');
+      }
+      if (getApiSettings().managementKey) {
+        html.push('<div class="usage-note">Saldo leído con tu key de gestión. '
+          + '<button type="button" class="usage-link" id="usage-management-remove">Quitarla</button></div>');
       }
       var modelRows = Object.keys(usage.byModel).sort(function(a, b) {
         return (usage.byModel[b].cost || 0) - (usage.byModel[a].cost || 0);
@@ -7950,6 +8045,21 @@
         html.push('<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>');
       }
       content.innerHTML = html.join('');
+      var managementForm = document.getElementById('usage-management-form');
+      if (managementForm) {
+        managementForm.addEventListener('submit', function(event) {
+          event.preventDefault();
+          var input = document.getElementById('usage-management-key');
+          if (input && input.value.trim()) saveOpenRouterManagementKey(input.value);
+        });
+      }
+      var managementRemove = document.getElementById('usage-management-remove');
+      if (managementRemove) {
+        // After this click reaches the outside-click check, so the popup stays open.
+        managementRemove.addEventListener('click', function() {
+          window.setTimeout(function() { saveOpenRouterManagementKey(''); }, 0);
+        });
+      }
     }
 
     function toggleUsagePopup() {
@@ -8404,7 +8514,9 @@
         } catch (_) {}
         apiSettingsCache = {
           apiKey: String(stored.apiKey || ''),
-          customModel: String(stored.customModel || '')
+          customModel: String(stored.customModel || ''),
+          // Optional: only used to read the account balance (GET /credits).
+          managementKey: String(stored.managementKey || '')
         };
       }
       return apiSettingsCache;
