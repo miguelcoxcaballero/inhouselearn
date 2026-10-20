@@ -4416,6 +4416,7 @@
         version: typeof snapshot.version === 'number' ? snapshot.version : 1,
         savedAt: typeof snapshot.savedAt === 'string' ? snapshot.savedAt : nowIso(),
         activeChatId: typeof snapshot.activeChatId === 'string' ? snapshot.activeChatId : chats[0].id,
+        settings: normalizeSyncedSettings(snapshot.settings),
         chats
       };
     }
@@ -4427,12 +4428,56 @@
         savedAt: nowIso(),
         activeChatId: appState.activeChatId,
         guidedLearning: !!appState.guidedLearning,
+        settings: buildSyncedSettings(),
         chats: appState.chats.map((chat) => {
           const normalizedChat = normalizeStoredChat(chat, opts);
           normalizedChat.messages = normalizedChat.messages.filter((message) => !message.pending);
           return normalizedChat;
         })
       };
+    }
+
+    // Settings that travel with the Drive snapshot, so a new browser or the
+    // Android app gets the OpenRouter key back after signing in with Google.
+    function buildSyncedSettings() {
+      const api = getApiSettings();
+      return { openRouter: { apiKey: api.apiKey, managementKey: api.managementKey, updatedAt: api.updatedAt || '' } };
+    }
+
+    function normalizeSyncedSettings(settings) {
+      const source = settings && settings.openRouter;
+      if (!source || typeof source !== 'object') return null;
+      return {
+        openRouter: {
+          apiKey: typeof source.apiKey === 'string' ? source.apiKey : '',
+          managementKey: typeof source.managementKey === 'string' ? source.managementKey : '',
+          updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : ''
+        }
+      };
+    }
+
+    // The newer side wins: the key saved most recently, here or on another device.
+    function applyRemoteApiSettings(settings) {
+      const remote = settings && settings.openRouter;
+      if (!remote || !remote.updatedAt) return false;
+      const local = getApiSettings();
+      if ((local.updatedAt || '') >= remote.updatedAt) return false;
+      if (remote.apiKey === local.apiKey && remote.managementKey === local.managementKey) {
+        saveApiSettings({ updatedAt: remote.updatedAt }, { fromDrive: true });
+        return false;
+      }
+      const hadKey = !!local.apiKey;
+      saveApiSettings({ apiKey: remote.apiKey, managementKey: remote.managementKey, updatedAt: remote.updatedAt }, { fromDrive: true });
+      appState.openRouterCredits = null;
+      if (elements.apiKeyInput) elements.apiKeyInput.value = '';
+      updateConfigUi();
+      renderUsageDonut();
+      refreshOpenRouterCredits();
+      if (remote.apiKey && !hadKey) {
+        closeModelMenu();
+        showToast('OpenRouter', 'API key recuperada de tu Google Drive.');
+      }
+      return true;
     }
 
     function applySnapshotToState(snapshot) {
@@ -7116,7 +7161,9 @@
         true,
         'No se pudo descargar el historial de Drive.'
       );
-      return normalizeSnapshot(JSON.parse(raw));
+      const parsed = JSON.parse(raw);
+      appState.driveRemoteSettings = normalizeSyncedSettings(parsed && parsed.settings);
+      return normalizeSnapshot(parsed);
     }
 
     async function persistDriveSnapshot(snapshot) {
@@ -7226,7 +7273,9 @@
       const localSnapshot = buildStateSnapshot({
         includeBinaries: false
       });
+      appState.driveRemoteSettings = null;
       const remoteSnapshot = await readDriveSnapshot();
+      applyRemoteApiSettings(appState.driveRemoteSettings);
       const localHasContent = snapshotHasMeaningfulContent(localSnapshot);
       const remoteHasContent = snapshotHasMeaningfulContent(remoteSnapshot);
 
@@ -8589,20 +8638,28 @@
           apiKey: String(stored.apiKey || ''),
           customModel: String(stored.customModel || ''),
           // Optional: only used to read the account balance (GET /credits).
-          managementKey: String(stored.managementKey || '')
+          managementKey: String(stored.managementKey || ''),
+          // When apiKey or managementKey last changed; decides which copy wins against Drive.
+          updatedAt: String(stored.updatedAt || '')
         };
       }
       return apiSettingsCache;
     }
 
-    function saveApiSettings(patch) {
-      const next = Object.assign({}, getApiSettings(), patch || {});
+    function saveApiSettings(patch, options) {
+      const previous = getApiSettings();
+      const next = Object.assign({}, previous, patch || {});
+      const fromDrive = !!(options && options.fromDrive);
+      const keysChanged = next.apiKey !== previous.apiKey || next.managementKey !== previous.managementKey;
+      if (keysChanged && !fromDrive) next.updatedAt = nowIso();
       apiSettingsCache = next;
       try {
         localStorage.setItem(API_SETTINGS_KEY, JSON.stringify(next));
       } catch (error) {
         console.warn('No se pudo guardar la configuracion de la API:', error);
       }
+      // Keys also live in the Drive snapshot (buildSyncedSettings) once signed in.
+      if (keysChanged && !fromDrive) scheduleDriveSync();
       return next;
     }
 

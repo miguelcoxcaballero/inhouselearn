@@ -44,7 +44,7 @@ npm run build   # genera ../vendor/pi-engine.js
 ## Cómo funciona
 
 - Las peticiones van directas del navegador a OpenRouter, con streaming. No hay servidor propio.
-- La API key de OpenRouter se guarda en `localStorage` de tu navegador.
+- La API key de OpenRouter se guarda en `localStorage` de tu navegador y, si entras con Google, también en el archivo de inhouse learn de tu Drive (junto al historial), para recuperarla al entrar desde otro navegador o desde la app Android. Gana la copia guardada más recientemente; borrar la key la borra también en Drive.
 - **Uso** (el anillo junto a enviar): lo gastado con tu key hoy, esta semana, este mes y en total (`GET /api/v1/key`), y lo que te queda si la key tiene un límite de crédito. El saldo de toda la cuenta (`GET /api/v1/credits`) OpenRouter solo se lo da a una [key de gestión](https://openrouter.ai/settings/management-keys): si la pegas en el panel de uso, se usa solo para leer el saldo y se queda en este navegador.
 - Adjuntos: PDF, Word, Excel y texto se extraen en el navegador; las imágenes se mandan al modelo si las admite y los PDF escaneados van como imágenes de sus páginas.
 - Historial en el navegador. Si entras con Google (botón de arriba a la derecha), también se sincroniza en tu Google Drive.
