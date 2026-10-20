@@ -35,6 +35,10 @@ def screen(name):
             except ElementTree.ParseError:
                 continue
             text = ' '.join(node.get('text', '') + ' ' + node.get('content-desc', '') for node in root.iter('node'))
+            # Text inside a button with its own accessible name (the updater's
+            # check status) is not in the UI dump: add OCR of the screenshot.
+            ocr = subprocess.run(['tesseract', str(OUT / f'{name}.png'), '-'], capture_output=True, text=True)
+            text += ' ' + ' '.join(ocr.stdout.split())
             (OUT / f'{name}.txt').write_text(text, encoding='utf-8')
             return text
         time.sleep(3)
