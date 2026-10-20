@@ -1,9 +1,9 @@
-// API de pi para Gemini a través de Code Assist (cloudcode-pa), el backend que usa
-// Gemini CLI al entrar con Google. Es el mismo formato de Gemini que
-// google-generative-ai de pi, pero envuelto en { model, project, request } y con
-// el token OAuth de la cuenta en vez de una API key. Reutiliza los conversores de
-// mensajes y herramientas de pi, así que los turnos con herramientas y las firmas
-// de razonamiento funcionan igual que con la API oficial.
+// API de pi para la API de Gemini (generativelanguage), la misma que usa el
+// proveedor "google" de pi. Se llama con fetch en vez de con @google/genai para
+// poder autenticar tanto con el token OAuth del login de Google como con una API
+// key de AI Studio (eso lo resuelve la app en hooks().fetch). Reutiliza los
+// conversores de mensajes y herramientas de pi, así que los turnos con
+// herramientas y las firmas de razonamiento funcionan igual que en pi.
 import {
   AssistantMessageEventStream,
   calculateCost,
@@ -62,7 +62,7 @@ function emptyUsage() {
   };
 }
 
-function buildRequest(model, context, options, project) {
+function buildRequest(model, context, options) {
   const initialSystemMessage = getInitialSystemMessage(context.messages);
   const systemText = initialSystemMessage ? getSystemMessageText(initialSystemMessage) : '';
   const tools = getCurrentTools(context.messages);
@@ -72,22 +72,16 @@ function buildRequest(model, context, options, project) {
   if (options.temperature !== undefined) generationConfig.temperature = options.temperature;
   if (options.thinkingConfig) generationConfig.thinkingConfig = options.thinkingConfig;
   return {
-    model: model.id,
-    project,
-    user_prompt_id: 'prompt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
-    request: {
-      contents: convertMessages(model, context),
-      ...(systemText && { systemInstruction: { role: 'user', parts: [{ text: systemText }] } }),
-      ...(tools.length && { tools: convertTools(tools, false, strict) }),
-      ...(mode !== undefined && { toolConfig: { functionCallingConfig: { mode } } }),
-      generationConfig,
-      ...(options.sessionId && { session_id: options.sessionId })
-    }
+    contents: convertMessages(model, context),
+    ...(systemText && { systemInstruction: { parts: [{ text: systemText }] } }),
+    ...(tools.length && { tools: convertTools(tools, false, strict) }),
+    ...(mode !== undefined && { toolConfig: { functionCallingConfig: { mode } } }),
+    generationConfig
   };
 }
 
-// hooks(): { fetch(path, { body, signal }), getProject(signal), describeError(status, payload, modelId) }
-export function codeAssistApi(hooks) {
+// hooks(): { fetch(modelId, body, signal) -> Response, describeError(status, payload, modelId) }
+export function geminiApi(hooks) {
   const stream = (model, rawContext, options = {}) => {
     const out = new AssistantMessageEventStream();
     const context = collapseSystemMessages(rawContext);
@@ -104,9 +98,8 @@ export function codeAssistApi(hooks) {
     (async () => {
       const api = hooks();
       try {
-        const project = await api.getProject(options.signal);
-        const body = buildRequest(model, context, options, project);
-        const response = await api.fetch(':streamGenerateContent?alt=sse', { body, signal: options.signal });
+        const body = buildRequest(model, context, options);
+        const response = await api.fetch(model.id, body, options.signal);
         if (!response.ok || !response.body) {
           const payload = await response.json().catch(() => null);
           throw new Error(api.describeError(response.status, payload, model.id));
@@ -130,8 +123,8 @@ export function codeAssistApi(hooks) {
           if (payload.error) {
             throw new Error(api.describeError(Number(payload.error.code) || 500, payload, model.id));
           }
-          const chunk = payload.response || payload;
-          output.responseId ||= chunk.responseId || payload.traceId;
+          const chunk = payload;
+          output.responseId ||= chunk.responseId;
           const candidate = chunk.candidates && chunk.candidates[0];
           for (const part of (candidate && candidate.content && candidate.content.parts) || []) {
             if (part.text !== undefined) {

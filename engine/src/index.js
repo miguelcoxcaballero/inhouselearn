@@ -7,23 +7,23 @@ import { openRouterCost } from '@earendil-works/pi-ai/providers/openrouter-api';
 import { Agent } from '@earendil-works/pi-agent-core';
 import JSZip from 'jszip';
 import catalog from './catalog.json';
-import { codeAssistApi } from './code-assist-api.js';
+import { geminiApi } from './gemini-api.js';
 import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
 
 export { createWorkspaceTools, normalizePath, runInSandbox };
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-export const CODE_ASSIST_BASE_URL = 'https://cloudcode-pa.googleapis.com/v1internal';
+export const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 export const UI_THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high'];
 
 const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 const MAX_STEP_OUTPUT = 4000;
 
-// Lo que pone la app: key de OpenRouter, cabeceras propias y el acceso a Code Assist.
+// Lo que pone la app: key de OpenRouter, cabeceras propias y el acceso a Gemini.
 const hooks = {
   getOpenRouterKey: () => '',
   openRouterHeaders: {},
-  codeAssist: null
+  gemini: null
 };
 
 export function configure(next) {
@@ -49,13 +49,14 @@ models.setProvider(createProvider({
 }));
 models.setProvider(createProvider({
   id: 'gemini',
-  name: 'Gemini (cuenta de Google)',
-  baseUrl: CODE_ASSIST_BASE_URL,
-  auth: { apiKey: { name: 'Cuenta de Google', resolve: async () => ({ auth: {} }) } },
+  name: 'Gemini',
+  baseUrl: GEMINI_API_BASE_URL,
+  // La autenticación (token de Google o API key) la pone la app en hooks.gemini.fetch.
+  auth: { apiKey: { name: 'Cuenta de Google o API key de Gemini', resolve: async () => ({ auth: {} }) } },
   models: [],
-  api: codeAssistApi(() => {
-    if (!hooks.codeAssist) throw new Error('Entra con Google para usar Gemini.');
-    return hooks.codeAssist;
+  api: geminiApi(() => {
+    if (!hooks.gemini) throw new Error('Entra con Google para usar Gemini.');
+    return hooks.gemini;
   })
 }));
 
@@ -112,8 +113,8 @@ const geminiTemplates = new Map(catalog.gemini.map((model) => [model.id, model])
 
 function geminiTemplate(id) {
   if (geminiTemplates.has(id)) return geminiTemplates.get(id);
-  // Nombres que solo existen en Code Assist (p. ej. gemini-3-flash): se toman
-  // los controles de razonamiento de su familia.
+  // Modelos más nuevos que el catálogo de pi: se toman los controles de
+  // razonamiento de su familia.
   if (/^gemini-([3-9]|\d{2})/.test(id)) {
     return geminiTemplates.get(id.includes('pro') ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview') || {};
   }
@@ -125,9 +126,9 @@ export function getGeminiModel(id) {
   return {
     id,
     name: id,
-    api: 'gemini-code-assist',
+    api: 'gemini-api',
     provider: 'gemini',
-    baseUrl: CODE_ASSIST_BASE_URL,
+    baseUrl: GEMINI_API_BASE_URL,
     reasoning: template.reasoning !== false,
     // 2.5 Pro no deja apagar el razonamiento (presupuesto mínimo 128).
     thinkingLevelMap: template.thinkingLevelMap || (id.includes('2.5-pro') ? { off: null } : undefined),

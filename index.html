@@ -2332,6 +2332,7 @@
     .google-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
     .google-account-copy { font-size: 0.8rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
     .google-account-row .btn { flex: 0 0 auto; }
+    .gemini-key-row { margin-top: 8px; }
     .model-popover-status.error { color: #b42318; }
     .model-card-badge.price { font-variant-numeric: tabular-nums; }
     .model-card-badge.pick { background: rgba(224, 122, 60, 0.14); color: #c2410c; }
@@ -2435,7 +2436,11 @@
                 <div class="google-account-copy" id="google-account-copy"></div>
                 <button class="btn btn-primary btn-sm" id="google-login-btn" type="button">Entrar con Google</button>
               </div>
-              <div class="api-key-hint" id="google-hint">Gemini usa la cuota gratuita de tu cuenta, la misma que Gemini CLI. No hace falta API key.</div>
+              <div class="api-key-row gemini-key-row">
+                <input class="api-input" id="gemini-key-input" type="password" placeholder="API key de AI Studio (opcional)" autocomplete="off" spellcheck="false">
+                <button class="btn btn-outline btn-sm" id="gemini-key-btn" type="button">Guardar</button>
+              </div>
+              <div class="api-key-hint" id="google-hint">Va por la API de Gemini, con su capa gratuita. Con la sesión de Google gasta la cuota del proyecto de Google Cloud de esta app; con una key de <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">AI Studio</a>, la de tu propia cuenta.</div>
             </div>
           </div>
         </div>
@@ -2817,12 +2822,12 @@
       }
     ];
 
-    // Gemini va por Code Assist con la cuenta de Google. La lista buena sale de
-    // retrieveUserQuota (modelos con cuota en esa cuenta); esta es la de partida.
+    // Gemini va por la API de Gemini. La lista buena sale de GET /models al entrar;
+    // esta es la de partida, con nombres del catálogo de pi.
     const GEMINI_DEFAULT_MODELS = [
       'gemini-3.1-pro-preview',
-      'gemini-3-flash-preview',
-      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash-lite',
       'gemini-2.5-pro',
       'gemini-2.5-flash'
     ];
@@ -2855,7 +2860,7 @@
         provider: 'gemini',
         id: modelId,
         label: geminiModelLabel(modelId),
-        badge: 'Cuota de tu cuenta',
+        badge: 'Gratis, con límites',
         price: ''
       });
     }
@@ -2922,7 +2927,6 @@
       accessToken: '',
       accessTokenExpiresAt: 0,
       profile: null,
-      codeAssistProjectId: '',
       activeController: null,
       driveFolderId: '',
       driveSnapshotFileId: '',
@@ -3505,6 +3509,8 @@
       googleSection: document.getElementById('google-section'),
       googleAccountCopy: document.getElementById('google-account-copy'),
       googleLoginBtn: document.getElementById('google-login-btn'),
+      geminiKeyInput: document.getElementById('gemini-key-input'),
+      geminiKeyBtn: document.getElementById('gemini-key-btn'),
       profileBtn: document.getElementById('profile-btn'),
       profilePopup: document.getElementById('profile-popup'),
       logoutMenuBtn: document.getElementById('logout-menu-btn'),
@@ -5485,9 +5491,7 @@
           const badge = option.price
             ? '<span class="model-card-badge price' + (option.pick ? ' pick' : '') + '"' + (option.priceNote ? ' title="' + escapeHtml(option.priceNote) + '"' : '') + '>' + escapeHtml(option.price) + '</span>'
             : '';
-          const subParts = [option.provider === 'gemini'
-            ? (geminiQuotaLabel(option.id) || option.badge)
-            : (option.id === CUSTOM_MODEL_ID && apiSettings.customModel ? apiSettings.customModel : option.badge)];
+          const subParts = [option.id === CUSTOM_MODEL_ID && apiSettings.customModel ? apiSettings.customModel : option.badge];
           if (option.thinkingLevels && option.thinkingLevels.length) {
             subParts.push('Razona');
           }
@@ -5556,6 +5560,7 @@
       }
       const isGemini = providerId === 'gemini';
       const googleSignedIn = hasDriveIdentitySession();
+      const geminiReady = hasGeminiAccess();
       if (elements.customModelSection) {
         elements.customModelSection.classList.toggle('hidden', !isCustom);
       }
@@ -5567,12 +5572,16 @@
       }
       if (elements.googleAccountCopy) {
         const email = googleSignedIn && appState.profile ? String(appState.profile.email || '') : '';
-        elements.googleAccountCopy.textContent = email
-          ? email + (geminiState.tierName ? ' · ' + geminiState.tierName : '')
-          : 'Sin iniciar sesión';
+        elements.googleAccountCopy.textContent = email || 'Sin iniciar sesión';
       }
       if (elements.googleLoginBtn) {
         elements.googleLoginBtn.classList.toggle('hidden', googleSignedIn);
+      }
+      if (elements.geminiKeyInput && document.activeElement !== elements.geminiKeyInput) {
+        elements.geminiKeyInput.value = apiSettings.geminiKey;
+      }
+      if (elements.geminiKeyBtn) {
+        elements.geminiKeyBtn.textContent = apiSettings.geminiKey ? 'Actualizar' : 'Guardar';
       }
       if (elements.customModelInput && document.activeElement !== elements.customModelInput) {
         elements.customModelInput.value = apiSettings.customModel;
@@ -5586,12 +5595,14 @@
       if (elements.modelMenuStatus) {
         let statusCopy;
         if (isGemini) {
-          if (!googleSignedIn) {
-            statusCopy = 'Entra con tu cuenta de Google y usa Gemini sin pagar nada.';
+          if (!geminiReady) {
+            statusCopy = 'Entra con Google (o pega una API key de AI Studio) y usa Gemini gratis, con límites.';
           } else if (geminiState.error) {
             statusCopy = geminiState.error;
           } else {
-            statusCopy = 'Gastas la cuota de tu cuenta de Google, no saldo.';
+            statusCopy = apiSettings.geminiKey
+              ? 'Gastas la cuota gratuita de tu API key de AI Studio.'
+              : 'Gastas la cuota gratuita de la API de Gemini, no saldo.';
           }
         } else if (!apiSettings.apiKey) {
           statusCopy = 'Pega tu API key de OpenRouter, o elige Gemini y entra con Google.';
@@ -5601,7 +5612,7 @@
           statusCopy = 'Pagas por tokens con tu saldo de OpenRouter.';
         }
         elements.modelMenuStatus.textContent = statusCopy;
-        elements.modelMenuStatus.classList.toggle('error', isGemini && googleSignedIn && !!geminiState.error);
+        elements.modelMenuStatus.classList.toggle('error', isGemini && geminiReady && !!geminiState.error);
       }
     }
 
@@ -7938,20 +7949,12 @@
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
       if (activeProviderName() === 'gemini') {
-        var modelId = activeModelName();
-        var quota = geminiState.quota[modelId];
-        if (hasDriveIdentitySession() && quota && quota.fraction !== null) {
-          renderDonutSegments(svg, [{
-            label: geminiModelLabel(modelId),
-            fraction: quota.fraction,
-            color: quotaColor(quota.fraction)
-          }], 'fraction', 1, 'Queda el ' + Math.round(quota.fraction * 100) + ' % de la cuota de ' + geminiModelLabel(modelId), function(entry) {
-            return entry.label + ': queda el ' + Math.round(entry.fraction * 100) + ' % de la cuota';
-          });
-          return;
-        }
-        svg.innerHTML = '<circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="3.5"/>';
-        document.getElementById('usage-btn').title = hasDriveIdentitySession() ? 'Cuota de Gemini' : 'Entra con Google para usar Gemini';
+        var ready = hasGeminiAccess();
+        var ringColor = !ready ? 'rgba(0,0,0,0.1)' : (geminiState.error ? '#ef4444' : '#22c55e');
+        svg.innerHTML = '<circle cx="18" cy="18" r="15.915" fill="none" stroke="' + ringColor + '" stroke-width="3.5"/>';
+        document.getElementById('usage-btn').title = !ready
+          ? 'Entra con Google para usar Gemini'
+          : (geminiState.error || 'Gemini listo (capa gratuita de la API de Gemini)');
         return;
       }
       var credits = appState.openRouterCredits;
@@ -7993,20 +7996,11 @@
 
     function renderGeminiUsagePopup(content) {
       var signedIn = hasDriveIdentitySession();
+      var key = geminiApiKey();
       var html = [
-        usageRow('Cuenta', signedIn && appState.profile ? String(appState.profile.email || '') : 'sin iniciar sesión')
+        usageRow('Cuenta', signedIn && appState.profile ? String(appState.profile.email || '') : 'sin iniciar sesión'),
+        usageRow('Acceso', key ? 'API key de AI Studio' : (signedIn ? 'Sesión de Google' : '—'))
       ];
-      if (geminiState.tierName) html.push(usageRow('Plan', geminiState.tierName));
-      var activeId = activeModelName();
-      var quotaRows = sortGeminiModels(Object.keys(geminiState.quota)).map(function(id) {
-        var quota = geminiState.quota[id];
-        var value = quota.fraction === null ? '—' : Math.round(quota.fraction * 100) + ' %';
-        var reset = formatQuotaReset(quota.resetTime);
-        if (reset && quota.fraction !== null && quota.fraction < 1) value += ' · se renueva ' + reset;
-        var label = usageDot(quota.fraction === null ? 'var(--muted)' : quotaColor(quota.fraction)) + escapeHtml(geminiModelLabel(id));
-        return usageRow(id === activeId ? '<strong>' + label + '</strong>' : label, value);
-      }).join('');
-      html.push(usageSection('Cuota que te queda', quotaRows || '<div class="usage-note">Aparece al entrar con Google.</div>'));
       var usage = getUsageData();
       var geminiIds = Object.keys(usage.byModel).filter(function(id) { return id.indexOf('gemini-') === 0; });
       if (geminiIds.length) {
@@ -8021,7 +8015,8 @@
           usageRow('Tokens', formatCompactNumber(totals.tokens))
         ].join('')));
       }
-      if (signedIn && geminiState.error) {
+      html.push('<div class="usage-note">Usa la capa gratuita de la API de Gemini: tiene límites por minuto y por día que dependen del modelo. Si llegas al límite, cambia de modelo o espera un poco.</div>');
+      if ((signedIn || key) && geminiState.error) {
         html.push('<div class="usage-note error">' + escapeHtml(geminiState.error) + '</div>');
       }
       content.innerHTML = html.join('');
@@ -8330,7 +8325,7 @@
           updateConfigUi();
           renderHistory();
           setComposerStatus('');
-          if (nextProvider === 'gemini' && !appState.codeAssistProjectId) {
+          if (nextProvider === 'gemini') {
             prepareGemini();
           }
         });
@@ -8367,6 +8362,23 @@
       elements.loginBtn.addEventListener('click', () => {
         saveApiKeyFromInput();
       });
+      if (elements.geminiKeyBtn && elements.geminiKeyInput) {
+        const saveGeminiKey = () => {
+          const value = elements.geminiKeyInput.value.trim();
+          saveApiSettings({ geminiKey: value });
+          geminiState.error = '';
+          showToast('Gemini', value ? 'API key de AI Studio guardada en este navegador.' : 'API key de Gemini borrada; se usa tu sesión de Google.');
+          updateConfigUi();
+          prepareGemini().then(updateConfigUi);
+        };
+        elements.geminiKeyBtn.addEventListener('click', saveGeminiKey);
+        elements.geminiKeyInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            saveGeminiKey();
+          }
+        });
+      }
       if (elements.googleLoginBtn) {
         elements.googleLoginBtn.addEventListener('click', async () => {
           try {
@@ -8513,7 +8525,8 @@
         } catch (_) {}
         apiSettingsCache = {
           apiKey: String(stored.apiKey || ''),
-          customModel: String(stored.customModel || '')
+          customModel: String(stored.customModel || ''),
+          geminiKey: String(stored.geminiKey || '')
         };
       }
       return apiSettingsCache;
@@ -8540,8 +8553,8 @@
 
     function ensureProviderReady(chat) {
       if (activeProviderName(chat) === 'gemini') {
-        if (hasDriveIdentitySession()) return true;
-        showToast('Gemini', 'Entra con tu cuenta de Google para usar Gemini.');
+        if (hasGeminiAccess()) return true;
+        showToast('Gemini', 'Entra con tu cuenta de Google (o pega una API key de AI Studio) para usar Gemini.');
         openModelMenuForKey(elements.googleLoginBtn);
         return false;
       }
@@ -8835,8 +8848,6 @@
         const wrapped = new Error(describeAgentError(providerId, error.message));
         wrapped.partial = error.partial;
         throw wrapped;
-      } finally {
-        if (engineProvider === 'gemini') refreshGeminiQuota().catch(() => {});
       }
       recordModelUsage(modelId, {
         prompt_tokens: result.usage.input,
@@ -8858,14 +8869,14 @@
       };
     }
 
-    // ─── GEMINI (Code Assist con la cuenta de Google) ──
-    // Es el backend que usa Gemini CLI al entrar con Google, así que la cuota es
-    // la de la propia cuenta (gratis en el plan individual). Se llama desde el
-    // navegador con el token del login (scope cloud-platform).
-    const CODE_ASSIST_BASE_URL = 'https://cloudcode-pa.googleapis.com/v1internal';
-    const CODE_ASSIST_METADATA = { ideType: 'IDE_UNSPECIFIED', platform: 'PLATFORM_UNSPECIFIED', pluginType: 'GEMINI' };
-    const GEMINI_CACHE_KEY = STORAGE_KEY + '::gemini';
-    const geminiState = { tierName: '', quota: {}, error: '', setupPromise: null };
+    // ─── GEMINI (API de Gemini) ─────────────────────────
+    // La API oficial (generativelanguage), la misma que el proveedor "google" de
+    // pi. Con la sesión de Google se llama con el token OAuth y gasta la cuota del
+    // proyecto de Google Cloud de la app; con una API key de AI Studio, la del
+    // proyecto de esa key.
+    const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+    const GEMINI_CACHE_KEY = STORAGE_KEY + '::geminiApi';
+    const geminiState = { error: '' };
 
     function readGeminiCache() {
       try {
@@ -8885,36 +8896,21 @@
     function restoreGeminiCache() {
       const cache = readGeminiCache();
       setGeminiModels(Array.isArray(cache.models) ? cache.models : null);
-      geminiState.quota = cache.quota && typeof cache.quota === 'object' ? cache.quota : {};
-      geminiState.tierName = String(cache.tierName || '');
     }
 
     function resetGeminiSession() {
-      appState.codeAssistProjectId = '';
-      geminiState.tierName = '';
-      geminiState.quota = {};
       geminiState.error = '';
-      geminiState.setupPromise = null;
-      writeGeminiCache({ quota: {}, tierName: '' });
     }
 
-    function formatQuotaReset(value) {
-      const date = value ? new Date(value) : null;
-      if (!date || isNaN(date.getTime())) return '';
-      const time = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      if (date.toDateString() === new Date().toDateString()) return 'a las ' + time;
-      return 'el ' + date.toLocaleDateString('es-ES', { weekday: 'long' }) + ' a las ' + time;
+    function geminiApiKey() {
+      return getApiSettings().geminiKey;
     }
 
-    function resetTimeFromMessage(message) {
-      const match = String(message || '').match(/reset after\s+((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)/i);
-      if (!match || !match[1]) return '';
-      const part = (re) => Number((match[1].match(re) || [])[1] || 0);
-      const seconds = part(/(\d+)h/) * 3600 + part(/(\d+)m/) * 60 + part(/([\d.]+)s/);
-      return seconds > 0 ? new Date(Date.now() + seconds * 1000).toISOString() : '';
+    function hasGeminiAccess() {
+      return !!geminiApiKey() || hasDriveIdentitySession();
     }
 
-    function codeAssistErrorMessage(payload, status) {
+    function geminiErrorMessage(payload, status) {
       let message = payload && payload.error && payload.error.message ? String(payload.error.message) : '';
       try {
         const nested = JSON.parse(message);
@@ -8923,46 +8919,60 @@
       return message || ('HTTP ' + status);
     }
 
-    function describeCodeAssistError(status, payload, modelId) {
-      const message = codeAssistErrorMessage(payload, status);
+    function geminiRetrySeconds(payload) {
+      const details = payload && payload.error && Array.isArray(payload.error.details) ? payload.error.details : [];
+      const retry = details.find((item) => item && typeof item.retryDelay === 'string');
+      const seconds = retry ? parseFloat(retry.retryDelay) : NaN;
+      return Number.isFinite(seconds) ? Math.ceil(seconds) : 0;
+    }
+
+    function describeGeminiError(status, payload, modelId) {
+      const message = geminiErrorMessage(payload, status);
       const lower = message.toLowerCase();
       const label = modelId ? geminiModelLabel(modelId) : 'Gemini';
+      if (lower.indexOf('api key not valid') !== -1 || lower.indexOf('api_key_invalid') !== -1) {
+        return 'Google rechaza la API key de Gemini. Revisa que esté copiada entera o bórrala para usar tu sesión de Google.';
+      }
       if (status === 401) {
         return 'La sesión de Google ha caducado. Vuelve a entrar con Google.';
       }
-      if (lower.indexOf('cloud code private api') !== -1 || lower.indexOf('cloudcode-pa') !== -1 || lower.indexOf('has not been used in project') !== -1) {
-        return 'El proyecto de Google Cloud de esta app (' + googleProjectRef() + ') no tiene activada la API de Code Assist (cloudcode-pa.googleapis.com). Hay que activarla en la consola de Google Cloud.';
+      if (lower.indexOf('has not been used in project') !== -1 || lower.indexOf('service_disabled') !== -1 || lower.indexOf('is disabled') !== -1) {
+        return 'La API de Gemini (Generative Language API) no está activada en el proyecto ' + googleProjectRef() + ' de Google Cloud. Actívala en https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com?project=' + googleProjectRef() + ' y vuelve a probar.';
       }
       if (status === 403 && lower.indexOf('scope') !== -1) {
         return 'Tu sesión de Google no tiene permiso para usar Gemini. Cierra sesión y vuelve a entrar aceptando todos los permisos.';
       }
+      if (lower.indexOf('location is not supported') !== -1) {
+        return 'La API de Gemini no está disponible desde tu país.';
+      }
       if (status === 429) {
-        const known = modelId && geminiState.quota[modelId];
-        const reset = formatQuotaReset(resetTimeFromMessage(message) || (known && known.fraction === 0 ? known.resetTime : ''));
-        return reset
-          ? 'Se ha acabado la cuota de ' + label + '. Se renueva ' + reset + '. Mientras, prueba con otro modelo de Gemini.'
-          : 'Google está limitando las peticiones a ' + label + '. Espera un minuto o prueba con otro modelo de Gemini.';
+        if (/limit:\s*0\b/.test(message)) {
+          return label + ' no tiene cuota gratuita. Prueba con un Gemini Flash o activa la facturación del proyecto en Google Cloud.';
+        }
+        const wait = geminiRetrySeconds(payload);
+        return 'Has llegado al límite de ' + label + (wait ? '. Vuelve a probar en ' + wait + ' s' : ' por ahora') + ' o cambia de modelo de Gemini.';
       }
       if (status === 404) {
-        return label + ' no está disponible para tu cuenta. Elige otro modelo de Gemini.';
+        return label + ' no está disponible en la API de Gemini. Elige otro modelo.';
       }
       return message;
     }
 
-    async function codeAssistFetch(path, options, allowRetry) {
+    async function geminiFetch(path, options, allowRetry) {
       const opts = options || {};
-      if (!appState.accessToken) {
-        throw new Error('Entra con Google para usar Gemini.');
+      const key = geminiApiKey();
+      if (!key && !appState.accessToken) {
+        throw new Error('Entra con Google o pega una API key de Gemini para usar Gemini.');
       }
-      const headers = { Authorization: 'Bearer ' + appState.accessToken };
+      const headers = key ? { 'x-goog-api-key': key } : { Authorization: 'Bearer ' + appState.accessToken };
       if (opts.body) headers['Content-Type'] = 'application/json';
-      const response = await fetch(CODE_ASSIST_BASE_URL + path, {
+      const response = await fetch(GEMINI_API_BASE_URL + path, {
         method: opts.body ? 'POST' : 'GET',
         headers,
         body: opts.body ? JSON.stringify(opts.body) : undefined,
         signal: opts.signal
       });
-      if (response.status === 401 && allowRetry !== false) {
+      if (!key && response.status === 401 && allowRetry !== false) {
         const refreshed = await loginWithGoogle({
           interactive: false,
           toast: false,
@@ -8971,84 +8981,33 @@
           forceRefresh: true
         }).catch(() => false);
         if (refreshed && appState.accessToken) {
-          return codeAssistFetch(path, opts, false);
+          return geminiFetch(path, opts, false);
         }
       }
       return response;
     }
 
-    async function codeAssistJson(path, body, signal) {
-      const response = await codeAssistFetch(path, { body, signal });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(describeCodeAssistError(response.status, payload));
-      }
-      return payload || {};
-    }
-
-    function cloudCompanionProjectId(value) {
-      if (!value) return '';
-      return typeof value === 'string' ? value : String(value.id || '');
-    }
-
-    function ineligibleTiersMessage(tiers) {
-      const reasons = (tiers || []).map((tier) => tier && tier.reasonMessage).filter(Boolean);
-      return reasons.length
-        ? 'Tu cuenta de Google no puede usar Gemini Code Assist: ' + reasons.join(' ')
-        : 'Esta cuenta de Google necesita un proyecto de Google Cloud propio para usar Code Assist (suele pasar con cuentas de empresa o de centro educativo). Prueba con una cuenta personal o usa un modelo de OpenRouter.';
-    }
-
-    // Mismo flujo que setupUser() de Gemini CLI: loadCodeAssist y, si la cuenta
-    // aún no tiene plan, onboardUser con el plan por defecto.
-    async function setupCodeAssist() {
-      const load = await codeAssistJson(':loadCodeAssist', { metadata: CODE_ASSIST_METADATA });
-      const ineligible = Array.isArray(load.ineligibleTiers) ? load.ineligibleTiers : [];
-      if (load.currentTier) {
-        geminiState.tierName = (load.paidTier && load.paidTier.name) || load.currentTier.name || '';
-        const project = cloudCompanionProjectId(load.cloudaicompanionProject);
-        if (project) return project;
-        throw new Error(ineligibleTiersMessage(ineligible));
-      }
-      const validation = ineligible.find((tier) => tier && tier.validationUrl && tier.reasonCode === 'VALIDATION_REQUIRED');
-      if (validation) {
-        throw new Error('Google pide verificar tu cuenta antes de usar Gemini: ' + validation.validationUrl);
-      }
-      const tier = (load.allowedTiers || []).find((item) => item && item.isDefault) || { id: 'legacy-tier', name: '' };
-      geminiState.tierName = tier.name || '';
-      // El plan gratuito usa un proyecto gestionado por Google, así que no se manda proyecto.
-      let operation = await codeAssistJson(':onboardUser', { tierId: tier.id, metadata: CODE_ASSIST_METADATA });
-      for (let attempt = 0; !operation.done && operation.name && attempt < 20; attempt++) {
-        await new Promise((resolve) => window.setTimeout(resolve, 3000));
-        operation = await codeAssistJson('/' + operation.name);
-      }
-      const project = operation.response ? cloudCompanionProjectId(operation.response.cloudaicompanionProject) : '';
-      if (project) return project;
-      throw new Error(ineligibleTiersMessage(ineligible));
-    }
-
-    function ensureCodeAssistProject() {
-      if (appState.codeAssistProjectId) {
-        return Promise.resolve(appState.codeAssistProjectId);
-      }
-      if (!geminiState.setupPromise) {
-        geminiState.setupPromise = setupCodeAssist().then((project) => {
-          appState.codeAssistProjectId = project;
-          geminiState.error = '';
-          return project;
-        }, (error) => {
-          geminiState.error = error.message || String(error);
-          throw error;
-        }).finally(() => {
-          geminiState.setupPromise = null;
-        });
-      }
-      return geminiState.setupPromise;
-    }
-
-    function isChatGeminiModel(modelId) {
-      return /^gemini-\d/.test(modelId) &&
-        modelId.indexOf('_') === -1 &&
-        !/embedding|image|tts|live|audio|customtools/.test(modelId);
+    // Del listado de la API, los modelos de chat (2.5 en adelante) sin alias ni
+    // versiones fechadas; de cada familia, las dos versiones más nuevas.
+    function pickGeminiModels(names) {
+      const byFamily = {};
+      names.forEach((name) => {
+        const match = String(name).match(/^gemini-(\d+(?:\.\d+)?)-(pro|flash|flash-lite)(-preview)?$/);
+        if (!match || parseFloat(match[1]) < 2.5) return;
+        const family = (byFamily[match[2]] = byFamily[match[2]] || {});
+        const version = match[1];
+        // Si existe la versión estable, sobra su preview.
+        if (!family[version] || !match[3]) family[version] = name;
+      });
+      const picked = [];
+      Object.keys(byFamily).forEach((familyName) => {
+        const family = byFamily[familyName];
+        Object.keys(family)
+          .sort((a, b) => parseFloat(b) - parseFloat(a))
+          .slice(0, 2)
+          .forEach((version) => picked.push(family[version]));
+      });
+      return sortGeminiModels(picked);
     }
 
     function sortGeminiModels(modelIds) {
@@ -9066,53 +9025,35 @@
       });
     }
 
-    async function refreshGeminiQuota() {
-      if (!hasDriveIdentitySession()) return null;
-      const project = await ensureCodeAssistProject();
-      const data = await codeAssistJson(':retrieveUserQuota', { project });
-      const quota = {};
-      (data.buckets || []).forEach((bucket) => {
-        const modelId = bucket && bucket.modelId ? String(bucket.modelId) : '';
-        if (!modelId || !isChatGeminiModel(modelId)) return;
-        const raw = Number(bucket.remainingFraction);
-        const entry = {
-          fraction: Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : null,
-          resetTime: String(bucket.resetTime || '')
-        };
-        const previous = quota[modelId];
-        if (!previous || (entry.fraction !== null && (previous.fraction === null || entry.fraction < previous.fraction))) {
-          quota[modelId] = entry;
-        }
-      });
-      const models = sortGeminiModels(Object.keys(quota));
-      geminiState.quota = quota;
-      if (models.length) setGeminiModels(models);
-      writeGeminiCache({ models, quota, tierName: geminiState.tierName });
+    async function refreshGeminiModels() {
+      if (!hasGeminiAccess()) return null;
+      const response = await geminiFetch('/models?pageSize=1000');
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(describeGeminiError(response.status, payload));
+      }
+      const names = (payload && payload.models || [])
+        .filter((model) => (model.supportedGenerationMethods || []).indexOf('generateContent') !== -1)
+        .map((model) => String(model.name || '').replace(/^models\//, ''));
+      const models = pickGeminiModels(names);
+      if (models.length) {
+        setGeminiModels(models);
+        writeGeminiCache({ models });
+      }
+      geminiState.error = '';
       renderModelControls();
-      renderUsageDonut();
-      renderUsagePopup();
-      return quota;
+      return models;
     }
 
     function prepareGemini() {
-      if (!hasDriveIdentitySession()) return Promise.resolve(null);
-      return refreshGeminiQuota().catch((error) => {
+      if (!hasGeminiAccess()) return Promise.resolve(null);
+      return refreshGeminiModels().catch((error) => {
         console.warn('Gemini no está listo:', error);
         geminiState.error = error.message || String(error);
         return null;
       }).finally(() => {
         renderModelControls();
       });
-    }
-
-    function geminiQuotaLabel(modelId) {
-      const quota = geminiState.quota[modelId];
-      if (!hasDriveIdentitySession() || !quota || quota.fraction === null) return '';
-      if (quota.fraction === 0) {
-        const reset = formatQuotaReset(quota.resetTime);
-        return 'Sin cuota' + (reset ? ', se renueva ' + reset : '');
-      }
-      return 'Queda el ' + Math.round(quota.fraction * 100) + ' %';
     }
 
     async function requestGoogleAccessToken(promptMode, options) {
@@ -9486,7 +9427,7 @@
       }
     }
 
-    // Une el motor de pi con la app: key de OpenRouter y sesión de Code Assist.
+    // Une el motor de pi con la app: key de OpenRouter y acceso a la API de Gemini.
     function configureEngine() {
       InhousePi.configure({
         getOpenRouterKey: () => getApiSettings().apiKey,
@@ -9494,10 +9435,9 @@
           'HTTP-Referer': location.origin && location.origin !== 'null' ? location.origin : 'https://github.com/miguelcoxcaballero/inhouselearn',
           'X-Title': 'inhouse learn'
         },
-        codeAssist: {
-          fetch: (path, options) => codeAssistFetch(path, options),
-          getProject: () => ensureCodeAssistProject(),
-          describeError: describeCodeAssistError
+        gemini: {
+          fetch: (modelId, body, signal) => geminiFetch('/models/' + encodeURIComponent(modelId) + ':streamGenerateContent?alt=sse', { body, signal }),
+          describeError: describeGeminiError
         }
       });
     }
@@ -9544,6 +9484,7 @@
 
       refreshOpenRouterCredits();
       prepareOpenRouterModels();
+      if (geminiApiKey()) prepareGemini();
       if (!getApiSettings().apiKey && activeProviderName() !== 'gemini') {
         openModelMenuForKey();
       }
