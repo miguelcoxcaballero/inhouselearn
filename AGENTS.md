@@ -9,10 +9,14 @@ Mandatory guidance for every AI and developer working in this repository.
   `android/README.md` before touching it.
 - **Signing:** every published APK is signed with the permanent Inhouse key shared with
   Inhouse YouTube and Inhouse Instagram (certificate SHA-256
-  `7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6`), taken only from
-  the repository secret `EJEMPLO` by `.github/workflows/android.yml`. Never commit a key,
-  keystore, password or its base64, and never sign a release with another key: Android
-  refuses to update an installed app signed with a different key.
+  `7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6`). That key exists only
+  as the secret `EJEMPLO` of `youtube-calma` and `ig-calma`; GitHub cannot copy a secret, so
+  this repository does not sign. `youtube-calma`'s workflow **Sign Inhouse Learn** builds a
+  given commit of this repository, signs it and stages it as a public prerelease there;
+  `.github/workflows/android.yml` (publish) verifies and publishes that APK as this
+  repository's release. Never commit a key, keystore, password or its base64, never add a
+  second copy of the key, and never sign a release with another key: Android refuses to
+  update an installed app signed with a different key. Steps in `android/README.md`.
 - **Package and versions:** the package ID `com.inhouse.learn` is permanent. Every new APK
   raises `versionCode` (and `versionName`) in `android/app/build.gradle.kts`; never reuse or
   lower a versionCode and never replace an already published release.

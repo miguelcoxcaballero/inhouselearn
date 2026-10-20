@@ -40,12 +40,20 @@ El token dura una hora; al caducar, la app pide volver a entrar con un toque.
 - Todas las APK publicadas se firman con **la clave permanente de Inhouse**, la misma que
   Inhouse YouTube e Inhouse Instagram. Certificado SHA-256:
   `7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6`.
-- La clave está solo en el secreto de GitHub **`EJEMPLO`** (base64 del keystore .p12/.jks,
-  contraseña de build `localbuild`). Para este repositorio hay que añadirlo en
-  *Settings → Secrets and variables → Actions* con **el mismo valor** que en `youtube-calma`.
-- El workflow busca en el keystore la entrada cuyo certificado coincide con ese SHA-256, firma
-  con `apksigner` (esquemas v2 y v3), comprueba que el único firmante es ese certificado y
-  borra la clave del runner. Si el secreto falta o es otra clave, la publicación se para.
+- La clave está **solo** en el secreto de GitHub **`EJEMPLO`** de `youtube-calma` y de `ig-calma`
+  (base64 del keystore, contraseña de build `localbuild`). GitHub no deja leer ni copiar un
+  secreto, así que este repositorio no lo tiene y **no firma**: la APK se firma en
+  `youtube-calma` con el workflow **Sign Inhouse Learn**
+  (`.github/workflows/sign-inhouse-learn.yml` de ese repositorio). Ese workflow compila Learn
+  desde el commit exacto que se le indica, busca en el keystore la entrada cuyo certificado
+  coincide con ese SHA-256, firma con `apksigner` (esquemas v2 y v3), comprueba que el único
+  firmante es ese certificado, borra la clave del runner y deja la APK firmada como
+  *prerelease* pública de `youtube-calma` (`learn-signed-<versión>-<sha corto>`; solo se
+  conserva la última).
+- El workflow **Android app** de este repositorio, al publicar, descarga esa copia, comprueba
+  hash, firmante, paquete, versión y que `build-info.json` apunta a este mismo commit, la abre
+  en el emulador y entonces la publica como release propia. Si alguien añade `EJEMPLO` aquí
+  no cambia nada: la firma sigue haciéndose en `youtube-calma`.
 - **Nunca** subas al repositorio un keystore, una contraseña ni su base64, ni firmes una
   publicación con otra clave: Android no deja actualizar una app instalada si la firma cambia,
   y habría que desinstalarla (perdiendo sus datos locales).
@@ -76,13 +84,17 @@ El token dura una hora; al caducar, la app pide volver a entrar con un toque.
 1. Sube `versionCode` y `versionName` en `app/build.gradle.kts` y haz push a `main`.
    El workflow **Android app** compila la release minificada, la firma con una clave de
    prueba y la abre en un emulador Android 15 (web, retorno del login, actualizador).
-2. *Actions → Android app → Run workflow* en `main`, con **publish** marcado y un changelog
-   mínimo en inglés (2–10 palabras, máx. 120 caracteres).
-3. El workflow firma con la clave de `EJEMPLO`, repite la prueba en el emulador con esa APK,
-   crea la release `android-vX.Y.Z` (`inhouse-learn-X.Y.Z.apk`, `SHA256SUMS.txt`,
+2. En **`youtube-calma`**: *Actions → Sign Inhouse Learn → Run workflow* con `ref` = el SHA
+   completo del commit de `main` de este repositorio que quieres publicar. Compila, firma con
+   `EJEMPLO` y deja la APK firmada en la prerelease `learn-signed-X.Y.Z-<sha corto>`.
+3. En este repositorio: *Actions → Android app → Run workflow* en `main` (el mismo commit),
+   con **publish** marcado y un changelog mínimo en inglés (2–10 palabras, máx. 120
+   caracteres). Descarga la APK firmada, la verifica, repite la prueba en el emulador, crea
+   la release `android-vX.Y.Z` (`inhouse-learn-X.Y.Z.apk`, `SHA256SUMS.txt`,
    `android-update.json`), descarga la APK pública para comprobar hash, tamaño, firma, paquete
    y versión, y solo entonces añade la versión a `updates/A.json` con
    `vendor/inhouse-services-updater/catalog.py`.
+   Si `main` cambió entre los pasos 2 y 3, repite el paso 2 con el SHA nuevo.
 
 La primera instalación es manual: descarga la APK de la release y ábrela en el móvil
 (Android pedirá permitir instalar apps de esa fuente). Las siguientes llegan por el actualizador.

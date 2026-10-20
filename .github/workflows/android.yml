@@ -4,11 +4,15 @@ name: Android app
 #
 # - Push / pull request / manual run without "publish": signed with a throwaway
 #   test key. That APK is only evidence; never hand it to users.
-# - Manual run on main with "publish": signed with the permanent Inhouse key from
-#   secret EJEMPLO (the same key as Inhouse YouTube and Instagram), published as
-#   a new GitHub release and, only after its public download is verified, added
-#   to update channel A (updates/A.json). It never replaces an existing release
-#   and never publishes B: B needs the user's explicit request (UPDATER.md).
+# - Manual run on main with "publish": uses the APK of this exact commit that
+#   youtube-calma's "Sign Inhouse Learn" workflow built and signed with the
+#   permanent Inhouse key (secret EJEMPLO lives only there and in ig-calma;
+#   GitHub cannot copy it here). That staged APK is verified again (signer,
+#   package, version, hash, source commit), opened on the emulator, published
+#   as a new GitHub release and, only after its public download is verified,
+#   added to update channel A (updates/A.json). It never replaces an existing
+#   release and never publishes B: B needs the user's explicit request
+#   (UPDATER.md). See android/README.md, "Publicar una versión".
 on:
   push:
     branches: [main]
@@ -28,7 +32,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Sign with the permanent Inhouse key (secret EJEMPLO) and publish on channel A
+        description: Publish on channel A the APK of this commit signed by youtube-calma's "Sign Inhouse Learn" run
         type: boolean
         default: false
       changelog:
@@ -46,6 +50,8 @@ concurrency:
 env:
   # Certificate of the permanent Inhouse key (shared with YouTube and Instagram).
   INHOUSE_SIGNER_SHA256: 7133a4b3e4b9f9c4d2fbbd38b7dd2d44c7b8d0d7d16568bfe3da74a09e7887b6
+  # Where the permanent key signs Learn (see the header comment).
+  SIGNING_REPO: miguelcoxcaballero/youtube-calma
   PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && 'true' || 'false' }}
 
 jobs:
@@ -103,71 +109,57 @@ jobs:
       - name: Build the minified release
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease
-      - name: Prepare the permanent Inhouse key from secret EJEMPLO
+      - name: Download the APK of this commit signed in youtube-calma
         if: env.PUBLISH == 'true'
         env:
-          KEYSTORE_SECRET: ${{ secrets.EJEMPLO }}
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
         run: |
+          tag="learn-signed-$VERSION-${GITHUB_SHA:0:7}"
+          base="https://github.com/$SIGNING_REPO/releases/download/$tag"
+          mkdir -p build/staged
+          for file in "inhouse-learn-$VERSION.apk" SHA256SUMS.txt build-info.json; do
+            if ! curl -fsSL --retry 3 --retry-delay 5 -o "build/staged/$file" "$base/$file"; then
+              echo "::error::No signed APK staged for this commit: run \"Sign Inhouse Learn\" in $SIGNING_REPO with ref $GITHUB_SHA, then run this again (expected https://github.com/$SIGNING_REPO/releases/tag/$tag)"
+              exit 1
+            fi
+          done
+          cd build/staged
+          sha256sum -c SHA256SUMS.txt
           python3 - <<'PY'
-          import base64, hashlib, os, re, subprocess, sys
-          from pathlib import Path
-          def fail(message):
-              print('::error::' + message)
-              sys.exit(1)
-          expected = os.environ['INHOUSE_SIGNER_SHA256']
-          temp = Path(os.environ['RUNNER_TEMP'])
-          text = os.environ.get('KEYSTORE_SECRET', '')
-          # Plain or line-wrapped base64 of the keystore file; armour lines are ignored.
-          body = ''.join(line.strip() for line in text.splitlines() if not line.strip().startswith('-----'))
-          if not body:
-              fail('Repository secret EJEMPLO is missing: add it to this repository with the same value as in youtube-calma')
-          try:
-              raw = base64.b64decode(body, validate=True)
-          except ValueError:
-              fail('Secret EJEMPLO must hold the signing keystore (.p12/.jks) as base64 text')
-          source = temp / 'inhouse-source.keystore'
-          source.touch(mode=0o600)
-          source.write_bytes(raw)
-          env = dict(os.environ, KS_PASS='localbuild')
-          def keytool(*args, check=False, text=True):
-              return subprocess.run(['keytool', '-J-Duser.language=en', *map(str, args)], env=env,
-                                    capture_output=True, text=text, check=check)
-          listing = keytool('-list', '-v', '-keystore', source, '-storepass:env', 'KS_PASS')
-          if listing.returncode:
-              fail("keytool could not open the keystore in EJEMPLO with the build password 'localbuild'")
-          match = None
-          for alias in re.findall(r'^Alias name: (.+)$', listing.stdout, re.M):
-              certificate = keytool('-exportcert', '-keystore', source, '-storepass:env', 'KS_PASS', '-alias', alias, text=False)
-              if certificate.returncode == 0 and hashlib.sha256(certificate.stdout).hexdigest() == expected:
-                  match = alias
-                  break
-          if match is None:
-              fail(f'No entry in EJEMPLO has the permanent Inhouse certificate {expected}')
-          # Normalise to one PKCS#12 entry "inhouse" for apksigner.
-          target = temp / 'inhouse.p12'
-          target.unlink(missing_ok=True)
-          keytool('-importkeystore', '-noprompt', '-srckeystore', source, '-srcstorepass:env', 'KS_PASS', '-srcalias', match,
-                  '-destkeystore', target, '-deststoretype', 'PKCS12', '-destalias', 'inhouse',
-                  '-deststorepass:env', 'KS_PASS', '-destkeypass:env', 'KS_PASS', check=True)
-          source.unlink()
-          print('Permanent Inhouse key ready; certificate SHA-256', expected)
+          import json, os
+          info = json.load(open('build-info.json'))
+          expected = {'source': os.environ['GITHUB_REPOSITORY'], 'sha': os.environ['GITHUB_SHA'],
+                      'version': os.environ['VERSION'], 'versionCode': int(os.environ['CODE']),
+                      'signerSha256': os.environ['INHOUSE_SIGNER_SHA256']}
+          for key, value in expected.items():
+              assert info.get(key) == value, f'build-info.json {key}: {info.get(key)!r} is not {value!r}'
+          print('Staged APK matches this commit:', json.dumps(info))
           PY
+          mkdir -p ../dist
+          cp "inhouse-learn-$VERSION.apk" ../dist/
       - name: Prepare a throwaway test key
         if: env.PUBLISH != 'true'
         run: |
           keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/inhouse.p12" -storetype PKCS12 \
             -storepass localbuild -keypass localbuild -alias inhouse -keyalg RSA -keysize 2048 \
             -validity 30 -dname 'CN=Inhouse Learn CI test key (not for release)'
-      - name: Sign and verify package, version and signer
+      - name: Sign the local build with the test key
+        if: env.PUBLISH != 'true'
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          CODE: ${{ steps.version.outputs.code }}
         run: |
           tools="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           mkdir -p build/dist
           "$tools/zipalign" -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk build/aligned.apk
           KS_PASS=localbuild "$tools/apksigner" sign --ks "$RUNNER_TEMP/inhouse.p12" --ks-key-alias inhouse \
             --ks-pass env:KS_PASS --key-pass env:KS_PASS --out "build/dist/inhouse-learn-$VERSION.apk" build/aligned.apk
+      - name: Verify package, version and signer; write the update manifest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
+        run: |
+          tools="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           apk="build/dist/inhouse-learn-$VERSION.apk"
           "$tools/apksigner" verify --print-certs "$apk" | tee build/signers.txt
           "$tools/aapt2" dump badging "$apk" | head -1 | tee build/badging.txt
@@ -195,9 +187,9 @@ jobs:
           open('build/dist/android-update.json', 'w').write(json.dumps(manifest, indent=2) + '\n')
           print(json.dumps(manifest))
           PY
-      - name: Delete the keys from the runner
+      - name: Delete the test key from the runner
         if: always()
-        run: rm -f "$RUNNER_TEMP/inhouse.p12" "$RUNNER_TEMP/inhouse-source.keystore"
+        run: rm -f "$RUNNER_TEMP/inhouse.p12"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.PUBLISH == 'true' && 'inhouse-learn-release' || 'inhouse-learn-test-signed' }}
