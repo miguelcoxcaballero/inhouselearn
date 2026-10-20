@@ -149,6 +149,16 @@
       transition: background 0.2s var(--ease);
     }
     .model-trigger-brand svg { width: 12px; height: 12px; display: block; }
+    .brand-logo { display: block; width: 62%; height: 62%; object-fit: contain; }
+    .model-trigger-brand:has(.brand-logo), .model-card-icon:has(.brand-logo) {
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.09);
+    }
+    .msg-attribution .brand-logo { width: 12px; height: 12px; flex: 0 0 auto; }
+    .company-chip-logo {
+      width: 16px; height: 16px; margin: 0 6px 0 -4px; padding: 2px; box-sizing: border-box;
+      border-radius: 50%; background: #fff; object-fit: contain; flex: 0 0 auto;
+    }
     .model-trigger-copy {
       flex: 1;
       min-width: 0;
@@ -278,6 +288,7 @@
       border-radius: 999px; border: 1px solid var(--border-strong);
       background: var(--surface); color: var(--text-secondary);
       font: inherit; font-size: 0.76rem; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center;
       transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
     .company-chip:hover { color: var(--text); border-color: rgba(0,0,0,0.2); }
@@ -3570,7 +3581,67 @@
       return '--brand-color: hsl(' + hue + ' 42% 46%)';
     }
 
+    // Logo de cada compañía (icons/companies, de LobeHub Icons, MIT) por su slug en
+    // OpenRouter (lo que va antes de la / del ID). Las que no tienen logo llevan su inicial.
+    const COMPANY_LOGOS = {
+      openai: 'openai',
+      qwen: 'qwen',
+      google: 'google',
+      anthropic: 'claude',
+      mistralai: 'mistral',
+      'z-ai': 'zai',
+      deepseek: 'deepseek',
+      nvidia: 'nvidia',
+      minimax: 'minimax',
+      meta: 'meta',
+      'meta-llama': 'meta',
+      moonshotai: 'moonshot',
+      'x-ai': 'xai',
+      tencent: 'tencent',
+      cohere: 'cohere',
+      'bytedance-seed': 'bytedance',
+      bytedance: 'bytedance',
+      'aion-labs': 'aionlabs',
+      openrouter: 'openrouter',
+      xiaomi: 'xiaomimimo',
+      amazon: 'aws',
+      perplexity: 'perplexity',
+      poolside: 'poolside',
+      sakana: 'sakana',
+      stepfun: 'stepfun',
+      'stepfun-ai': 'stepfun',
+      upstage: 'upstage',
+      inclusionai: 'antgroup',
+      inception: 'inception',
+      nousresearch: 'nousresearch',
+      liquid: 'liquid',
+      'ibm-granite': 'ibm',
+      relace: 'relace',
+      morph: 'morph',
+      rekaai: 'reka',
+      meituan: 'longcat',
+      cognitivecomputations: 'venice',
+      fireworks: 'fireworks',
+      microsoft: 'microsoft',
+      'arcee-ai': 'arcee',
+      'dots-studio': 'dotsstudio',
+      perceptron: 'perceptron',
+      alibaba: 'alibaba',
+      baidu: 'baidu',
+      thudm: 'zhipu',
+      ai21: 'ai21',
+      '01-ai': 'yi',
+      allenai: 'ai2'
+    };
+
+    function companyLogoSrc(companyId) {
+      const file = COMPANY_LOGOS[String(companyId || '').replace(/^~/, '')];
+      return file ? 'icons/companies/' + file + '.svg' : '';
+    }
+
     function brandIconSvg(modelId) {
+      const logo = companyLogoSrc(companyIdOf(modelId));
+      if (logo) return '<img class="brand-logo" src="' + logo + '" alt="" decoding="async">';
       return providerLetterIcon(escapeHtml(companyLabelFor(modelId).charAt(0).toUpperCase() || '?'));
     }
 
@@ -5455,7 +5526,12 @@
       });
       const chips = [{ id: '', label: 'Todas', count: modelCatalog.entries.length }].concat(Array.from(companies.values()));
       elements.companyChips.classList.toggle('hidden', !modelCatalog.entries.length);
-      elements.companyChips.innerHTML = chips.map((chip) => '<button type="button" class="company-chip' + (chip.id === modelPicker.company ? ' active' : '') + '" data-company-id="' + escapeHtml(chip.id) + '" title="' + chip.count + ' modelos">' + escapeHtml(chip.label) + '</button>').join('');
+      elements.companyChips.innerHTML = chips.map((chip) => {
+        const logo = chip.id ? companyLogoSrc(chip.id) : '';
+        return '<button type="button" class="company-chip' + (chip.id === modelPicker.company ? ' active' : '') + '" data-company-id="' + escapeHtml(chip.id) + '" title="' + chip.count + ' modelos">' +
+          (logo ? '<img class="company-chip-logo" src="' + logo + '" alt="" decoding="async">' : '') +
+          escapeHtml(chip.label) + '</button>';
+      }).join('');
     }
 
     function renderModelList() {
