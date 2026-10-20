@@ -1,29 +1,33 @@
-// Motor de inhouse learn sobre pi: pi-ai pone los proveedores y el streaming, y
-// pi-agent-core el bucle del agente con herramientas. Se empaqueta como
-// window.InhousePi para que index.html lo use sin build propio.
+// Motor de inhouse learn sobre pi: pi-ai pone el proveedor (OpenRouter), el
+// streaming y el coste, y pi-agent-core el bucle del agente con herramientas.
+// Se empaqueta como window.InhousePi para que index.html lo use sin build propio.
+//
+// No hay catálogo fijo: los modelos salen en vivo de GET /models de OpenRouter,
+// con sus precios, límites y niveles de razonamiento.
 import { createModels, createProvider, getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy';
 import { openRouterCost } from '@earendil-works/pi-ai/providers/openrouter-api';
 import { Agent } from '@earendil-works/pi-agent-core';
 import JSZip from 'jszip';
-import catalog from './catalog.json';
-import { geminiApi } from './gemini-api.js';
 import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
 
 export { createWorkspaceTools, normalizePath, runInSandbox };
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-export const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-export const UI_THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high'];
+// xhigh solo se ofrece si el modelo no tiene max (ver thinkingLevels).
+export const UI_THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 
-const ZERO_COST = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+// Tope de salida por petición: OpenRouter reserva saldo según max_tokens, así que
+// pedir el máximo del modelo (a veces cientos de miles) da 402 con poco saldo.
+const MAX_OUTPUT_TOKENS = 32768;
 const MAX_STEP_OUTPUT = 4000;
+const EFFORT_FOR_LEVEL = { off: 'none', minimal: 'minimal', low: 'low', medium: 'medium', high: 'high', xhigh: 'xhigh', max: 'max' };
+const LEVEL_FOR_EFFORT = Object.fromEntries(Object.entries(EFFORT_FOR_LEVEL).map(([level, effort]) => [effort, level]));
 
-// Lo que pone la app: key de OpenRouter, cabeceras propias y el acceso a Gemini.
+// Lo que pone la app: key de OpenRouter y cabeceras propias.
 const hooks = {
   getOpenRouterKey: () => '',
-  openRouterHeaders: {},
-  gemini: null
+  openRouterHeaders: {}
 };
 
 export function configure(next) {
@@ -44,124 +48,141 @@ models.setProvider(createProvider({
       }
     }
   },
-  models: catalog.openrouter,
-  api: openAICompletionsApi()
-}));
-models.setProvider(createProvider({
-  id: 'gemini',
-  name: 'Gemini',
-  baseUrl: GEMINI_API_BASE_URL,
-  // La autenticación (token de Google o API key) la pone la app en hooks.gemini.fetch.
-  auth: { apiKey: { name: 'Cuenta de Google o API key de Gemini', resolve: async () => ({ auth: {} }) } },
   models: [],
-  api: geminiApi(() => {
-    if (!hooks.gemini) throw new Error('Entra con Google para usar Gemini.');
-    return hooks.gemini;
-  })
+  api: openAICompletionsApi()
 }));
 
 // ─── Modelos ─────────────────────────────────────────
 
-const catalogOpenRouter = new Map(catalog.openrouter.map((model) => [model.id, model]));
-const listedOpenRouter = new Map();
-let listingPromise = null;
+const registered = new Map();
 
-function openRouterModelFromListing(entry) {
+function isChatModel(entry) {
+  const id = String((entry && entry.id) || '');
+  const arch = (entry && entry.architecture) || {};
+  const input = arch.input_modalities || ['text'];
+  const output = arch.output_modalities || ['text'];
+  return !!id && !id.startsWith('~') && !id.endsWith(':batch') &&
+    input.includes('text') && output.includes('text') && !output.includes('image') && !output.includes('audio');
+}
+
+function perMillion(value) {
+  const perToken = parseFloat(value);
+  return Number.isFinite(perToken) && perToken > 0 ? Number((perToken * 1e6).toFixed(4)) : 0;
+}
+
+function titleCase(slug) {
+  return String(slug || '').split(/[-_]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+/** Resumen de un modelo del listado: lo que necesitan la UI, la caché y pi. */
+function summarize(entry, rank) {
+  const companyId = entry.id.split('/')[0];
+  const [first, ...rest] = String(entry.name || entry.id).split(': ');
   const params = entry.supported_parameters || [];
-  const modalities = (entry.architecture && entry.architecture.input_modalities) || ['text'];
+  const reasoning = entry.reasoning || (params.includes('reasoning') ? {} : null);
+  const benchmarks = entry.benchmarks && entry.benchmarks.artificial_analysis;
   return {
     id: entry.id,
-    name: entry.name || entry.id,
+    name: rest.length ? rest.join(': ') : first,
+    company: rest.length ? first : titleCase(companyId),
+    companyId,
+    rank,
+    created: entry.created || 0,
+    pricing: entry.pricing || {},
+    price: { input: perMillion(entry.pricing && entry.pricing.prompt), output: perMillion(entry.pricing && entry.pricing.completion) },
+    context: (entry.top_provider && entry.top_provider.context_length) || entry.context_length || 0,
+    maxOutput: (entry.top_provider && entry.top_provider.max_completion_tokens) || 0,
+    images: ((entry.architecture && entry.architecture.input_modalities) || []).includes('image'),
+    tools: params.includes('tools'),
+    reasoning: reasoning && {
+      efforts: Array.isArray(reasoning.supported_efforts) ? reasoning.supported_efforts : [],
+      defaultEffort: reasoning.default_effort || null,
+      defaultEnabled: reasoning.default_enabled !== false,
+      mandatory: !!reasoning.mandatory
+    },
+    intelligence: benchmarks && typeof benchmarks.intelligence_index === 'number' ? benchmarks.intelligence_index : null
+  };
+}
+
+function thinkingLevelMapFrom(reasoning) {
+  if (!reasoning || !reasoning.efforts || !reasoning.efforts.length) return reasoning && reasoning.mandatory ? { off: null } : undefined;
+  const map = {};
+  for (const [level, effort] of Object.entries(EFFORT_FOR_LEVEL)) {
+    map[level] = reasoning.efforts.includes(effort) ? effort : null;
+  }
+  if (reasoning.mandatory) map.off = null;
+  return map;
+}
+
+function piModelFrom(summary) {
+  return {
+    id: summary.id,
+    name: summary.name,
     api: 'openai-completions',
     provider: 'openrouter',
     baseUrl: OPENROUTER_BASE_URL,
-    reasoning: params.includes('reasoning'),
-    input: modalities.filter((kind) => kind === 'text' || kind === 'image'),
-    cost: entry.pricing ? openRouterCost(entry.pricing) : ZERO_COST,
-    contextWindow: (entry.top_provider && entry.top_provider.context_length) || entry.context_length || 128000,
-    maxTokens: (entry.top_provider && entry.top_provider.max_completion_tokens) || 32768,
-    compat: { thinkingFormat: 'openrouter', supportsDeveloperRole: false, sendSessionAffinityHeaders: true }
+    reasoning: !!summary.reasoning,
+    thinkingLevelMap: thinkingLevelMapFrom(summary.reasoning),
+    input: summary.images ? ['text', 'image'] : ['text'],
+    cost: openRouterCost(summary.pricing),
+    contextWindow: summary.context || 128000,
+    maxTokens: Math.min(summary.maxOutput || MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
+    compat: { thinkingFormat: 'openrouter' }
   };
 }
 
-// Modelo sin datos todavía (ID personalizado antes de consultar el listado).
-function openRouterFallback(id) {
-  return openRouterModelFromListing({ id, supported_parameters: ['reasoning', 'tools'], architecture: { input_modalities: ['text', 'image'] } });
-}
-
-/** Trae del listado público de OpenRouter los modelos que no están en el catálogo de pi. */
-export async function prepareOpenRouterModel(id) {
-  if (!id || catalogOpenRouter.has(id) || listedOpenRouter.has(id)) return;
-  if (!listingPromise) {
-    listingPromise = fetch(OPENROUTER_BASE_URL + '/models')
-      .then((response) => (response.ok ? response.json() : { data: [] }))
-      .then((body) => {
-        for (const entry of body.data || []) {
-          if (entry && entry.id && !catalogOpenRouter.has(entry.id)) {
-            listedOpenRouter.set(entry.id, openRouterModelFromListing(entry));
-          }
-        }
-      })
-      .catch(() => {
-        listingPromise = null;
-      });
+/** Registra en pi una lista de modelos ya resumida (p. ej. la de la caché local). */
+export function registerOpenRouterModels(summaries) {
+  for (const summary of summaries || []) {
+    if (summary && summary.id) registered.set(summary.id, { summary, model: piModelFrom(summary) });
   }
-  await listingPromise;
 }
 
-const geminiTemplates = new Map(catalog.gemini.map((model) => [model.id, model]));
+/**
+ * Pide a OpenRouter todos sus modelos de chat. Por defecto en el orden de
+ * "más usados esta semana", que es lo que la app muestra como recomendados.
+ */
+export async function fetchOpenRouterModels(options = {}) {
+  const sort = options.sort || 'top-weekly';
+  const response = await fetch(OPENROUTER_BASE_URL + '/models?sort=' + encodeURIComponent(sort), { signal: options.signal });
+  if (!response.ok) throw new Error('OpenRouter respondió ' + response.status + ' al pedir la lista de modelos.');
+  const body = await response.json();
+  const summaries = (body.data || []).filter(isChatModel).map((entry, index) => summarize(entry, index));
+  registerOpenRouterModels(summaries);
+  return summaries;
+}
 
-function geminiTemplate(id) {
-  if (geminiTemplates.has(id)) return geminiTemplates.get(id);
-  // Modelos más nuevos que el catálogo de pi: se toman los controles de
-  // razonamiento de su familia.
-  if (/^gemini-([3-9]|\d{2})/.test(id)) {
-    return geminiTemplates.get(id.includes('pro') ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview') || {};
+// ID que no está en el listado (escrito a mano): se trata como modelo genérico.
+function fallbackModel(id) {
+  return piModelFrom({ id, name: id, pricing: {}, images: true, reasoning: { efforts: [], defaultEnabled: true, mandatory: false }, context: 0, maxOutput: 0 });
+}
+
+export function getModel(id) {
+  const entry = registered.get(id);
+  return entry ? entry.model : fallbackModel(id);
+}
+
+/** Niveles de razonamiento que la UI puede ofrecer para un modelo (vacío si no razona). */
+export function thinkingLevels(id) {
+  const model = getModel(id);
+  if (!model.reasoning) return [];
+  const supported = getSupportedThinkingLevels(model);
+  const levels = UI_THINKING_LEVELS.filter((level) => supported.includes(level));
+  return levels.includes('max') ? levels.filter((level) => level !== 'xhigh') : levels;
+}
+
+/** Nivel por defecto: el que OpenRouter dice que usa el modelo si no se pide otro. */
+export function defaultThinkingLevel(id) {
+  const levels = thinkingLevels(id);
+  if (!levels.length) return '';
+  const entry = registered.get(id);
+  const reasoning = entry && entry.summary.reasoning;
+  if (reasoning) {
+    if (!reasoning.defaultEnabled && levels.includes('off')) return 'off';
+    const fromEffort = reasoning.defaultEffort && LEVEL_FOR_EFFORT[reasoning.defaultEffort];
+    if (fromEffort && levels.includes(fromEffort)) return fromEffort;
   }
-  return {};
-}
-
-export function getGeminiModel(id) {
-  const template = geminiTemplate(id);
-  return {
-    id,
-    name: id,
-    api: 'gemini-api',
-    provider: 'gemini',
-    baseUrl: GEMINI_API_BASE_URL,
-    reasoning: template.reasoning !== false,
-    // 2.5 Pro no deja apagar el razonamiento (presupuesto mínimo 128).
-    thinkingLevelMap: template.thinkingLevelMap || (id.includes('2.5-pro') ? { off: null } : undefined),
-    input: template.input || ['text', 'image'],
-    cost: ZERO_COST,
-    contextWindow: template.contextWindow || 1048576,
-    maxTokens: Math.min(template.maxTokens || 65536, 65536)
-  };
-}
-
-export function getModel(provider, id) {
-  if (provider === 'gemini') return getGeminiModel(id);
-  return catalogOpenRouter.get(id) || listedOpenRouter.get(id) || openRouterFallback(id);
-}
-
-/** Niveles de razonamiento que la UI puede ofrecer para un modelo. */
-export function thinkingLevels(provider, id) {
-  const supported = getSupportedThinkingLevels(getModel(provider, id));
-  return UI_THINKING_LEVELS.filter((level) => supported.includes(level));
-}
-
-export function modelInfo(provider, id) {
-  const model = getModel(provider, id);
-  return {
-    id: model.id,
-    name: model.name,
-    images: model.input.includes('image'),
-    reasoning: !!model.reasoning,
-    thinkingLevels: thinkingLevels(provider, id),
-    cost: model.cost,
-    contextWindow: model.contextWindow,
-    known: provider === 'gemini' || catalogOpenRouter.has(id) || listedOpenRouter.has(id)
-  };
+  return ['medium', 'low', 'high', 'minimal', 'max', 'xhigh', 'off'].find((level) => levels.includes(level));
 }
 
 // ─── Agente ──────────────────────────────────────────

@@ -109,17 +109,6 @@
       max-width: 520px;
     }
     :root {
-      --brand-codex: #10a37f;
-      --brand-gemini: #4285f4;
-      --brand-claude: #c96442;
-      --brand-gemma: #7c3aed;
-      --brand-deepseek: #4d6bfe;
-      --brand-zai: #3d3d4e;
-      --brand-minimax: #e5484d;
-      --brand-anthropic: #c96442;
-      --brand-openai: #10a37f;
-      --brand-kimi: #1783ff;
-      --brand-custom: #7c3aed;
     }
     .model-trigger {
       width: 100%;
@@ -155,10 +144,6 @@
       transition: background 0.2s var(--ease);
     }
     .model-trigger-brand svg { width: 12px; height: 12px; display: block; }
-    .model-trigger-brand[data-provider="codex"] { --brand-color: var(--brand-codex); }
-    .model-trigger-brand[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
-    .model-trigger-brand[data-provider="claude"] { --brand-color: var(--brand-claude); }
-    .model-trigger-brand[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
     .model-trigger-copy {
       flex: 1;
       min-width: 0;
@@ -217,7 +202,7 @@
       padding: 14px;
       border-radius: 18px;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,0.97);
+      background: var(--surface);
       box-shadow: var(--shadow-lg);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
@@ -260,55 +245,51 @@
       margin-bottom: 6px;
     }
 
-    .provider-segmented {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      padding: 3px;
-      background: rgba(0,0,0,0.04);
-      border-radius: 12px;
-      border: 1px solid var(--border);
+    .model-search {
+      position: relative;
+      margin-bottom: 8px;
     }
-    .provider-chip {
-      display: inline-flex; align-items: center; justify-content: center;
-      gap: 6px;
-      height: 32px;
-      padding: 0 8px;
-      border: none;
-      background: transparent;
-      border-radius: 9px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      transition: background 0.16s var(--ease), color 0.16s var(--ease), box-shadow 0.16s var(--ease);
-      min-width: 0;
+    .model-search svg {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      width: 15px; height: 15px; color: var(--muted); pointer-events: none;
     }
-    .provider-chip:hover:not(.active) {
-      color: var(--text);
-      background: rgba(0,0,0,0.03);
+    .model-search input {
+      width: 100%; height: 36px; padding: 0 12px 0 32px;
+      border: 1px solid var(--border-strong); border-radius: 10px;
+      background: var(--surface); color: var(--text);
+      font: inherit; font-size: 0.85rem; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .provider-chip.active {
-      background: var(--surface);
-      color: var(--text);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px var(--border);
+    .model-search input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.15); }
+    .model-search input::-webkit-search-cancel-button { cursor: pointer; }
+    .company-chips {
+      display: flex; gap: 6px; overflow-x: auto;
+      margin: 0 -14px 8px; padding: 0 14px 2px;
+      scrollbar-width: none;
     }
-    .provider-chip-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--brand-color, var(--muted));
-      flex: 0 0 auto;
+    .company-chips::-webkit-scrollbar { display: none; }
+    .company-chip {
+      flex-shrink: 0; height: 28px; padding: 0 10px;
+      border-radius: 999px; border: 1px solid var(--border-strong);
+      background: var(--surface); color: var(--text-secondary);
+      font: inherit; font-size: 0.76rem; font-weight: 500; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
-    .provider-chip[data-provider="codex"] { --brand-color: var(--brand-codex); }
-    .provider-chip[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
-    .provider-chip[data-provider="claude"] { --brand-color: var(--brand-claude); }
-    .provider-chip[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
-
+    .company-chip:hover { color: var(--text); border-color: rgba(0,0,0,0.2); }
+    .company-chip.active { background: var(--text); border-color: var(--text); color: #fff; }
+    .model-list-heading {
+      display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px;
+      padding: 8px 4px 4px; font-size: 0.74rem; font-weight: 500; color: var(--text-secondary);
+    }
+    .model-list-heading:first-child { padding-top: 2px; }
+    .model-list-heading span { white-space: nowrap; }
+    .model-list-heading small { font-size: 0.68rem; font-weight: 400; color: var(--muted); }
+    .model-list-note { padding: 8px 4px; font-size: 0.74rem; color: var(--muted); line-height: 1.45; }
     .model-list {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      max-height: 260px;
+      gap: 2px;
+      max-height: 320px;
       overflow-y: auto;
       padding: 2px;
       margin: -2px;
@@ -343,10 +324,6 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
     }
     .model-card-icon svg { width: 13px; height: 13px; }
-    .model-card[data-provider="codex"] { --brand-color: var(--brand-codex); }
-    .model-card[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
-    .model-card[data-provider="claude"] { --brand-color: var(--brand-claude); }
-    .model-card[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
     .model-card-main {
       flex: 1; min-width: 0;
       display: flex; flex-direction: column; gap: 1px;
@@ -356,10 +333,12 @@
       color: var(--text);
       letter-spacing: -0.01em;
       line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .model-card-sub {
       font-size: 0.7rem; color: var(--muted);
       line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .model-card-badge {
       font-size: 0.68rem;
@@ -2008,7 +1987,7 @@
       .topbar-popover { right: auto; left: 0; width: min(380px, calc(100vw - 20px)); }
       .model-popover { width: min(380px, calc(100vw - 20px)); }
       .profile-popover { left: auto; right: 0; }
-      .model-list { max-height: 220px; }
+      .model-list { max-height: 40vh; }
       .sidebar {
         position: fixed; inset: var(--topbar-h) auto 0 0; width: 280px; z-index: 60;
         transform: translateX(-100%);
@@ -2114,10 +2093,6 @@
       display: block; flex: 0 0 auto;
       color: var(--brand-color, var(--muted));
     }
-    .msg-attribution[data-provider="codex"] { --brand-color: var(--brand-codex); }
-    .msg-attribution[data-provider="gemini"] { --brand-color: var(--brand-gemini); }
-    .msg-attribution[data-provider="claude"] { --brand-color: var(--brand-claude); }
-    .msg-attribution[data-provider="gemma"] { --brand-color: var(--brand-gemma); }
     .msg-attribution-sep { opacity: 0.5; }
     @media (max-width: 768px) {
       .msg-attribution { opacity: 0.6; }
@@ -2284,13 +2259,6 @@
       color: #b91c1c;
     }
 
-    [data-provider="deepseek"] { --brand-color: var(--brand-deepseek); }
-    [data-provider="zai"] { --brand-color: var(--brand-zai); }
-    [data-provider="minimax"] { --brand-color: var(--brand-minimax); }
-    [data-provider="anthropic"] { --brand-color: var(--brand-anthropic); }
-    [data-provider="openai"] { --brand-color: var(--brand-openai); }
-    [data-provider="kimi"] { --brand-color: var(--brand-kimi); }
-    [data-provider="custom"] { --brand-color: var(--brand-custom); }
     .api-key-section {
       margin-top: 4px;
       padding-top: 10px;
@@ -2332,7 +2300,6 @@
     .google-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
     .google-account-copy { font-size: 0.8rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
     .google-account-row .btn { flex: 0 0 auto; }
-    .gemini-key-row { margin-top: 8px; }
     .model-popover-status.error { color: #b42318; }
     .model-card-badge.price { font-variant-numeric: tabular-nums; }
     .model-card-badge.pick { background: rgba(224, 122, 60, 0.14); color: #c2410c; }
@@ -2398,27 +2365,21 @@
           <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Configuración del modelo">
             <div class="model-popover-head">
               <div class="model-popover-title">Modelo del chat</div>
-              <div class="model-popover-status" id="model-menu-status">Elige compañía, modelo y razonamiento para este chat.</div>
+              <div class="model-popover-status" id="model-menu-status"></div>
             </div>
 
-            <div class="model-popover-section">
-              <div class="model-popover-section-label">Compañía</div>
-              <div class="provider-segmented" id="provider-segmented" role="tablist"></div>
+            <div class="model-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
+              <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
             </div>
-
+            <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
             <div class="model-popover-section">
-              <div class="model-popover-section-label">Modelo</div>
-              <div class="model-list" id="model-list" role="radiogroup"></div>
+              <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
             </div>
 
             <div class="model-popover-section hidden" id="thinking-section">
               <div class="model-popover-section-label">Razonamiento</div>
               <div class="thinking-segmented" id="thinking-segmented" role="radiogroup"></div>
-            </div>
-
-            <div class="model-popover-section hidden" id="custom-model-section">
-              <div class="model-popover-section-label">ID del modelo en OpenRouter</div>
-              <input class="api-input" id="custom-model-input" type="text" placeholder="moonshotai/kimi-k3" autocomplete="off" spellcheck="false">
             </div>
 
             <div class="model-popover-section api-key-section" id="api-key-section">
@@ -2430,18 +2391,6 @@
               <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
             </div>
 
-            <div class="model-popover-section api-key-section hidden" id="google-section">
-              <div class="model-popover-section-label">Cuenta de Google</div>
-              <div class="google-account-row">
-                <div class="google-account-copy" id="google-account-copy"></div>
-                <button class="btn btn-primary btn-sm" id="google-login-btn" type="button">Entrar con Google</button>
-              </div>
-              <div class="api-key-row gemini-key-row">
-                <input class="api-input" id="gemini-key-input" type="password" placeholder="API key de AI Studio (opcional)" autocomplete="off" spellcheck="false">
-                <button class="btn btn-outline btn-sm" id="gemini-key-btn" type="button">Guardar</button>
-              </div>
-              <div class="api-key-hint" id="google-hint">Va por la API de Gemini, con su capa gratuita. Con la sesión de Google gasta la cuota del proyecto de Google Cloud de esta app; con una key de <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">AI Studio</a>, la de tu propia cuenta.</div>
-            </div>
           </div>
         </div>
       </div>
@@ -2453,7 +2402,7 @@
           </button>
           <div class="topbar-popover profile-popover hidden" id="profile-popup">
             <div class="profile-menu-name" id="profile-menu-name">Sin iniciar sesión</div>
-            <div class="profile-menu-email" id="profile-menu-email">Entra con Google para guardar el historial en Drive y usar Gemini.</div>
+            <div class="profile-menu-email" id="profile-menu-email">Entra con Google para guardar el historial en Drive.</div>
             <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
           </div>
         </div>
@@ -2563,9 +2512,10 @@
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
       GOOGLE_CLOUD_PROJECT: '',
-      DEFAULT_PROVIDER: 'deepseek',
-      DEFAULT_MODEL: 'deepseek/deepseek-v4.1-flash-1017',
-      DEFAULT_THINKING_LEVEL: 'medium',
+      DEFAULT_PROVIDER: 'openrouter',
+      // Sin modelo fijo: por defecto, el más usado esta semana en OpenRouter.
+      DEFAULT_MODEL: '',
+      DEFAULT_THINKING_LEVEL: '',
       SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension, but never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
       GUIDED_LEARNING_PROMPT: [
         'Estás en modo "Guided Learning" de inhouse learn. El usuario está estudiando: quiere entender en profundidad, no correr. Habla siempre en español, tuteo informal, tono cercano.',
@@ -2701,179 +2651,6 @@
       '',
       'RECORDATORIO FINAL: si no cierras con <guided-state>{...}</guided-state> el producto se rompe. Ese bloque es obligatorio en TODOS tus mensajes mientras Guided Learning este activo.'
     ].join('\n');
-
-    // Catalogo de modelos via OpenRouter. Precio = USD por 1M tokens (entrada / salida).
-    // Los niveles de razonamiento de cada modelo los pone pi (syncModelCapabilities).
-    const CUSTOM_MODEL_ID = 'custom';
-    const REASONING_LEVELS = InhousePi.UI_THINKING_LEVELS.slice();
-
-    const PROVIDER_OPTIONS = [
-      { id: 'gemini', label: 'Gemini' },
-      { id: 'deepseek', label: 'DeepSeek' },
-      { id: 'zai', label: 'Z.ai' },
-      { id: 'minimax', label: 'MiniMax' },
-      { id: 'anthropic', label: 'Claude' },
-      { id: 'openai', label: 'OpenAI' },
-      { id: 'kimi', label: 'Kimi' },
-      { id: 'custom', label: 'Otro' }
-    ];
-
-    const MODEL_OPTIONS = [
-      {
-        provider: 'deepseek',
-        id: 'deepseek/deepseek-v4.1-flash-1017',
-        label: 'DeepSeek V4.1 Flash',
-        badge: 'Por defecto',
-        price: '$0.15 / $0.60',
-        priceNote: 'Lun-vie de 01:00 a 04:00 y de 06:00 a 10:00 UTC sube a $0.30 / $1.20',
-        pick: true,
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'zai',
-        id: 'z-ai/glm-5.3-flashx',
-        label: 'GLM-5.3 FlashX',
-        badge: 'Rápido',
-        price: '$0.37 / $1.25',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'zai',
-        id: 'z-ai/glm-5.3-prime',
-        label: 'GLM-5.3 Prime',
-        badge: 'Más capaz',
-        price: '$2.80 / $8.80',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'minimax',
-        id: 'minimax/minimax-m3.1-flash:free',
-        label: 'MiniMax M3.1 Flash',
-        badge: 'Gratis',
-        price: 'Gratis',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'anthropic',
-        id: 'anthropic/claude-haiku-5.5',
-        label: 'Claude Haiku 5.5',
-        badge: 'Rápido',
-        price: '$0.10 / $0.50',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'anthropic',
-        id: 'anthropic/claude-sonnet-5.5',
-        label: 'Claude Sonnet 5.5',
-        badge: 'Equilibrado',
-        price: '$2 / $10',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'anthropic',
-        id: 'anthropic/claude-opus-5.5',
-        label: 'Claude Opus 5.5',
-        badge: 'El más capaz',
-        price: '$4 / $20',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'openai',
-        id: 'openai/gpt-6-luna',
-        label: 'GPT-6 Luna',
-        badge: 'Rápido',
-        price: '$0.10 / $0.50',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'openai',
-        id: 'openai/gpt-6-sol',
-        label: 'GPT-6 Sol',
-        badge: 'Más capaz',
-        price: '$2 / $10',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'kimi',
-        id: 'moonshotai/kimi-k2.7-code',
-        label: 'Kimi K2.7 Code',
-        badge: 'Para programar',
-        price: '$0.67 / $3.35',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      },
-      {
-        provider: 'custom',
-        id: CUSTOM_MODEL_ID,
-        label: 'Modelo personalizado',
-        badge: 'Cualquier ID de OpenRouter',
-        price: '',
-        thinkingLevels: REASONING_LEVELS,
-        defaultThinkingLevel: 'medium'
-      }
-    ];
-
-    // Gemini va por la API de Gemini. La lista buena sale de GET /models al entrar;
-    // esta es la de partida, con nombres del catálogo de pi.
-    const GEMINI_DEFAULT_MODELS = [
-      'gemini-3.1-pro-preview',
-      'gemini-3.8-flash',
-      'gemini-3.5-flash-lite',
-      'gemini-2.5-pro',
-      'gemini-2.5-flash'
-    ];
-
-    function geminiModelLabel(modelId) {
-      return String(modelId).split('-').map((word) => {
-        if (word === 'gemini') return 'Gemini';
-        return /^\d/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1);
-      }).join(' ').replace('Flash Lite', 'Flash-Lite');
-    }
-
-    function engineProviderFor(providerId) {
-      return providerId === 'gemini' ? 'gemini' : 'openrouter';
-    }
-
-    function preferredThinkingLevel(levels) {
-      return ['medium', 'low', 'high', 'minimal', 'off'].find((level) => levels.includes(level)) || '';
-    }
-
-    // Niveles de razonamiento según el catálogo de pi. Si solo cabe uno no se muestra selector.
-    function applyThinkingLevels(option, engineModelId) {
-      const levels = InhousePi.thinkingLevels(engineProviderFor(option.provider), engineModelId || option.id);
-      option.thinkingLevels = levels.length > 1 ? levels : [];
-      option.defaultThinkingLevel = preferredThinkingLevel(option.thinkingLevels);
-      return option;
-    }
-
-    function geminiModelOption(modelId) {
-      return applyThinkingLevels({
-        provider: 'gemini',
-        id: modelId,
-        label: geminiModelLabel(modelId),
-        badge: 'Gratis, con límites',
-        price: ''
-      });
-    }
-
-    function setGeminiModels(modelIds) {
-      const ids = modelIds && modelIds.length ? modelIds : GEMINI_DEFAULT_MODELS;
-      for (let i = MODEL_OPTIONS.length - 1; i >= 0; i--) {
-        if (MODEL_OPTIONS[i].provider === 'gemini') MODEL_OPTIONS.splice(i, 1);
-      }
-      MODEL_OPTIONS.unshift.apply(MODEL_OPTIONS, ids.map(geminiModelOption));
-    }
-
-    setGeminiModels(GEMINI_DEFAULT_MODELS);
 
     const STORAGE_KEY = 'inhouseGeminiStandaloneV1';
     const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -3497,20 +3274,13 @@
       modelTriggerMain: document.getElementById('model-trigger-main'),
       modelTriggerMeta: document.getElementById('model-trigger-meta'),
       modelTriggerBrand: document.getElementById('model-trigger-brand'),
-      providerSegmented: document.getElementById('provider-segmented'),
+      modelSearchInput: document.getElementById('model-search-input'),
+      companyChips: document.getElementById('company-chips'),
       modelList: document.getElementById('model-list'),
       thinkingSegmented: document.getElementById('thinking-segmented'),
       thinkingSection: document.getElementById('thinking-section'),
       apiKeyInput: document.getElementById('api-key-input'),
-      customModelSection: document.getElementById('custom-model-section'),
-      customModelInput: document.getElementById('custom-model-input'),
       loginBtn: document.getElementById('login-btn'),
-      apiKeySection: document.getElementById('api-key-section'),
-      googleSection: document.getElementById('google-section'),
-      googleAccountCopy: document.getElementById('google-account-copy'),
-      googleLoginBtn: document.getElementById('google-login-btn'),
-      geminiKeyInput: document.getElementById('gemini-key-input'),
-      geminiKeyBtn: document.getElementById('gemini-key-btn'),
       profileBtn: document.getElementById('profile-btn'),
       profilePopup: document.getElementById('profile-popup'),
       logoutMenuBtn: document.getElementById('logout-menu-btn'),
@@ -3584,49 +3354,148 @@
       return isConfigured(APP_CONFIG.GOOGLE_CLIENT_ID) && !!googleProjectRef();
     }
 
-    function getProviderOption(providerId) {
-      return PROVIDER_OPTIONS.find((option) => option.id === providerId)
-        || PROVIDER_OPTIONS.find((option) => option.id === APP_CONFIG.DEFAULT_PROVIDER);
+    // ─── MODELOS (OpenRouter, en vivo) ─────────────────
+    // La lista sale de GET /models de OpenRouter ordenada por "más usados esta
+    // semana", así que los primeros son los recomendados de ese momento. Se guarda
+    // en localStorage para pintar el selector al instante y se refresca cada hora.
+    const MODELS_CACHE_KEY = STORAGE_KEY + '::openrouterModels';
+    const MODELS_MAX_AGE_MS = 60 * 60 * 1000;
+    const RECOMMENDED_COUNT = 6;
+    const MODEL_LIST_LIMIT = 60;
+    // Solo mientras no ha llegado la lista: OpenRouter elige el modelo.
+    const FALLBACK_MODEL_ID = 'openrouter/auto';
+    const modelCatalog = { entries: [], byId: new Map(), search: new Map(), fetchedAt: 0, loading: null, error: '' };
+    const modelPicker = { query: '', company: '' };
+
+    function searchKey(text) {
+      return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     }
 
-    function normalizeProviderId(providerId) {
-      return getProviderOption(providerId || APP_CONFIG.DEFAULT_PROVIDER).id;
+    function setModelCatalog(entries, fetchedAt) {
+      modelCatalog.entries = entries;
+      modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
+      modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
+      modelCatalog.fetchedAt = fetchedAt || 0;
+      InhousePi.registerOpenRouterModels(entries);
     }
 
-    function modelOptionsForProvider(providerId) {
-      const resolvedProvider = normalizeProviderId(providerId);
-      return MODEL_OPTIONS.filter((option) => option.provider === resolvedProvider);
+    function loadModelCatalogFromCache() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) || 'null');
+        if (cached && Array.isArray(cached.entries) && cached.entries.length) {
+          setModelCatalog(cached.entries, Number(cached.fetchedAt) || 0);
+        }
+      } catch (_) {}
     }
 
-    function defaultModelForProvider(providerId) {
-      const options = modelOptionsForProvider(providerId);
-      return (options[0] || MODEL_OPTIONS[0]).id;
-    }
-
-    function getModelOption(modelId, providerId) {
-      const options = modelOptionsForProvider(providerId);
-      return options.find((option) => option.id === modelId) || options[0] || MODEL_OPTIONS[0];
-    }
-
-    function normalizeModelId(modelId, providerId) {
-      return getModelOption(modelId, providerId).id;
-    }
-
-    function defaultThinkingLevelForModel(providerId, modelId) {
-      return getModelOption(modelId, providerId).defaultThinkingLevel || '';
-    }
-
-    function normalizeThinkingLevelForModel(providerId, modelId, thinkingLevel) {
-      const option = getModelOption(modelId, providerId);
-      const allowedLevels = option.thinkingLevels || [];
-      if (!allowedLevels.length) {
-        return '';
+    function refreshModelCatalog(force) {
+      if (modelCatalog.loading) return modelCatalog.loading;
+      if (!force && modelCatalog.entries.length && Date.now() - modelCatalog.fetchedAt < MODELS_MAX_AGE_MS) {
+        return Promise.resolve(modelCatalog.entries);
       }
-      const rawLevel = String(thinkingLevel || '').trim().toLowerCase();
-      if (allowedLevels.includes(rawLevel)) {
-        return rawLevel;
+      const hadEntries = modelCatalog.entries.length > 0;
+      modelCatalog.loading = InhousePi.fetchOpenRouterModels({ sort: 'top-weekly' }).then((entries) => {
+        setModelCatalog(entries, Date.now());
+        modelCatalog.error = '';
+        try {
+          localStorage.setItem(MODELS_CACHE_KEY, JSON.stringify({ fetchedAt: modelCatalog.fetchedAt, entries }));
+        } catch (_) {}
+        if (!hadEntries) {
+          // Chats vacíos creados antes de tener la lista: pasan al recomendado.
+          appState.chats.forEach((chat) => {
+            if (!chat.messages.length && chat.model === FALLBACK_MODEL_ID) {
+              chat.model = defaultModelId();
+              chat.thinkingLevel = defaultThinkingLevelForModel(chat.model);
+            }
+          });
+        }
+        return entries;
+      }).catch((error) => {
+        modelCatalog.error = error && error.message ? error.message : String(error);
+        return modelCatalog.entries;
+      }).finally(() => {
+        modelCatalog.loading = null;
+        updateConfigUi();
+        renderHistory();
+      });
+      return modelCatalog.loading;
+    }
+
+    function catalogEntry(modelId) {
+      return modelCatalog.byId.get(modelId) || null;
+    }
+
+    function defaultModelId() {
+      return modelCatalog.entries.length ? modelCatalog.entries[0].id : FALLBACK_MODEL_ID;
+    }
+
+    function companyIdOf(modelId) {
+      const id = String(modelId || '');
+      return id.indexOf('/') > 0 ? id.split('/')[0] : 'openrouter';
+    }
+
+    function modelLabelFor(modelId) {
+      const entry = catalogEntry(modelId);
+      if (entry) return entry.name;
+      if (modelId === FALLBACK_MODEL_ID) return 'Automático';
+      return String(modelId || '').split('/').pop();
+    }
+
+    function companyLabelFor(modelId) {
+      const entry = catalogEntry(modelId);
+      if (entry) return entry.company;
+      const slug = companyIdOf(modelId);
+      return slug === 'openrouter' ? 'OpenRouter' : slug.charAt(0).toUpperCase() + slug.slice(1);
+    }
+
+    // Color estable por compañía, sacado de su nombre: sirve para cualquier compañía nueva.
+    function brandStyle(modelId) {
+      let hue = 0;
+      for (const char of companyIdOf(modelId)) hue = (hue * 31 + char.charCodeAt(0)) % 360;
+      return '--brand-color: hsl(' + hue + ' 42% 46%)';
+    }
+
+    function brandIconSvg(modelId) {
+      return providerLetterIcon(escapeHtml(companyLabelFor(modelId).charAt(0).toUpperCase() || '?'));
+    }
+
+    function normalizeModelId(modelId) {
+      const raw = String(modelId || '').trim();
+      if (raw === 'custom') {
+        // Versiones viejas guardaban el ID libre aparte.
+        const custom = getApiSettings().customModel.trim();
+        return custom.indexOf('/') > 0 ? custom : defaultModelId();
       }
-      return defaultThinkingLevelForModel(providerId, option.id);
+      // Los IDs de OpenRouter son compañía/modelo; lo demás (Gemini directo) es de versiones viejas.
+      return raw.indexOf('/') > 0 ? raw : defaultModelId();
+    }
+
+    function thinkingLevelsForModel(modelId) {
+      return InhousePi.thinkingLevels(modelId);
+    }
+
+    function defaultThinkingLevelForModel(modelId) {
+      return InhousePi.defaultThinkingLevel(modelId) || '';
+    }
+
+    function normalizeThinkingLevelForModel(modelId, thinkingLevel) {
+      const levels = thinkingLevelsForModel(modelId);
+      if (levels.length < 2) return levels[0] || '';
+      const raw = String(thinkingLevel || '').trim().toLowerCase();
+      return levels.includes(raw) ? raw : defaultThinkingLevelForModel(modelId);
+    }
+
+    function formatPerMillion(value) {
+      if (!value) return '0';
+      if (Number.isInteger(value)) return String(value);
+      if (value < 0.1) return String(Number(value.toFixed(3)));
+      return value < 100 ? value.toFixed(2) : String(Math.round(value));
+    }
+
+    function modelPriceLabel(entry) {
+      if (!entry) return '';
+      if (!entry.price.input && !entry.price.output) return 'Gratis';
+      return '$' + formatPerMillion(entry.price.input) + ' / $' + formatPerMillion(entry.price.output);
     }
 
     const GUIDED_STATE_TAG_START = '<guided-state>';
@@ -4264,9 +4133,17 @@
       if (!chat || typeof chat !== 'object') {
         return chat;
       }
-      chat.provider = normalizeProviderId(chat.provider || APP_CONFIG.DEFAULT_PROVIDER);
-      chat.model = normalizeModelId(chat.model || defaultModelForProvider(chat.provider), chat.provider);
-      chat.thinkingLevel = normalizeThinkingLevelForModel(chat.provider, chat.model, chat.thinkingLevel || APP_CONFIG.DEFAULT_THINKING_LEVEL);
+      chat.provider = 'openrouter';
+      // Un ID viejo (sin compañía/) no se pisa con el modelo provisional: se resuelve
+      // al leerlo y pasa al recomendado en cuanto llega la lista.
+      const resolvedModel = normalizeModelId(chat.model);
+      if (resolvedModel !== FALLBACK_MODEL_ID || String(chat.model || '').indexOf('/') > 0) {
+        chat.model = resolvedModel;
+      }
+      // Sin la lista todavía no se sabe qué niveles admite: se respeta el guardado.
+      if (catalogEntry(chat.model)) {
+        chat.thinkingLevel = normalizeThinkingLevelForModel(chat.model, chat.thinkingLevel);
+      }
       return chat;
     }
 
@@ -5021,7 +4898,6 @@
       if (!settings.preserveProfile) {
         appState.profile = null;
       }
-      resetGeminiSession();
     }
 
     function hasFreshGoogleAccessToken() {
@@ -5143,42 +5019,34 @@
       return activeChat ? normalizeChatConfig(activeChat) : null;
     }
 
-    function activeProviderName(chatLike) {
+    function activeModelName(chatLike) {
       const chat = getResolvedChat(chatLike);
-      return normalizeProviderId(chat && chat.provider ? chat.provider : APP_CONFIG.DEFAULT_PROVIDER);
+      return normalizeModelId(chat && chat.model);
+    }
+
+    // "Proveedor" de un mensaje = la compañía del modelo (para el icono y el color).
+    function activeProviderName(chatLike) {
+      return companyIdOf(activeModelName(chatLike));
     }
 
     function activeProviderLabel(chatLike) {
-      return getProviderOption(activeProviderName(chatLike)).label;
-    }
-
-    function activeModelName(chatLike) {
-      const chat = getResolvedChat(chatLike);
-      const providerId = activeProviderName(chat);
-      return normalizeModelId(chat && chat.model ? chat.model : defaultModelForProvider(providerId), providerId);
+      return companyLabelFor(activeModelName(chatLike));
     }
 
     function activeModelLabel(chatLike) {
-      return getModelOption(activeModelName(chatLike), activeProviderName(chatLike)).label;
+      return modelLabelFor(activeModelName(chatLike));
     }
 
     function activeModelBadge(chatLike) {
-      const modelId = activeModelName(chatLike);
-      if (modelId === CUSTOM_MODEL_ID) {
-        const custom = getApiSettings().customModel.trim();
-        return custom ? custom.split('/').pop() : 'Modelo personalizado';
-      }
-      return getModelOption(modelId, activeProviderName(chatLike)).label;
+      return activeModelLabel(chatLike);
     }
 
     function currentThinkingLevel(chatLike) {
       const chat = getResolvedChat(chatLike);
-      const providerId = activeProviderName(chat);
-      const modelId = activeModelName(chat);
-      return normalizeThinkingLevelForModel(providerId, modelId, chat && typeof chat.thinkingLevel !== 'undefined' ? chat.thinkingLevel : APP_CONFIG.DEFAULT_THINKING_LEVEL);
+      return normalizeThinkingLevelForModel(activeModelName(chat), chat && chat.thinkingLevel);
     }
 
-    const THINKING_LABELS = { off: 'No', minimal: 'Mínimo', low: 'Bajo', medium: 'Medio', high: 'Alto' };
+    const THINKING_LABELS = { off: 'No', minimal: 'Mínimo', low: 'Bajo', medium: 'Medio', high: 'Alto', xhigh: 'Muy alto', max: 'Máximo' };
 
     function thinkingLabel(level) {
       return THINKING_LABELS[level] || level;
@@ -5215,23 +5083,22 @@
         throw new Error('Falta configurar GOOGLE_CLIENT_ID para el login con Google.');
       }
       if (!googleProjectRef()) {
-        throw new Error('Falta configurar GOOGLE_CLOUD_PROJECT para poder usar Gemini con OAuth.');
+        throw new Error('Falta configurar GOOGLE_CLOUD_PROJECT para el login con Google.');
       }
     }
 
     function createChat(title) {
       const recent = appState.chats[0];
-      const provider = normalizeProviderId(recent && recent.provider ? recent.provider : APP_CONFIG.DEFAULT_PROVIDER);
-      const model = normalizeModelId(recent && recent.provider === provider ? recent.model : defaultModelForProvider(provider), provider);
+      const model = recent ? normalizeModelId(recent.model) : defaultModelId();
       return {
         id: uid('chat'),
         title: title || 'Nuevo chat',
         createdAt: nowIso(),
         updatedAt: nowIso(),
         messages: [],
-        provider,
+        provider: 'openrouter',
         model,
-        thinkingLevel: normalizeThinkingLevelForModel(provider, model, recent ? recent.thinkingLevel : APP_CONFIG.DEFAULT_THINKING_LEVEL),
+        thinkingLevel: normalizeThinkingLevelForModel(model, recent ? recent.thinkingLevel : ''),
         guidedLearning: !!appState.guidedLearning,
         guidedSession: createEmptyGuidedSession()
       };
@@ -5443,148 +5310,120 @@
       return '<svg viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="19.2" text-anchor="middle" font-size="19" font-weight="800" fill="currentColor" font-family="inherit">' + letter + '</text></svg>';
     }
 
-    function providerBrandIconSvg(providerId) {
-      if (providerId === 'deepseek') return providerLetterIcon('D');
-      if (providerId === 'zai') return providerLetterIcon('Z');
-      if (providerId === 'minimax') return providerLetterIcon('M');
-      if (providerId === 'kimi') return providerLetterIcon('K');
-      if (providerId === 'anthropic') providerId = 'claude';
-      if (providerId === 'custom') providerId = 'gemma';
-      if (providerId === 'gemini') {
-        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.4 4.3 2.7 7.6 7 10-4.3 2.4-6.6 5.7-7 10-.4-4.3-2.7-7.6-7-10 4.3-2.4 6.6-5.7 7-10z"/></svg>';
+    function modelRowMarkup(modelId, activeId, entry) {
+      const subParts = [entry ? entry.company : 'ID de OpenRouter'];
+      if (entry && entry.reasoning) subParts.push('razona');
+      if (entry && entry.images) subParts.push('imágenes');
+      const price = modelPriceLabel(entry);
+      const isActive = modelId === activeId;
+      const title = entry
+        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '')
+        : modelId;
+      return '<button type="button" class="model-card' + (isActive ? ' active' : '') + '" data-model-id="' + escapeHtml(modelId) + '" style="' + brandStyle(modelId) + '" title="' + escapeHtml(title) + '" role="option" aria-selected="' + (isActive ? 'true' : 'false') + '">' +
+        '<span class="model-card-icon">' + brandIconSvg(modelId) + '</span>' +
+        '<span class="model-card-main">' +
+          '<span class="model-card-name">' + escapeHtml(entry ? entry.name : modelId) + '</span>' +
+          '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
+        '</span>' +
+        (price ? '<span class="model-card-badge price' + (price === 'Gratis' ? ' pick' : '') + '">' + escapeHtml(price) + '</span>' : '') +
+        '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
+        '</button>';
+    }
+
+    function renderCompanyChips() {
+      if (!elements.companyChips) return;
+      // Compañías en el orden en que aparecen en la lista: las más usadas primero.
+      const companies = new Map();
+      modelCatalog.entries.forEach((entry) => {
+        if (!companies.has(entry.companyId)) companies.set(entry.companyId, { id: entry.companyId, label: entry.company, count: 0 });
+        companies.get(entry.companyId).count += 1;
+      });
+      const chips = [{ id: '', label: 'Todas', count: modelCatalog.entries.length }].concat(Array.from(companies.values()));
+      elements.companyChips.classList.toggle('hidden', !modelCatalog.entries.length);
+      elements.companyChips.innerHTML = chips.map((chip) => '<button type="button" class="company-chip' + (chip.id === modelPicker.company ? ' active' : '') + '" data-company-id="' + escapeHtml(chip.id) + '" title="' + chip.count + ' modelos">' + escapeHtml(chip.label) + '</button>').join('');
+    }
+
+    function renderModelList() {
+      if (!elements.modelList) return;
+      const activeId = activeModelName();
+      const query = modelPicker.query.trim();
+      const terms = searchKey(query).split(/\s+/).filter(Boolean);
+      const filtered = modelCatalog.entries.filter((entry) => (!modelPicker.company || entry.companyId === modelPicker.company) &&
+        terms.every((term) => modelCatalog.search.get(entry.id).indexOf(term) !== -1));
+      const heading = (title, note) => '<div class="model-list-heading"><span>' + escapeHtml(title) + '</span>' + (note ? '<small>' + escapeHtml(note) + '</small>' : '') + '</div>';
+      const note = (text) => '<div class="model-list-note">' + escapeHtml(text) + '</div>';
+      const parts = [];
+      if (!modelCatalog.entries.length) {
+        parts.push(note(modelCatalog.loading ? 'Cargando los modelos de OpenRouter…' : (modelCatalog.error ? 'No se pudo cargar la lista: ' + modelCatalog.error : 'Todavía no hay lista de modelos.')));
       }
-      if (providerId === 'claude') {
-        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7.3 6.8h1.9l3.4 8.6h-1.7l-.8-2.1H7.1L6.3 15.4H4.7L7.3 6.8zm.3 5.1h2.3L8.75 8.9 7.6 11.9zm6.5-5.1h1.6v8.6h-1.6V6.8z"/></svg>';
+      // Un ID escrito a mano que no está en la lista sigue siendo el modelo del chat.
+      if (!terms.length && !modelPicker.company && !catalogEntry(activeId)) {
+        parts.push(heading('Modelo actual'), modelRowMarkup(activeId, activeId, null));
       }
-      if (providerId === 'gemma') {
-        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3z"/></svg>';
+      let rest = filtered;
+      if (!terms.length && !modelPicker.company && filtered.length) {
+        parts.push(heading('Recomendados ahora', 'los más usados esta semana en OpenRouter'));
+        filtered.slice(0, RECOMMENDED_COUNT).forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
+        rest = filtered.slice(RECOMMENDED_COUNT);
+        if (rest.length) parts.push(heading('Todos los modelos', rest.length + ' más'));
       }
-      return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 3.5a6.5 6.5 0 1 1-6.5 6.5A6.5 6.5 0 0 1 12 5.5zm0 2.5a4 4 0 1 0 4 4 4 4 0 0 0-4-4z"/></svg>';
+      rest.slice(0, MODEL_LIST_LIMIT).forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
+      if (rest.length > MODEL_LIST_LIMIT) {
+        parts.push(note('Y ' + (rest.length - MODEL_LIST_LIMIT) + ' más. Busca o elige una compañía para verlos.'));
+      }
+      if (terms.length && !filtered.length) {
+        parts.push(note('Ningún modelo coincide con «' + query + '».'));
+      }
+      // Escribir un ID completo (compañía/modelo) permite usar cualquier modelo de OpenRouter.
+      if (query.indexOf('/') > 0 && !/\s/.test(query) && !catalogEntry(query)) {
+        parts.push(heading('Usar este ID'), modelRowMarkup(query, activeId, null));
+      }
+      elements.modelList.innerHTML = parts.join('');
     }
 
     function renderModelControls() {
       const chat = getActiveChat();
-      const providerId = activeProviderName(chat);
-      const providerOption = getProviderOption(providerId);
-      const providerModels = modelOptionsForProvider(providerId);
-      const modelOption = getModelOption(chat.model, providerId);
+      const activeId = activeModelName(chat);
+      const levels = thinkingLevelsForModel(activeId);
       const thinkingLevel = currentThinkingLevel(chat);
       const apiSettings = getApiSettings();
 
-      if (elements.providerSegmented) {
-        elements.providerSegmented.innerHTML = PROVIDER_OPTIONS.map((option) => {
-          const isActive = option.id === providerId;
-          return '<button type="button" class="provider-chip' + (isActive ? ' active' : '') + '"' +
-            ' data-provider-id="' + escapeHtml(option.id) + '"' +
-            ' data-provider="' + escapeHtml(option.id) + '"' +
-            ' role="tab" aria-selected="' + (isActive ? 'true' : 'false') + '"' +
-            '>' +
-            '<span class="provider-chip-dot"></span>' +
-            '<span>' + escapeHtml(option.label) + '</span>' +
-            '</button>';
-        }).join('');
+      if (elements.modelSearchInput && document.activeElement !== elements.modelSearchInput) {
+        elements.modelSearchInput.value = modelPicker.query;
       }
-
-      if (elements.modelList) {
-        elements.modelList.innerHTML = providerModels.map((option) => {
-          const isActive = option.id === modelOption.id;
-          const badge = option.price
-            ? '<span class="model-card-badge price' + (option.pick ? ' pick' : '') + '"' + (option.priceNote ? ' title="' + escapeHtml(option.priceNote) + '"' : '') + '>' + escapeHtml(option.price) + '</span>'
-            : '';
-          const subParts = [option.id === CUSTOM_MODEL_ID && apiSettings.customModel ? apiSettings.customModel : option.badge];
-          if (option.thinkingLevels && option.thinkingLevels.length) {
-            subParts.push('Razona');
-          }
-          return '<button type="button" class="model-card' + (isActive ? ' active' : '') + '"' +
-            ' data-model-id="' + escapeHtml(option.id) + '"' +
-            ' data-provider="' + escapeHtml(option.provider) + '"' +
-            ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
-            '>' +
-            '<span class="model-card-icon">' + providerBrandIconSvg(option.provider) + '</span>' +
-            '<span class="model-card-main">' +
-              '<span class="model-card-name">' + escapeHtml(option.label) + '</span>' +
-              '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
-            '</span>' +
-            badge +
-            '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
-            '</button>';
-        }).join('');
-      }
+      renderCompanyChips();
+      const scrollTop = elements.modelList ? elements.modelList.scrollTop : 0;
+      renderModelList();
+      if (elements.modelList) elements.modelList.scrollTop = scrollTop;
 
       if (elements.thinkingSection && elements.thinkingSegmented) {
-        if (modelOption.thinkingLevels.length) {
-          elements.thinkingSection.classList.remove('hidden');
-          elements.thinkingSegmented.innerHTML = modelOption.thinkingLevels.map((level) => {
-            const isActive = level === thinkingLevel;
-            const shortLabel = thinkingLabel(level);
-            return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
-              ' data-thinking-level="' + escapeHtml(level) + '"' +
-              ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
-              '>' +
-              escapeHtml(shortLabel) +
-              '</button>';
-          }).join('');
-        } else {
-          elements.thinkingSection.classList.add('hidden');
-          elements.thinkingSegmented.innerHTML = '';
-        }
+        elements.thinkingSection.classList.toggle('hidden', levels.length < 2);
+        elements.thinkingSegmented.innerHTML = levels.length < 2 ? '' : levels.map((level) => {
+          const isActive = level === thinkingLevel;
+          return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
+            ' data-thinking-level="' + escapeHtml(level) + '"' +
+            ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
+            '>' + escapeHtml(thinkingLabel(level)) + '</button>';
+        }).join('');
       }
 
-      const isCustom = modelOption.id === CUSTOM_MODEL_ID;
-      const triggerLabel = isCustom && apiSettings.customModel
-        ? apiSettings.customModel.split('/').pop()
-        : modelOption.label;
-      const thinkingCopy = modelOption.thinkingLevels.length
-        ? ' · razonamiento ' + thinkingLabel(thinkingLevel).toLowerCase()
-        : '';
       if (elements.modelCopy) {
-        elements.modelCopy.textContent = providerOption.label + thinkingCopy + '. Se guarda en este chat.';
+        elements.modelCopy.textContent = companyLabelFor(activeId) + (levels.length > 1 ? ' · razonamiento ' + thinkingLabel(thinkingLevel).toLowerCase() : '') + '. Se guarda en este chat.';
       }
       if (elements.modelTriggerKicker) {
-        elements.modelTriggerKicker.textContent = providerOption.label;
+        elements.modelTriggerKicker.textContent = companyLabelFor(activeId);
       }
       if (elements.modelTriggerMain) {
-        elements.modelTriggerMain.textContent = triggerLabel;
+        elements.modelTriggerMain.textContent = modelLabelFor(activeId);
       }
       if (elements.modelTriggerBrand) {
-        elements.modelTriggerBrand.setAttribute('data-provider', providerId);
-        elements.modelTriggerBrand.innerHTML = providerBrandIconSvg(providerId);
+        elements.modelTriggerBrand.setAttribute('style', brandStyle(activeId));
+        elements.modelTriggerBrand.innerHTML = brandIconSvg(activeId);
       }
       if (elements.modelTriggerMeta) {
-        if (modelOption.thinkingLevels.length && thinkingLevel && thinkingLevel !== modelOption.defaultThinkingLevel) {
-          elements.modelTriggerMeta.textContent = thinkingLabel(thinkingLevel);
-          elements.modelTriggerMeta.classList.remove('hidden');
-        } else {
-          elements.modelTriggerMeta.classList.add('hidden');
-        }
-      }
-      const isGemini = providerId === 'gemini';
-      const googleSignedIn = hasDriveIdentitySession();
-      const geminiReady = hasGeminiAccess();
-      if (elements.customModelSection) {
-        elements.customModelSection.classList.toggle('hidden', !isCustom);
-      }
-      if (elements.apiKeySection) {
-        elements.apiKeySection.classList.toggle('hidden', isGemini);
-      }
-      if (elements.googleSection) {
-        elements.googleSection.classList.toggle('hidden', !isGemini);
-      }
-      if (elements.googleAccountCopy) {
-        const email = googleSignedIn && appState.profile ? String(appState.profile.email || '') : '';
-        elements.googleAccountCopy.textContent = email || 'Sin iniciar sesión';
-      }
-      if (elements.googleLoginBtn) {
-        elements.googleLoginBtn.classList.toggle('hidden', googleSignedIn);
-      }
-      if (elements.geminiKeyInput && document.activeElement !== elements.geminiKeyInput) {
-        elements.geminiKeyInput.value = apiSettings.geminiKey;
-      }
-      if (elements.geminiKeyBtn) {
-        elements.geminiKeyBtn.textContent = apiSettings.geminiKey ? 'Actualizar' : 'Guardar';
-      }
-      if (elements.customModelInput && document.activeElement !== elements.customModelInput) {
-        elements.customModelInput.value = apiSettings.customModel;
+        const showLevel = levels.length > 1 && thinkingLevel && thinkingLevel !== defaultThinkingLevelForModel(activeId);
+        elements.modelTriggerMeta.textContent = showLevel ? thinkingLabel(thinkingLevel) : '';
+        elements.modelTriggerMeta.classList.toggle('hidden', !showLevel);
       }
       if (elements.apiKeyInput && document.activeElement !== elements.apiKeyInput) {
         elements.apiKeyInput.value = apiSettings.apiKey;
@@ -5594,29 +5433,19 @@
       }
       if (elements.modelMenuStatus) {
         let statusCopy;
-        if (isGemini) {
-          if (!geminiReady) {
-            statusCopy = 'Entra con Google (o pega una API key de AI Studio) y usa Gemini gratis, con límites.';
-          } else if (geminiState.error) {
-            statusCopy = geminiState.error;
-          } else {
-            statusCopy = apiSettings.geminiKey
-              ? 'Gastas la cuota gratuita de tu API key de AI Studio.'
-              : 'Gastas la cuota gratuita de la API de Gemini, no saldo.';
-          }
-        } else if (!apiSettings.apiKey) {
-          statusCopy = 'Pega tu API key de OpenRouter, o elige Gemini y entra con Google.';
-        } else if (isCustom && !apiSettings.customModel) {
-          statusCopy = 'Escribe el ID exacto del modelo tal como aparece en openrouter.ai/models.';
+        if (!apiSettings.apiKey) {
+          statusCopy = 'Pega tu API key de OpenRouter abajo para empezar.';
+        } else if (!modelCatalog.entries.length && modelCatalog.error) {
+          statusCopy = 'No se pudo cargar la lista de modelos: ' + modelCatalog.error;
+        } else if (!modelCatalog.entries.length) {
+          statusCopy = 'Cargando los modelos de OpenRouter…';
         } else {
-          statusCopy = 'Pagas por tokens con tu saldo de OpenRouter.';
+          statusCopy = modelCatalog.entries.length + ' modelos en OpenRouter. Pagas por tokens con tu saldo.';
         }
         elements.modelMenuStatus.textContent = statusCopy;
-        elements.modelMenuStatus.classList.toggle('error', isGemini && geminiReady && !!geminiState.error);
+        elements.modelMenuStatus.classList.toggle('error', !!apiSettings.apiKey && !modelCatalog.entries.length && !!modelCatalog.error);
       }
     }
-
-
 
     function renderInline(text) {
       return escapeHtml(text)
@@ -5792,10 +5621,6 @@
       };
     }
 
-    function providerBrandSvg(providerId) {
-      return providerBrandIconSvg(providerId);
-    }
-
     function totalMessageVersions(message) {
       return ((message && message.alternatives) ? message.alternatives.length : 0) + 1;
     }
@@ -5814,26 +5639,15 @@
       if (!message) return null;
       const alts = message.alternatives || [];
       const idx = activeVersionIndex(message);
-      let rawProvider = '';
-      let rawModel = '';
-      if (idx === alts.length) {
-        rawProvider = message.provider || '';
-        rawModel = message.model || '';
-      } else {
-        const alt = alts[idx];
-        rawProvider = (alt && alt.provider) || '';
-        rawModel = (alt && alt.model) || '';
-      }
-      if (!rawProvider || !rawModel) return null;
-      const providerId = normalizeProviderId(rawProvider);
-      const modelId = normalizeModelId(rawModel, providerId);
-      const providerOption = getProviderOption(providerId);
-      const modelOption = getModelOption(modelId, providerId);
-      const exactOption = MODEL_OPTIONS.find((option) => option.id === rawModel);
+      const source = idx === alts.length ? message : alts[idx];
+      const rawModel = source && source.model ? String(source.model) : '';
+      if (!rawModel) return null;
+      // Mensajes de versiones viejas (Gemini directo) no tienen ID de OpenRouter.
+      const legacy = rawModel.indexOf('/') < 0;
       return {
-        providerId,
-        providerLabel: providerOption.label,
-        modelLabel: exactOption ? exactOption.label : (providerId === 'custom' ? String(rawModel).split('/').pop() : modelOption.label)
+        modelId: legacy ? 'google/' + rawModel : rawModel,
+        providerLabel: legacy ? 'Google' : companyLabelFor(rawModel),
+        modelLabel: legacy ? rawModel : modelLabelFor(rawModel)
       };
     }
 
@@ -5841,8 +5655,8 @@
       if (!message || message.role !== 'assistant' || message.pending) return '';
       const info = resolveMessageAttribution(message);
       if (!info) return '';
-      return '<div class="msg-attribution" data-provider="' + escapeHtml(info.providerId) + '" title="' + escapeHtml(info.providerLabel + ' · ' + info.modelLabel) + '">' +
-        providerBrandSvg(info.providerId) +
+      return '<div class="msg-attribution" style="' + brandStyle(info.modelId) + '" title="' + escapeHtml(info.providerLabel + ' · ' + info.modelLabel) + '">' +
+        brandIconSvg(info.modelId) +
         '<span>' + escapeHtml(info.modelLabel) + '</span>' +
         '</div>';
     }
@@ -6870,7 +6684,6 @@
       return [
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/cloud-platform',
         DRIVE_SCOPE
       ];
     }
@@ -7948,15 +7761,6 @@
     function renderUsageDonut() {
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
-      if (activeProviderName() === 'gemini') {
-        var ready = hasGeminiAccess();
-        var ringColor = !ready ? 'rgba(0,0,0,0.1)' : (geminiState.error ? '#ef4444' : '#22c55e');
-        svg.innerHTML = '<circle cx="18" cy="18" r="15.915" fill="none" stroke="' + ringColor + '" stroke-width="3.5"/>';
-        document.getElementById('usage-btn').title = !ready
-          ? 'Entra con Google para usar Gemini'
-          : (geminiState.error || 'Gemini listo (capa gratuita de la API de Gemini)');
-        return;
-      }
       var credits = appState.openRouterCredits;
       if (credits && credits.total > 0) {
         var remaining = Math.max(0, credits.total - credits.used);
@@ -7994,41 +7798,9 @@
       return '<span class="usage-dot" style="background:' + color + '"></span>';
     }
 
-    function renderGeminiUsagePopup(content) {
-      var signedIn = hasDriveIdentitySession();
-      var key = geminiApiKey();
-      var html = [
-        usageRow('Cuenta', signedIn && appState.profile ? String(appState.profile.email || '') : 'sin iniciar sesión'),
-        usageRow('Acceso', key ? 'API key de AI Studio' : (signedIn ? 'Sesión de Google' : '—'))
-      ];
-      var usage = getUsageData();
-      var geminiIds = Object.keys(usage.byModel).filter(function(id) { return id.indexOf('gemini-') === 0; });
-      if (geminiIds.length) {
-        var totals = geminiIds.reduce(function(acc, id) {
-          var item = usage.byModel[id];
-          acc.requests += item.requests || 0;
-          acc.tokens += (item.promptTokens || 0) + (item.completionTokens || 0);
-          return acc;
-        }, { requests: 0, tokens: 0 });
-        html.push(usageSection('En este navegador', [
-          usageRow('Mensajes', formatNumber(totals.requests)),
-          usageRow('Tokens', formatCompactNumber(totals.tokens))
-        ].join('')));
-      }
-      html.push('<div class="usage-note">Usa la capa gratuita de la API de Gemini: tiene límites por minuto y por día que dependen del modelo. Si llegas al límite, cambia de modelo o espera un poco.</div>');
-      if ((signedIn || key) && geminiState.error) {
-        html.push('<div class="usage-note error">' + escapeHtml(geminiState.error) + '</div>');
-      }
-      content.innerHTML = html.join('');
-    }
-
     function renderUsagePopup() {
       var content = document.getElementById('usage-popup-content');
       if (!content) return;
-      if (activeProviderName() === 'gemini') {
-        renderGeminiUsagePopup(content);
-        return;
-      }
       var hasKey = !!getApiSettings().apiKey;
       var credits = appState.openRouterCredits;
       var usage = getUsageData();
@@ -8044,12 +7816,11 @@
           usageRow('Recargado', formatUsd(credits.total))
         ].join('')));
       }
-      var paidIds = Object.keys(usage.byModel).filter(function(id) { return id.indexOf('gemini-') !== 0; });
-      var modelRows = paidIds.sort(function(a, b) {
+      var modelRows = Object.keys(usage.byModel).sort(function(a, b) {
         return (usage.byModel[b].cost || 0) - (usage.byModel[a].cost || 0);
       }).slice(0, 6).map(function(id, index) {
         var item = usage.byModel[id];
-        return usageRow(usageDot(modelDonutColor(index)) + escapeHtml(id.split('/').pop()), formatUsd(item.cost) + ' · ' + item.requests + ' msg');
+        return usageRow(usageDot(modelDonutColor(index)) + escapeHtml(modelLabelFor(id)), formatUsd(item.cost) + ' · ' + item.requests + ' msg');
       }).join('');
       html.push(usageSection('En este navegador', [
         usageRow('Mensajes', formatNumber(usage.requests)),
@@ -8070,8 +7841,7 @@
       popup.classList.toggle('hidden');
       if (isHidden) {
         renderUsagePopup();
-        var refresh = activeProviderName() === 'gemini' ? prepareGemini() : refreshOpenRouterCredits();
-        refresh.then(function() {
+        refreshOpenRouterCredits().then(function() {
           if (!popup.classList.contains('hidden')) {
             renderUsagePopup();
           }
@@ -8089,8 +7859,20 @@
       if (!elements.modelMenuPopup || !elements.modelMenuBtn) return;
       const shouldOpen = elements.modelMenuPopup.classList.contains('hidden');
       closeProfileMenu();
+      if (shouldOpen) {
+        modelPicker.query = '';
+        modelPicker.company = '';
+        if (elements.modelSearchInput) elements.modelSearchInput.value = '';
+        renderModelControls();
+        if (elements.modelList) elements.modelList.scrollTop = 0;
+        refreshModelCatalog(false);
+      }
       elements.modelMenuPopup.classList.toggle('hidden', !shouldOpen);
       elements.modelMenuBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      // En el móvil no se enfoca para que no salte el teclado.
+      if (shouldOpen && elements.modelSearchInput && window.innerWidth > 768 && getApiSettings().apiKey) {
+        elements.modelSearchInput.focus();
+      }
     }
 
     function closeProfileMenu() {
@@ -8220,14 +8002,6 @@
           }
         });
       }
-      if (elements.customModelInput) {
-        elements.customModelInput.addEventListener('input', () => {
-          saveApiSettings({ customModel: elements.customModelInput.value.trim() });
-          syncModelCapabilities();
-          renderModelControls();
-        });
-        elements.customModelInput.addEventListener('change', prepareOpenRouterModels);
-      }
       elements.profileBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
         if (hasDriveIdentitySession()) {
@@ -8311,38 +8085,45 @@
       elements.profilePopup.addEventListener('click', function(e) {
         e.stopPropagation();
       });
-      if (elements.providerSegmented) {
-        elements.providerSegmented.addEventListener('click', (event) => {
-          const btn = event.target.closest('[data-provider-id]');
-          if (!btn) return;
-          const chat = getActiveChat();
-          const nextProvider = normalizeProviderId(btn.getAttribute('data-provider-id'));
-          if (nextProvider === activeProviderName(chat)) return;
-          chat.provider = nextProvider;
-          chat.model = normalizeModelId(defaultModelForProvider(chat.provider), chat.provider);
-          chat.thinkingLevel = defaultThinkingLevelForModel(chat.provider, chat.model);
+      const selectModel = (modelId) => {
+        const chat = getActiveChat();
+        const nextModel = normalizeModelId(modelId);
+        if (nextModel !== chat.model) {
+          chat.model = nextModel;
+          chat.thinkingLevel = defaultThinkingLevelForModel(nextModel);
           touchChat(chat);
-          updateConfigUi();
           renderHistory();
-          setComposerStatus('');
-          if (nextProvider === 'gemini') {
-            prepareGemini();
-          }
-        });
-      }
+        }
+        updateConfigUi();
+        setComposerStatus('');
+      };
       if (elements.modelList) {
         elements.modelList.addEventListener('click', (event) => {
           const btn = event.target.closest('[data-model-id]');
-          if (!btn) return;
-          const chat = getActiveChat();
-          const nextModel = normalizeModelId(btn.getAttribute('data-model-id'), activeProviderName(chat));
-          if (nextModel === chat.model) return;
-          chat.model = nextModel;
-          chat.thinkingLevel = defaultThinkingLevelForModel(activeProviderName(chat), chat.model);
-          touchChat(chat);
-          updateConfigUi();
-          renderHistory();
-          setComposerStatus('');
+          if (btn) selectModel(btn.getAttribute('data-model-id'));
+        });
+      }
+      if (elements.modelSearchInput) {
+        elements.modelSearchInput.addEventListener('input', () => {
+          modelPicker.query = elements.modelSearchInput.value;
+          renderModelList();
+          elements.modelList.scrollTop = 0;
+        });
+        elements.modelSearchInput.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          const first = elements.modelList.querySelector('[data-model-id]');
+          if (first && modelPicker.query.trim()) selectModel(first.getAttribute('data-model-id'));
+        });
+      }
+      if (elements.companyChips) {
+        elements.companyChips.addEventListener('click', (event) => {
+          const chip = event.target.closest('[data-company-id]');
+          if (!chip) return;
+          modelPicker.company = chip.getAttribute('data-company-id');
+          renderCompanyChips();
+          renderModelList();
+          elements.modelList.scrollTop = 0;
         });
       }
       if (elements.thinkingSegmented) {
@@ -8350,7 +8131,7 @@
           const btn = event.target.closest('[data-thinking-level]');
           if (!btn) return;
           const chat = getActiveChat();
-          const nextLevel = normalizeThinkingLevelForModel(activeProviderName(chat), chat.model, btn.getAttribute('data-thinking-level'));
+          const nextLevel = normalizeThinkingLevelForModel(chat.model, btn.getAttribute('data-thinking-level'));
           if (nextLevel === currentThinkingLevel(chat)) return;
           chat.thinkingLevel = nextLevel;
           touchChat(chat);
@@ -8361,39 +8142,6 @@
       }
       elements.loginBtn.addEventListener('click', () => {
         saveApiKeyFromInput();
-      });
-      if (elements.geminiKeyBtn && elements.geminiKeyInput) {
-        const saveGeminiKey = () => {
-          const value = elements.geminiKeyInput.value.trim();
-          saveApiSettings({ geminiKey: value });
-          geminiState.error = '';
-          showToast('Gemini', value ? 'API key de AI Studio guardada en este navegador.' : 'API key de Gemini borrada; se usa tu sesión de Google.');
-          updateConfigUi();
-          prepareGemini().then(updateConfigUi);
-        };
-        elements.geminiKeyBtn.addEventListener('click', saveGeminiKey);
-        elements.geminiKeyInput.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            saveGeminiKey();
-          }
-        });
-      }
-      if (elements.googleLoginBtn) {
-        elements.googleLoginBtn.addEventListener('click', async () => {
-          try {
-            await loginWithGoogle({ interactive: true, toast: false });
-          } catch (error) {
-            if (!hasDriveIdentitySession()) {
-              showToast('Google', error.message || 'No se pudo iniciar sesión.');
-            }
-          }
-          updateConfigUi();
-        });
-      }
-      elements.logoutMenuBtn.addEventListener('click', () => {
-        closeProfileMenu();
-        logoutGoogle();
       });
       document.getElementById('preview-close').addEventListener('click', closeAttachmentPreview);
       document.getElementById('preview-overlay').addEventListener('click', function(e) {
@@ -8490,7 +8238,7 @@
         elements.profileEmail.textContent = '';
         elements.profileMenuName.textContent = hasDriveOauth ? 'Sin iniciar sesión' : 'OAuth no configurado';
         elements.profileMenuEmail.textContent = hasDriveOauth
-          ? 'Entra con Google para guardar el historial en Drive y usar Gemini.'
+          ? 'Entra con Google para guardar el historial en Drive.'
           : 'Configura GOOGLE_CLIENT_ID para activar el login con Google.';
         closeProfileMenu();
       }
@@ -8525,8 +8273,7 @@
         } catch (_) {}
         apiSettingsCache = {
           apiKey: String(stored.apiKey || ''),
-          customModel: String(stored.customModel || ''),
-          geminiKey: String(stored.geminiKey || '')
+          customModel: String(stored.customModel || '')
         };
       }
       return apiSettingsCache;
@@ -8544,31 +8291,14 @@
     }
 
     function resolveRequestModelId(chatLike) {
-      const modelId = activeModelName(chatLike);
-      if (modelId === CUSTOM_MODEL_ID) {
-        return getApiSettings().customModel.trim();
-      }
-      return modelId;
+      return activeModelName(chatLike);
     }
 
-    function ensureProviderReady(chat) {
-      if (activeProviderName(chat) === 'gemini') {
-        if (hasGeminiAccess()) return true;
-        showToast('Gemini', 'Entra con tu cuenta de Google (o pega una API key de AI Studio) para usar Gemini.');
-        openModelMenuForKey(elements.googleLoginBtn);
-        return false;
-      }
-      if (!getApiSettings().apiKey) {
-        showToast('OpenRouter', 'Pega tu API key de OpenRouter, o elige Gemini y entra con Google.');
-        openModelMenuForKey();
-        return false;
-      }
-      if (activeModelName(chat) === CUSTOM_MODEL_ID && !getApiSettings().customModel.trim()) {
-        showToast('Modelo personalizado', 'Escribe el ID del modelo de OpenRouter en el selector.');
-        openModelMenuForKey(elements.customModelInput);
-        return false;
-      }
-      return true;
+    function ensureProviderReady() {
+      if (getApiSettings().apiKey) return true;
+      showToast('OpenRouter', 'Pega tu API key de OpenRouter para empezar.');
+      openModelMenuForKey();
+      return false;
     }
 
     function openModelMenuForKey(focusTarget) {
@@ -8621,9 +8351,8 @@
     }
 
     // pi formatea los errores HTTP como "401: {json}".
-    function describeAgentError(providerId, message) {
+    function describeAgentError(message) {
       const text = String(message || '');
-      if (providerId === 'gemini') return text;
       const match = text.match(/^(\d{3}):\s*([\s\S]*)$/);
       if (!match) return text;
       let payload = null;
@@ -8747,7 +8476,10 @@
       const guided = !!(chat && chat.guidedLearning);
       const cleanText = (text) => (guided ? parseGuidedAssistantPayload(text).visibleText : text);
       const isLatestVersion = activeVersionIndex(message) === totalMessageVersions(message) - 1;
-      if (Array.isArray(message.piMessages) && message.piMessages.length && isLatestVersion) {
+      // Solo se reutiliza si es de OpenRouter (las de Gemini directo de versiones viejas, no).
+      const fromOpenRouter = Array.isArray(message.piMessages) && message.piMessages.length &&
+        message.piMessages.every((item) => item.role !== 'assistant' || item.provider === 'openrouter');
+      if (fromOpenRouter && isLatestVersion) {
         return message.piMessages.map((item) => (item.role === 'assistant'
           ? Object.assign({}, item, {
             content: item.content.map((block) => (block.type === 'text' ? Object.assign({}, block, { text: cleanText(block.text) }) : block))
@@ -8756,8 +8488,7 @@
       }
       const text = cleanText(getVisibleContent(message));
       if (!text.trim()) return [];
-      const providerId = message.provider === 'gemini' ? 'gemini' : 'openrouter';
-      const model = InhousePi.getModel(providerId, message.model || 'unknown');
+      const model = InhousePi.getModel(message.model || 'unknown');
       return [{
         role: 'assistant',
         content: [{ type: 'text', text }],
@@ -8805,16 +8536,8 @@
     }
 
     async function callModel(chat, signal, onProgress) {
-      const providerId = activeProviderName(chat);
-      const engineProvider = engineProviderFor(providerId);
       const modelId = resolveRequestModelId(chat);
-      if (!modelId) {
-        throw new Error('Escribe el ID del modelo personalizado (p. ej. moonshotai/kimi-k3).');
-      }
-      if (engineProvider === 'openrouter') {
-        await InhousePi.prepareOpenRouterModel(modelId);
-      }
-      const model = InhousePi.getModel(engineProvider, modelId);
+      const model = InhousePi.getModel(modelId);
       const { history, prompt } = await buildPiConversation(chat, model.input.includes('image'));
       const run = (tools) => InhousePi.runAgent({
         model,
@@ -8837,7 +8560,7 @@
           result = await run(InhousePi.createWorkspaceTools(chatWorkspace(chat)));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
-          if (error.name !== 'AbortError' && engineProvider === 'openrouter' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {
+          if (error.name !== 'AbortError' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {
             result = await run([]);
           } else {
             throw error;
@@ -8845,7 +8568,7 @@
         }
       } catch (error) {
         if (error.name === 'AbortError') throw error;
-        const wrapped = new Error(describeAgentError(providerId, error.message));
+        const wrapped = new Error(describeAgentError(error.message));
         wrapped.partial = error.partial;
         throw wrapped;
       }
@@ -8867,193 +8590,6 @@
         piMessages: compactPiMessages(result.messages),
         parts: [{ text: result.text }]
       };
-    }
-
-    // ─── GEMINI (API de Gemini) ─────────────────────────
-    // La API oficial (generativelanguage), la misma que el proveedor "google" de
-    // pi. Con la sesión de Google se llama con el token OAuth y gasta la cuota del
-    // proyecto de Google Cloud de la app; con una API key de AI Studio, la del
-    // proyecto de esa key.
-    const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-    const GEMINI_CACHE_KEY = STORAGE_KEY + '::geminiApi';
-    const geminiState = { error: '' };
-
-    function readGeminiCache() {
-      try {
-        const raw = JSON.parse(localStorage.getItem(GEMINI_CACHE_KEY) || 'null');
-        return raw && typeof raw === 'object' ? raw : {};
-      } catch (_) {
-        return {};
-      }
-    }
-
-    function writeGeminiCache(patch) {
-      try {
-        localStorage.setItem(GEMINI_CACHE_KEY, JSON.stringify(Object.assign(readGeminiCache(), patch)));
-      } catch (_) {}
-    }
-
-    function restoreGeminiCache() {
-      const cache = readGeminiCache();
-      setGeminiModels(Array.isArray(cache.models) ? cache.models : null);
-    }
-
-    function resetGeminiSession() {
-      geminiState.error = '';
-    }
-
-    function geminiApiKey() {
-      return getApiSettings().geminiKey;
-    }
-
-    function hasGeminiAccess() {
-      return !!geminiApiKey() || hasDriveIdentitySession();
-    }
-
-    function geminiErrorMessage(payload, status) {
-      let message = payload && payload.error && payload.error.message ? String(payload.error.message) : '';
-      try {
-        const nested = JSON.parse(message);
-        if (nested && nested.error && nested.error.message) message = String(nested.error.message);
-      } catch (_) {}
-      return message || ('HTTP ' + status);
-    }
-
-    function geminiRetrySeconds(payload) {
-      const details = payload && payload.error && Array.isArray(payload.error.details) ? payload.error.details : [];
-      const retry = details.find((item) => item && typeof item.retryDelay === 'string');
-      const seconds = retry ? parseFloat(retry.retryDelay) : NaN;
-      return Number.isFinite(seconds) ? Math.ceil(seconds) : 0;
-    }
-
-    function describeGeminiError(status, payload, modelId) {
-      const message = geminiErrorMessage(payload, status);
-      const lower = message.toLowerCase();
-      const label = modelId ? geminiModelLabel(modelId) : 'Gemini';
-      if (lower.indexOf('api key not valid') !== -1 || lower.indexOf('api_key_invalid') !== -1) {
-        return 'Google rechaza la API key de Gemini. Revisa que esté copiada entera o bórrala para usar tu sesión de Google.';
-      }
-      if (status === 401) {
-        return 'La sesión de Google ha caducado. Vuelve a entrar con Google.';
-      }
-      if (lower.indexOf('has not been used in project') !== -1 || lower.indexOf('service_disabled') !== -1 || lower.indexOf('is disabled') !== -1) {
-        return 'La API de Gemini (Generative Language API) no está activada en el proyecto ' + googleProjectRef() + ' de Google Cloud. Actívala en https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com?project=' + googleProjectRef() + ' y vuelve a probar.';
-      }
-      if (status === 403 && lower.indexOf('scope') !== -1) {
-        return 'Tu sesión de Google no tiene permiso para usar Gemini. Cierra sesión y vuelve a entrar aceptando todos los permisos.';
-      }
-      if (lower.indexOf('location is not supported') !== -1) {
-        return 'La API de Gemini no está disponible desde tu país.';
-      }
-      if (status === 429) {
-        if (/limit:\s*0\b/.test(message)) {
-          return label + ' no tiene cuota gratuita. Prueba con un Gemini Flash o activa la facturación del proyecto en Google Cloud.';
-        }
-        const wait = geminiRetrySeconds(payload);
-        return 'Has llegado al límite de ' + label + (wait ? '. Vuelve a probar en ' + wait + ' s' : ' por ahora') + ' o cambia de modelo de Gemini.';
-      }
-      if (status === 404) {
-        return label + ' no está disponible en la API de Gemini. Elige otro modelo.';
-      }
-      return message;
-    }
-
-    async function geminiFetch(path, options, allowRetry) {
-      const opts = options || {};
-      const key = geminiApiKey();
-      if (!key && !appState.accessToken) {
-        throw new Error('Entra con Google o pega una API key de Gemini para usar Gemini.');
-      }
-      const headers = key ? { 'x-goog-api-key': key } : { Authorization: 'Bearer ' + appState.accessToken };
-      if (opts.body) headers['Content-Type'] = 'application/json';
-      const response = await fetch(GEMINI_API_BASE_URL + path, {
-        method: opts.body ? 'POST' : 'GET',
-        headers,
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
-        signal: opts.signal
-      });
-      if (!key && response.status === 401 && allowRetry !== false) {
-        const refreshed = await loginWithGoogle({
-          interactive: false,
-          toast: false,
-          skipDriveBootstrap: true,
-          prompt: 'none',
-          forceRefresh: true
-        }).catch(() => false);
-        if (refreshed && appState.accessToken) {
-          return geminiFetch(path, opts, false);
-        }
-      }
-      return response;
-    }
-
-    // Del listado de la API, los modelos de chat (2.5 en adelante) sin alias ni
-    // versiones fechadas; de cada familia, las dos versiones más nuevas.
-    function pickGeminiModels(names) {
-      const byFamily = {};
-      names.forEach((name) => {
-        const match = String(name).match(/^gemini-(\d+(?:\.\d+)?)-(pro|flash|flash-lite)(-preview)?$/);
-        if (!match || parseFloat(match[1]) < 2.5) return;
-        const family = (byFamily[match[2]] = byFamily[match[2]] || {});
-        const version = match[1];
-        // Si existe la versión estable, sobra su preview.
-        if (!family[version] || !match[3]) family[version] = name;
-      });
-      const picked = [];
-      Object.keys(byFamily).forEach((familyName) => {
-        const family = byFamily[familyName];
-        Object.keys(family)
-          .sort((a, b) => parseFloat(b) - parseFloat(a))
-          .slice(0, 2)
-          .forEach((version) => picked.push(family[version]));
-      });
-      return sortGeminiModels(picked);
-    }
-
-    function sortGeminiModels(modelIds) {
-      const rank = (modelId) => {
-        const match = String(modelId).match(/^gemini-(\d+)(?:\.(\d+))?-(.+)$/);
-        if (!match) return [0, 0, 9];
-        const family = match[3].replace(/-preview.*$/, '');
-        const tier = { pro: 0, flash: 1, 'flash-lite': 2 }[family];
-        return [Number(match[1]), Number(match[2] || 0), tier === undefined ? 3 : tier];
-      };
-      return modelIds.slice().sort((a, b) => {
-        const ra = rank(a);
-        const rb = rank(b);
-        return (rb[0] - ra[0]) || (ra[2] - rb[2]) || (rb[1] - ra[1]) || a.localeCompare(b);
-      });
-    }
-
-    async function refreshGeminiModels() {
-      if (!hasGeminiAccess()) return null;
-      const response = await geminiFetch('/models?pageSize=1000');
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(describeGeminiError(response.status, payload));
-      }
-      const names = (payload && payload.models || [])
-        .filter((model) => (model.supportedGenerationMethods || []).indexOf('generateContent') !== -1)
-        .map((model) => String(model.name || '').replace(/^models\//, ''));
-      const models = pickGeminiModels(names);
-      if (models.length) {
-        setGeminiModels(models);
-        writeGeminiCache({ models });
-      }
-      geminiState.error = '';
-      renderModelControls();
-      return models;
-    }
-
-    function prepareGemini() {
-      if (!hasGeminiAccess()) return Promise.resolve(null);
-      return refreshGeminiModels().catch((error) => {
-        console.warn('Gemini no está listo:', error);
-        geminiState.error = error.message || String(error);
-        return null;
-      }).finally(() => {
-        renderModelControls();
-      });
     }
 
     async function requestGoogleAccessToken(promptMode, options) {
@@ -9121,7 +8657,6 @@
       setAuthGateReason('');
       updateAuthUi();
       updateConfigUi();
-      prepareGemini();
       if (!options || !options.skipDriveBootstrap) {
         await ensureDriveReady();
         updateConfigUi();
@@ -9132,7 +8667,7 @@
         scheduleDriveSync();
       }
       if (!options || options.toast !== false) {
-        showToast('Sesión iniciada', 'Historial en Drive y Gemini con tu cuenta.');
+        showToast('Sesión iniciada', 'El historial se guarda en tu Google Drive.');
       }
       saveState();
     }
@@ -9427,46 +8962,20 @@
       }
     }
 
-    // Une el motor de pi con la app: key de OpenRouter y acceso a la API de Gemini.
+    // Une el motor de pi con la app: key de OpenRouter y cabeceras de la app.
     function configureEngine() {
       InhousePi.configure({
         getOpenRouterKey: () => getApiSettings().apiKey,
         openRouterHeaders: {
           'HTTP-Referer': location.origin && location.origin !== 'null' ? location.origin : 'https://github.com/miguelcoxcaballero/inhouselearn',
           'X-Title': 'inhouse learn'
-        },
-        gemini: {
-          fetch: (modelId, body, signal) => geminiFetch('/models/' + encodeURIComponent(modelId) + ':streamGenerateContent?alt=sse', { body, signal }),
-          describeError: describeGeminiError
         }
-      });
-    }
-
-    function syncModelCapabilities() {
-      const customId = getApiSettings().customModel.trim();
-      MODEL_OPTIONS.forEach((option) => {
-        applyThinkingLevels(option, option.id === CUSTOM_MODEL_ID ? (customId || 'custom/model') : option.id);
-      });
-    }
-
-    // Modelos que no están en el catálogo de pi: se completan con el listado de OpenRouter.
-    function prepareOpenRouterModels() {
-      const customId = getApiSettings().customModel.trim();
-      const ids = MODEL_OPTIONS
-        .filter((option) => option.provider !== 'gemini')
-        .map((option) => (option.id === CUSTOM_MODEL_ID ? customId : option.id))
-        .filter((id) => id && !InhousePi.modelInfo('openrouter', id).known);
-      if (!ids.length) return;
-      Promise.all(ids.map((id) => InhousePi.prepareOpenRouterModel(id))).then(() => {
-        syncModelCapabilities();
-        renderModelControls();
       });
     }
 
     function boot() {
       configureEngine();
-      restoreGeminiCache();
-      syncModelCapabilities();
+      loadModelCatalogFromCache();
       loadState();
       loadGoogleTokenFromStorage();
       updateConfigUi();
@@ -9483,9 +8992,8 @@
       renderUsageDonut();
 
       refreshOpenRouterCredits();
-      prepareOpenRouterModels();
-      if (geminiApiKey()) prepareGemini();
-      if (!getApiSettings().apiKey && activeProviderName() !== 'gemini') {
+      refreshModelCatalog(false);
+      if (!getApiSettings().apiKey) {
         openModelMenuForKey();
       }
       window.setTimeout(() => {

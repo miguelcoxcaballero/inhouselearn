@@ -4,8 +4,7 @@
   "type": "module",
   "description": "Motor de chat de inhouse learn sobre pi (pi-ai + pi-agent-core), empaquetado para el navegador.",
   "scripts": {
-    "catalog": "node scripts/build-catalog.mjs",
-    "build": "npm run catalog && esbuild src/index.js --bundle --format=iife --global-name=InhousePi --platform=browser --target=es2020 --minify --legal-comments=eof --alias:@google/genai=./src/genai-shim.js --outfile=../vendor/pi-engine.js --metafile=meta.json"
+    "build": "esbuild src/index.js --bundle --format=iife --global-name=InhousePi --platform=browser --target=es2020 --minify --legal-comments=eof --outfile=../vendor/pi-engine.js --metafile=meta.json"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "1.3.0",
