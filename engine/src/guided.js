@@ -21,15 +21,17 @@ export function createGuidedTools(handlers) {
     {
       name: 'set_course_plan',
       label: 'Plan del curso',
-      description: 'Create or replace the course plan of this Guided Learning chat. The app shows it as a card with a "Start" button and tracks progress lesson by lesson. Group lessons in units; each lesson teaches one concept and lists 2–4 concrete, checkable objectives.',
+      description: 'Create or replace the course plan of this Guided Learning chat. The app shows it as a card with a "Start" button and tracks progress lesson by lesson. Group lessons in units (each with one emoji); each lesson teaches one concept, lists 2–4 concrete, checkable objectives and an estimate in minutes.',
       parameters: Type.Object({
         title: Type.String({ description: 'Short course title, e.g. "Derivadas desde cero".' }),
         goal: Type.String({ description: 'One sentence: what the student will be able to do at the end.' }),
         units: Type.Array(Type.Object({
           title: Type.String({ description: 'Unit title.' }),
+          icon: Type.Optional(Type.String({ description: 'One emoji that represents the unit, e.g. "📐".' })),
           lessons: Type.Array(Type.Object({
             title: Type.String({ description: 'Lesson title.' }),
-            objectives: Type.Array(Type.String(), { minItems: 1, maxItems: 5, description: '2–4 concrete objectives of the lesson.' })
+            objectives: Type.Array(Type.String(), { minItems: 1, maxItems: 5, description: '2–4 concrete objectives of the lesson.' }),
+            minutes: Type.Optional(Type.Integer({ minimum: 3, maximum: 60, description: 'Estimated study minutes for the lesson.' }))
           }), { minItems: 1, maxItems: 8 })
         }), { minItems: 1, maxItems: 8 })
       }),

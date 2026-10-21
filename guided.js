@@ -38,7 +38,7 @@ const GUIDED_BASE_PROMPT = [
   '- After calling quiz or final_exam, stop: at most one short sentence. The results arrive in the student\'s next message.',
   '- "Your task now" (below) comes from the app and changes after every step. Follow it exactly, even if earlier messages suggested something else.',
   '- Messages that start with "(Aviso de la app)" come from the app, not the student: do what they say without mentioning them.',
-  '- Teach with visuals whenever they help (```visual plots with sliders, step-by-step solutions, flashcards, timelines, comparisons, ```mermaid concept maps), but check the lesson only with the quiz tool, never with a visual of type check.',
+  '- Every lesson teaches with at least one interactive visual (see "Interactive visuals"): the first message of each lesson always includes one, and so does every re-explanation. Check the lesson only with the quiz tool, never with a visual of type check.',
   '',
   'How to teach (the student\'s preferences)',
   '- Assume they know nothing of the topic yet. Build from intuition and origin: where each formula comes from, what it really measures, why it has that shape; derive it instead of dropping it. If something is pure convention, say so ("esto es convención, memorízalo").',
@@ -186,12 +186,15 @@ function courseTaskText(course, chat) {
   const quiz = pendingQuiz(course, 'check');
   if (quiz) return 'A quiz for ' + lesson.id + ' is on screen and not answered yet. Answer the student briefly and remind them to finish it. Do not call tools.';
   const lastUser = [...(chat.messages || [])].reverse().find((message) => message.role === 'user' && !message.hidden);
+  if (lastUser && lastUser.kind === 'visual') {
+    return 'The student asked to SEE it: answer with one ```visual block (or a ```mermaid diagram) that shows the idea you are teaching in ' + lesson.id + ', choosing the type that fits best, plus at most three short lines of text around it.';
+  }
   if (lastUser && lastUser.kind === 'test-me') {
     return 'The student asked to be tested: call quiz NOW with 3–4 questions about ' + lesson.id + ' «' + lesson.title + '». One short sentence of text.';
   }
   if (event && event.type === 'quiz' && event.lessonId === lesson.id && !event.passed) {
     return 'The student scored ' + event.score + '% on the quiz of ' + lesson.id + ' (pass: ' + GUIDED_PASS + '%). They missed:\n' + event.wrong +
-      '\nRe-explain exactly those points from a different angle (a new metaphor or a simpler case) in one or two short messages, then call quiz again with NEW questions.';
+      '\nRe-explain exactly those points from a different angle (a new metaphor or a simpler case) with one ```visual block that makes them visible, in one or two short messages, then call quiz again with NEW questions.';
   }
   const opening = event && event.type === 'quiz' && event.passed
     ? 'Lesson ' + event.lessonId + ' was passed with ' + event.score + '%. Celebrate in one line, then start teaching ' + lesson.id + ' «' + lesson.title + '». '
@@ -201,15 +204,19 @@ function courseTaskText(course, chat) {
         ? 'The course starts now. Begin teaching ' + lesson.id + ' «' + lesson.title + '» with its first idea. '
         : '';
   const turns = lesson.turns || 0;
+  if (turns === 0) {
+    return opening + 'Teach the first idea of ' + lesson.id + ' «' + lesson.title + '» and include one ```visual block (or a ```mermaid diagram) that lets the student see or play with it: a plot or formula with sliders for maths and physics, steps for a procedure, a timeline for history, compare for contrasts, flashcards for terms. One idea, short text around the visual, end with a short question.';
+  }
   if (turns >= 3) {
     return opening + 'You have spent ' + turns + ' messages on ' + lesson.id + ': wrap it up in two sentences and call quiz NOW with 3–4 questions about its objectives.';
   }
   return opening + 'Teach ' + lesson.id + ' «' + lesson.title + '»: cover its objectives over one to three short messages, one idea per message. When the objectives are covered (or the student asks to be tested), call quiz with 3–4 questions about this lesson.';
 }
 
-function buildGuidedPrompt(chat) {
+// Goes last in the system prompt, after the visuals and the tools.
+function guidedTaskPrompt(chat) {
   const course = courseOf(chat);
-  return [GUIDED_BASE_PROMPT, '', '## Course state (from the app; the source of truth)', courseStateText(course), '', '## Your task now', courseTaskText(course, chat)].join('\n');
+  return ['## Course state (from the app; the source of truth)', courseStateText(course), '', '## Your task now', courseTaskText(course, chat)].join('\n');
 }
 
 /* ─── Tool handlers ──────────────────────────────────────────────────── */
@@ -250,9 +257,11 @@ function createGuidedToolHandlers(chat, message) {
       const course = courseOf(chat);
       const units = (Array.isArray(params && params.units) ? params.units : []).map((unit) => ({
         title: cleanText(unit && unit.title, 120) || 'Unidad',
+        icon: Array.from(cleanText(unit && unit.icon, 16)).slice(0, 2).join(''),
         lessons: (Array.isArray(unit && unit.lessons) ? unit.lessons : []).map((lesson) => ({
           title: cleanText(lesson && lesson.title, 140),
-          objectives: (Array.isArray(lesson && lesson.objectives) ? lesson.objectives : []).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 5)
+          objectives: (Array.isArray(lesson && lesson.objectives) ? lesson.objectives : []).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 5),
+          minutes: Math.max(0, Math.min(90, Math.round(Number(lesson && lesson.minutes) || 0)))
         })).filter((lesson) => lesson.title)
       })).filter((unit) => unit.lessons.length);
       const total = units.reduce((sum, unit) => sum + unit.lessons.length, 0);
@@ -495,13 +504,14 @@ const GUIDED_QUICK = {
   next: { text: 'Sigue.', kind: '' },
   example: { text: 'Dame otro ejemplo.', kind: '' },
   confused: { text: 'No lo entiendo, explícamelo de otra forma.', kind: '' },
+  visual: { text: 'Muéstramelo con una vista interactiva.', kind: 'visual' },
   test: { text: 'Ponme a prueba.', kind: 'test-me' },
   review: { text: 'Repásame lo que fallé en el examen.', kind: '' },
   retake: { text: 'Quiero repetir el examen final.', kind: 'retake' }
 };
 
 document.addEventListener('click', (event) => {
-  const target = event.target.closest('[data-g-answer],[data-g-submit],[data-g-start],[data-g-quick],[data-g-toggle-map],[data-g-skip],[data-g-level],[data-g-length],[data-g-change-plan]');
+  const target = event.target.closest('[data-g-answer],[data-g-submit],[data-g-start],[data-g-quick],[data-g-tweak],[data-g-toggle-map],[data-g-skip],[data-g-level],[data-g-length],[data-g-change-plan]');
   if (!target) return;
   const chat = getActiveChat();
   if (!chat) return;
@@ -517,6 +527,9 @@ document.addEventListener('click', (event) => {
     if (course.status !== 'ready' || appState.busy) return;
     startCourse(course);
     guidedSend(chat, '¡Empezamos!', { kind: 'start' });
+  } else if (target.dataset.gTweak) {
+    const tweak = GUIDED_TWEAKS[target.dataset.gTweak];
+    if (tweak && courseOf(chat).status === 'ready' && !appState.busy) guidedSend(chat, tweak.text);
   } else if (target.hasAttribute('data-g-change-plan')) {
     elements.composer.value = 'Cambia el plan: ';
     autoResizeComposer();
@@ -630,20 +643,61 @@ function renderGuidedHero(chat) {
     '</section>';
 }
 
+function formatMinutes(total) {
+  if (total < 60) return total + ' min';
+  const hours = Math.floor(total / 60);
+  const rest = Math.round((total % 60) / 5) * 5;
+  return hours + ' h' + (rest ? ' ' + rest + ' min' : '');
+}
+
+const GUIDED_TWEAKS = {
+  easier: { label: 'Más fácil', text: 'Ajusta el plan: empieza desde más abajo, no tengo base.' },
+  shorter: { label: 'Más corto', text: 'Ajusta el plan: hazlo más corto, solo lo esencial.' },
+  deeper: { label: 'Más a fondo', text: 'Ajusta el plan: hazlo más a fondo, con más lecciones y más nivel.' },
+  practical: { label: 'Más práctico', text: 'Ajusta el plan: más práctico, con más ejemplos y ejercicios guiados.' }
+};
+
+function planLessonMarkup(lesson) {
+  const node = '<span class="g-node ' + lesson.status + '">' +
+    (lesson.status === 'done' ? G_ICON.check : lesson.status === 'skipped' ? G_ICON.skip : escapeHtml(lesson.id.slice(1))) + '</span>';
+  const meta = lesson.score != null ? lesson.score + '%' : lesson.status === 'skipped' ? 'Saltada' : lesson.minutes ? '~' + lesson.minutes + ' min' : '';
+  const head = node + '<span class="g-route-name">' + escapeHtml(lesson.title) + (lesson.status === 'current' ? '<em>Ahora</em>' : '') + '</span>' +
+    (meta ? '<span class="g-route-meta">' + escapeHtml(meta) + '</span>' : '');
+  const objectives = lesson.objectives || [];
+  if (!objectives.length) return '<div class="g-route-lesson ' + lesson.status + '"><div class="g-route-row">' + head + '</div></div>';
+  return '<details class="g-route-lesson ' + lesson.status + '"><summary class="g-route-row">' + head + '<span class="g-route-chev">' + G_ICON.chevron + '</span></summary>' +
+    '<ul class="g-route-objs">' + objectives.map((item) => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul></details>';
+}
+
 function renderPlanCard(chat) {
   const course = courseOf(chat);
   const lessons = courseLessons(course);
-  const body = course.units.map((unit, index) => '<div class="g-plan-unit"><div class="g-plan-unit-head"><span class="g-plan-unit-num">' + (index + 1) + '</span>' + escapeHtml(unit.title) + '</div><ol class="g-plan-lessons">' +
-    unit.lessons.map((lesson) => '<li class="' + lesson.status + '">' + lessonStatusIcon(lesson) + '<div><div class="g-plan-lesson">' + escapeHtml(lesson.title) + '</div>' +
-      (lesson.objectives && lesson.objectives.length ? '<div class="g-plan-obj">' + lesson.objectives.map(escapeHtml).join(' · ') + '</div>' : '') + '</div></li>').join('') +
-    '</ol></div>').join('');
-  const action = course.status === 'ready'
-    ? '<div class="g-card-foot"><button type="button" class="g-secondary" data-g-change-plan>Cambiar el plan</button><button type="button" class="g-primary" data-g-start>' + G_ICON.play + 'Empezar</button></div>'
+  const progress = courseProgress(course);
+  const ready = course.status === 'ready';
+  const minutes = lessons.reduce((sum, lesson) => sum + (lesson.minutes || 0), 0);
+  const timed = lessons.length && lessons.every((lesson) => lesson.minutes);
+  const stat = (value, label) => '<span class="g-stat"><b>' + escapeHtml(String(value)) + '</b>' + escapeHtml(label) + '</span>';
+  const hero = '<header class="g-plan-hero">' +
+    '<span class="g-plan-badge">' + G_ICON.cap + (ready ? 'Tu plan de estudio' : 'Plan del curso') + '</span>' +
+    '<span class="g-plan-title">' + escapeHtml(course.title) + '</span>' +
+    (course.goal ? '<span class="g-plan-goal">' + escapeHtml(course.goal) + '</span>' : '') +
+    (ready
+      ? '<span class="g-plan-stats">' + stat(lessons.length, lessons.length === 1 ? ' lección' : ' lecciones') +
+        (timed ? stat('~' + formatMinutes(minutes), '') : '') + '<span class="g-stat exam">' + G_ICON.trophy + 'Examen final</span></span>'
+      : '<span class="g-plan-progress"><span class="g-plan-bar"><span style="width:' + progress.percent + '%"></span></span><b>' + progress.percent + '%</b></span>') +
+    '</header>';
+  const route = course.units.map((unit, index) => '<div class="g-route-unit">' +
+    '<div class="g-route-unit-head"><span class="g-route-unit-icon' + (unit.icon ? '' : ' num') + '">' + (unit.icon ? escapeHtml(unit.icon) : index + 1) + '</span>' +
+    '<span class="g-route-unit-text"><small>Unidad ' + (index + 1) + '</small><b>' + escapeHtml(unit.title) + '</b></span></div>' +
+    unit.lessons.map(planLessonMarkup).join('') + '</div>').join('') +
+    '<div class="g-route-exam' + (course.status === 'done' ? ' done' : course.status === 'exam' ? ' current' : '') + '"><span class="g-node exam">' + G_ICON.trophy + '</span>' +
+    '<span class="g-route-unit-text"><b>Examen final</b><small>' + (course.examScore != null ? 'Nota: ' + course.examScore + '%' : 'De todo el curso · unas 2 preguntas por lección') + '</small></span></div>';
+  const foot = ready
+    ? '<div class="g-plan-foot"><button type="button" class="g-start" data-g-start>' + G_ICON.play + 'Empezar el curso</button>' +
+      '<div class="g-tweaks"><span>¿Lo ajustamos?</span>' + Object.keys(GUIDED_TWEAKS).map((key) => '<button type="button" class="g-tweak" data-g-tweak="' + key + '">' + GUIDED_TWEAKS[key].label + '</button>').join('') +
+      '<button type="button" class="g-tweak ghost" data-g-change-plan>Otro cambio…</button></div></div>'
     : '';
-  return '<section class="g-card g-plan">' +
-    '<header class="g-card-head"><span class="g-eyebrow">' + G_ICON.cap + 'Tu plan · ' + lessons.length + ' lecciones + examen</span>' +
-    '<span class="g-title">' + escapeHtml(course.title) + '</span>' + (course.goal ? '<span class="g-goal">' + escapeHtml(course.goal) + '</span>' : '') + '</header>' +
-    '<div class="g-plan-body">' + body + '<div class="g-plan-exam">' + G_ICON.trophy + 'Examen final de todo el curso</div></div>' + action + '</section>';
+  return '<section class="g-card g-plan' + (ready ? ' ready' : '') + '">' + hero + '<div class="g-route">' + route + '</div>' + foot + '</section>';
 }
 
 function questionMarkup(quiz, question, index, mode) {
@@ -753,6 +807,25 @@ function renderGuidedCards(message, chat) {
   }).join('');
 }
 
+// Course cards elsewhere in the thread follow the course: a replaced plan
+// collapses, a started plan loses its buttons. Only slots whose drawing
+// changed are redrawn, so open lessons and answers stay as they are.
+const guidedSlotHtml = new WeakMap();
+function refreshGuidedCardSlots(chat, exceptId) {
+  if (!chat || !chat.guidedLearning || chat.id !== appState.activeChatId) return;
+  chat.messages.forEach((message) => {
+    if (message.id === exceptId || !(message.guidedCards || []).length) return;
+    const article = findMessageElement(message.id);
+    const slot = article && article.querySelector('.slot-cards');
+    if (!slot) return;
+    const html = renderGuidedCards(message, chat);
+    if (guidedSlotHtml.get(slot) === html) return;
+    slot.innerHTML = html;
+    enhanceRichContent(slot, { renderMath: true, latexPreview: false });
+    guidedSlotHtml.set(slot, html);
+  });
+}
+
 // Result of a mini test or the exam: a compact chip instead of the text the model reads.
 function renderGuidedResultMessage(message) {
   const result = message && message.result;
@@ -766,9 +839,9 @@ function guidedQuickRepliesMarkup(chat) {
   if (!chat || !chat.guidedLearning || appState.busy) return '';
   const course = courseOf(chat);
   let keys = [];
-  if (course.status === 'learning' && !pendingQuiz(course, 'check')) keys = ['next', 'example', 'confused', 'test'];
+  if (course.status === 'learning' && !pendingQuiz(course, 'check')) keys = ['next', 'visual', 'example', 'confused', 'test'];
   else if (course.status === 'done') keys = ['review', 'retake'];
   if (!keys.length) return '';
-  const labels = { next: 'Sigue', example: 'Otro ejemplo', confused: 'No lo entiendo', test: 'Ponme a prueba', review: 'Repasar lo que fallé', retake: 'Repetir el examen' };
+  const labels = { next: 'Sigue', visual: 'Muéstramelo', example: 'Otro ejemplo', confused: 'No lo entiendo', test: 'Ponme a prueba', review: 'Repasar lo que fallé', retake: 'Repetir el examen' };
   return '<div class="g-quick">' + keys.map((key) => '<button type="button" class="g-quick-btn' + (key === 'test' || key === 'retake' ? ' accent' : '') + '" data-g-quick="' + key + '">' + labels[key] + '</button>').join('') + '</div>';
 }

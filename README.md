@@ -42,8 +42,8 @@ Cada respuesta muestra los pasos con herramientas que ha dado (plegados). Si un 
 
 El botón del birrete convierte el chat en un curso. La lógica la lleva la app (`guided.js`), no el modelo:
 
-1. **Plan**: eliges nivel y duración, dices el tema (o subes apuntes) y el tutor llama a `set_course_plan`. El plan sale como tarjeta con «Empezar» y «Cambiar el plan».
-2. **Lecciones**: una barra arriba enseña el curso, la lección actual y el progreso, y se despliega en el mapa del temario (con «Saltar» si ya la dominas). Debajo de cada respuesta hay respuestas rápidas: Sigue, Otro ejemplo, No lo entiendo, Ponme a prueba.
+1. **Plan**: eliges nivel y duración, dices el tema (o subes apuntes) y el tutor llama a `set_course_plan`. El plan sale como una ruta: unidades con su emoji, lecciones numeradas con minutos estimados y objetivos que se despliegan, y el examen al final. Debajo, «Empezar el curso» y ajustes de un toque (más fácil, más corto, más a fondo, más práctico).
+2. **Lecciones**: una barra arriba enseña el curso, la lección actual y el progreso, y se despliega en el mapa del temario (con «Saltar» si ya la dominas). La primera explicación de cada lección y cada repaso traen siempre una vista interactiva. Debajo de cada respuesta hay respuestas rápidas: Sigue, Muéstramelo, Otro ejemplo, No lo entiendo, Ponme a prueba.
 3. **Mini test** por lección (`quiz`): corrección al momento con explicación. Con un 70 % se aprueba y se pasa a la siguiente; si no, el tutor vuelve a explicar justo lo que fallaste y repite el test con preguntas nuevas.
 4. **Examen final** (`final_exam`) de todo el curso, con nota por lección, y repaso final. Se puede repetir.
 
@@ -51,7 +51,7 @@ Cada petición manda al modelo el estado del curso y una única tarea concreta (
 
 ## Vistas visuales e interactivas en el chat
 
-El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`.
+El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el chat normal, si una respuesta larga no trae ninguna vista, debajo aparece «Muéstramelo en visual».
 
 ## Respuestas fluidas
 

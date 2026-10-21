@@ -4462,7 +4462,8 @@
         : renderMarkdownBlocks(visibleContent);
       const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
       const cardsMarkup = isUser ? '' : renderGuidedCards(message, chat);
-      const quickMarkup = !isUser && isLastAssistant && !message.pending ? guidedQuickRepliesMarkup(chat) : '';
+      const quickMarkup = isUser || !isLastAssistant || message.pending ? ''
+        : chat && chat.guidedLearning ? guidedQuickRepliesMarkup(chat) : visualAskMarkup(message);
       const actionsMarkup = renderMsgActions(message, !!isLastAssistant);
       const attributionMarkup = renderMessageAttribution(message);
       return [
@@ -4480,6 +4481,27 @@
         '</article>'
       ].join('');
     }
+
+    // Under the last answer of a normal chat that has no visual yet: one tap asks for one.
+    function visualAskMarkup(message) {
+      const text = getVisibleContent(message);
+      if (!text || text.length < 160 || /^Error: /.test(text) || /```[ \t]*(visual|widget|viz|interactive|mermaid)/i.test(text)) return '';
+      return '<div class="g-quick"><button type="button" class="g-quick-btn accent" data-ask-visual>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>' +
+        'Muéstramelo en visual</button></div>';
+    }
+
+    function askForVisual() {
+      const chat = getActiveChat();
+      if (appState.busy || !chat) return;
+      const message = createMessage('user', 'Muéstramelo de forma visual e interactiva.', false);
+      message.kind = 'visual';
+      runAssistantTurn(chat, message);
+    }
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[data-ask-visual]')) askForVisual();
+    });
 
     function findMessageElement(messageId) {
       return Array.from(elements.thread.querySelectorAll('[data-msg-id]')).find(function(el) {
@@ -6638,8 +6660,9 @@
 
     function buildAgentSystemPrompt(chat) {
       const files = chatWorkspace(chat).list();
+      const guided = !!(chat && chat.guidedLearning);
       return [
-        chat && chat.guidedLearning ? buildGuidedPrompt(chat) : APP_CONFIG.SYSTEM_PROMPT,
+        guided ? GUIDED_BASE_PROMPT : APP_CONFIG.SYSTEM_PROMPT,
         '',
         VISUALS_PROMPT,
         '',
@@ -6648,7 +6671,10 @@
         '- write_file, read_file, edit_file, list_files y delete_file manejan los archivos del chat (apuntes, esquemas, código, CSV...). El usuario los ve encima del cuadro de texto y puede descargarlos en un ZIP. Crea archivos solo si te lo pide o si el contenido es largo y le sirve guardarlo; después dile qué has guardado.',
         files.length
           ? 'Archivos actuales: ' + files.map((file) => file.path).join(', ') + '.'
-          : 'Ahora mismo no hay archivos.'
+          : 'Ahora mismo no hay archivos.',
+        '',
+        // Last, where models pay most attention: the course task, or the visuals reminder.
+        guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER
       ].join('\n');
     }
 
@@ -7229,6 +7255,7 @@
         } else if (chat.id === appState.activeChatId) {
           renderThread({ preserveScroll: true });
         }
+        refreshGuidedCardSlots(chat, assistantMessage.id);
         syncGuidedBannerSlot(chat);
       }
       if (nudge && chat.id === appState.activeChatId) {

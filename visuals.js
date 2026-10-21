@@ -16,7 +16,10 @@
    time (renderMarkdown, escapeHtml). */
 
 const VISUALS_PROMPT = [
-  'Visual answers: when a picture teaches better than text, put ONE ```visual block (strict JSON) where it belongs in the answer; the chat shows it as an interactive card. Keep the explanation in your text too. Types:',
+  '## Interactive visuals (use them a lot)',
+  'This chat turns a ```visual block (JSON) into an interactive card and a ```mermaid block into a diagram. Whenever an answer explains something that can be seen, played with or practised (a function or formula, data or a trend, a process or cycle, a comparison, dates, a procedure, terms to memorise), put ONE visual block where it helps and keep explaining in text around it. Most teaching answers in maths, science, economics, history, languages and exam prep should have one. Skip it only for small talk, one-line answers, or when the student asks for text only.',
+  'Pick the type: a quantity that varies → plot (graph with sliders) or formula (sliders with live results); data, proportions, trends → chart; a procedure or worked solution → steps; dates and periods → timeline; A vs B → compare; terms, formulas or vocabulary to memorise → flashcards; overview of key points → cards; a quick self-check → check; processes, cycles, hierarchies, concept maps → mermaid.',
+  'Formats (JSON with double quotes; LaTeX inside strings such as \\(x^2\\) is fine):',
   '- plot (graph of functions, with sliders): {"type":"plot","title":"…","x":[-6.3,6.3],"y":[-3,3],"functions":[{"expr":"a*sin(b*x)","label":"\\\\(a\\\\sin(bx)\\\\)"}],"params":{"a":{"min":0,"max":3,"value":1,"step":0.1,"label":"amplitud"}},"points":[{"x":0,"y":0,"label":"origen"}],"readouts":[{"label":"Periodo","expr":"2*pi/b","unit":"s"}]}. "y", "params", "points" and "readouts" are optional.',
   '- formula (a formula to play with, sliders and live results, no graph): {"type":"formula","title":"…","formula":"V = I\\\\,R","params":{"I":{"min":0,"max":5,"value":2,"label":"corriente (A)"},"R":{"min":1,"max":100,"value":10,"label":"resistencia (Ω)"}},"readouts":[{"label":"Tensión","expr":"I*R","unit":"V"}]}',
   '  expr: plain math with x and the param names; + - * / ^, parentheses, sin cos tan asin acos atan sqrt abs exp ln log (base 10) floor ceil min max, pi, e. Not LaTeX.',
@@ -28,9 +31,12 @@ const VISUALS_PROMPT = [
   '- check (one quick question with instant feedback): {"type":"check","question":"…","options":["…","…"],"correct":0,"explanation":"…"}',
   '- cards (key ideas at a glance): {"type":"cards","title":"…","items":[{"icon":"⚡","title":"…","body":"…"}]}',
   'For processes, hierarchies, cycles and concept maps use a ```mermaid block (flowchart TD, mindmap, sequenceDiagram, timeline) with short labels in quotes.',
-  'Text fields accept markdown and LaTeX \\( … \\). Use a visual only when it adds understanding (graphs, data, processes, comparisons, memorising, step-by-step solutions), at most one or two per answer, never as decoration.'
+  'Text fields accept markdown and LaTeX \\( … \\). Prefer sliders with sensible ranges, real numbers and short labels. One or two visuals per answer at most.'
 ].join('\n');
 
+const VISUALS_REMINDER = 'Before you answer: if this answer explains something visual, numeric, sequential or worth memorising, include one ```visual block (or a ```mermaid diagram) for it.';
+
+const VIZ_FENCES = /^(visual|widget|viz|interactive|visualization)$/;
 const VIZ_COLORS = ['#E07A3C', '#3B82F6', '#16A34A', '#9333EA', '#DC2626', '#0EA5E9', '#CA8A04', '#DB2777'];
 const vizState = new Map();
 const vizMermaidCache = new Map();
@@ -60,13 +66,54 @@ function vizFmt(value, digits) {
   return value.toLocaleString('es-ES', { maximumFractionDigits: max });
 }
 
-function parseVisualSpec(text) {
-  const raw = String(text || '').trim();
-  const attempts = [raw, raw.replace(/,\s*([}\]])/g, '$1').replace(/[“”]/g, '"')];
+// LaTeX commands that start like a JSON escape: \nabla is not "\n" + "abla".
+const VIZ_LATEX_AFTER_N = /^(abla|eq|e(?![a-z])|u(?![a-z])|ot|eg|otin|exists|mid|leq|geq|subset|parallel|ewline|ormalsize)/;
+
+// Models write LaTeX inside the JSON the natural way: "\(x^2\)", "\frac{1}{2}".
+// That is invalid JSON, or worse, valid with \f, \t, \b turned into control
+// characters. Inside strings, a backslash that is not a real JSON escape is
+// kept as a backslash; raw line breaks become \n.
+function vizRepairJson(raw) {
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+      continue;
+    }
+    if (ch === '"') { inString = false; out += ch; continue; }
+    if (ch === '\n') { out += '\\n'; continue; }
+    if (ch === '\r' || ch === '\t') { out += ' '; continue; }
+    if (ch !== '\\') { out += ch; continue; }
+    const next = raw[i + 1] || '';
+    const rest = raw.slice(i + 2, i + 14);
+    let real = false;
+    if (next === '"' || next === '/') real = true;
+    else if (next === 'u') real = /^[0-9a-fA-F]{4}/.test(rest);
+    else if (next === 'n') real = !VIZ_LATEX_AFTER_N.test(rest);
+    else if ('tbfr'.includes(next) && next) real = !/^[a-zA-Z]/.test(rest);
+    if (real) { out += ch + next; i++; continue; }
+    out += '\\\\';
+    // A LaTeX line break written as \\ stays a double backslash.
+    if (next === '\\') { out += '\\\\'; i++; }
+  }
+  return out;
+}
+
+function parseVisualSpec(text, fallbackType) {
+  const raw = String(text || '').trim().replace(/[“”]/g, '"').replace(/,\s*([}\]])/g, '$1');
+  // Correctly escaped JSON ("\\frac", "\\(") goes first; otherwise the repaired text.
+  const escaped = /\\\\[A-Za-z()[\]{},]/.test(raw);
+  const attempts = escaped ? [raw, vizRepairJson(raw)] : [vizRepairJson(raw), raw];
   for (const attempt of attempts) {
     try {
       const spec = JSON.parse(attempt);
-      if (spec && typeof spec === 'object' && typeof spec.type === 'string') return spec;
+      if (spec && typeof spec === 'object' && !Array.isArray(spec)) {
+        if (typeof spec.type !== 'string' && fallbackType) spec.type = fallbackType;
+        if (typeof spec.type === 'string') return spec;
+      }
     } catch (_) {}
   }
   return null;
@@ -776,8 +823,11 @@ function enhanceVisuals(root, options) {
     const lang = ((code.className.match(/language-([\w+-]+)/) || [])[1] || '').toLowerCase();
     const source = code.textContent;
     if (lang === 'mermaid') { mountMermaid(pre, source); return; }
-    if (lang !== 'visual' && lang !== 'widget' && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards)"/.test(source))) return;
-    const spec = parseVisualSpec(source);
+    // ```visual is the format; ```viz, ```interactive, ```chart, ```plot… or a
+    // ```json with a known "type" are accepted too.
+    const typed = Object.prototype.hasOwnProperty.call(VIZ_RENDERERS, lang) ? lang : '';
+    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards)"/.test(source))) return;
+    const spec = parseVisualSpec(source, typed);
     const render = spec && VIZ_RENDERERS[String(spec.type).toLowerCase()];
     if (!render) return;
     const article = pre.closest('[data-msg-id]');

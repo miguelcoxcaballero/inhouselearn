@@ -12,7 +12,7 @@
    Loaded before the main script of index.html; uses its globals at call
    time (renderMarkdown, enhanceRichContent, renderReasoningMarkup…). */
 
-const STREAM_FENCE_PLACEHOLDER = /^(visual|widget|mermaid)$/i;
+const STREAM_FENCE_PLACEHOLDER = /^(visual|widget|viz|interactive|visualization|mermaid|plot|graph|formula|chart|flashcards|steps|timeline|compare|cards|check)$/i;
 
 function isListStart(line) {
   return /^\s{0,3}(?:[-*+]|\d{1,9}[.)])\s/.test(line || '');
@@ -392,6 +392,7 @@ class StreamView {
       if (cardsSlot && chat) {
         cardsSlot.innerHTML = renderGuidedCards(message, chat);
         cardsSlot.querySelectorAll('.g-card').forEach((card) => card.classList.add('appear'));
+        refreshGuidedCardSlots(chat, message.id);
         enhanceRichContent(cardsSlot, { renderMath: true, latexPreview: false });
         syncGuidedBannerSlot(chat);
       }
