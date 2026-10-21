@@ -1448,15 +1448,6 @@
       width: 40px; height: 40px; border: 1px solid var(--border-strong); color: var(--text-secondary);
     }
     .attach-btn:hover { transform: none; background: rgba(0,0,0,0.04); }
-    .dictate-btn {
-      width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border-strong);
-      display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
-    }
-    .dictate-btn[hidden] { display: none; }
-    .dictate-btn:hover { background: rgba(0,0,0,0.04); color: var(--text); }
-    .dictate-btn[aria-pressed="true"] { background: #B42318; border-color: #B42318; color: #fff; animation: dictatePulse 1.4s ease-in-out infinite; }
-    @keyframes dictatePulse { 50% { box-shadow: 0 0 0 6px rgba(180,35,24,0.18); } }
-    @media (prefers-reduced-motion: reduce) { .dictate-btn[aria-pressed="true"] { animation: none; } }
     .guided-btn {
       width: auto; height: 40px; padding: 0 15px 0 4px; gap: 8px; border-radius: var(--r-full);
       border: 1px solid var(--border-strong); color: var(--text); font-size: 0.9rem; font-weight: 500; white-space: nowrap;
@@ -1509,7 +1500,7 @@
       .composer-area { padding: 8px 12px max(10px, env(safe-area-inset-bottom, 0px)); }
       .guided-btn { width: 44px; height: 44px; padding: 0; justify-content: center; }
       .guided-btn-label { display: none; }
-      .attach-btn, .dictate-btn { width: 44px; height: 44px; }
+      .attach-btn { width: 44px; height: 44px; }
       .model-menu-wrap { max-width: 190px; }
       .model-trigger { height: 44px; }
       .model-trigger-chip { display: none; }
@@ -1652,9 +1643,6 @@
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21.44 11.05l-8.49 8.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66L9.4 17.43a2 2 0 1 1-2.83-2.83l8.49-8.48"/>
                 </svg>
-              </button>
-              <button class="dictate-btn" id="dictate-btn" type="button" aria-label="Dictar" aria-pressed="false" title="Dictar con la voz" hidden>
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
               </button>
               <button class="guided-btn" id="guided-btn" type="button" aria-pressed="false" aria-label="Aprendizaje guiado" title="Aprendizaje guiado: un curso por lecciones con mini tests y examen final">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3744,14 +3732,12 @@
         elements.sendIcon.innerHTML = '<path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>';
       }
       if (elements.composer) {
-        // Rewriting these on every keystroke cuts Android keyboards' voice typing.
-        if (elements.composer.disabled !== driveLocked) elements.composer.disabled = driveLocked;
-        const nextPlaceholder = driveLocked
+        elements.composer.disabled = driveLocked;
+        elements.composer.placeholder = driveLocked
           ? 'Inicia sesión con Google para continuar...'
           : (guidedActive
             ? guidedComposerPlaceholder(activeChat)
             : 'Pregunta lo que quieras');
-        if (elements.composer.placeholder !== nextPlaceholder) elements.composer.placeholder = nextPlaceholder;
       }
       if (elements.attachBtn) {
         elements.attachBtn.disabled = driveLocked || appState.busy || appState.attachmentBusy;
@@ -6439,98 +6425,7 @@
       elements.profileBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     }
 
-    /* ─── DICTADO ────────────────────────────────────────
-       In the Android app the shell opens the system's speech recognizer
-       ({type: 'dictate'} → window.inhouseLearnDictation(text)); in browsers
-       the Web Speech API writes into the composer as you speak. */
-    const dictation = { active: false, recognition: null, base: '', timer: 0 };
-
-    function insertDictatedText(text, base) {
-      const clean = String(text || '').trim();
-      if (!clean && base === undefined) return;
-      const start = base !== undefined ? base : elements.composer.value;
-      const joiner = start && !/\s$/.test(start) && clean ? ' ' : '';
-      elements.composer.value = start + joiner + clean;
-      autoResizeComposer();
-      updateSendUi();
-    }
-
-    function setDictating(on) {
-      dictation.active = on;
-      const btn = document.getElementById('dictate-btn');
-      if (btn) {
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.setAttribute('aria-label', on ? 'Parar el dictado' : 'Dictar');
-      }
-    }
-
-    window.inhouseLearnDictation = function(text) {
-      window.clearTimeout(dictation.timer);
-      setDictating(false);
-      if (typeof text === 'string' && text.trim()) {
-        insertDictatedText(text);
-        elements.composer.focus();
-      }
-    };
-
-    function toggleDictation() {
-      if (ANDROID_APP) {
-        if (dictation.active) return;
-        setDictating(true);
-        haptic('light');
-        androidAppMessage({ type: 'dictate', lang: navigator.language || 'es-ES' });
-        // Older versions of the app don't know this message: say so instead of waiting forever.
-        dictation.timer = window.setTimeout(() => {
-          if (!dictation.active || !document.hasFocus()) return;
-          setDictating(false);
-          showToast('Dictado', 'Actualiza la app para dictar desde aquí. Mientras, usa el micrófono del teclado.');
-        }, 2500);
-        return;
-      }
-      if (dictation.active && dictation.recognition) {
-        dictation.recognition.stop();
-        return;
-      }
-      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!Recognition) return;
-      const recognition = new Recognition();
-      recognition.lang = navigator.language || 'es-ES';
-      recognition.interimResults = true;
-      recognition.continuous = true;
-      dictation.base = elements.composer.value;
-      let finalText = '';
-      recognition.onresult = (event) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const piece = event.results[i][0].transcript;
-          if (event.results[i].isFinal) finalText += piece; else interim += piece;
-        }
-        insertDictatedText((finalText + ' ' + interim).replace(/\s+/g, ' '), dictation.base);
-      };
-      recognition.onerror = (event) => {
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          showToast('Dictado', 'Permite el micrófono en el navegador para dictar.');
-        }
-      };
-      recognition.onend = () => {
-        dictation.recognition = null;
-        setDictating(false);
-      };
-      dictation.recognition = recognition;
-      setDictating(true);
-      try { recognition.start(); } catch (_) { setDictating(false); }
-    }
-
-    function setupDictation() {
-      const btn = document.getElementById('dictate-btn');
-      if (!btn) return;
-      const available = ANDROID_APP || !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-      btn.hidden = !available;
-      if (available) btn.addEventListener('click', toggleDictation);
-    }
-
     function bindEvents() {
-      setupDictation();
       elements.composer.addEventListener('input', () => {
         autoResizeComposer();
         updateSendUi();
