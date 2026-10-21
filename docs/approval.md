@@ -17,7 +17,7 @@ para que siempre sepas qué se ha tocado.
 
 - `approval.js`: los tres modos, el botón y su menú, y la puerta de entrada
   (`approveChange`) que decide entre el diálogo de confirmación y la aprobación sola.
-- `approval.css`: el botón y el menú (en el móvil, solo el icono).
+- `approval.css`: el botón y el菜单 (en el móvil, solo el icono).
 - `index.html`: carga el módulo, guarda el modo con el chat (`normalizeStoredChat`) y
   envuelve las herramientas de archivos del chat (`approvalWorkspaceTools`).
 
