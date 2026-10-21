@@ -30,3 +30,14 @@ para que siempre sepas qué se ha tocado.
   preguntan en «Preguntar». `run_js` pregunta si su código guarda archivos.
 - El modelo recibe el modo en el prompt del sistema (`approvalPromptText`) para que sepa si
   va a tener que pedir permiso.
+
+## Accesibilidad
+
+- El botón es un `<button>` real, con `aria-haspopup="listbox"` y `aria-expanded`; el menú es
+  una lista de opciones con `role="option"` y `aria-selected`.
+- El menú se cierra con Escape y con un clic fuera, y el botón Atrás de la app Android lo
+  cierra antes de salir de la app.
+- El icono del botón cambia con el modo (escudo, rayo, candado abierto) y su color avisa:
+  ámbar para «Preguntar», verde para «Auto» y rojo para «Acceso total».
+- En el móvil el botón se queda solo con el icono; el menú se abre a pantalla casi completa
+  desde abajo, como el de modelos.
