@@ -93,6 +93,9 @@ function summarize(entry, rank) {
     context: (entry.top_provider && entry.top_provider.context_length) || entry.context_length || 0,
     maxOutput: (entry.top_provider && entry.top_provider.max_completion_tokens) || 0,
     images: ((entry.architecture && entry.architecture.input_modalities) || []).includes('image'),
+    audio: ((entry.architecture && entry.architecture.input_modalities) || []).includes('audio'),
+    video: ((entry.architecture && entry.architecture.input_modalities) || []).includes('video'),
+    files: ((entry.architecture && entry.architecture.input_modalities) || []).includes('file'),
     tools: params.includes('tools'),
     reasoning: reasoning && {
       efforts: Array.isArray(reasoning.supported_efforts) ? reasoning.supported_efforts : [],
@@ -100,7 +103,10 @@ function summarize(entry, rank) {
       defaultEnabled: reasoning.default_enabled !== false,
       mandatory: !!reasoning.mandatory
     },
-    intelligence: benchmarks && typeof benchmarks.intelligence_index === 'number' ? benchmarks.intelligence_index : null
+    // Artificial Analysis indices as published by OpenRouter for each model.
+    intelligence: benchmarks && typeof benchmarks.intelligence_index === 'number' ? benchmarks.intelligence_index : null,
+    coding: benchmarks && typeof benchmarks.coding_index === 'number' ? benchmarks.coding_index : null,
+    agentic: benchmarks && typeof benchmarks.agentic_index === 'number' ? benchmarks.agentic_index : null
   };
 }
 

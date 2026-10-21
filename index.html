@@ -1771,6 +1771,40 @@
     .bubble code { font-family: ui-monospace, 'SF Mono', SFMono-Regular, Consolas, monospace; }
     .bubble :not(pre) > code { padding: 2px 6px; border-radius: var(--r-xs); background: rgba(0,0,0,0.05); font-size: 0.87em; }
     .bubble .katex-display { margin: 10px 0; overflow-x: auto; overflow-y: hidden; }
+    /* ```latex blocks: a readable preview, the code one tap away. */
+    .latex-block { margin-top: 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); overflow: hidden; }
+    .latex-bar { display: flex; align-items: center; gap: 2px; padding: 3px 6px 3px 12px; border-bottom: 1px solid var(--border); font-size: 0.7rem; color: var(--muted); }
+    .latex-bar-label { font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .latex-bar-spacer { flex: 1; }
+    .latex-bar-btn { border: none; background: none; padding: 4px 8px; border-radius: 7px; font: inherit; font-size: 0.72rem; color: var(--text-secondary); cursor: pointer; }
+    .latex-bar-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+    .latex-preview { padding: 14px 16px; line-height: 1.55; overflow-x: auto; }
+    .latex-preview h1 { font-size: 1.25em; margin: 0 0 6px; }
+    .latex-preview h2 { font-size: 1.1em; margin: 14px 0 6px; }
+    .latex-preview h3 { font-size: 1em; margin: 12px 0 4px; }
+    .latex-preview h4 { font-size: 0.95em; margin: 10px 0 4px; }
+    .latex-preview p { margin: 0 0 8px; }
+    .latex-preview p:last-child { margin-bottom: 0; }
+    .latex-preview ul, .latex-preview ol { margin: 4px 0 8px 20px; }
+    .latex-preview dt { font-weight: 600; margin-top: 4px; }
+    .latex-preview dd { margin: 0 0 4px 16px; }
+    .latex-preview .ltx-title { text-align: center; margin-bottom: 14px; }
+    .latex-preview .ltx-title p { color: var(--text-secondary); font-size: 0.9em; }
+    .latex-preview .ltx-abstract { margin: 8px 12px 12px; font-size: 0.92em; }
+    .latex-preview .ltx-abstract-title { text-align: center; font-weight: 700; }
+    .latex-preview .ltx-theorem, .latex-preview .ltx-proof { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--orange-border); background: rgba(0,0,0,0.025); border-radius: 0 var(--r-xs) var(--r-xs) 0; }
+    .latex-preview .ltx-proof { border-left-color: var(--border-strong); }
+    .latex-preview .ltx-qed { float: right; }
+    .latex-preview .ltx-center { text-align: center; }
+    .latex-preview .ltx-caption { font-size: 0.85em; color: var(--text-secondary); text-align: center; }
+    .latex-preview .ltx-fig { display: inline-block; padding: 6px 10px; border: 1px dashed var(--border-strong); border-radius: var(--r-xs); color: var(--muted); font-size: 0.85em; }
+    .latex-preview .ltx-math { margin: 6px 0; overflow-x: auto; }
+    .latex-preview .ltx-pre { margin: 8px 0; padding: 10px 12px; border-radius: var(--r-xs); background: rgba(0,0,0,0.05); color: var(--text); font-size: 0.85em; overflow-x: auto; white-space: pre; }
+    .latex-preview table { margin: 8px auto; width: auto; }
+    .latex-preview .ltx-fn { font-size: 0.8em; color: var(--text-secondary); }
+    .latex-block > pre { margin: 0; border-radius: 0; }
+    .latex-block[data-view="code"] .latex-preview { display: none; }
+    .latex-block:not([data-view="code"]) > pre { display: none; }
     .bubble table { border-collapse: collapse; margin-top: 8px; font-size: 0.84rem; width: 100%; }
     .bubble th, .bubble td { border: 1px solid var(--border); padding: 6px 10px; }
     .bubble th { background: rgba(0,0,0,0.025); font-weight: 600; text-align: left; }
@@ -2307,6 +2341,15 @@
     .model-popover-status.error { color: #b42318; }
     .model-card-badge.price { font-variant-numeric: tabular-nums; }
     .model-card-badge.pick { color: #c2410c; font-weight: 600; }
+    .capability-chips { margin-top: -2px; }
+    .filter-chip.active { background: var(--orange-soft); color: #c2410c; }
+    .model-card-score {
+      font-size: 0.68rem; font-weight: 700; min-width: 24px; text-align: center; padding: 2px 5px;
+      border-radius: 7px; flex: 0 0 auto; font-variant-numeric: tabular-nums;
+    }
+    .model-card-score.high { background: rgba(34,197,94,0.14); color: #15803d; }
+    .model-card-score.mid { background: rgba(234,179,8,0.16); color: #a16207; }
+    .model-card-score.low { background: rgba(0,0,0,0.05); color: var(--muted); }
   </style>
 </head>
 <body>
@@ -2375,6 +2418,7 @@
               <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
             </div>
             <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
+            <div class="company-chips capability-chips" id="capability-chips" role="group" aria-label="Filtros"></div>
             <div class="model-popover-section">
               <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
             </div>
@@ -3386,6 +3430,7 @@
       modelTriggerBrand: document.getElementById('model-trigger-brand'),
       modelSearchInput: document.getElementById('model-search-input'),
       companyChips: document.getElementById('company-chips'),
+      capabilityChips: document.getElementById('capability-chips'),
       modelList: document.getElementById('model-list'),
       thinkingSegmented: document.getElementById('thinking-segmented'),
       thinkingSection: document.getElementById('thinking-section'),
@@ -3474,8 +3519,28 @@
     const MODEL_LIST_LIMIT = 60;
     // Solo mientras no ha llegado la lista: OpenRouter elige el modelo.
     const FALLBACK_MODEL_ID = 'openrouter/auto';
-    const modelCatalog = { entries: [], byId: new Map(), search: new Map(), fetchedAt: 0, loading: null, error: '' };
-    const modelPicker = { query: '', company: '' };
+    const modelCatalog = { entries: [], byId: new Map(), search: new Map(), fetchedAt: 0, loading: null, error: '', smartThreshold: null, scoreMid: null };
+    const modelPicker = { query: '', company: '', filters: [] };
+
+    // Filters by what the OpenRouter listing says about each model. "Inteligente"
+    // uses the Artificial Analysis intelligence index that OpenRouter publishes
+    // per model (entry.intelligence), so new models get their score automatically.
+    const CAPABILITY_FILTERS = [
+      { id: 'free', label: 'Gratis', title: 'Sin coste por token', test: (e) => !e.price.input && !e.price.output },
+      { id: 'smart', label: 'Inteligente', title: () => 'Índice de inteligencia de Artificial Analysis ≥ ' + modelCatalog.smartThreshold + ': el cuarto superior de la lista, de mayor a menor', test: (e) => typeof e.intelligence === 'number' && modelCatalog.smartThreshold !== null && e.intelligence >= modelCatalog.smartThreshold },
+      { id: 'reasoning', label: 'Razona', title: 'Modelos con razonamiento', test: (e) => !!e.reasoning },
+      { id: 'images', label: 'Imágenes', title: 'Aceptan imágenes', test: (e) => !!e.images },
+      { id: 'audio', label: 'Audio', title: 'Aceptan audio', test: (e) => !!e.audio },
+      { id: 'video', label: 'Vídeo', title: 'Aceptan vídeo', test: (e) => !!e.video },
+      { id: 'files', label: 'Archivos', title: 'Aceptan PDF y otros archivos', test: (e) => !!e.files },
+      { id: 'tools', label: 'Herramientas', title: 'Pueden usar las herramientas del chat (JavaScript y archivos)', test: (e) => !!e.tools }
+    ];
+
+    function scoreLevel(score) {
+      if (modelCatalog.smartThreshold !== null && score >= modelCatalog.smartThreshold) return 'high';
+      if (modelCatalog.scoreMid !== null && score >= modelCatalog.scoreMid) return 'mid';
+      return 'low';
+    }
 
     function searchKey(text) {
       return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -3486,13 +3551,17 @@
       modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
       modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
       modelCatalog.fetchedAt = fetchedAt || 0;
+      const scores = entries.map((entry) => entry.intelligence).filter((value) => typeof value === 'number').sort((a, b) => a - b);
+      modelCatalog.smartThreshold = scores.length ? scores[Math.floor(scores.length * 0.75)] : null;
+      modelCatalog.scoreMid = scores.length ? scores[Math.floor(scores.length * 0.4)] : null;
       InhousePi.registerOpenRouterModels(entries);
     }
 
     function loadModelCatalogFromCache() {
       try {
         const cached = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) || 'null');
-        if (cached && Array.isArray(cached.entries) && cached.entries.length) {
+        // Entries cached before the engine kept modalities and scores are refetched.
+        if (cached && Array.isArray(cached.entries) && cached.entries.length && 'audio' in cached.entries[0]) {
           setModelCatalog(cached.entries, Number(cached.fetchedAt) || 0);
         }
       } catch (_) {}
@@ -5529,10 +5598,13 @@
       const subParts = [entry ? entry.company : 'ID de OpenRouter'];
       if (entry && entry.reasoning) subParts.push('razona');
       if (entry && entry.images) subParts.push('imágenes');
+      if (entry && entry.audio) subParts.push('audio');
+      if (entry && entry.video) subParts.push('vídeo');
       const price = modelPriceLabel(entry);
+      const score = entry && typeof entry.intelligence === 'number' ? entry.intelligence : null;
       const isActive = modelId === activeId;
       const title = entry
-        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '')
+        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '') + (score !== null ? ' · inteligencia ' + score : '')
         : modelId;
       return '<button type="button" class="model-card' + (isActive ? ' active' : '') + '" data-model-id="' + escapeHtml(modelId) + '" style="' + brandStyle(modelId) + '" title="' + escapeHtml(title) + '" role="option" aria-selected="' + (isActive ? 'true' : 'false') + '">' +
         '<span class="model-card-icon">' + brandIconSvg(modelId) + '</span>' +
@@ -5540,6 +5612,7 @@
           '<span class="model-card-name">' + escapeHtml(entry ? entry.name : modelId) + '</span>' +
           '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
         '</span>' +
+        (score !== null ? '<span class="model-card-score ' + scoreLevel(score) + '" title="Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)">' + Math.round(score) + '</span>' : '') +
         (price ? '<span class="model-card-badge price' + (price === 'Gratis' ? ' pick' : '') + '">' + escapeHtml(price) + '</span>' : '') +
         '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
         '</button>';
@@ -5563,13 +5636,28 @@
       }).join('');
     }
 
+    function renderCapabilityChips() {
+      if (!elements.capabilityChips) return;
+      elements.capabilityChips.classList.toggle('hidden', !modelCatalog.entries.length);
+      elements.capabilityChips.innerHTML = CAPABILITY_FILTERS.map((filter) => {
+        const count = modelCatalog.entries.filter(filter.test).length;
+        const active = modelPicker.filters.includes(filter.id);
+        const title = (typeof filter.title === 'function' ? filter.title() : filter.title) + ' · ' + count + ' modelos';
+        return '<button type="button" class="company-chip filter-chip' + (active ? ' active' : '') + '" data-filter-id="' + filter.id + '" aria-pressed="' + (active ? 'true' : 'false') + '" title="' + escapeHtml(title) + '">' + escapeHtml(filter.label) + '</button>';
+      }).join('');
+    }
+
     function renderModelList() {
       if (!elements.modelList) return;
       const activeId = activeModelName();
       const query = modelPicker.query.trim();
       const terms = searchKey(query).split(/\s+/).filter(Boolean);
-      const filtered = modelCatalog.entries.filter((entry) => (!modelPicker.company || entry.companyId === modelPicker.company) &&
+      const activeFilters = CAPABILITY_FILTERS.filter((filter) => modelPicker.filters.includes(filter.id));
+      const browsing = !terms.length && !modelPicker.company && !activeFilters.length;
+      let filtered = modelCatalog.entries.filter((entry) => (!modelPicker.company || entry.companyId === modelPicker.company) &&
+        activeFilters.every((filter) => filter.test(entry)) &&
         terms.every((term) => modelCatalog.search.get(entry.id).indexOf(term) !== -1));
+      if (modelPicker.filters.includes('smart')) filtered = filtered.slice().sort((a, b) => (b.intelligence || 0) - (a.intelligence || 0));
       const heading = (title, note) => '<div class="model-list-heading"><span>' + escapeHtml(title) + '</span>' + (note ? '<small>' + escapeHtml(note) + '</small>' : '') + '</div>';
       const note = (text) => '<div class="model-list-note">' + escapeHtml(text) + '</div>';
       const parts = [];
@@ -5577,11 +5665,11 @@
         parts.push(note(modelCatalog.loading ? 'Cargando los modelos de OpenRouter…' : (modelCatalog.error ? 'No se pudo cargar la lista: ' + modelCatalog.error : 'Todavía no hay lista de modelos.')));
       }
       // Un ID escrito a mano que no está en la lista sigue siendo el modelo del chat.
-      if (!terms.length && !modelPicker.company && !catalogEntry(activeId)) {
+      if (browsing && !catalogEntry(activeId)) {
         parts.push(heading('Modelo actual'), modelRowMarkup(activeId, activeId, null));
       }
       let rest = filtered;
-      if (!terms.length && !modelPicker.company && filtered.length) {
+      if (browsing && filtered.length) {
         parts.push(heading('Recomendados ahora', 'los más usados esta semana en OpenRouter'));
         filtered.slice(0, RECOMMENDED_COUNT).forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
         rest = filtered.slice(RECOMMENDED_COUNT);
@@ -5591,8 +5679,8 @@
       if (rest.length > MODEL_LIST_LIMIT) {
         parts.push(note('Y ' + (rest.length - MODEL_LIST_LIMIT) + ' más. Busca o elige una compañía para verlos.'));
       }
-      if (terms.length && !filtered.length) {
-        parts.push(note('Ningún modelo coincide con «' + query + '».'));
+      if ((terms.length || activeFilters.length) && !filtered.length) {
+        parts.push(note(terms.length ? 'Ningún modelo coincide con «' + query + '».' : 'Ningún modelo cumple esos filtros.'));
       }
       // Escribir un ID completo (compañía/modelo) permite usar cualquier modelo de OpenRouter.
       if (query.indexOf('/') > 0 && !/\s/.test(query) && !catalogEntry(query)) {
@@ -5612,6 +5700,7 @@
         elements.modelSearchInput.value = modelPicker.query;
       }
       renderCompanyChips();
+      renderCapabilityChips();
       const scrollTop = elements.modelList ? elements.modelList.scrollTop : 0;
       renderModelList();
       if (elements.modelList) elements.modelList.scrollTop = scrollTop;
@@ -5736,6 +5825,379 @@
       return fences.reduce((acc, code, index) => acc.replace('__CODE_BLOCK_' + index + '__', code), rendered);
     }
 
+    /* ─── LATEX PREVIEW ──────────────────────────────── */
+    // A ```latex block is shown as a readable preview inside the chat (title,
+    // sections, lists, theorem boxes, tables and KaTeX math), with the code one
+    // tap away. It is not a TeX engine: an unknown command keeps its text
+    // argument, and anything KaTeX cannot draw stays as its source.
+    const LATEX_PREVIEW_MACROS = {
+      '\\dd': '\\mathrm{d}', '\\dv': '\\frac{\\mathrm{d} #1}{\\mathrm{d} #2}', '\\pdv': '\\frac{\\partial #1}{\\partial #2}',
+      '\\grad': '\\nabla', '\\curl': '\\nabla\\times', '\\divergence': '\\nabla\\cdot', '\\laplacian': '\\nabla^2',
+      '\\vb': '\\mathbf{#1}', '\\va': '\\vec{#1}', '\\vu': '\\hat{\\mathbf{#1}}', '\\bm': '\\boldsymbol{#1}',
+      '\\abs': '\\left|#1\\right|', '\\norm': '\\left\\lVert#1\\right\\rVert', '\\order': '\\mathcal{O}\\left(#1\\right)',
+      '\\dotproduct': '\\cdot', '\\vdot': '\\cdot', '\\crossproduct': '\\times', '\\cross': '\\times',
+      '\\R': '\\mathbb{R}', '\\N': '\\mathbb{N}', '\\Z': '\\mathbb{Z}', '\\C': '\\mathbb{C}', '\\Q': '\\mathbb{Q}', '\\E': '\\mathbb{E}'
+    };
+    const LATEX_MATH_ENVS = ['subequations', 'equation', 'equation*', 'align', 'align*', 'alignat', 'alignat*', 'gather', 'gather*', 'multline', 'multline*', 'eqnarray', 'eqnarray*', 'flalign', 'flalign*', 'displaymath', 'math'];
+    const LATEX_THEOREMS = {
+      theorem: 'Teorema', lemma: 'Lema', corollary: 'Corolario', proposition: 'Proposición', definition: 'Definición', example: 'Ejemplo',
+      remark: 'Observación', note: 'Nota', exercise: 'Ejercicio', solution: 'Solución', claim: 'Afirmación', axiom: 'Axioma', notation: 'Notación',
+      teorema: 'Teorema', lema: 'Lema', corolario: 'Corolario', proposicion: 'Proposición', definicion: 'Definición', ejemplo: 'Ejemplo',
+      observacion: 'Observación', nota: 'Nota', ejercicio: 'Ejercicio', solucion: 'Solución', afirmacion: 'Afirmación'
+    };
+    const LATEX_ACCENTS = { "'": '́', '`': '̀', '^': '̂', '"': '̈', '~': '̃', '=': '̄', '.': '̇', 'c': '̧', 'v': '̌', 'u': '̆', 'H': '̋' };
+
+    function latexFindBraced(text, start) {
+      let depth = 0;
+      for (let i = start; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '\\') { i++; continue; }
+        if (ch === '{') depth++;
+        else if (ch === '}') { depth--; if (depth === 0) return i; }
+      }
+      return -1;
+    }
+
+    // Every \name*[opt]{arg} (balanced braces) becomes fn(arg, opt).
+    function latexReplaceCommand(text, name, fn) {
+      const marker = '\\' + name;
+      let out = '', index = 0;
+      for (;;) {
+        const at = text.indexOf(marker, index);
+        if (at === -1) break;
+        const after = at + marker.length;
+        if (/[a-zA-Z]/.test(text[after] || '')) { out += text.slice(index, after); index = after; continue; }
+        let pos = after, opt = '';
+        while (text[pos] === ' ') pos++;
+        if (text[pos] === '*') pos++;
+        if (text[pos] === '[') { const close = text.indexOf(']', pos); if (close !== -1) { opt = text.slice(pos + 1, close); pos = close + 1; } }
+        while (text[pos] === ' ') pos++;
+        if (text[pos] !== '{') { out += text.slice(index, after); index = after; continue; }
+        const end = latexFindBraced(text, pos);
+        if (end === -1) { out += text.slice(index, after); index = after; continue; }
+        out += text.slice(index, at) + fn(text.slice(pos + 1, end), opt);
+        index = end + 1;
+      }
+      return out + text.slice(index);
+    }
+
+    // Every \begin{name}[opt]{arg}…\end{name} (same-name nesting respected) becomes fn(inner, opt, arg).
+    function latexReplaceEnv(text, name, fn, takesArg) {
+      const begin = '\\begin{' + name + '}', end = '\\end{' + name + '}';
+      let out = '', index = 0;
+      for (;;) {
+        const at = text.indexOf(begin, index);
+        if (at === -1) break;
+        let depth = 1, pos = at + begin.length, close = -1;
+        while (depth > 0) {
+          const nextBegin = text.indexOf(begin, pos), nextEnd = text.indexOf(end, pos);
+          if (nextEnd === -1) break;
+          if (nextBegin !== -1 && nextBegin < nextEnd) { depth++; pos = nextBegin + begin.length; }
+          else { depth--; if (depth === 0) close = nextEnd; pos = nextEnd + end.length; }
+        }
+        if (close === -1) break;
+        let inner = text.slice(at + begin.length, close), opt = '', arg = '';
+        const optMatch = inner.match(/^[ \t]*\[([^\]]*)\]/);
+        if (optMatch) { opt = optMatch[1]; inner = inner.slice(optMatch[0].length); }
+        if (takesArg && /^[ \t]*\{/.test(inner)) {
+          const s = inner.indexOf('{'), e = latexFindBraced(inner, s);
+          if (e !== -1) { arg = inner.slice(s + 1, e); inner = inner.slice(e + 1); }
+        }
+        out += text.slice(index, at) + fn(inner, opt, arg);
+        index = close + end.length;
+      }
+      return out + text.slice(index);
+    }
+
+    // physics-package forms KaTeX macros cannot express: \qty(…), \dv[n]{f}{x}, \vb*{x}, \div.
+    function latexPhysics(tex) {
+      let t = tex.replace(/\\div\b/g, '\\divergence').replace(/\\vb\*/g, '\\boldsymbol').replace(/\\va\*/g, '\\vec');
+      t = t.replace(/\\(dv|pdv)\[([^\]]+)\]\{([^{}]*)\}\{([^{}]*)\}/g, (m, k, n, f, x) => {
+        const d = k === 'dv' ? '\\mathrm{d}' : '\\partial';
+        return '\\frac{' + d + '^{' + n + '} ' + f + '}{' + d + ' ' + x + '^{' + n + '}}';
+      });
+      t = t.replace(/\\(dv|pdv)\{([^{}]*)\}(?!\s*\{)/g, (m, k, x) => {
+        const d = k === 'dv' ? '\\mathrm{d}' : '\\partial';
+        return '\\frac{' + d + '}{' + d + ' ' + x + '}';
+      });
+      const pairs = { '(': ')', '[': ']', '{': '}', '|': '|' };
+      let out = '', i = 0;
+      for (;;) {
+        const at = t.indexOf('\\qty', i);
+        if (at === -1) break;
+        let p = at + 4;
+        while (t[p] === ' ') p++;
+        const open = t[p], close = pairs[open];
+        if (!close) { out += t.slice(i, p); i = p; continue; }
+        let depth = 0, e = -1;
+        for (let j = p; j < t.length; j++) {
+          if (t[j] === '\\') { j++; continue; }
+          if (open !== '|' && t[j] === open) depth++;
+          else if (t[j] === close) { if (open === '|' ? j > p : --depth === 0) { e = j; break; } }
+        }
+        if (e === -1) { out += t.slice(i, p); i = p; continue; }
+        const l = open === '{' ? '(' : open === '|' ? '\\lvert' : open, r = close === '}' ? ')' : close === '|' ? '\\rvert' : close;
+        out += t.slice(i, at) + '\\left' + l + t.slice(p + 1, e) + '\\right' + r;
+        i = e + 1;
+      }
+      return out + t.slice(i);
+    }
+
+    function latexToHtml(source) {
+      const slots = [];
+      const hold = (html, block) => { slots.push(html); const m = block ? '\u0002' : '\u0001'; return m + (slots.length - 1) + m; };
+      let text = String(source || '').replace(/\r\n?/g, '\n').replace(/\t/g, '  ');
+      text = text.replace(/(^|[^\\])%[^\n]*/g, '$1');
+      const docStart = text.indexOf('\\begin{document}');
+      const preamble = docStart === -1 ? '' : text.slice(0, docStart);
+      let body = docStart === -1 ? text : text.slice(docStart + '\\begin{document}'.length);
+      const docEnd = body.indexOf('\\end{document}');
+      if (docEnd !== -1) body = body.slice(0, docEnd);
+      const physics = /\\usepackage(\[[^\]]*\])?\{[^}]*\bphysics\b/.test(preamble) || /\\(grad|curl|dv|pdv|vb|qty)\b/.test(body);
+      const theorems = Object.assign({}, LATEX_THEOREMS);
+      text.replace(/\\newtheorem\*?\{([^}]+)\}(?:\[[^\]]*\])?\{([^}]+)\}/g, (m, env, label) => { theorems[env] = label; return ''; });
+      const meta = {};
+      ['title', 'author', 'date'].forEach((key) => latexReplaceCommand(preamble + body, key, (arg) => { if (!(key in meta)) meta[key] = arg; return ''; }));
+      const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      const mathTex = (tex, display) => {
+        let t = tex.replace(/\\label\{[^}]*\}/g, '').replace(/\\(nonumber|notag)\b/g, '');
+        if (physics) t = latexPhysics(t);
+        return display ? '$$' + t + '$$' : '\\(' + t + '\\)';
+      };
+      const holdMath = (tex, display) => hold(display ? '<div class="ltx-math">' + escapeHtml(mathTex(tex, true)) + '</div>' : escapeHtml(mathTex(tex, false)), display);
+      const holdPre = (inner) => hold('<pre class="ltx-pre">' + escapeHtml(inner.replace(/^\n/, '').replace(/\n$/, '')) + '</pre>', true);
+
+      // Verbatim and math first: nothing inside them is LaTeX markup.
+      ['verbatim', 'verbatim*', 'lstlisting', 'minted', 'Verbatim'].forEach((env) => { body = latexReplaceEnv(body, env, holdPre, env === 'minted'); });
+      body = body.replace(/\\verb(\*?)(\S)(.*?)\2/g, (m, star, d, c) => hold('<code>' + escapeHtml(c) + '</code>'));
+      LATEX_MATH_ENVS.forEach((env) => {
+        body = latexReplaceEnv(body, env, (inner) => {
+          if (env === 'subequations') return inner;
+          const base = env.replace('*', '');
+          const tex = inner.trim();
+          if (base === 'equation' || base === 'displaymath' || base === 'math') return holdMath(tex, base !== 'math');
+          if (base === 'multline') return holdMath('\\begin{gathered}' + tex + '\\end{gathered}', true);
+          if (base === 'eqnarray') return holdMath('\\begin{aligned}' + tex.replace(/\s*&\s*([^&\n]{1,12}?)\s*&\s*/g, ' &$1 ') + '\\end{aligned}', true);
+          if (base === 'flalign') return holdMath('\\begin{aligned}' + tex + '\\end{aligned}', true);
+          return holdMath('\\begin{' + env + '}' + tex + '\\end{' + env + '}', true);
+        });
+      });
+      body = body.replace(/\\\[([\s\S]*?)\\\]/g, (m, tex) => holdMath(tex, true));
+      body = body.replace(/\$\$([\s\S]*?)\$\$/g, (m, tex) => holdMath(tex, true));
+      body = body.replace(/\\\(([\s\S]*?)\\\)/g, (m, tex) => holdMath(tex, false));
+      body = body.replace(/(^|[^\\])\$([^$\n]+?)\$/g, (m, pre, tex) => pre + holdMath(tex, false));
+
+      const DROP_WITH_ARG = ['label', 'vspace', 'hspace', 'setlength', 'addtolength', 'linespread', 'pagestyle', 'thispagestyle', 'usepackage', 'documentclass',
+        'newcommand', 'renewcommand', 'providecommand', 'newtheorem', 'theoremstyle', 'bibliographystyle', 'bibliography', 'input', 'include', 'graphicspath',
+        'geometry', 'hypersetup', 'definecolor', 'color', 'numberwithin', 'DeclareMathOperator', 'setcounter', 'addtocounter', 'newcounter', 'title', 'author', 'date',
+        'pagenumbering', 'rule', 'phantom', 'hphantom', 'vphantom', 'index', 'glossary', 'lstset', 'captionsetup', 'renewenvironment', 'newenvironment', 'selectlanguage'];
+      const DROP_BARE = ['noindent', 'centering', 'raggedright', 'raggedleft', 'newpage', 'clearpage', 'cleardoublepage', 'tableofcontents', 'listoffigures', 'listoftables',
+        'medskip', 'bigskip', 'smallskip', 'vfill', 'hfill', 'indent', 'par', 'relax', 'frenchspacing', 'maketitle', 'qedhere', 'qed', 'appendix', 'printbibliography',
+        'small', 'footnotesize', 'scriptsize', 'tiny', 'large', 'Large', 'LARGE', 'huge', 'Huge', 'normalsize', 'bfseries', 'itshape', 'ttfamily', 'rmfamily', 'sffamily', 'mdseries', 'upshape', 'em', 'bf', 'it', 'tt', 'sc', 'sl', 'rm', 'sf', 'onehalfspacing', 'doublespacing', 'singlespacing'];
+
+      function inline(raw) {
+        let t = String(raw || '');
+        // Accents, quotes and dashes before the HTML escape.
+        t = t.replace(/\\(['`^"~=.])\{?([a-zA-Z])\}?/g, (m, a, ch) => (ch + LATEX_ACCENTS[a]).normalize('NFC'));
+        t = t.replace(/\\([cvuH])(?:\{([a-zA-Z])\}|\s+([a-zA-Z]))/g, (m, a, c1, c2) => ((c1 || c2) + LATEX_ACCENTS[a]).normalize('NFC'));
+        t = t.replace(/\\ss\b/g, 'ß').replace(/\\o\b/g, 'ø').replace(/\\O\b/g, 'Ø').replace(/\\ae\b/g, 'æ').replace(/\\AE\b/g, 'Æ').replace(/\\aa\b/g, 'å');
+        t = t.replace(/``/g, '“').replace(/''/g, '”').replace(/(^|\s)`/g, '$1‘').replace(/---/g, '—').replace(/--/g, '–');
+        t = t.replace(/\\\{/g, '\u0003').replace(/\\\}/g, '\u0004');
+        t = escapeHtml(t);
+        const tag = (open, close) => (arg) => open + inline(arg) + close;
+        t = latexReplaceCommand(t, 'textbf', tag('<strong>', '</strong>'));
+        t = latexReplaceCommand(t, 'textit', tag('<em>', '</em>'));
+        t = latexReplaceCommand(t, 'emph', tag('<em>', '</em>'));
+        t = latexReplaceCommand(t, 'textsl', tag('<em>', '</em>'));
+        t = latexReplaceCommand(t, 'texttt', tag('<code>', '</code>'));
+        t = latexReplaceCommand(t, 'underline', tag('<u>', '</u>'));
+        t = latexReplaceCommand(t, 'uline', tag('<u>', '</u>'));
+        t = latexReplaceCommand(t, 'textsc', tag('<span style="font-variant:small-caps">', '</span>'));
+        t = latexReplaceCommand(t, 'textcolor', (arg) => inline(arg));
+        t = latexReplaceCommand(t, 'colorbox', (arg) => inline(arg));
+        t = latexReplaceCommand(t, 'href', (arg) => '<a href="' + arg + '" target="_blank" rel="noopener">');
+        t = t.replace(/(<a href="[^"]*" target="_blank" rel="noopener">)\s*\{/g, '$1\u0005');
+        t = t.replace(/\u0005([^}]*)\}/g, (m, label) => inline(label) + '</a>');
+        t = latexReplaceCommand(t, 'url', (arg) => '<a href="' + arg + '" target="_blank" rel="noopener">' + arg + '</a>');
+        t = latexReplaceCommand(t, 'footnote', (arg) => ' <span class="ltx-fn">(' + inline(arg) + ')</span>');
+        t = latexReplaceCommand(t, 'cite', (arg) => '[' + inline(arg) + ']');
+        t = latexReplaceCommand(t, 'citep', (arg) => '[' + inline(arg) + ']');
+        t = latexReplaceCommand(t, 'citet', (arg) => '[' + inline(arg) + ']');
+        t = latexReplaceCommand(t, 'eqref', () => '(ec.)');
+        t = latexReplaceCommand(t, 'ref', () => '(ref.)');
+        t = latexReplaceCommand(t, 'pageref', () => '(pág.)');
+        t = latexReplaceCommand(t, 'includegraphics', (arg) => '<span class="ltx-fig">[imagen: ' + inline(arg) + ']</span>');
+        t = latexReplaceCommand(t, 'caption', (arg) => '<span class="ltx-caption">' + inline(arg) + '</span>');
+        ['textrm', 'textsf', 'textnormal', 'textup', 'textmd', 'mbox', 'hbox', 'text', 'ensuremath', 'enquote', 'MakeUppercase', 'MakeLowercase', 'protect'].forEach((name) => {
+          t = latexReplaceCommand(t, name, (arg) => inline(arg));
+        });
+        DROP_WITH_ARG.forEach((name) => { t = latexReplaceCommand(t, name, () => ''); });
+        t = t.replace(/\\\\\s*(\[[^\]]*\])?/g, '<br>').replace(/\\(newline|linebreak)\b/g, '<br>');
+        t = t.replace(/\\item\s*(\[[^\]]*\])?\s*/g, '• ');
+        t = t.replace(/\\today\b/g, today).replace(/\\LaTeX\b/g, 'LaTeX').replace(/\\TeX\b/g, 'TeX');
+        t = t.replace(/\\(ldots|dots|cdots|textellipsis)\b/g, '…');
+        t = t.replace(/\\(quad|qquad)\b/g, '&emsp;').replace(/\\[,;: !]/g, ' ').replace(/\\@/g, '');
+        t = t.replace(/\\&amp;/g, '&amp;').replace(/\\%/g, '%').replace(/\\\$/g, '$').replace(/\\_/g, '_').replace(/\\#/g, '#').replace(/\\textbackslash\b\{?\}?/g, '\\');
+        t = t.replace(/~/g, '&nbsp;');
+        DROP_BARE.forEach((name) => { t = t.replace(new RegExp('\\\\' + name + '(?![a-zA-Z])\\s*', 'g'), ''); });
+        // Old-style groups and whatever is left: keep the words, drop the command.
+        t = t.replace(/\{\\(bf|textbf)\s+([^{}]*)\}/g, '<strong>$2</strong>').replace(/\{\\(it|em|textit)\s+([^{}]*)\}/g, '<em>$2</em>').replace(/\{\\tt\s+([^{}]*)\}/g, '<code>$1</code>');
+        for (let guard = 0; guard < 20 && /\\[a-zA-Z]+\*?\s*(\[[^\]]*\])?\s*\{/.test(t); guard++) {
+          const name = (t.match(/\\([a-zA-Z]+)\*?\s*(\[[^\]]*\])?\s*\{/) || [])[1];
+          if (!name) break;
+          const before = t;
+          t = latexReplaceCommand(t, name, (arg) => inline(arg));
+          if (t === before) t = t.replace(new RegExp('\\\\' + name + '\\*?(?![a-zA-Z])'), '');
+        }
+        t = t.replace(/\\[a-zA-Z]+\*?/g, '').replace(/[{}]/g, '');
+        return t.replace(/\u0003/g, '{').replace(/\u0004/g, '}');
+      }
+
+      function paragraphs(raw, compact) {
+        const chunks = String(raw || '').split(/\n[ \t]*\n+/);
+        const pieces = [];
+        chunks.forEach((chunk) => {
+          chunk.split(/(\u0002\d+\u0002)/).forEach((seg) => {
+            if (!seg.trim()) return;
+            if (/^\u0002\d+\u0002$/.test(seg)) { pieces.push({ block: true, html: seg }); return; }
+            const html = inline(seg.trim().replace(/\s*\n\s*/g, ' ')).trim();
+            if (html && html !== '<br>') pieces.push({ block: false, html });
+          });
+        });
+        if (compact && pieces.length === 1 && !pieces[0].block) return pieces[0].html;
+        return pieces.map((piece) => piece.block ? piece.html : '<p>' + piece.html + '</p>').join('');
+      }
+
+      function blocks(raw) {
+        return paragraphs(replaceEnvs(raw));
+      }
+
+      function listItems(inner, description) {
+        const parts = replaceEnvs(inner).split(/\\item\b/).slice(1);
+        return parts.map((item) => {
+          let label = '';
+          const m = item.match(/^\s*\[/);
+          if (m) { const close = latexFindBraced(item.replace('[', '{').replace(']', '}'), item.indexOf('[')); if (close !== -1) { label = item.slice(item.indexOf('[') + 1, close); item = item.slice(close + 1); } }
+          const content = paragraphs(item, true);
+          if (description) return '<dt>' + inline(label) + '</dt><dd>' + content + '</dd>';
+          return '<li>' + (label ? '<strong>' + inline(label) + '</strong> ' : '') + content + '</li>';
+        }).join('');
+      }
+
+      function table(inner) {
+        const hasRule = /\\(hline|toprule|midrule)\b/.test(inner);
+        const rows = replaceEnvs(inner).replace(/\\(hline|toprule|midrule|bottomrule)\b/g, '').replace(/\\(cline|cmidrule)(\([^)]*\))?\{[^}]*\}/g, '')
+          .split(/\\\\\s*(?:\[[^\]]*\])?/).map((row) => row.trim()).filter(Boolean);
+        return '<table>' + rows.map((row, index) => {
+          const cells = row.split(/(?<!\\)&/).map((cell) => {
+            const multi = cell.match(/\\multicolumn\{(\d+)\}\{[^}]*\}\{([\s\S]*)\}\s*$/);
+            const span = multi ? ' colspan="' + multi[1] + '"' : '';
+            const tagName = hasRule && index === 0 ? 'th' : 'td';
+            return '<' + tagName + span + '>' + paragraphs(multi ? multi[2] : cell, true) + '</' + tagName + '>';
+          });
+          return '<tr>' + cells.join('') + '</tr>';
+        }).join('') + '</table>';
+      }
+
+      function replaceEnvs(raw) {
+        let t = String(raw || '');
+        ['section', 'subsection', 'subsubsection', 'chapter', 'part', 'paragraph', 'subparagraph'].forEach((name, index) => {
+          const level = Math.min(4, [2, 3, 4, 1, 1, 4, 4][index]);
+          t = latexReplaceCommand(t, name, (arg) => hold('<h' + level + '>' + inline(arg) + '</h' + level + '>', true));
+        });
+        t = t.replace(/\\maketitle\b/g, () => hold('<div class="ltx-title"><h1>' + inline(meta.title || '') + '</h1>' +
+          ((meta.author || meta.date) ? '<p>' + [inline(meta.author || ''), inline(meta.date || '')].filter(Boolean).join(' · ') + '</p>' : '') + '</div>', true));
+        t = latexReplaceCommand(t, 'caption', (arg) => hold('<p class="ltx-caption">' + inline(arg) + '</p>', true));
+        t = latexReplaceCommand(t, 'includegraphics', (arg) => hold('<p class="ltx-center"><span class="ltx-fig">[imagen: ' + inline(arg) + ']</span></p>', true));
+        ['itemize', 'enumerate', 'compactitem', 'compactenum'].forEach((env) => {
+          t = latexReplaceEnv(t, env, (inner) => hold((/enum/.test(env) ? '<ol>' : '<ul>') + listItems(inner, false) + (/enum/.test(env) ? '</ol>' : '</ul>'), true));
+        });
+        t = latexReplaceEnv(t, 'description', (inner) => hold('<dl>' + listItems(inner, true) + '</dl>', true));
+        ['tabular', 'tabular*', 'tabularx', 'longtable', 'tabulary'].forEach((env) => { t = latexReplaceEnv(t, env, (inner) => hold(table(inner), true), true); });
+        t = latexReplaceEnv(t, 'proof', (inner, opt) => hold('<div class="ltx-proof"><em>' + (opt ? inline(opt) : 'Demostración') + '.</em> ' + paragraphs(inner, true) + ' <span class="ltx-qed">∎</span></div>', true));
+        Object.keys(theorems).forEach((env) => {
+          t = latexReplaceEnv(t, env, (inner, opt) => hold('<div class="ltx-theorem"><strong>' + escapeHtml(theorems[env]) + (opt ? ' (' + inline(opt) + ')' : '') + '.</strong> ' + paragraphs(inner, true) + '</div>', true));
+          t = latexReplaceEnv(t, env + '*', (inner, opt) => hold('<div class="ltx-theorem"><strong>' + escapeHtml(theorems[env]) + (opt ? ' (' + inline(opt) + ')' : '') + '.</strong> ' + paragraphs(inner, true) + '</div>', true));
+        });
+        t = latexReplaceEnv(t, 'abstract', (inner) => hold('<div class="ltx-abstract"><p class="ltx-abstract-title">Resumen</p>' + paragraphs(inner) + '</div>', true));
+        ['quote', 'quotation', 'verse'].forEach((env) => { t = latexReplaceEnv(t, env, (inner) => hold('<blockquote>' + paragraphs(inner) + '</blockquote>', true)); });
+        t = latexReplaceEnv(t, 'center', (inner) => hold('<div class="ltx-center">' + blocks(inner) + '</div>', true));
+        t = latexReplaceEnv(t, 'thebibliography', (inner) => hold('<ol class="ltx-bib">' + replaceEnvs(inner).split(/\\bibitem\s*(?:\[[^\]]*\])?\{[^}]*\}/).slice(1).map((item) => '<li>' + paragraphs(item, true) + '</li>').join('') + '</ol>', true), true);
+        ['tikzpicture', 'pgfpicture', 'circuitikz'].forEach((env) => { t = latexReplaceEnv(t, env, () => hold('<p class="ltx-center"><span class="ltx-fig">[figura]</span></p>', true)); });
+        ['minipage', 'multicols', 'wrapfigure'].forEach((env) => { t = latexReplaceEnv(t, env, (inner) => blocks(inner).length ? hold(blocks(inner), true) : '', true); });
+        // Any other environment keeps its content.
+        for (let guard = 0; guard < 30; guard++) {
+          const m = t.match(/\\begin\{([a-zA-Z*]+)\}/);
+          if (!m) break;
+          const before = t;
+          t = latexReplaceEnv(t, m[1], (inner) => hold(blocks(inner), true));
+          if (t === before) t = t.replace(m[0], '').replace('\\end{' + m[1] + '}', '');
+        }
+        return t;
+      }
+
+      let html = blocks(body);
+      for (let guard = 0; guard < 60 && /[\u0001\u0002]\d+[\u0001\u0002]/.test(html); guard++) {
+        html = html.replace(/[\u0001\u0002](\d+)[\u0001\u0002]/g, (m, i) => slots[Number(i)] || '');
+      }
+      return html;
+    }
+
+    function looksLikeLatex(code, lang) {
+      if (/^(latex|tex)$/i.test(lang)) return true;
+      if (lang) return false;
+      return /\\documentclass|\\begin\{document\}|\\begin\{(equation|align|itemize|enumerate)\*?\}|\\section\*?\{/.test(code);
+    }
+
+    function enhanceLatexBlocks(root) {
+      if (!window.DOMPurify) return;
+      Array.from(root.querySelectorAll('pre > code')).forEach((code) => {
+        const pre = code.parentElement;
+        if (!pre || pre.closest('.latex-block')) return;
+        const lang = ((code.className.match(/language-([\w+-]+)/) || [])[1] || '').toLowerCase();
+        const source = code.textContent;
+        if (!looksLikeLatex(source, lang)) return;
+        let html = '';
+        try { html = window.DOMPurify.sanitize(latexToHtml(source)); } catch (error) { console.warn('LaTeX preview failed:', error); return; }
+        if (!html.replace(/<[^>]+>/g, '').trim()) return;
+        const block = document.createElement('div');
+        block.className = 'latex-block';
+        block.innerHTML = '<div class="latex-bar"><span class="latex-bar-label">LaTeX</span><span class="latex-bar-spacer"></span>' +
+          '<button type="button" class="latex-bar-btn" data-latex-toggle>Ver código</button>' +
+          '<button type="button" class="latex-bar-btn" data-latex-copy>Copiar</button></div><div class="latex-preview"></div>';
+        const preview = block.querySelector('.latex-preview');
+        preview.innerHTML = html;
+        pre.parentNode.insertBefore(block, pre);
+        block.appendChild(pre);
+        if (window.renderMathInElement) {
+          window.renderMathInElement(preview, {
+            delimiters: [{ left: '$$', right: '$$', display: true }, { left: '\\(', right: '\\)', display: false }],
+            throwOnError: false, macros: LATEX_PREVIEW_MACROS, ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+          });
+        }
+      });
+    }
+
+    document.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-latex-toggle]');
+      if (toggle) {
+        const block = toggle.closest('.latex-block');
+        const showingCode = block.getAttribute('data-view') === 'code';
+        block.setAttribute('data-view', showingCode ? 'preview' : 'code');
+        toggle.textContent = showingCode ? 'Ver código' : 'Ver vista previa';
+        return;
+      }
+      const copy = event.target.closest('[data-latex-copy]');
+      if (copy) {
+        const pre = copy.closest('.latex-block').querySelector('pre');
+        navigator.clipboard.writeText(pre ? pre.textContent : '').then(() => {
+          copy.textContent = 'Copiado';
+          window.setTimeout(() => { copy.textContent = 'Copiar'; }, 1500);
+        }).catch(() => {});
+      }
+    });
+
     function renderMarkdown(text) {
       if (!text) {
         return '';
@@ -5784,6 +6246,7 @@
       if (options.renderMath === false || !window.renderMathInElement) {
         return;
       }
+      if (options.latexPreview !== false) enhanceLatexBlocks(root);
 
       window.renderMathInElement(root, {
         delimiters: [
@@ -6649,7 +7112,8 @@
       currentEl.setAttribute('data-msg-id', message.id);
       currentEl.innerHTML = nextEl.innerHTML;
       syncGuidedBannerSlot(resolvedChat);
-      enhanceRichContent(currentEl, { renderMath: true });
+      // The LaTeX preview is built once the answer is complete, not per chunk.
+      enhanceRichContent(currentEl, { renderMath: true, latexPreview: !isStreaming });
       if (isStreaming) {
         const bubbleContent = currentEl.querySelector('.bubble-content');
         if (bubbleContent) {
@@ -8211,6 +8675,7 @@
       if (shouldOpen) {
         modelPicker.query = '';
         modelPicker.company = '';
+        modelPicker.filters = [];
         if (elements.modelSearchInput) elements.modelSearchInput.value = '';
         renderModelControls();
         if (elements.modelList) elements.modelList.scrollTop = 0;
@@ -8471,6 +8936,17 @@
           if (!chip) return;
           modelPicker.company = chip.getAttribute('data-company-id');
           renderCompanyChips();
+          renderModelList();
+          elements.modelList.scrollTop = 0;
+        });
+      }
+      if (elements.capabilityChips) {
+        elements.capabilityChips.addEventListener('click', (event) => {
+          const chip = event.target.closest('[data-filter-id]');
+          if (!chip) return;
+          const id = chip.getAttribute('data-filter-id');
+          modelPicker.filters = modelPicker.filters.includes(id) ? modelPicker.filters.filter((f) => f !== id) : modelPicker.filters.concat(id);
+          renderCapabilityChips();
           renderModelList();
           elements.modelList.scrollTop = 0;
         });
