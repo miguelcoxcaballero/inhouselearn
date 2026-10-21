@@ -394,6 +394,8 @@ function vizReadouts(spec, names) {
 }
 
 function vizBindSliders(root, params, values, state, onChange) {
+  let frame = 0;
+  const draw = () => { frame = 0; if (root.isConnected) onChange(); };
   root.querySelectorAll('input[data-viz-param]').forEach((input) => {
     const param = params.find((item) => item.name === input.dataset.vizParam);
     const output = input.parentElement.querySelector('output');
@@ -402,7 +404,11 @@ function vizBindSliders(root, params, values, state, onChange) {
       values[param.name] = Number(input.value);
       state.values = values;
       output.textContent = vizFmt(values[param.name]) + (param.unit ? ' ' + param.unit : '');
-      onChange();
+      // Pointer events can outpace the screen: draw only the latest values.
+      if (!frame) frame = requestAnimationFrame(draw);
+    });
+    input.addEventListener('change', () => {
+      if (frame) { cancelAnimationFrame(frame); draw(); }
     });
   });
 }
@@ -503,11 +509,13 @@ function vizPlot(spec, state) {
     (spec.caption ? '<div class="viz-caption">' + vizBlock(spec.caption) + '</div>' : '') +
     (errors.length ? '<div class="viz-error">No se pudo dibujar: ' + escapeHtml(errors.join(' · ')) + '</div>' : '') + '</div>');
 
+  let previousAxes = '', previousPoints = '';
   const draw = () => {
     if (!isFormula) {
-      el.querySelector('.viz-axes').innerHTML = axes();
+      const nextAxes = axes(), nextPoints = points();
+      if (nextAxes !== previousAxes) el.querySelector('.viz-axes').innerHTML = previousAxes = nextAxes;
       el.querySelector('.viz-curves').innerHTML = curves();
-      el.querySelector('.viz-points').innerHTML = points();
+      if (nextPoints !== previousPoints) el.querySelector('.viz-points').innerHTML = previousPoints = nextPoints;
     }
     readouts.forEach((item, index) => {
       const target = el.querySelector('[data-viz-readout="' + index + '"]');
@@ -696,7 +704,7 @@ function vizFlashcards(spec, state) {
     '<div class="viz-dots"></div></div>');
   const cards = Array.from(el.querySelectorAll('.viz-card'));
   const done = el.querySelector('.viz-deck-done');
-  const update = () => {
+  const update = () => interactiveUpdate(el, () => {
     const finished = state.index >= state.order.length;
     const current = state.order[state.index];
     cards.forEach((card, index) => {
@@ -714,7 +722,7 @@ function vizFlashcards(spec, state) {
         '<div class="viz-done-actions">' + (again.length ? '<button type="button" class="viz-btn ok" data-flash="review">Repasar ' + again.length + '</button>' : '') +
         '<button type="button" class="viz-btn ghost" data-flash="restart">Otra vez</button><button type="button" class="viz-btn ghost" data-flash="shuffle">Barajar</button></div>';
     }
-  };
+  });
   el.addEventListener('click', (event) => {
     const card = event.target.closest('.viz-card');
     if (card) { state.flipped = !state.flipped; update(); return; }
@@ -758,7 +766,7 @@ function vizSteps(spec, state) {
     (spec.result ? '<div class="viz-step-result">' + vizBlock(spec.result) + '</div>' : '') +
     '<div class="viz-foot"><button type="button" class="viz-btn ghost" data-step="all">Ver todo</button><button type="button" class="viz-btn ok" data-step="next">Siguiente paso</button></div></div>');
   const items = Array.from(el.querySelectorAll('.viz-step'));
-  const update = () => {
+  const update = () => interactiveUpdate(el, () => {
     items.forEach((item, index) => {
       item.classList.toggle('shown', index < state.shown);
       item.classList.toggle('latest', index === state.shown - 1);
@@ -769,7 +777,7 @@ function vizSteps(spec, state) {
     const next = el.querySelector('[data-step="next"]');
     next.textContent = all ? 'Empezar de nuevo' : 'Siguiente paso';
     el.querySelector('[data-step="all"]').hidden = all;
-  };
+  });
   el.addEventListener('click', (event) => {
     const button = event.target.closest('[data-step]');
     if (!button) return;
@@ -837,7 +845,7 @@ function vizCheck(spec, state) {
     '<div class="viz-check-feedback right"><strong>¡Bien!</strong> ' + vizBlock(spec.explanation || '') + '</div>' +
     '<div class="viz-check-feedback wrong"><strong>Era la ' + letters[correct] + '.</strong> ' + vizBlock(spec.explanation || '') + '</div>' +
     '<div class="viz-foot"><button type="button" class="viz-btn ghost" data-check-retry>Reintentar</button></div></div>');
-  const update = () => {
+  const update = () => interactiveUpdate(el, () => {
     const chosen = state.chosen;
     el.classList.toggle('answered', chosen != null);
     el.classList.toggle('is-right', chosen === correct);
@@ -848,7 +856,7 @@ function vizCheck(spec, state) {
       button.classList.toggle('correct', chosen != null && index === correct);
       button.classList.toggle('wrong', chosen === index && index !== correct);
     });
-  };
+  });
   el.addEventListener('click', (event) => {
     if (event.target.closest('[data-check-retry]')) { state.chosen = null; update(); return; }
     const button = event.target.closest('.viz-check-opt');

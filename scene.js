@@ -15,8 +15,8 @@
      tiny postMessage protocol {v:1, type, id, payload} checked by the host.
 
    One requestAnimationFrame drives every scene; a scene only runs while it is
-   on screen, at most SCENE_LIMITS.running at once, at 30 fps on touch
-   devices, and starts paused when the reader prefers reduced motion. Its
+   on screen, at most SCENE_LIMITS.running at once, at the display refresh
+   rate, and starts paused when the reader prefers reduced motion. Its
    state (controls, time, positions) lives in vizState, so redrawing the
    message does not restart it. What the student does (moves a slider,
    presses a button, a trigger fires, a sandbox emits) is kept per message and
@@ -144,6 +144,13 @@ const sceneRuntime = {
   observer: null
 };
 
+window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (event) => {
+  sceneRuntime.reduced = event.matches;
+  if (event.matches) sceneRuntime.views.forEach((view) => {
+    if (view.playing) view.pause('Animación en pausa (movimiento reducido). Pulsa ▶ para verla.');
+  });
+});
+
 function sceneObserve(view) {
   if (!('IntersectionObserver' in window)) { view.visible = true; return; }
   if (!sceneRuntime.observer) {
@@ -178,7 +185,6 @@ function sceneClaimSlot(view) {
 
 function sceneTick(now) {
   sceneRuntime.raf = 0;
-  const minGap = sceneRuntime.coarse ? 1000 / 30 - 2 : 0;
   const gap = now - (sceneRuntime.last || now - 16);
   let active = false;
   sceneRuntime.views.forEach((view) => {
@@ -187,7 +193,6 @@ function sceneTick(now) {
   });
   if (!active) { sceneRuntime.last = 0; return; }
   sceneRuntime.raf = requestAnimationFrame(sceneTick);
-  if (gap < minGap) return;
   sceneRuntime.last = now;
   const dt = Math.min(0.05, gap / 1000);
   const t0 = performance.now();

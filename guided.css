@@ -439,8 +439,8 @@ details[open] > .g-route-row .g-route-chev { transform: rotate(180deg); }
 .g-qdot.wrong { background: #B42318; }
 .g-questions { padding: 0 20px 8px; }
 .g-q.compact {
-  align-items: flex-start; gap: 12px; margin: 8px 0 0; padding: 11px 14px;
-  border: 1px solid var(--border-strong); border-radius: 14px; background: var(--surface-hover);
+  align-items: flex-start; gap: 12px; margin: 8px 0 0; padding: 12px 0;
+  border: 0; border-top: 1px solid var(--border); border-radius: 0; background: none;
 }
 .g-questions > .g-q.compact:first-child { margin-top: 2px; }
 .g-q.compact + .g-q:not(.compact) { border-top: none; margin-top: 6px; }
@@ -460,6 +460,19 @@ details[open] > .g-route-row .g-route-chev { transform: rotate(180deg); }
 .g-card-foot { padding: 12px 20px 16px; }
 .g-primary { background: var(--text); box-shadow: none; }
 .g-primary:hover:not(:disabled) { background: #333; transform: none; }
+
+/* Exercises sit on the page; only answer controls need their own boundary. */
+.g-card.g-quiz, .g-card.g-exam {
+  border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible;
+}
+.g-quiz > .g-card-head, .g-exam > .g-card-head,
+.g-quiz > .g-questions, .g-exam > .g-questions,
+.g-quiz > .g-card-foot, .g-exam > .g-card-foot {
+  padding-left: 0; padding-right: 0;
+}
+.g-quiz .g-options { grid-template-columns: 1fr; }
+.g-opt-key { background: none; border-radius: 50%; }
+.g-opt:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 
 /* Exam graded: the last page */
 .g-exam-head { position: relative; }

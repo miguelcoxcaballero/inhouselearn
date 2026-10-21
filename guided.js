@@ -556,8 +556,11 @@ function rerenderGuidedCard(chat, quizId) {
   const template = document.createElement('template');
   template.innerHTML = (quiz.kind === 'exam' ? renderExamCard(course, quiz) : renderQuizCard(course, quiz)).trim();
   const next = template.content.firstElementChild;
-  card.replaceWith(next);
-  enhanceRichContent(next, { renderMath: true, latexPreview: false });
+  interactiveUpdate(card, () => {
+    card.replaceWith(next);
+    enhanceRichContent(next, { renderMath: true, latexPreview: false });
+    return next;
+  });
 }
 
 const GUIDED_QUICK = {
@@ -826,7 +829,7 @@ function questionMarkup(quiz, question, index, mode) {
   const right = reveal && chosen === question.correct;
   if (mode === 'check' && answered) {
     const pick = (optionIndex) => LETTERS[optionIndex] + ' · ' + renderMarkdown(question.options[optionIndex] || '');
-    return '<li class="g-q compact ' + (right ? 'right' : 'wrong') + '"><span class="g-q-mark">' + (right ? G_ICON.check : G_ICON.cross) + '</span>' +
+    return '<li data-motion-key="question:' + index + '" class="g-q compact ' + (right ? 'right' : 'wrong') + '"><span class="g-q-mark">' + (right ? G_ICON.check : G_ICON.cross) + '</span>' +
       '<div class="g-q-main"><div class="g-q-text">' + (index + 1) + '. ' + renderMarkdown(question.question) + '</div>' +
       '<div class="g-q-sum">Elegiste <b class="' + (right ? 'right' : 'wrong') + '">' + pick(chosen) + '</b>. ' +
       (right ? '<strong class="right">¡Bien!</strong> ' : '<strong class="wrong">Era la ' + LETTERS[question.correct] + '</strong>, <b class="right">' + renderMarkdown(question.options[question.correct] || '') + '</b>: ') +
@@ -846,7 +849,7 @@ function questionMarkup(quiz, question, index, mode) {
   const feedback = reveal
     ? '<div class="g-feedback ' + (right ? 'right' : 'wrong') + '"><strong>' + (right ? '¡Bien!' : 'Era la ' + LETTERS[question.correct] + '.') + '</strong> ' + renderMarkdown(question.explanation || '') + '</div>'
     : '';
-  return '<li class="g-q' + (reveal ? (right ? ' right' : ' wrong') : '') + '"><div class="g-q-num">' + (index + 1) + '</div><div class="g-q-main"><div class="g-q-text">' + renderMarkdown(question.question) + '</div>' +
+  return '<li data-motion-key="question:' + index + '" class="g-q' + (reveal ? (right ? ' right' : ' wrong') : '') + '"><div class="g-q-num">' + (index + 1) + '</div><div class="g-q-main"><div class="g-q-text">' + renderMarkdown(question.question) + '</div>' +
     '<div class="g-options">' + options + '</div>' + feedback + '</div></li>';
 }
 

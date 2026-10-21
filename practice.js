@@ -32,7 +32,7 @@ function vizMatch(spec, state) {
     '<div class="px-col">' + right.map((k) => '<button type="button" class="px-item" data-side="r" data-k="' + k + '">' + vizInline(pairs[k].right) + '</button>').join('') + '</div></div>' +
     '<div class="px-result"></div></div>');
   let selected = null;
-  const update = () => {
+  const update = () => interactiveUpdate(el, () => {
     const done = Object.keys(state.matched).length;
     el.querySelectorAll('.px-item').forEach((button) => {
       const k = Number(button.dataset.k);
@@ -44,7 +44,7 @@ function vizMatch(spec, state) {
     });
     el.querySelector('.viz-count').textContent = done + '/' + pairs.length;
     el.querySelector('.px-result').innerHTML = done === pairs.length ? practiceDone(state.misses ? '¡Hecho! Con ' + state.misses + (state.misses === 1 ? ' fallo.' : ' fallos.') : '¡Perfecto, sin fallos!') : '';
-  };
+  });
   el.addEventListener('click', (event) => {
     const button = event.target.closest('.px-item');
     if (!button || button.disabled) return;
@@ -75,8 +75,8 @@ function vizSequence(spec, state) {
     '<div class="px-result"></div>' + (spec.explanation ? '<div class="px-expl">' + vizBlock(spec.explanation) + '</div>' : '') + '</div>');
   let picked = -1;
   const list = el.querySelector('.px-list');
-  const render = () => {
-    list.innerHTML = state.order.map((k, pos) => '<li class="px-row' + (state.checked ? (k === pos ? ' right' : ' wrong') : '') + (picked === pos ? ' selected' : '') + '">' +
+  const render = () => interactiveUpdate(el, () => {
+    list.innerHTML = state.order.map((k, pos) => '<li data-motion-key="order:' + k + '" class="px-row' + (state.checked ? (k === pos ? ' right' : ' wrong') : '') + (picked === pos ? ' selected' : '') + '">' +
       '<span class="px-pos">' + (pos + 1) + '</span><button type="button" class="px-text" data-swap="' + pos + '">' + vizInline(items[k]) + '</button>' +
       '<span class="px-arrows"><button type="button" class="px-arrow" data-move="' + pos + ':-1" aria-label="Subir"' + (pos === 0 ? ' disabled' : '') + '>↑</button>' +
       '<button type="button" class="px-arrow" data-move="' + pos + ':1" aria-label="Bajar"' + (pos === state.order.length - 1 ? ' disabled' : '') + '>↓</button></span></li>').join('');
@@ -84,7 +84,7 @@ function vizSequence(spec, state) {
     const all = state.order.every((k, pos) => k === pos);
     el.classList.toggle('solved', !!state.checked && all);
     el.querySelector('.px-result').innerHTML = state.checked ? practiceDone(all ? '¡Orden correcto!' : state.order.filter((k, pos) => k === pos).length + ' de ' + items.length + ' en su sitio. Mueve los rojos.') : '';
-  };
+  });
   el.addEventListener('click', (event) => {
     const move = event.target.closest('[data-move]');
     const swap = event.target.closest('[data-swap]');
@@ -124,7 +124,7 @@ function vizCategorize(spec, state) {
   let selected = -1;
   const chip = (k) => '<button type="button" class="px-chip' + (selected === k ? ' selected' : '') +
     (state.checked && state.placed[k] != null ? (state.placed[k] === Number(items[k].category) ? ' right' : ' wrong') : '') + '" data-item="' + k + '">' + vizInline(items[k].text) + '</button>';
-  const render = () => {
+  const render = () => interactiveUpdate(el, () => {
     const free = pool.filter((k) => state.placed[k] == null);
     el.querySelector('.px-pool').innerHTML = free.length ? free.map(chip).join('') : '<span class="px-empty">Todo colocado.</span>';
     el.querySelectorAll('.px-bucket').forEach((bucket) => {
@@ -138,7 +138,7 @@ function vizCategorize(spec, state) {
     const wrong = pool.filter((k) => state.placed[k] != null && state.placed[k] !== Number(items[k].category)).length;
     el.querySelector('[data-px="retry"]').hidden = !(state.checked && wrong);
     el.querySelector('.px-result').innerHTML = state.checked ? practiceDone(wrong ? wrong + (wrong === 1 ? ' mal colocado (en rojo).' : ' mal colocados (en rojo).') : placed === items.length ? '¡Todo bien clasificado!' : 'Lo colocado está bien; faltan ' + (items.length - placed) + '.') : '';
-  };
+  });
   el.addEventListener('click', (event) => {
     const item = event.target.closest('[data-item]');
     const bucket = event.target.closest('.px-bucket');
@@ -192,7 +192,7 @@ function vizFill(spec, state) {
     '<div class="viz-foot"><button type="button" class="viz-btn ghost" data-px="solve">Ver solución</button><button type="button" class="viz-btn ok" data-px="check">Comprobar</button></div>' +
     '<div class="px-result"></div>' + (spec.explanation ? '<div class="px-expl">' + vizBlock(spec.explanation) + '</div>' : '') + '</div>');
   const selects = Array.from(el.querySelectorAll('select'));
-  const render = () => {
+  const render = () => interactiveUpdate(el, () => {
     selects.forEach((select) => {
       const k = Number(select.dataset.blank);
       select.value = state.answers[k] || '';
@@ -202,7 +202,7 @@ function vizFill(spec, state) {
     const right = blanks.filter((options, k) => state.answers[k] === options[0]).length;
     el.classList.toggle('solved', !!state.checked && right === blanks.length);
     el.querySelector('.px-result').innerHTML = state.checked ? practiceDone(right === blanks.length ? '¡Todo correcto!' : right + ' de ' + blanks.length + ' bien.') : '';
-  };
+  });
   el.addEventListener('change', (event) => {
     const select = event.target.closest('select');
     if (!select) return;
@@ -240,7 +240,7 @@ function vizEstimate(spec, state) {
     '<div class="viz-foot"><button type="button" class="viz-btn ghost" data-px="again" hidden>Otra vez</button><button type="button" class="viz-btn ok" data-px="lock">Fijar mi respuesta</button></div>' +
     '<div class="px-result"></div><div class="px-expl" hidden>' + vizBlock(spec.explanation || '') + '</div></div>');
   const input = el.querySelector('input');
-  const render = () => {
+  const render = () => interactiveUpdate(el, () => {
     input.value = state.guess;
     input.disabled = !!state.locked;
     el.querySelector('.px-guess-value').textContent = vizFmt(Number(state.guess)) + unit;
@@ -254,7 +254,7 @@ function vizEstimate(spec, state) {
     const off = Math.abs(Number(state.guess) - answer);
     el.querySelector('.px-result').innerHTML = state.locked
       ? practiceDone((off <= tolerance ? '¡Muy cerca! ' : off <= tolerance * 3 ? 'No está mal. ' : 'Lejos. ') + 'Era ' + vizFmt(answer) + unit + '; te has desviado ' + vizFmt(off) + unit + '.') : '';
-  };
+  });
   input.addEventListener('input', () => { state.guess = Number(input.value); if (typeof haptic === 'function') haptic('drag'); render(); });
   el.addEventListener('click', (event) => {
     const action = event.target.closest('[data-px]');
@@ -277,7 +277,7 @@ function vizTrueFalse(spec, state) {
     '<ol class="px-tf">' + statements.map((item, k) => '<li class="px-tf-row" data-row="' + k + '"><div class="px-tf-text">' + vizInline(item.text) + '</div>' +
       '<div class="px-tf-buttons"><button type="button" class="px-tf-btn" data-answer="' + k + ':1">Verdadero</button><button type="button" class="px-tf-btn" data-answer="' + k + ':0">Falso</button></div>' +
       '<div class="px-tf-expl">' + vizBlock(item.explanation || '') + '</div></li>').join('') + '</ol><div class="px-result"></div></div>');
-  const render = () => {
+  const render = () => interactiveUpdate(el, () => {
     let right = 0;
     statements.forEach((item, k) => {
       const row = el.querySelector('[data-row="' + k + '"]');
@@ -297,7 +297,7 @@ function vizTrueFalse(spec, state) {
     const answered = Object.keys(state.answers).length;
     el.querySelector('.viz-count').textContent = right + '/' + statements.length;
     el.querySelector('.px-result').innerHTML = answered === statements.length ? practiceDone(right === statements.length ? '¡Pleno!' : right + ' de ' + statements.length + ' bien.') : '';
-  };
+  });
   el.addEventListener('click', (event) => {
     const button = event.target.closest('[data-answer]');
     if (!button || button.disabled) return;

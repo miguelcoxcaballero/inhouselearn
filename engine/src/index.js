@@ -13,6 +13,7 @@ import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
 import { createGuidedTools } from './guided.js';
 
 export { createWorkspaceTools, createGuidedTools, normalizePath, runInSandbox };
+export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 // xhigh solo se ofrece si el modelo no tiene max (ver thinkingLevels).

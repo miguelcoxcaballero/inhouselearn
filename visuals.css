@@ -48,6 +48,14 @@
 .viz-btn.ghost:hover { color: var(--text); border-color: rgba(0,0,0,0.2); }
 .viz-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
+/* Questions and practice share the page, without an outer card around controls. */
+.viz.viz-check, .viz.viz-practice {
+  border: 0; border-radius: 0; background: none; box-shadow: none; padding: 14px 0;
+}
+.viz-check-opt:focus-visible, .px-tf-btn:focus-visible {
+  outline: 2px solid var(--orange); outline-offset: 2px;
+}
+
 /* Waiting for a visual that is still arriving */
 .viz-wait {
   display: flex; align-items: center; gap: 10px; min-height: 64px; color: var(--muted); font-size: 0.84rem;
@@ -124,8 +132,8 @@
   grid-area: 1 / 1; display: none; width: 100%; padding: 0; border: none; background: none; cursor: pointer;
   perspective: 1200px; font: inherit; color: inherit; text-align: center;
 }
-.viz-card.active { display: block; animation: vizIn 0.25s var(--ease) both; }
-.viz-card-inner { display: grid; transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.2, 1); transform-style: preserve-3d; }
+.viz-card.active { display: block; }
+.viz-card-inner { display: grid; transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); transform-style: preserve-3d; }
 .viz-card.flipped .viz-card-inner { transform: rotateY(180deg); }
 .viz-card-face {
   grid-area: 1 / 1; backface-visibility: hidden; -webkit-backface-visibility: hidden;
@@ -158,7 +166,6 @@
 .bubble .viz-step + .viz-step { margin-top: 0; }
 .viz-step:first-child { border-top: none; }
 .viz-step.shown { display: flex; }
-.viz-step.latest { animation: vizIn 0.3s var(--ease) both; }
 .viz-step-num {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
   font-size: 0.74rem; font-weight: 700; background: rgba(0,0,0,0.05); color: var(--text-secondary);
@@ -168,7 +175,7 @@
 .viz-step-title { font-weight: 650; font-size: 0.9rem; }
 .viz-step-body { font-size: 0.9rem; color: var(--text); margin-top: 2px; }
 .viz-step-result { display: none; margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: #f0fdf4; color: #14532d; font-weight: 550; }
-.viz-steps.complete .viz-step-result { display: block; animation: vizIn 0.3s var(--ease) both; }
+.viz-steps.complete .viz-step-result { display: block; }
 
 /* Timeline */
 .viz-tl { list-style: none; position: relative; margin-top: 6px; }
@@ -215,7 +222,7 @@
 .viz-check-opt.wrong .viz-check-key { background: #dc2626; color: #fff; }
 .viz-check-feedback { display: none; margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); }
 .viz-check-feedback p { display: inline; }
-.viz-check.is-right .viz-check-feedback.right, .viz-check.is-wrong .viz-check-feedback.wrong { display: block; animation: vizIn 0.25s var(--ease) both; }
+.viz-check.is-right .viz-check-feedback.right, .viz-check.is-wrong .viz-check-feedback.wrong { display: block; }
 .viz-check-feedback.right strong { color: #15803d; }
 .viz-check-feedback.wrong strong { color: #b91c1c; }
 .viz-check:not(.is-wrong) .viz-foot { display: none; }
@@ -313,7 +320,7 @@ button:focus-visible, summary:focus-visible, [role="switch"]:focus-visible + spa
 /* ─── Practice visuals (practice.js) ─────────────────────────────────── */
 .px-hint { font-size: 0.78rem; color: var(--muted); margin: -2px 0 10px; }
 .px-result:empty { display: none; }
-.px-done { margin-top: 10px; padding: 9px 13px; border-radius: 12px; background: var(--orange-soft); font-size: 0.86rem; font-weight: 600; color: var(--text); animation: vizIn 0.25s var(--ease) both; }
+.px-done { margin-top: 10px; padding: 9px 13px; border-radius: 12px; background: var(--orange-soft); font-size: 0.86rem; font-weight: 600; color: var(--text); }
 .solved .px-done { background: #f0fdf4; color: #15803d; }
 .px-expl { margin-top: 8px; font-size: 0.84rem; color: var(--text-secondary); }
 .px-item, .px-chip, .px-text, .px-tf-btn, .px-arrow {
@@ -382,10 +389,10 @@ button:focus-visible, summary:focus-visible, [role="switch"]:focus-visible + spa
 /* true / false */
 .px-tf { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .bubble .px-tf { margin: 0; }
-.px-tf-row { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-strong); margin: 0; transition: background 0.2s var(--ease), border-color 0.2s var(--ease); }
+.px-tf-row { padding: 12px 0; border-radius: 0; border: 0; border-top: 1px solid var(--border-strong); margin: 0; transition: border-color 0.2s var(--ease); }
 .bubble .px-tf-row + .px-tf-row { margin-top: 0; }
-.px-tf-row.right { border-color: #86efac; background: #f0fdf4; }
-.px-tf-row.wrong { border-color: #fca5a5; background: #fef2f2; }
+.px-tf-row.right { border-color: #86efac; }
+.px-tf-row.wrong { border-color: #fca5a5; }
 .px-tf-text { font-size: 0.9rem; margin-bottom: 8px; }
 .px-tf-buttons { display: flex; gap: 6px; }
 .px-tf-btn { flex: 1; padding: 7px 10px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; }
@@ -400,4 +407,19 @@ button:focus-visible, summary:focus-visible, [role="switch"]:focus-visible + spa
   .px-buckets { grid-template-columns: 1fr; }
   .px-match { gap: 6px; }
   .px-item { padding: 9px 10px; font-size: 0.82rem; }
+}
+
+/* Keep state feedback quick and consistent; layout motion is owned by motion.js. */
+.g-opt, .viz-check-opt, .px-item, .px-chip, .px-text, .px-tf-btn {
+  transition: background-color 180ms ease-out, border-color 180ms ease-out,
+    color 180ms ease-out, opacity 180ms ease-out, transform 120ms ease-out;
+}
+.viz-readout b, .px-guess-value, .scene-time { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .g-card, .g-card *, .g-card *::before, .g-card *::after,
+  .viz, .viz *, .viz *::before, .viz *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
