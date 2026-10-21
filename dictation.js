@@ -152,7 +152,7 @@
       host = options;
       try { settings = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) {}
       button = document.createElement('button'); button.type = 'button'; button.id = 'dictation-btn'; button.className = 'attach-btn dictation-btn'; button.innerHTML = MIC; button.title = 'Dictar con IA';
-      host.sendButton.before(button);
+      host.sendButton.after(button);
       panel = document.createElement('div'); panel.className = 'dictation-panel'; panel.id = 'dictation-panel'; panel.hidden = true;
       panel.innerHTML = '<span class="dictation-indicator" aria-hidden="true"></span><span class="dictation-label" role="status" aria-live="polite"></span><div class="dictation-actions"><button type="button" data-voice="cancel">Cancelar</button><button type="button" data-voice="retry" hidden>Reintentar</button><button type="button" data-voice="review">Revisar</button></div>';
       host.composer.before(panel); label = panel.querySelector('.dictation-label'); review = panel.querySelector('[data-voice=review]'); retry = panel.querySelector('[data-voice=retry]');

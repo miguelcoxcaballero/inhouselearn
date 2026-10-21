@@ -1,0 +1,156 @@
+/* Cinco propuestas del menú «+» y del selector de modelos (?ui=1…5). Temporal. */
+
+/* Pulido común del selector */
+[data-ui] .composer-area .model-popover { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+[data-ui] .model-popover > * { flex-shrink: 0; }
+[data-ui] .model-popover .model-popover-section:has(.model-list) { flex: 1 1 auto; min-height: 0; display: flex; }
+[data-ui] .model-list { max-height: none; flex: 1; overflow-y: auto; }
+[data-ui] .model-card-name { font-size: 0.9rem; }
+[data-ui] .model-card-sub { font-size: 0.74rem; }
+
+/* ── 1 · Limpio: tarjeta amplia, aire y jerarquía clara ── */
+[data-ui="1"] .composer-area .model-popover { width: min(540px, 100%); border-radius: 22px; max-height: min(680px, calc(100dvh - var(--topbar-h) - 150px)); }
+[data-ui="1"] .model-popover-head { padding: 18px 20px 10px; margin: 0; }
+[data-ui="1"] .model-popover-title { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 1.4rem; letter-spacing: -0.01em; }
+[data-ui="1"] .model-popover-status { font-size: 0.8rem; }
+[data-ui="1"] .model-search-row { padding: 0 20px; margin-bottom: 10px; }
+[data-ui="1"] .model-search input { height: 46px; border-radius: 14px; font-size: 0.95rem; background: var(--surface-hover); border: 1px solid var(--border-strong); }
+[data-ui="1"] .filter-toggle { height: 46px; border-radius: 14px; border: 1px solid var(--border-strong); padding: 0 14px; }
+[data-ui="1"] .company-chips { padding: 0 20px 10px; gap: 6px; }
+[data-ui="1"] .company-chip { height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border-strong); font-size: 0.82rem; }
+[data-ui="1"] .company-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+[data-ui="1"] .filter-panel { margin: 0 20px 8px; }
+[data-ui="1"] .model-popover-section:has(.model-list) { padding: 0 12px; border-top: 1px solid var(--border); }
+[data-ui="1"] .model-list-heading { padding: 14px 8px 6px; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 650; color: var(--ink-3); }
+[data-ui="1"] .model-card { min-height: 58px; padding: 8px; border-radius: 14px; gap: 12px; }
+[data-ui="1"] .model-card-icon { width: 34px; height: 34px; padding: 7px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); box-sizing: border-box; }
+[data-ui="1"] .model-card.active { background: var(--orange-soft); }
+[data-ui="1"] #thinking-section, [data-ui="1"] .api-key-section { margin: 0; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--surface-hover); }
+[data-ui="1"] .api-key-section { padding-bottom: 16px; }
+[data-ui="1"] .thinking-segmented { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 3px; }
+[data-ui="1"] .thinking-pill.active { background: var(--text); color: #fff; }
+[data-ui="1"] .plus-menu { border-radius: 20px; padding: 8px; }
+
+/* ── 2 · Hoja: el selector ocupa la columna; razonamiento y key lado a lado ── */
+[data-ui="2"] .composer-area .model-popover { width: 100%; border-radius: 24px 24px 18px 18px; max-height: min(72vh, calc(100dvh - var(--topbar-h) - 140px)); display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; }
+[data-ui="2"] .model-popover > * { grid-column: 1 / -1; }
+[data-ui="2"] .model-popover::before { content: ''; grid-column: 1 / -1; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.18); margin-top: 8px; }
+[data-ui="2"] .model-popover-head { padding: 6px 20px 8px; margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+[data-ui="2"] .model-popover-title { font-size: 1.05rem; }
+[data-ui="2"] .model-search-row { padding: 0 20px; }
+[data-ui="2"] .model-search input { height: 44px; border-radius: 999px; }
+[data-ui="2"] .filter-toggle { border-radius: 999px; height: 44px; }
+[data-ui="2"] .company-chips { padding: 0 20px 8px; }
+[data-ui="2"] .company-chip.active { background: var(--orange-soft); color: #A84F1A; }
+[data-ui="2"] .filter-panel { margin: 0 20px 8px; }
+[data-ui="2"] .model-popover-section:has(.model-list) { padding: 0 12px; }
+[data-ui="2"] .model-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-content: start; }
+[data-ui="2"] .model-list-heading, [data-ui="2"] .model-list-note { grid-column: 1 / -1; }
+[data-ui="2"] .model-card { border: 1px solid var(--border); border-radius: 14px; min-height: 60px; }
+[data-ui="2"] .model-card.active { border-color: rgba(224,122,60,0.5); background: var(--orange-soft); }
+[data-ui="2"] #thinking-section { grid-column: 1; grid-row: 6; margin: 0; padding: 12px 10px 14px 20px; border-top: 1px solid var(--border); }
+[data-ui="2"] .api-key-section { grid-column: 2; grid-row: 6; margin: 0; padding: 12px 20px 14px 10px; border-top: 1px solid var(--border); }
+[data-ui="2"] .api-key-hint { display: none; }
+[data-ui="2"] .plus-menu { width: min(480px, 100%); flex-direction: row; padding: 8px; gap: 6px; }
+[data-ui="2"] .plus-item { flex: 1; flex-direction: column; align-items: flex-start; min-height: 112px; padding: 12px; background: var(--surface-hover); border: 1px solid var(--border); position: relative; }
+[data-ui="2"] .plus-item-text small { display: none; }
+[data-ui="2"] .plus-switch { position: absolute; top: 12px; right: 12px; }
+@media (max-width: 768px) {
+  [data-ui="2"] .model-list { grid-template-columns: minmax(0, 1fr); }
+  [data-ui="2"] .model-popover > *, [data-ui="2"] .model-list, [data-ui="2"] .model-card { min-width: 0; max-width: 100%; }
+  [data-ui="2"] .plus-item-text b { font-size: 0.82rem; }
+  [data-ui="2"] .model-list-heading small { display: none; }
+  [data-ui="2"] .composer-area .model-popover { grid-template-columns: minmax(0, 1fr); }
+  [data-ui="2"] #thinking-section, [data-ui="2"] .api-key-section { grid-column: 1 / -1; grid-row: auto; padding: 10px 16px; }
+}
+
+/* ── 3 · Libro: tipográfico, filas con puntos y sin cajas ── */
+[data-ui="3"] .composer-area .model-popover { width: min(520px, 100%); border-radius: 18px; max-height: min(660px, calc(100dvh - var(--topbar-h) - 150px)); }
+[data-ui="3"] .model-popover-head { padding: 20px 22px 6px; margin: 0; }
+[data-ui="3"] .model-popover-title { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 1.6rem; }
+[data-ui="3"] .model-search-row { padding: 6px 22px 6px; }
+[data-ui="3"] .model-search input { background: none; border-radius: 0; border-bottom: 1.5px solid var(--text); height: 42px; padding-left: 30px; }
+[data-ui="3"] .model-search input:focus { box-shadow: none; background: none; }
+[data-ui="3"] .filter-toggle { background: none; text-decoration: underline; text-underline-offset: 3px; }
+[data-ui="3"] .company-chips { padding: 4px 22px 8px; gap: 14px; }
+[data-ui="3"] .company-chip { padding: 4px 0; background: none !important; border-radius: 0; border-bottom: 2px solid transparent; }
+[data-ui="3"] .company-chip.active { border-bottom-color: var(--orange); }
+[data-ui="3"] .filter-panel { margin: 0 22px 8px; }
+[data-ui="3"] .model-popover-section:has(.model-list) { padding: 0 14px; }
+[data-ui="3"] .model-list-heading { padding: 14px 8px 4px; font-family: 'Newsreader', Georgia, serif; font-size: 1.05rem; font-weight: 500; color: var(--text); }
+[data-ui="3"] .model-card { border-radius: 0; border-bottom: 1px dotted rgba(0,0,0,0.2); min-height: 54px; }
+[data-ui="3"] .model-card:hover { background: none; }
+[data-ui="3"] .model-card:hover .model-card-name { color: var(--orange); }
+[data-ui="3"] .model-card.active { background: none; }
+[data-ui="3"] .model-card.active .model-card-name { color: #A84F1A; }
+[data-ui="3"] #thinking-section, [data-ui="3"] .api-key-section { margin: 0; padding: 12px 22px; border-top: 1px solid var(--border-strong); }
+[data-ui="3"] .thinking-segmented { background: none; gap: 14px; }
+[data-ui="3"] .thinking-pill { background: none; border-radius: 0; padding: 4px 0; border-bottom: 2px solid transparent; }
+[data-ui="3"] .thinking-pill.active { background: none; box-shadow: none; border-bottom-color: var(--orange); color: var(--text); }
+[data-ui="3"] .plus-menu { padding: 4px 0; border-radius: 16px; }
+[data-ui="3"] .plus-item { border-radius: 0; }
+[data-ui="3"] .plus-item + .plus-item { border-top: 1px solid var(--border); }
+[data-ui="3"] .plus-item > svg { background: none; border: 0; }
+
+/* ── 4 · Tarjetas: el modelo actual como protagonista ── */
+[data-ui="4"] .composer-area .model-popover { width: min(520px, 100%); border-radius: 24px; background: var(--bg); max-height: min(680px, calc(100dvh - var(--topbar-h) - 150px)); }
+[data-ui="4"] .model-popover-head { padding: 18px 18px 8px; margin: 0; }
+[data-ui="4"] .model-popover-title { font-size: 1.1rem; }
+[data-ui="4"] .model-search-row { padding: 0 18px; margin-bottom: 8px; }
+[data-ui="4"] .model-search input { height: 46px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border-strong); }
+[data-ui="4"] .filter-toggle { height: 46px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border-strong); }
+[data-ui="4"] .company-chips { padding: 0 18px 10px; }
+[data-ui="4"] .company-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; height: 36px; }
+[data-ui="4"] .company-chip.active { background: var(--text); color: #fff; }
+[data-ui="4"] .filter-panel { margin: 0 18px 8px; }
+[data-ui="4"] .model-popover-section:has(.model-list) { padding: 0 14px; }
+[data-ui="4"] .model-list { display: flex; flex-direction: column; gap: 6px; }
+[data-ui="4"] .model-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; min-height: 60px; padding: 10px 12px; }
+[data-ui="4"] .model-card.active { background: var(--text); color: #fff; border-color: var(--text); min-height: 76px; }
+[data-ui="4"] .model-card.active .model-card-sub, [data-ui="4"] .model-card.active .model-gauge-num { color: rgba(255,255,255,0.75); }
+[data-ui="4"] .model-card.active .model-card-name { font-size: 1.05rem; }
+[data-ui="4"] .model-card.active .model-card-icon { background: #fff; border-radius: 10px; padding: 5px; box-sizing: border-box; width: 34px; height: 34px; }
+[data-ui="4"] .model-card.active .model-price-out { color: #fca5a5; }
+[data-ui="4"] .model-card.active .model-price-in { color: #86efac; }
+[data-ui="4"] .model-list-heading { padding: 10px 6px 2px; }
+[data-ui="4"] #thinking-section, [data-ui="4"] .api-key-section { margin: 8px 14px 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+[data-ui="4"] .api-key-section { margin-bottom: 14px; }
+[data-ui="4"] .thinking-pill.active { background: var(--orange); color: #1a1a1a; }
+[data-ui="4"] .plus-menu { background: var(--bg); padding: 10px; gap: 8px; border-radius: 22px; }
+[data-ui="4"] .plus-item { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; min-height: 64px; }
+[data-ui="4"] .plus-item.attach-btn > svg { background: #E8F0FE; color: #1a56db; border-color: transparent; }
+[data-ui="4"] .plus-item.usage-btn > svg { background: #E7F4EC; border-color: transparent; }
+[data-ui="4"] .plus-item.guided-btn > svg { background: var(--orange-soft); color: #A84F1A; border-color: transparent; }
+
+/* ── 5 · Compacto: tabla densa con columnas ── */
+[data-ui="5"] .composer-area .model-popover { width: min(560px, 100%); border-radius: 16px; max-height: min(620px, calc(100dvh - var(--topbar-h) - 150px)); }
+[data-ui="5"] .model-popover-head { padding: 12px 14px 8px; margin: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+[data-ui="5"] .model-popover-title { font-size: 0.95rem; }
+[data-ui="5"] .model-popover-status { font-size: 0.74rem; }
+[data-ui="5"] .model-search-row { padding: 8px 14px 6px; margin: 0; }
+[data-ui="5"] .model-search input { height: 38px; border-radius: 10px; }
+[data-ui="5"] .filter-toggle { height: 38px; border-radius: 10px; }
+[data-ui="5"] .company-chips { padding: 0 14px 6px; }
+[data-ui="5"] .company-chip { height: 30px; font-size: 0.78rem; border-radius: 8px; }
+[data-ui="5"] .filter-panel { margin: 0 14px 6px; }
+[data-ui="5"] .model-popover-section:has(.model-list) { padding: 0; border-top: 1px solid var(--border); }
+[data-ui="5"] .model-list-heading { position: sticky; top: 0; z-index: 1; background: var(--surface-hover); padding: 6px 14px; margin: 0; border-bottom: 1px solid var(--border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+[data-ui="5"] .model-card { border-radius: 0; min-height: 46px; padding: 6px 14px; gap: 10px; border-bottom: 1px solid var(--border); }
+[data-ui="5"] .model-card-icon { width: 18px; height: 18px; }
+[data-ui="5"] .model-card-name { font-size: 0.84rem; }
+[data-ui="5"] .model-card-sub { font-size: 0.7rem; }
+[data-ui="5"] .model-card.active { background: var(--orange-soft); box-shadow: inset 3px 0 0 var(--orange); }
+[data-ui="5"] #thinking-section, [data-ui="5"] .api-key-section { margin: 0; padding: 10px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+[data-ui="5"] .thinking-segmented { flex: 1; }
+[data-ui="5"] .api-key-row { flex: 1; }
+[data-ui="5"] .api-key-hint { flex-basis: 100%; }
+[data-ui="5"] .model-popover-section-label { margin: 0; }
+[data-ui="5"] .plus-menu { width: 260px; padding: 4px; border-radius: 14px; }
+[data-ui="5"] .plus-item { min-height: 44px; padding: 6px 8px; }
+[data-ui="5"] .plus-item > svg { width: 30px; height: 30px; padding: 6px; border-radius: 8px; }
+[data-ui="5"] .plus-item-text small { display: none; }
+
+/* Móvil: el popup del modelo va anclado a los bordes en todas las versiones */
+@media (max-width: 768px) {
+  [data-ui] .composer-area .model-popover { width: auto; left: 8px; right: 8px; }
+}
