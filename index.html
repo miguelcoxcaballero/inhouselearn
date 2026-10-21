@@ -1901,6 +1901,9 @@
     const OAUTH_REMEMBER_KEY = STORAGE_KEY + '::oauthRemember';
     const OAUTH_HINT_EMAIL_KEY = STORAGE_KEY + '::oauthHintEmail';
     const AUTH_SKIP_RESTORE_KEY = STORAGE_KEY + '::manualLogout';
+    // Like Inhouse Notes: the account (name, email, photo) is kept with the
+    // remembered session, so the app opens signed in and only the token renews.
+    const OAUTH_PROFILE_KEY = STORAGE_KEY + '::oauthProfile';
     const AUTH_EXPIRY_SKEW_MS = 30000;
     const AUTH_REFRESH_SKEW_MS = 5 * 60 * 1000;
     const AUTH_REFRESH_RETRY_MS = 30 * 1000;
@@ -3203,7 +3206,29 @@
     }
 
     function hasDriveIdentitySession() {
-      return !!(appState.accessToken && appState.profile);
+      return !!(appState.profile && (appState.accessToken || hasStoredGoogleRememberSession()));
+    }
+
+    function saveCachedGoogleProfile(profile) {
+      if (!profile || !profile.email) return;
+      try {
+        localStorage.setItem(OAUTH_PROFILE_KEY, JSON.stringify({
+          name: profile.name || '', email: profile.email, picture: profile.picture || ''
+        }));
+      } catch (_) {}
+    }
+
+    function restoreCachedGoogleProfile() {
+      try {
+        if (localStorage.getItem(AUTH_SKIP_RESTORE_KEY) === '1' || !hasStoredGoogleRememberSession()) return false;
+        const profile = JSON.parse(localStorage.getItem(OAUTH_PROFILE_KEY) || 'null');
+        const email = getStoredGoogleHintEmail().toLowerCase();
+        if (!profile || !profile.email || profile.email.toLowerCase() !== email) return false;
+        appState.profile = Object.assign({}, profile, { cached: true });
+        return true;
+      } catch (_) {
+        return false;
+      }
     }
 
     function hasDrivePersistenceReady() {
@@ -3349,7 +3374,8 @@
               });
             } else {
               clearGoogleSessionState({
-                preserveRemember: true
+                preserveRemember: true,
+                preserveProfile: true
               });
               setAuthGateReason('La sesión de Google ha caducado y no se pudo renovar automáticamente. Vuelve a iniciar sesión para seguir guardando el historial en Drive.');
               setAuthGateStatus('No se pudo renovar la sesión automáticamente.', {
@@ -5409,6 +5435,7 @@
       clearGoogleSessionState({
         preserveRemember: false
       });
+      try { localStorage.removeItem(OAUTH_PROFILE_KEY); } catch (_) {}
       setAuthGateReason('Has cerrado la sesión. Inicia sesión con Google para volver a usar la app y seguir guardando el historial en Drive.');
       setAuthGateStatus('');
       updateAuthUi();
@@ -6439,7 +6466,7 @@
       }
       elements.profileBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
-        if (hasDriveIdentitySession()) {
+        if (hasDriveIdentitySession() && hasFreshGoogleAccessToken()) {
           toggleProfileMenu();
           return;
         }
@@ -7189,6 +7216,7 @@
       localStorage.setItem(OAUTH_REMEMBER_KEY, '1');
       if (appState.profile && appState.profile.email) {
         localStorage.setItem(OAUTH_HINT_EMAIL_KEY, String(appState.profile.email).trim());
+        saveCachedGoogleProfile(appState.profile);
       }
       setAuthGateReason('');
       updateAuthUi();
@@ -7267,7 +7295,8 @@
           if (!settings.interactive) {
             if (!hasFreshGoogleAccessToken()) {
               clearGoogleSessionState({
-                preserveRemember: true
+                preserveRemember: true,
+                preserveProfile: true
               });
             }
             return false;
@@ -7309,7 +7338,8 @@
         }
       } catch (error) {
         clearGoogleSessionState({
-          preserveRemember: true
+          preserveRemember: true,
+          preserveProfile: true
         });
         setAuthGateReason('No se pudo restaurar la sesión de Google automáticamente. Inicia sesión para seguir guardando el historial en Drive.');
         setAuthGateStatus('No se pudo restaurar la sesión automáticamente.', {
@@ -7581,6 +7611,7 @@
       loadModelCatalogFromCache();
       loadState();
       loadGoogleTokenFromStorage();
+      restoreCachedGoogleProfile();
       updateConfigUi();
       updateAuthUi();
       renderHistory();
