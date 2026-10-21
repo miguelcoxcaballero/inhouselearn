@@ -449,6 +449,21 @@
       background: transparent; color: var(--muted);
     }
     .btn-icon:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+    /* Only in a browser on Android, never inside the app (setupAppDownload). */
+    .app-download {
+      display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 12px; border-radius: var(--r-full);
+      background: var(--orange); color: #fff; font-size: 0.8rem; font-weight: 650; text-decoration: none; flex-shrink: 0;
+      box-shadow: 0 2px 10px var(--orange-glow); transition: transform 0.12s var(--ease), background 0.15s var(--ease);
+    }
+    .app-download:hover { background: #d06a30; }
+    .hero-app {
+      align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 16px;
+      border: none; border-radius: var(--r-full); background: var(--orange); color: #fff; font: inherit; font-size: 0.86rem; font-weight: 650;
+      cursor: pointer; box-shadow: 0 4px 14px var(--orange-glow); transition: transform 0.12s var(--ease);
+    }
+    .hero-app:active { transform: scale(0.96); }
+    .app-download:active { transform: scale(0.95); }
+    .app-download:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
     .profile-btn {
       width: 36px; height: 36px; border-radius: 50%;
       background: var(--surface);
@@ -982,6 +997,9 @@
       .brand { font-size: 0.85rem; }
       .brand svg { width: 19px; height: 19px; }
       .topbar-mid { max-width: calc(100vw - 146px); }
+      .has-app-download .topbar-mid { max-width: calc(100vw - 190px); }
+      .app-download { width: 36px; padding: 0; justify-content: center; }
+      .app-download-label { display: none; }
       .model-menu-wrap { max-width: none; }
       .model-trigger { height: 34px; padding: 0 10px; }
       .model-trigger-main { font-size: 0.74rem; }
@@ -1455,6 +1473,10 @@
         </div>
       </div>
       <div class="topbar-end">
+        <a class="app-download hidden" id="app-download" href="https://github.com/miguelcoxcaballero/inhouselearn/releases" target="_blank" rel="noopener" title="Descargar la app para Android" aria-label="Descargar la app para Android">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><polyline points="7 10 12 15 17 10"/><path d="M5 20h14"/></svg>
+          <span class="app-download-label">Descargar app</span>
+        </a>
         <div class="profile-wrap">
           <button class="profile-btn" id="profile-btn" type="button" title="Conectar Google Drive" data-connected="false" aria-haspopup="dialog" aria-expanded="false">
             <svg class="profile-google-icon" viewBox="0 0 48 48" width="18" height="18"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -4412,6 +4434,9 @@
         '<section class="hero">',
         '  <h2>¿Qué estudiamos hoy?</h2>',
         '  <p class="hero-sub">Pregunta lo que sea, pega tus apuntes o sube un PDF o una foto.</p>',
+        document.body.classList.contains('has-app-download')
+          ? '  <button type="button" class="hero-app" data-app-download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><polyline points="7 10 12 15 17 10"/><path d="M5 20h14"/></svg>Descargar la app para Android</button>'
+          : '',
         '  <div class="chips">',
         suggestions.map((item) => '    <button class="chip suggestion-chip" data-prompt="' + escapeHtml(item[1]) + '">' + escapeHtml(item[0]) + '</button>').join(''),
         '  </div>',
@@ -7287,6 +7312,36 @@
       });
     }
 
+    // A browser on Android gets a "Descargar app" button with the newest APK
+    // from this repository's channel A catalog; inside the app it never shows.
+    function setupAppDownload() {
+      const link = document.getElementById('app-download');
+      const ua = navigator.userAgent || '';
+      const android = /Android/i.test(ua) || !!(navigator.userAgentData && /Android/i.test(navigator.userAgentData.platform || ''));
+      if (!link || ANDROID_APP || !android) return;
+      link.classList.remove('hidden');
+      document.body.classList.add('has-app-download');
+      link.addEventListener('click', () => haptic('select'));
+      fetch('updates/A.json', { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((catalog) => {
+          const latest = catalog && catalog.latest;
+          if (!latest || !/^https:\/\/github\.com\/miguelcoxcaballero\/inhouselearn\/releases\/download\/[\w.-]+\/[\w.-]+\.apk$/.test(String(latest.apkUrl || ''))) return;
+          link.href = latest.apkUrl;
+          link.removeAttribute('target');
+          link.title = 'Descargar Inhouse Learn ' + latest.version + ' para Android';
+          link.setAttribute('aria-label', link.title);
+        })
+        .catch(() => {});
+    }
+
+    // The start screen's button downloads the same APK as the topbar one.
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-app-download]')) return;
+      const link = document.getElementById('app-download');
+      if (link) link.click();
+    });
+
     function bindHapticsToggle() {
       const toggle = document.getElementById('haptics-toggle');
       if (!toggle) return;
@@ -7297,6 +7352,7 @@
     function boot() {
       configureEngine();
       bindHapticsToggle();
+      setupAppDownload();
       initThreadFollow();
       loadModelCatalogFromCache();
       loadState();
