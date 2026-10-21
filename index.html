@@ -2605,7 +2605,8 @@
         course: normalizeCourse(chat && chat.course),
         files: normalizeChatFiles(chat && chat.files),
         github: !!(chat && chat.github),
-        githubRepo: chat && typeof chat.githubRepo === 'string' ? chat.githubRepo : ''
+        githubRepo: chat && typeof chat.githubRepo === 'string' ? chat.githubRepo : '',
+          approvalMode: normalizeApprovalMode(chat && chat.approvalMode)
       });
     }
 
