@@ -40,6 +40,10 @@ Mandatory guidance for every AI and developer working in this repository.
   `allow-same-origin`, never relax the CSP) types; schema in `docs/visual-schema.json`, tests
   in `tests/web`. `haptics.js` sends `{type: 'haptic', style}` to the Android shell
   (`MainActivity.haptic`), with `navigator.vibrate` as the browser fallback.
+  `approval.js` + `approval.css` own the composer's approval button: the mode is per chat
+  (`chat.approvalMode`) and can be «Preguntar» (the user approves every change), «Auto» (the
+  chat's own files are approved, GitHub still asks) or «Acceso total» (nothing asks). It
+  wraps the workspace tools and the GitHub `confirm` hook; every write still goes through it.
 - **Chat library:** `library.js` keeps the files a user uploads to a chat (folders, PDFs page by
   page, photos and scanned pages read with OCR) in IndexedDB and in the user's Drive folder
   (`library-<id>.json`); the model reaches them only through the `search_library`,
@@ -49,7 +53,10 @@ Mandatory guidance for every AI and developer working in this repository.
   files, read, search code, one-commit multi-file writes through the git data API, exact edits,
   pull requests, issues and comments) with the user's fine-grained token, kept only in that
   browser's localStorage, never in Drive. Tools are on per chat (+ menu → GitHub) and every write
-  goes through `confirmDialog` with the files and +/− lines; never add a write that skips it.
+  goes through the approval gate of `approval.js`: with the chat in «Preguntar» or «Auto» the
+  user sees the files and the +/− lines in `confirmDialog` and decides; only in «Acceso total»
+  (the user's explicit, per-chat choice) a write is approved without asking, and then it is
+  announced with a toast. Never add a write that skips that gate.
 - **Live sync:** devices of the same account open WebRTC data channels to each other, signalled
   through `peer-<deviceId>.json` files in the Drive folder; the answering device sends every change
   at once and a `saved` notice after each Drive save. When a direct connection is not possible,

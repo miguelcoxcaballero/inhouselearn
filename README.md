@@ -38,6 +38,16 @@ El chat corre sobre [pi](https://github.com/earendil-works/pi): `@earendil-works
 
 Cada respuesta muestra los pasos con herramientas que ha dado (plegados). Si un modelo no admite herramientas, la petición se repite sin ellas (salvo en el aprendizaje guiado, que las necesita).
 
+## Aprobación de cambios
+
+El botón del compositor, junto al selector de modelo, decide cuánto le preguntas al modelo antes de que cambie algo. El modo es de cada chat y se guarda con él (también en Drive):
+
+- **Preguntar**: pide permiso para escribir o borrar archivos del chat y para hacer commits, pull requests o comentarios en GitHub.
+- **Auto**: los archivos del chat se guardan sin preguntar; en GitHub te lo sigue preguntando.
+- **Acceso total**: no pregunta nada, tampoco en GitHub.
+
+Las lecturas (archivos del chat, repositorios, biblioteca) nunca preguntan. En «Acceso total» cada cambio automático se avisa con un aviso, para que siempre sepas qué se ha tocado.
+
 ## Aprendizaje guiado
 
 El botón del birrete convierte el chat en un curso. La lógica la lleva la app (`guided.js`), no el modelo:
@@ -47,7 +57,7 @@ El botón del birrete convierte el chat en un curso. La lógica la lleva la app 
 3. **Mini test** por lección (`quiz`): corrección al momento con explicación. Con un 70 % se aprueba y se pasa a la siguiente; si no, el tutor vuelve a explicar justo lo que fallaste y repite el test con preguntas nuevas.
 4. **Examen final** (`final_exam`) de todo el curso, con nota por lección, y repaso final. Se puede repetir.
 
-Cada petición manda al modelo el estado del curso y una única tarea concreta («enseña L3», «llama a `final_exam` ahora»), así que no se pierde ni se olvida del examen. Si se salta un paso, la app se lo recuerda con un aviso oculto y lo vuelve a pedir. Todo (plan, notas, respuestas) se guarda con el chat y se sincroniza en Drive.
+Cada petición manda al modelo el estado del curso y una única tarea concreta («enseña L3», «llama a `final_exam` ahora»), así que no se pierde ni se olvida el examen. Si se salta un paso, la app se lo recuerda con un aviso oculto y lo vuelve a pedir. Todo (plan, notas, respuestas) se guarda con el chat y se sincroniza en Drive.
 
 ## Vistas visuales e interactivas en el chat
 
