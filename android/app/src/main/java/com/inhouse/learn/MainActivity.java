@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.speech.RecognizerIntent;
 import android.util.Base64;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -26,6 +27,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+import java.util.ArrayList;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
@@ -125,6 +127,11 @@ public class MainActivity extends ComponentActivity {
 
     private final ActivityResultLauncher<Intent> filePicker = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), this::deliverPickedFiles);
+
+    // Dictation: the system's speech recognizer (Google's voice typing). It
+    // records the audio itself, so the app needs no microphone permission.
+    private final ActivityResultLauncher<Intent> dictation = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), this::deliverDictation);
 
     private final ActivityResultLauncher<String> saveDocument = registerForActivityResult(
             new ActivityResultContracts.CreateDocument("application/octet-stream") {
@@ -255,12 +262,45 @@ public class MainActivity extends ComponentActivity {
                 case "haptic":
                     haptic(message.optString("style"));
                     break;
+                case "dictate":
+                    startDictation(message.optString("lang"));
+                    break;
                 default:
                     break;
             }
         } catch (JSONException | IllegalArgumentException error) {
             // Malformed messages are ignored; only the app's own page can send them.
         }
+    }
+
+    // --- Dictation -----------------------------------------------------------
+
+    private void startDictation(String lang) {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_PROMPT, "Habla para escribir tu mensaje");
+        if (lang != null && !lang.isEmpty()) intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
+        try {
+            dictation.launch(intent);
+        } catch (ActivityNotFoundException error) {
+            Toast.makeText(this, "Este teléfono no tiene reconocimiento de voz.", Toast.LENGTH_LONG).show();
+            sendDictation(null);
+        }
+    }
+
+    private void deliverDictation(ActivityResult result) {
+        String text = null;
+        Intent data = result.getData();
+        if (result.getResultCode() == RESULT_OK && data != null) {
+            ArrayList<String> matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (matches != null && !matches.isEmpty()) text = matches.get(0);
+        }
+        sendDictation(text);
+    }
+
+    private void sendDictation(String text) {
+        webView.evaluateJavascript("window.inhouseLearnDictation && window.inhouseLearnDictation("
+                + (text == null ? "null" : JSONObject.quote(text)) + ")", null);
     }
 
     // --- Haptics -------------------------------------------------------------

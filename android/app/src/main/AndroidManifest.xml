@@ -12,6 +12,10 @@
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
+        <!-- Dictation opens the system's speech recognizer. -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 
     <!-- No Android backup: the WebView storage holds the Google token and the
