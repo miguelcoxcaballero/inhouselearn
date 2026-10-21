@@ -13,11 +13,24 @@ también en Drive.
 Las lecturas nunca preguntan. En «Acceso total» cada cambio automático se avisa con un aviso,
 para que siempre sepas qué se ha tocado.
 
+## Herramientas y qué se pregunta
+
+| Herramienta | Cambio | Pregunta en «Preguntar» | Pregunta en «Auto» | Pregunta en «Acceso total» |
+| --- | --- | --- | --- | --- |
+| `run_js` | Calcula (sandbox sin red) | No | No | No |
+| `run_js` | Guarda archivos (`writeFile`) | Sí | No | No |
+| `write_file` / `edit_file` / `delete_file` | Archivos del chat | Sí | No | No |
+| `read_file` / `list_files` | Lectura | No | No | No |
+| `search_library` / `read_library` | Biblioteca del chat | No | No | No |
+| `github_*` de lectura | Ver repos, leer, buscar | No | No | No |
+| `github_commit_files` / `github_edit_file` | Commit | Sí | Sí | No |
+| `github_create_pull_request` / `github_comment` | PR y comentarios | Sí | Sí | No |
+
 ## Dónde está
 
 - `approval.js`: los tres modos, el botón y su menú, y la puerta de entrada
   (`approveChange`) que decide entre el diálogo de confirmación y la aprobación sola.
-- `approval.css`: el botón y el菜单 (en el móvil, solo el icono).
+- `approval.css`: el botón y el menú (en el móvil, solo el icono).
 - `index.html`: carga el módulo, guarda el modo con el chat (`normalizeStoredChat`) y
   envuelve las herramientas de archivos del chat (`approvalWorkspaceTools`).
 
@@ -41,3 +54,11 @@ para que siempre sepas qué se ha tocado.
   ámbar para «Preguntar», verde para «Auto» y rojo para «Acceso total».
 - En el móvil el botón se queda solo con el icono; el menú se abre a pantalla casi completa
   desde abajo, como el de modelos.
+
+## Probarlo a mano
+
+1. Abre un chat y pulsa el botón del compositor: salen los tres modos con su descripción.
+2. Elige «Preguntar» y pide al modelo que guarde un archivo: sale el diálogo y, si lo
+   rechazas, no se guarda.
+3. Elige «Acceso total» y pide un commit en GitHub: se aprueba solo y sale un aviso.
+4. Cambia de chat: el botón muestra el modo de ese chat, no el del anterior.
