@@ -1,0 +1,77 @@
+/* ─── Aprobación de cambios (approval.js) ─────────────────────────────
+   El botón del compositor y su menú con los tres modos (Preguntar, Auto,
+   Acceso total). Vive en el compositor, así que en el móvil el menú se abre
+   hacia arriba a pantalla casi completa, como el de modelos. */
+
+.approval-wrap { position: relative; flex: 0 0 auto; }
+.approval-trigger {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 40px; padding: 0 10px 0 9px;
+  border: 1px solid var(--border-strong); border-radius: var(--r-full);
+  background: var(--surface-hover); color: var(--text);
+  font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+  transition: background 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+.approval-trigger:hover,
+.approval-trigger[aria-expanded="true"] { background: var(--surface); border-color: rgba(224,122,60,0.45); }
+.approval-trigger[aria-expanded="true"] { box-shadow: 0 0 0 4px var(--orange-soft); }
+.approval-trigger-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; flex: 0 0 auto;
+}
+.approval-trigger-icon svg { width: 16px; height: 16px; display: block; }
+.approval-trigger[data-mode="ask"] .approval-trigger-icon { color: #b45309; }
+.approval-trigger[data-mode="auto"] .approval-trigger-icon { color: #15803d; }
+.approval-trigger[data-mode="full"] .approval-trigger-icon { color: #b91c1c; }
+.approval-trigger-caret {
+  width: 13px; height: 13px; flex: 0 0 auto; color: var(--muted);
+  transition: transform 0.22s var(--ease);
+}
+.approval-trigger[aria-expanded="true"] .approval-trigger-caret { transform: rotate(180deg); color: var(--text); }
+
+.approval-popover {
+  width: min(330px, calc(100vw - 24px));
+  padding: 12px;
+  animation: model-popover-in 0.18s var(--ease);
+}
+.composer-area .approval-popover { top: auto; bottom: calc(100% + 12px); left: auto; right: 0; }
+.approval-popover-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.approval-popover-status {
+  font-size: 0.74rem; line-height: 1.45; color: var(--text-secondary);
+  margin: 2px 0 10px;
+}
+.approval-options { display: flex; flex-direction: column; gap: 2px; }
+.approval-option {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%;
+  padding: 9px 10px; border: none; border-radius: 12px; background: none;
+  text-align: left; cursor: pointer; font: inherit; color: var(--text);
+  transition: background 0.15s var(--ease);
+}
+.approval-option:hover { background: rgba(0,0,0,0.04); }
+.approval-option.active { background: var(--orange-soft); }
+.approval-option-icon {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface-hover); border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.approval-option.active .approval-option-icon { background: var(--orange); border-color: var(--orange); color: #fff; }
+.approval-option-icon svg { width: 15px; height: 15px; display: block; }
+.approval-option-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.approval-option-text b { font-size: 0.85rem; font-weight: 600; }
+.approval-option-text small { font-size: 0.74rem; line-height: 1.4; color: var(--text-secondary); }
+.approval-option-check {
+  margin-left: auto; flex: 0 0 auto; width: 16px; height: 16px;
+  color: var(--orange); opacity: 0; align-self: center;
+}
+.approval-option.active .approval-option-check { opacity: 1; }
+
+@media (max-width: 768px) {
+  .approval-trigger { width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .approval-trigger-label, .approval-trigger-caret { display: none; }
+  .composer-area .approval-popover {
+    position: fixed; top: auto; left: 8px; right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: auto; max-height: calc(100dvh - var(--topbar-h) - 24px); overflow-y: auto;
+  }
+}
