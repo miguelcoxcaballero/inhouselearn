@@ -6579,12 +6579,6 @@
           saveState({ skipDrive: true });
           updateSendUi();
           renderThread({ preserveScroll: true });
-          showToast(
-            'Guided Learning',
-            chat.guidedLearning
-              ? 'Dime qué quieres aprender (o sube tus apuntes): te preparo un plan por lecciones, mini tests y un examen final.'
-              : 'Modo tutor desactivado. Vuelve al chat normal.'
-          );
         });
       }
       elements.fileInput.addEventListener('change', async () => {
