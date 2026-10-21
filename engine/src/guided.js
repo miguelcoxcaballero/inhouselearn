@@ -6,9 +6,9 @@ import { Type } from '@earendil-works/pi-ai';
 
 const question = (extra) => Type.Object(Object.assign({
   question: Type.String({ description: 'The question. Markdown and LaTeX (\\( … \\)) allowed. No answer options here.' }),
-  options: Type.Array(Type.String(), { minItems: 2, maxItems: 5, description: 'The answer options (2–5), plain text without letters or numbers in front.' }),
-  correct: Type.Integer({ minimum: 0, maximum: 4, description: 'Index of the correct option, starting at 0.' }),
-  explanation: Type.String({ description: 'Why the correct option is right, in 1–3 short sentences. Shown after answering.' })
+  options: Type.Array(Type.String(), { minItems: 2, maxItems: 5, description: 'The answer options (2–5), plain text without letters or numbers in front. The app shuffles them, so order does not matter. Every wrong option must be as long, specific and plausible as the right one (a typical mistake or misconception); the right one must not stand out by length, detail or wording. Avoid "all/none of the above".' }),
+  correct: Type.Integer({ minimum: 0, maximum: 4, description: 'Index of the correct option in the list you wrote, starting at 0.' }),
+  explanation: Type.String({ description: 'Why the correct option is right, in 1–3 short sentences, without mentioning letters or positions (options are reordered). Shown after answering.' })
 }, extra || {}));
 
 function result(outcome) {

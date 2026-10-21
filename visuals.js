@@ -30,6 +30,14 @@ const VISUALS_PROMPT = [
   '- compare (2–3 columns side by side): {"type":"compare","title":"…","columns":[{"title":"…","points":["…"]}]}',
   '- check (one quick question with instant feedback): {"type":"check","question":"…","options":["…","…"],"correct":0,"explanation":"…"}',
   '- cards (key ideas at a glance): {"type":"cards","title":"…","items":[{"icon":"⚡","title":"…","body":"…"}]}',
+  'Practice types (the student DOES something; use one when they should practise what you just explained, instead of always asking a question in text):',
+  '- match (connect pairs): {"type":"match","title":"…","pairs":[{"left":"término","right":"definición"}]} (3–8 pairs, written side by side; the app shuffles them)',
+  '- order (put steps or events in sequence): {"type":"order","title":"…","items":["first","second","third"],"explanation":"…"} (3–10 items written in the RIGHT order; the app shuffles them)',
+  '- categorize (sort items into 2–4 groups): {"type":"categorize","title":"…","categories":["Mitosis","Meiosis"],"items":[{"text":"…","category":0}]}',
+  '- fill (blanks in a text): {"type":"fill","title":"…","text":"La derivada de \\(x^2\\) es [[2x|x^2|2]] y la de una constante es [[0|1|la constante]].","explanation":"…"} (in each [[…]] the FIRST option is the right one; the app shuffles them)',
+  '- estimate (guess a number, then see the real one): {"type":"estimate","question":"…","min":0,"max":100,"step":1,"answer":42,"unit":"%","tolerance":3,"explanation":"…"}',
+  '- truefalse (quick round): {"type":"truefalse","title":"…","statements":[{"text":"…","answer":true,"explanation":"…"}]} (mix true and false)',
+  'Vary the types: do not repeat the type you used in your last answers when another one fits; mix explanation types (plot, scene, steps, compare, mermaid…) with practice types. In check, match, order and fill, never let the answer give itself away: wrong options as long and plausible as the right one, the right one not always the longest or the first written.',
   'For processes, hierarchies, cycles and concept maps use a ```mermaid block (flowchart TD, mindmap, sequenceDiagram, timeline) with short labels in quotes.',
   '- scene (ANIMATED or hands-on: things that move, flow, oscillate, collide, or that the student drags, taps or draws). Declarative JSON, world coordinates with y up (camera); every number may be an expression of the control ids, t (seconds), vars, state and functions; radius/strokeWidth/size are pixels, other lengths world units:',
   '  {"type":"scene","title":"…","alt":"one sentence: what is drawn and what changes when you move the controls","width":800,"height":360,"camera":{"xmin":0,"xmax":12,"ymin":0,"ymax":5},"background":"#fbfaf7",',
@@ -41,6 +49,26 @@ const VISUALS_PROMPT = [
   '- sandbox (only when a scene cannot express it: custom algorithms, games, step-by-step algorithm animations): {"type":"sandbox","title":"…","alt":"…","height":380,"html":"<canvas id=c></canvas><script>…</script>","emit":["sorted"]}. Plain HTML/JS, no libraries, no network, under 64 KB; use requestAnimationFrame; call inhouse.emit("sorted", {steps: 12}) to tell the app something happened.',
   'Text fields accept markdown and LaTeX \\( … \\). Prefer sliders with sensible ranges, real numbers and short labels. You may use up to 4 visuals in one answer, each right after the paragraph it illustrates; at most 2 of them animated. One animation, one idea; never decorate, never repeat in the visual what the text already says, and visuals never replace the quiz tool for grading.'
 ].join('\n');
+
+// Which visual types this chat has seen lately, so the model varies them.
+function visualVarietyText(chat) {
+  const used = [];
+  (chat && chat.messages || []).filter((message) => message.role === 'assistant').slice(-8).forEach((message) => {
+    const re = /```[ \t]*([\w-]+)[^\n]*\n([\s\S]*?)```/g;
+    let match;
+    while ((match = re.exec(String(message.content || '')))) {
+      const lang = match[1].toLowerCase();
+      if (lang === 'mermaid') used.push('mermaid');
+      else if (VIZ_FENCES.test(lang) || lang === 'json') { const type = (match[2].match(/"type"\s*:\s*"([a-z_]+)"/i) || [])[1]; if (type) used.push(type.toLowerCase()); }
+    }
+  });
+  if (!used.length) return '';
+  const recent = used.slice(-6);
+  const counts = {};
+  recent.forEach((type) => { counts[type] = (counts[type] || 0) + 1; });
+  return 'Visual types you already used in this chat (oldest first): ' + recent.join(', ') + '. Choose a DIFFERENT type next time unless only that one fits' +
+    (Object.keys(counts).length <= 2 ? '; you have been repeating yourself, so try e.g. ' + ['match', 'order', 'categorize', 'fill', 'estimate', 'truefalse', 'scene', 'steps', 'compare', 'timeline'].filter((type) => !counts[type]).slice(0, 4).join(', ') : '') + '.';
+}
 
 const VISUALS_REMINDER = 'Before you answer: if this answer explains something visual, numeric, sequential or worth memorising, include one ```visual block (or a ```mermaid diagram) for it.';
 
@@ -781,10 +809,28 @@ function vizCards(spec) {
     '<div class="viz-idea-title">' + vizInline(item.title || '') + '</div>' + (item.body ? '<div class="viz-idea-body">' + vizBlock(item.body) + '</div>' : '') + '</div>').join('') + '</div></div>');
 }
 
+// Same order every time the same card is drawn, different from how it was written.
+function vizSeeded(seedText) {
+  let seed = parseInt(vizHash(seedText), 36) || 1;
+  return () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+}
+
+function vizShuffle(list, seedText, avoidIdentity) {
+  const rand = vizSeeded(seedText);
+  const out = list.slice();
+  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+  if (avoidIdentity && out.length > 1 && out.every((item, k) => item === list[k])) out.push(out.shift());
+  return out;
+}
+
 function vizCheck(spec, state) {
-  const options = (Array.isArray(spec.options) ? spec.options : []).slice(0, 6).map(String);
-  const correct = Number(spec.correct);
-  if (options.length < 2 || !Number.isInteger(correct) || correct < 0 || correct >= options.length) return null;
+  const written = (Array.isArray(spec.options) ? spec.options : []).slice(0, 6).map(String);
+  const writtenCorrect = Number(spec.correct);
+  if (written.length < 2 || !Number.isInteger(writtenCorrect) || writtenCorrect < 0 || writtenCorrect >= written.length) return null;
+  // The model tends to write the right answer first: the card reorders the options.
+  const order = vizShuffle(written.map((_, k) => k), JSON.stringify(spec));
+  const options = order.map((k) => written[k]);
+  const correct = order.indexOf(writtenCorrect);
   const letters = 'ABCDEF';
   const el = vizElement('<div class="viz viz-check">' + vizHead('check', '') + '<div class="viz-check-q">' + vizBlock(spec.question || '') + '</div>' +
     '<div class="viz-check-options">' + options.map((option, index) => '<button type="button" class="viz-check-opt" data-opt="' + index + '"><span class="viz-check-key">' + letters[index] + '</span><span>' + vizInline(option) + '</span></button>').join('') + '</div>' +
@@ -873,7 +919,7 @@ function enhanceVisuals(root, options) {
     // ```visual is the format; ```viz, ```interactive, ```chart, ```plot… or a
     // ```json with a known "type" are accepted too.
     const typed = Object.prototype.hasOwnProperty.call(VIZ_RENDERERS, lang) ? lang : '';
-    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards)"/.test(source))) return;
+    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox)"/.test(source))) return;
     const spec = parseVisualSpec(source, typed);
     const render = spec && VIZ_RENDERERS[String(spec.type).toLowerCase()];
     if (!render) {

@@ -12,7 +12,7 @@
    Loaded before the main script of index.html; uses its globals at call
    time (renderMarkdown, enhanceRichContent, renderReasoningMarkup…). */
 
-const STREAM_FENCE_PLACEHOLDER = /^(visual|widget|viz|interactive|visualization|mermaid|plot|graph|formula|chart|flashcards|steps|timeline|compare|cards|check)$/i;
+const STREAM_FENCE_PLACEHOLDER = /^(visual|widget|viz|interactive|visualization|mermaid|plot|graph|formula|chart|flashcards|steps|timeline|compare|cards|check|match|order|categorize|fill|estimate|truefalse)$/i;
 
 function isListStart(line) {
   return /^\s{0,3}(?:[-*+]|\d{1,9}[.)])\s/.test(line || '');
@@ -105,6 +105,8 @@ function prepareStreamingTail(src) {
   }
   text = text.replace(/\[([^\]\n]*)\]\([^)\s]*$/, '$1');
   text = text.replace(/[*_`]+$/, '');
+  // Half-arrived syntax: a lone backslash, or a list number with nothing after it yet.
+  text = text.replace(/\\+$/, '').replace(/(^|\n)\s{0,3}\d{1,3}[.)]?\s*$/, '$1');
   const code = text.replace(/```[\s\S]*?```/g, '');
   if ((code.match(/`/g) || []).length % 2 === 1) text += '`';
   const plain = text.replace(/`[^`]*`/g, '');

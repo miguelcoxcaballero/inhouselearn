@@ -23,7 +23,13 @@
       "timeline",
       "compare",
       "check",
-      "cards"
+      "cards",
+      "match",
+      "order",
+      "categorize",
+      "fill",
+      "estimate",
+      "truefalse"
      ]
     }
    },
@@ -1329,6 +1335,222 @@
      "description": "Event names the host accepts."
     }
    }
+  },
+  "practice": {
+   "description": "Practice types (practice.js). The model writes answers in their natural place; the card shuffles with a seed from the spec.",
+   "oneOf": [
+    {
+     "type": "object",
+     "required": [
+      "type",
+      "pairs"
+     ],
+     "properties": {
+      "type": {
+       "const": "match"
+      },
+      "title": {
+       "type": "string"
+      },
+      "pairs": {
+       "type": "array",
+       "minItems": 2,
+       "maxItems": 8,
+       "items": {
+        "type": "object",
+        "required": [
+         "left",
+         "right"
+        ],
+        "properties": {
+         "left": {
+          "type": "string"
+         },
+         "right": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "required": [
+      "type",
+      "items"
+     ],
+     "properties": {
+      "type": {
+       "const": "order"
+      },
+      "title": {
+       "type": "string"
+      },
+      "hint": {
+       "type": "string"
+      },
+      "items": {
+       "type": "array",
+       "minItems": 3,
+       "maxItems": 10,
+       "items": {
+        "type": "string"
+       },
+       "description": "In the right order."
+      },
+      "explanation": {
+       "type": "string"
+      }
+     }
+    },
+    {
+     "type": "object",
+     "required": [
+      "type",
+      "categories",
+      "items"
+     ],
+     "properties": {
+      "type": {
+       "const": "categorize"
+      },
+      "title": {
+       "type": "string"
+      },
+      "categories": {
+       "type": "array",
+       "minItems": 2,
+       "maxItems": 4,
+       "items": {
+        "type": "string"
+       }
+      },
+      "items": {
+       "type": "array",
+       "minItems": 3,
+       "maxItems": 16,
+       "items": {
+        "type": "object",
+        "required": [
+         "text",
+         "category"
+        ],
+        "properties": {
+         "text": {
+          "type": "string"
+         },
+         "category": {
+          "type": "integer",
+          "minimum": 0
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "required": [
+      "type",
+      "text"
+     ],
+     "properties": {
+      "type": {
+       "const": "fill"
+      },
+      "title": {
+       "type": "string"
+      },
+      "text": {
+       "type": "string",
+       "description": "Blanks as [[right|wrong|wrong]]; the first option is the right one."
+      },
+      "explanation": {
+       "type": "string"
+      }
+     }
+    },
+    {
+     "type": "object",
+     "required": [
+      "type",
+      "min",
+      "max",
+      "answer"
+     ],
+     "properties": {
+      "type": {
+       "const": "estimate"
+      },
+      "title": {
+       "type": "string"
+      },
+      "question": {
+       "type": "string"
+      },
+      "min": {
+       "type": "number"
+      },
+      "max": {
+       "type": "number"
+      },
+      "step": {
+       "type": "number"
+      },
+      "answer": {
+       "type": "number"
+      },
+      "unit": {
+       "type": "string"
+      },
+      "tolerance": {
+       "type": "number"
+      },
+      "explanation": {
+       "type": "string"
+      }
+     }
+    },
+    {
+     "type": "object",
+     "required": [
+      "type",
+      "statements"
+     ],
+     "properties": {
+      "type": {
+       "const": "truefalse"
+      },
+      "title": {
+       "type": "string"
+      },
+      "statements": {
+       "type": "array",
+       "minItems": 1,
+       "maxItems": 10,
+       "items": {
+        "type": "object",
+        "required": [
+         "text",
+         "answer"
+        ],
+        "properties": {
+         "text": {
+          "type": "string"
+         },
+         "answer": {
+          "type": "boolean"
+         },
+         "explanation": {
+          "type": "string"
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
   }
  }
 }

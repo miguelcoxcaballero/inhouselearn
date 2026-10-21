@@ -1576,6 +1576,7 @@
   <script src="stream.js"></script>
   <script src="visuals.js"></script>
   <script src="scene.js"></script>
+  <script src="practice.js"></script>
   <script src="guided.js"></script>
   <script>
     const APP_CONFIG = {
@@ -6677,6 +6678,8 @@
           : 'Ahora mismo no hay archivos.',
         '',
         visualEventsText(chat),
+        '',
+        visualVarietyText(chat),
         '',
         // Last, where models pay most attention: the course task, or the visuals reminder.
         guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER

@@ -247,7 +247,59 @@ function validateQuestions(raw, options) {
   return { questions: out };
 }
 
+// Models tend to put the right answer first, or to make it the longest and
+// most detailed option. The app decides the positions itself: each quiz draws
+// them from a shuffled bag, so they are spread evenly over A, B, C, D, and the
+// wrong options are shuffled too. Questions with "all / none of the above"
+// keep their order.
+const PINNED_OPTION = /^(todas|ninguna|ambas)\b.*\b(anteriores|correctas|incorrectas)\b|\b(all|none|both) of the above\b/i;
+
+function shuffledCopy(list) {
+  const out = list.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function balanceAnswerPositions(questions) {
+  const bags = {};
+  questions.forEach((question) => {
+    if (question.options.some((option) => PINNED_OPTION.test(option))) return;
+    const n = question.options.length;
+    if (!bags[n] || !bags[n].length) bags[n] = shuffledCopy(Array.from({ length: n }, (_, k) => k));
+    const target = bags[n].pop();
+    const right = question.options[question.correct];
+    const others = shuffledCopy(question.options.filter((_, k) => k !== question.correct));
+    others.splice(target, 0, right);
+    question.options = others;
+    question.correct = target;
+  });
+  return questions;
+}
+
+// Questions whose right answer gives itself away by being clearly longer.
+function longestAnswerGiveaways(questions) {
+  return questions.filter((question) => {
+    const lengths = question.options.map((option) => option.replace(/\\[a-z]+|[{}$\\]/gi, '').trim().length);
+    const right = lengths[question.correct];
+    const other = Math.max(...lengths.filter((_, k) => k !== question.correct));
+    return right >= other * 1.3 && right - other >= 10;
+  });
+}
+
+function questionsTooEasyToGuess(questions, state) {
+  const giveaways = longestAnswerGiveaways(questions);
+  // Sent back at most twice per answer, so a stubborn model cannot loop forever.
+  if (giveaways.length <= Math.max(1, Math.floor(questions.length / 4)) || state.rejected >= 2) return '';
+  state.rejected += 1;
+  return 'In ' + giveaways.length + ' of ' + questions.length + ' questions the correct option is clearly the longest, so it can be guessed without knowing the answer (' +
+    giveaways.slice(0, 3).map((question) => '«' + question.question.slice(0, 60) + '»').join(', ') + '). Call the tool again with wrong options as long, specific and plausible as the correct one (and the correct one no more detailed than the rest).';
+}
+
 function createGuidedToolHandlers(chat, message) {
+  const lengthCheck = { rejected: 0 };
   const addCard = (card) => {
     message.guidedCards = (message.guidedCards || []).filter((item) => !(card.type === 'plan' && item.type === 'plan'));
     message.guidedCards.push(card);
@@ -306,6 +358,9 @@ function createGuidedToolHandlers(chat, message) {
       }
       const checked = validateQuestions(params && params.questions, { min: 2 });
       if (checked.error) return { isError: true, text: checked.error };
+      const giveaway = questionsTooEasyToGuess(checked.questions, lengthCheck);
+      if (giveaway) return { isError: true, text: giveaway };
+      balanceAnswerPositions(checked.questions);
       Object.values(course.quizzes).forEach((quiz) => { if (quiz.kind === 'check' && !quiz.submitted) quiz.superseded = true; });
       const id = uid('quiz');
       course.quizzes[id] = { id, kind: 'check', lessonId: lesson.id, questions: checked.questions.slice(0, 6), answers: {}, submitted: false, score: null, createdAt: nowIso() };
@@ -322,6 +377,9 @@ function createGuidedToolHandlers(chat, message) {
       const lessons = courseLessons(course);
       const checked = validateQuestions(params && params.questions, { min: Math.min(6, lessons.length * 2), lessons });
       if (checked.error) return { isError: true, text: checked.error };
+      const giveaway = questionsTooEasyToGuess(checked.questions, lengthCheck);
+      if (giveaway) return { isError: true, text: giveaway };
+      balanceAnswerPositions(checked.questions);
       const covered = new Set(checked.questions.map((question) => question.lessonId).filter(Boolean));
       const missing = lessons.filter((lesson) => lesson.status === 'done' && !covered.has(lesson.id));
       if (missing.length && missing.length > Math.floor(lessons.length / 4)) {
