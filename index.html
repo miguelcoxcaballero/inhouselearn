@@ -1357,6 +1357,162 @@
     .model-price-out { color: #dc2626; width: 100%; text-align: center; padding-bottom: 1px; border-bottom: 1px solid rgba(0,0,0,0.14); }
     .model-price-in { color: #16a34a; padding-top: 1px; }
     .model-price.free { color: #16a34a; font-size: 0.66rem; }
+
+    /* ─── DISEÑO «LIBRO» ─────────────────────────────────
+       Una columna como un lector: arriba Chats, la marca y el título del chat
+       o de la lección; los chats salen como un cajón por la izquierda; abajo,
+       el compositor fijo a todo el ancho con el modelo dentro. */
+    :root { --topbar-h: 56px; --ink-3: #6b6b66; --column: 720px; }
+    .topbar {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+      gap: 12px; padding: 0 16px;
+      background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none;
+      border-bottom: 1px solid var(--border-strong); box-shadow: none;
+    }
+    .topbar-start { justify-self: start; gap: 12px; min-width: 0; }
+    .topbar-mid { justify-self: center; flex: none; min-width: 0; max-width: 100%; justify-content: center; }
+    .topbar-end { justify-self: end; margin-left: 0; }
+    .chats-btn {
+      display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0;
+      height: 40px; padding: 0 15px 0 12px; border-radius: var(--r-full);
+      background: var(--surface); border: 1px solid var(--border-strong);
+      font-size: 0.875rem; font-weight: 600; color: var(--text);
+      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease);
+    }
+    .chats-btn:hover { border-color: rgba(0,0,0,0.22); }
+    .chats-btn[aria-expanded="true"] { background: var(--text); border-color: var(--text); color: #fff; }
+    .chats-btn:focus-visible, .sidebar-close:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+    .top-title { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: min(520px, 46vw); text-align: center; line-height: 1.2; }
+    .top-title b {
+      max-width: 100%; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-weight: 500; font-size: 1.18rem;
+      letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .top-title small { max-width: 100%; font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Cajón de chats */
+    .layout, .layout.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
+    .sidebar {
+      position: fixed; inset: 0 auto 0 0; width: min(340px, 88vw); z-index: 220;
+      padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+      border-right: 1px solid var(--border); background: var(--surface);
+      transform: translateX(-104%); transition: transform 0.28s var(--ease); box-shadow: none;
+    }
+    .sidebar.open { transform: translateX(0); box-shadow: 0 0 60px rgba(0,0,0,0.18); }
+    .sidebar-overlay {
+      display: block; position: fixed; inset: 0; z-index: 210;
+      background: rgba(26,26,26,0.28); -webkit-backdrop-filter: none; backdrop-filter: none;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s var(--ease);
+    }
+    .sidebar-overlay.open { opacity: 1; pointer-events: auto; cursor: pointer; }
+    .sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 12px 8px 18px; }
+    .sidebar-close {
+      width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--text-secondary);
+      transition: background 0.18s var(--ease), color 0.18s var(--ease);
+    }
+    .sidebar-close:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+    .sidebar-new-chat { padding: 6px 12px 6px; }
+    .sidebar-new-chat .btn { height: 46px; border-radius: 14px; justify-content: center; font-size: 0.95rem; gap: 8px; }
+    .sidebar-body { padding: 8px 12px 12px; }
+    .sidebar-section-label { padding-left: 12px; }
+    .chat-row { border-radius: 12px; }
+    .chat-item { padding-top: 9px; padding-bottom: 9px; }
+    .chat-item-title { font-size: 0.9rem; }
+    .chat-item-meta { font-size: 0.74rem; color: var(--ink-3); }
+    .sidebar-profile { margin: 0 12px 12px; }
+
+    /* La conversación, en una columna */
+    .guided-banner-slot { padding: 0; display: block; }
+    .guided-banner-slot > * { width: 100%; }
+    .thread-wrap { padding: 28px 24px 32px; }
+    .thread { width: min(var(--column), 100%); }
+
+    /* El compositor, fijo abajo a todo el ancho */
+    .composer-area {
+      background: var(--surface); border-top: 1px solid var(--border-strong);
+      padding: 10px 24px max(14px, env(safe-area-inset-bottom, 0px));
+    }
+    .composer-inner { max-width: var(--column); margin: 0 auto; }
+    .workspace-bar { max-width: none; margin: 0 0 6px; padding-bottom: 8px; border-bottom: 1px dashed var(--border-strong); }
+    .workspace-file { padding: 6px 12px; border-radius: 999px; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.76rem; }
+    .composer-shell, .composer-shell:focus-within {
+      max-width: none; background: transparent; border: 0; border-radius: 0; padding: 0; box-shadow: none;
+    }
+    .composer-shell.drag-active { border-radius: 16px; }
+    .composer { display: block; width: 100%; min-height: 44px; max-height: 200px; padding: 10px 2px 8px; font-size: 1rem; }
+    .composer::placeholder { color: var(--ink-3); }
+    .composer-row { align-items: center; gap: 8px; padding-top: 2px; }
+    .composer-spacer { flex: 1; min-width: 0; }
+    .attach-btn {
+      width: 40px; height: 40px; border: 1px solid var(--border-strong); color: var(--text-secondary);
+    }
+    .attach-btn:hover { transform: none; background: rgba(0,0,0,0.04); }
+    .guided-btn {
+      width: auto; height: 40px; padding: 0 15px 0 4px; gap: 8px; border-radius: var(--r-full);
+      border: 1px solid var(--border-strong); color: var(--text); font-size: 0.9rem; font-weight: 500; white-space: nowrap;
+    }
+    .guided-btn svg { width: 30px; height: 30px; padding: 7px; border-radius: 50%; flex-shrink: 0; transition: background 0.18s var(--ease), color 0.18s var(--ease); }
+    .guided-btn:hover { transform: none; background: rgba(0,0,0,0.04); }
+    .guided-btn.active, .guided-btn.active:hover { background: var(--orange-soft); border-color: transparent; color: #A84F1A; box-shadow: none; }
+    .guided-btn.active svg { background: var(--orange); color: #fff; }
+    /* El modelo vive en el compositor; su menú se abre hacia arriba */
+    .model-menu-wrap { position: static; flex: 0 1 auto; max-width: 300px; min-width: 0; }
+    .model-trigger {
+      width: auto; max-width: 100%; height: 40px; padding: 0 10px 0 4px; gap: 8px;
+      border: 1px solid var(--border-strong); border-radius: var(--r-full); background: var(--surface-hover);
+    }
+    .model-trigger:hover, .model-trigger[aria-expanded="true"] { background: var(--surface); border-color: rgba(224,122,60,0.45); }
+    .model-trigger[aria-expanded="true"] { box-shadow: 0 0 0 4px var(--orange-soft); }
+    .model-trigger-brand { width: 30px; height: 30px; padding: 6px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); }
+    .model-trigger-copy { flex: 0 1 auto; }
+    .model-trigger-kicker { display: none; }
+    .model-trigger-main { font-size: 0.88rem; font-weight: 600; }
+    .model-trigger-chip { padding: 2px 8px; border: 0; background: var(--orange-soft); color: #A84F1A; font-size: 0.72rem; }
+    .composer-area .model-popover {
+      top: auto; bottom: calc(100% + 12px); left: 0; right: auto;
+      width: min(480px, 100%); max-height: calc(100dvh - var(--topbar-h) - 150px);
+    }
+    .usage-btn { width: 40px; height: 40px; }
+    .usage-btn svg { width: 28px; height: 28px; }
+    .usage-popup { right: 0; }
+    .send-btn {
+      width: auto; height: 42px; padding: 0 16px 0 18px; gap: 8px; border-radius: var(--r-full);
+      background: var(--text); color: #fff; font-size: 0.95rem; font-weight: 600;
+    }
+    .send-btn:hover:not([disabled]) { transform: none; background: #333; }
+    .send-btn[disabled] { opacity: 0.35; background: var(--text); }
+    .send-btn.busy { background: var(--text); }
+
+    @media (max-width: 768px) {
+      :root { --topbar-h: 58px; }
+      .topbar { grid-template-columns: auto minmax(0, 1fr) auto; padding: 0 10px; gap: 8px; }
+      .topbar-start { gap: 8px; }
+      .topbar-mid { justify-self: stretch; }
+      .top-title { max-width: 100%; }
+      .chats-btn { width: 44px; height: 44px; padding: 0; justify-content: center; }
+      .chats-btn-label { display: none; }
+      .brand { font-size: 0; gap: 0; }
+      .brand svg { width: 26px; height: 26px; }
+      .sidebar .brand { font-size: 1rem; gap: 7px; }
+      .sidebar .brand svg { width: 22px; height: 22px; }
+      .thread-wrap { padding: 18px 14px 24px; }
+      .composer-area { padding: 8px 12px max(10px, env(safe-area-inset-bottom, 0px)); }
+      .guided-btn { width: 44px; height: 44px; padding: 0; justify-content: center; }
+      .guided-btn-label { display: none; }
+      .attach-btn { width: 44px; height: 44px; }
+      .model-menu-wrap { max-width: 190px; }
+      .model-trigger { height: 44px; }
+      .model-trigger-chip { display: none; }
+      .send-btn { width: 44px; height: 44px; padding: 0; justify-content: center; }
+      .send-label { display: none; }
+      .composer-area .model-popover {
+        position: fixed; top: auto; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        width: auto; max-height: calc(100dvh - var(--topbar-h) - 24px); overflow-y: auto;
+      }
+    }
+    @media (max-width: 380px) {
+      .model-menu-wrap { max-width: 120px; }
+      .usage-btn { display: none; }
+    }
   </style>
   <link rel="stylesheet" href="guided.css">
   <link rel="stylesheet" href="visuals.css">
@@ -1389,10 +1545,9 @@
     <!-- TOPBAR -->
     <header class="topbar">
       <div class="topbar-start">
-        <button class="hamburger" id="hamburger-btn" aria-label="Abrir menú">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
+        <button class="chats-btn" id="hamburger-btn" type="button" aria-label="Chats" aria-controls="sidebar" aria-expanded="false" title="Tus chats">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="chats-btn-label">Chats</span>
         </button>
         <div class="brand">
           <svg width="22" height="22" xmlns="http://www.w3.org/2000/svg" viewBox="25 23.5 58 58" aria-hidden="true"><path d="M54 25 C69 25 77 36 77 47 C77 57 69 62 66 68 H42 C39 62 31 57 31 47 C31 36 39 25 54 25 Z" fill="#F2A900" stroke="#F2A900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 73 H64 M47 79 H61" fill="none" stroke="#A97600" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 52.5 L54 43.5 L63 52.5" fill="none" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1404,72 +1559,9 @@
           <span class="transport-dot"></span>
           <span id="transport-label">—</span>
         </div>
-        <div class="model-menu-wrap">
-          <button class="model-trigger" id="model-menu-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
-            <span class="model-trigger-brand" id="model-trigger-brand" data-provider="codex" aria-hidden="true"></span>
-            <span class="model-trigger-copy">
-              <span class="model-trigger-main" id="model-trigger-main">Selecciona un modelo</span>
-              <span class="model-trigger-kicker" id="model-trigger-kicker">Modelo</span>
-            </span>
-            <span class="model-trigger-chip hidden" id="model-trigger-meta">Estable</span>
-            <svg class="model-trigger-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Configuración del modelo">
-            <div class="model-popover-head">
-              <div class="model-popover-title">Modelo del chat</div>
-              <div class="model-popover-status" id="model-menu-status"></div>
-            </div>
-
-            <div class="model-search-row">
-              <div class="model-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
-                <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
-              </div>
-              <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
-                <span>Filtros</span><span class="filter-count hidden" id="filter-count"></span>
-              </button>
-            </div>
-            <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
-            <div class="filter-panel hidden" id="filter-panel">
-              <div class="filter-chips" id="capability-chips" role="group" aria-label="Capacidades"></div>
-              <div class="filter-iq">
-                <div class="filter-row-head">
-                  <span class="filter-label">Inteligencia mínima</span>
-                  <span class="filter-iq-value" id="iq-value"></span>
-                </div>
-                <input type="range" class="iq-range" id="iq-range" min="0" max="60" step="1" value="0" aria-label="Inteligencia mínima">
-              </div>
-              <div class="filter-sort">
-                <span class="filter-label">Ordenar</span>
-                <div class="filter-sort-options" id="sort-options" role="radiogroup" aria-label="Ordenar"></div>
-              </div>
-              <div class="filter-foot">
-                <span id="filter-result"></span>
-                <button type="button" class="filter-clear hidden" id="filter-clear">Quitar filtros</button>
-              </div>
-            </div>
-            <div class="model-popover-section">
-              <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
-            </div>
-
-            <div class="model-popover-section hidden" id="thinking-section">
-              <div class="model-popover-section-label">Razonamiento</div>
-              <div class="thinking-segmented" id="thinking-segmented" role="radiogroup"></div>
-            </div>
-
-            <div class="model-popover-section api-key-section" id="api-key-section">
-              <div class="model-popover-section-label">API key de OpenRouter</div>
-              <div class="api-key-row">
-                <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
-                <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
-              </div>
-              <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
-            </div>
-
-          </div>
+        <div class="top-title" id="top-title">
+          <b id="top-title-main">inhouse learn</b>
+          <small id="top-title-sub"></small>
         </div>
       </div>
       <div class="topbar-end">
@@ -1499,16 +1591,24 @@
       <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
       <!-- SIDEBAR -->
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-body">
-          <div class="sidebar-label">Recientes</div>
-          <div class="chat-list" id="chat-list"></div>
+      <aside class="sidebar" id="sidebar" aria-label="Tus chats">
+        <div class="sidebar-head">
+          <div class="brand">
+            <svg width="22" height="22" xmlns="http://www.w3.org/2000/svg" viewBox="25 23.5 58 58" aria-hidden="true"><path d="M54 25 C69 25 77 36 77 47 C77 57 69 62 66 68 H42 C39 62 31 57 31 47 C31 36 39 25 54 25 Z" fill="#F2A900" stroke="#F2A900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 73 H64 M47 79 H61" fill="none" stroke="#A97600" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 52.5 L54 43.5 L63 52.5" fill="none" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            inhouse learn
+          </div>
+          <button class="sidebar-close" id="sidebar-close" type="button" aria-label="Cerrar chats">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
         <div class="sidebar-new-chat">
           <button class="btn btn-primary" id="new-chat-btn">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span class="btn-label">Nuevo chat</span>
           </button>
+        </div>
+        <div class="sidebar-body">
+          <div class="chat-list" id="chat-list"></div>
         </div>
         <div class="sidebar-profile hidden" id="profile-card">
           <div class="sidebar-avatar-wrap">
@@ -1528,29 +1628,100 @@
           <section class="thread" id="thread"></section>
         </div>
         <footer class="composer-area">
+          <div class="composer-inner">
           <div class="workspace-bar hidden" id="workspace-bar"></div>
           <div class="composer-shell">
             <div class="composer-attachments hidden" id="composer-attachments"></div>
+            <textarea id="composer" class="composer" rows="1" placeholder="Pregunta lo que quieras"></textarea>
             <div class="composer-row">
               <button class="attach-btn" id="attach-btn" aria-label="Adjuntar" title="Adjuntar archivos">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21.44 11.05l-8.49 8.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66L9.4 17.43a2 2 0 1 1-2.83-2.83l8.49-8.48"/>
                 </svg>
               </button>
-              <button class="guided-btn" id="guided-btn" type="button" aria-pressed="false" aria-label="Guided Learning" title="Guided Learning: modo tutor paso a paso">
+              <button class="guided-btn" id="guided-btn" type="button" aria-pressed="false" aria-label="Aprendizaje guiado" title="Aprendizaje guiado: un curso por lecciones con mini tests y examen final">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 10L12 5 2 10l10 5 10-5z"/>
                   <path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/>
                 </svg>
+                <span class="guided-btn-label">Aprendizaje guiado</span>
               </button>
-              <textarea id="composer" class="composer" rows="1" placeholder="Pregunta lo que quieras"></textarea>
-              <button class="send-btn" id="send-btn" aria-label="Enviar">
-                <svg id="send-icon" viewBox="0 0 24 24" width="15" height="15" fill="none">
-                  <path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                </svg>
-              </button>
+                <div class="model-menu-wrap">
+                  <button class="model-trigger" id="model-menu-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+                    <span class="model-trigger-brand" id="model-trigger-brand" data-provider="codex" aria-hidden="true"></span>
+                    <span class="model-trigger-copy">
+                      <span class="model-trigger-main" id="model-trigger-main">Selecciona un modelo</span>
+                      <span class="model-trigger-kicker" id="model-trigger-kicker">Modelo</span>
+                    </span>
+                    <span class="model-trigger-chip hidden" id="model-trigger-meta">Estable</span>
+                    <svg class="model-trigger-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Configuración del modelo">
+                    <div class="model-popover-head">
+                      <div class="model-popover-title">Modelo del chat</div>
+                      <div class="model-popover-status" id="model-menu-status"></div>
+                    </div>
+
+                    <div class="model-search-row">
+                      <div class="model-search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
+                        <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
+                      </div>
+                      <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                        <span>Filtros</span><span class="filter-count hidden" id="filter-count"></span>
+                      </button>
+                    </div>
+                    <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
+                    <div class="filter-panel hidden" id="filter-panel">
+                      <div class="filter-chips" id="capability-chips" role="group" aria-label="Capacidades"></div>
+                      <div class="filter-iq">
+                        <div class="filter-row-head">
+                          <span class="filter-label">Inteligencia mínima</span>
+                          <span class="filter-iq-value" id="iq-value"></span>
+                        </div>
+                        <input type="range" class="iq-range" id="iq-range" min="0" max="60" step="1" value="0" aria-label="Inteligencia mínima">
+                      </div>
+                      <div class="filter-sort">
+                        <span class="filter-label">Ordenar</span>
+                        <div class="filter-sort-options" id="sort-options" role="radiogroup" aria-label="Ordenar"></div>
+                      </div>
+                      <div class="filter-foot">
+                        <span id="filter-result"></span>
+                        <button type="button" class="filter-clear hidden" id="filter-clear">Quitar filtros</button>
+                      </div>
+                    </div>
+                    <div class="model-popover-section">
+                      <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
+                    </div>
+
+                    <div class="model-popover-section hidden" id="thinking-section">
+                      <div class="model-popover-section-label">Razonamiento</div>
+                      <div class="thinking-segmented" id="thinking-segmented" role="radiogroup"></div>
+                    </div>
+
+                    <div class="model-popover-section api-key-section" id="api-key-section">
+                      <div class="model-popover-section-label">API key de OpenRouter</div>
+                      <div class="api-key-row">
+                        <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
+                        <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
+                      </div>
+                      <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
+                    </div>
+
+                  </div>
+                </div>
+              <span class="composer-spacer"></span>
               <button class="usage-btn" id="usage-btn" aria-label="Actividad de API" title="Ver actividad de API">
                 <svg id="usage-donut" viewBox="0 0 36 36"></svg>
+              </button>
+              <button class="send-btn" id="send-btn" aria-label="Enviar">
+                <span class="send-label" id="send-label">Enviar</span>
+                <svg id="send-icon" viewBox="0 0 24 24" width="16" height="16" fill="none">
+                  <path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </button>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
@@ -1560,6 +1731,7 @@
             <div class="composer-status-row">
               <span id="composer-status" class="hidden"></span>
             </div>
+          </div>
           </div>
         </footer>
       </main>
@@ -1712,8 +1884,7 @@
       if (elements.profilePopup && !elements.profilePopup.classList.contains('hidden')) { closeProfileMenu(); return true; }
       const sidebar = document.getElementById('sidebar');
       if (sidebar && sidebar.classList.contains('open')) {
-        sidebar.classList.remove('open');
-        document.getElementById('sidebar-overlay').classList.remove('open');
+        setChatsDrawer(false);
         return true;
       }
       return false;
@@ -1796,6 +1967,9 @@
       composerAttachments: document.getElementById('composer-attachments'),
       sendBtn: document.getElementById('send-btn'),
       sendIcon: document.getElementById('send-icon'),
+      sendLabel: document.getElementById('send-label'),
+      topTitleMain: document.getElementById('top-title-main'),
+      topTitleSub: document.getElementById('top-title-sub'),
       newChatBtn: document.getElementById('new-chat-btn'),
       clearChatBtn: document.getElementById('clear-chat-btn'),
       modelMenuBtn: document.getElementById('model-menu-btn'),
@@ -2256,6 +2430,7 @@
         kind: message && typeof message.kind === 'string' ? message.kind : '',
         hidden: !!(message && message.hidden),
         result: message && message.result && typeof message.result === 'object' ? message.result : null,
+        lessonId: message && typeof message.lessonId === 'string' ? message.lessonId : '',
         guidedCards: Array.isArray(message && message.guidedCards) ? message.guidedCards.filter((card) => card && typeof card.type === 'string') : []
       };
     }
@@ -3510,11 +3685,15 @@
       const hasDraft = !!elements.composer.value.trim() || !!(appState.composerAttachments && appState.composerAttachments.length);
       elements.sendBtn.disabled = !appState.busy && (driveLocked || !hasDraft || appState.attachmentBusy);
       if (appState.busy) {
-        elements.sendBtn.setAttribute('aria-label', 'Cancelar');
+        elements.sendBtn.setAttribute('aria-label', 'Parar');
+        elements.sendBtn.classList.add('busy');
+        if (elements.sendLabel) elements.sendLabel.textContent = 'Parar';
         elements.sendIcon.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>';
       } else {
         elements.sendBtn.setAttribute('aria-label', 'Enviar');
-        elements.sendIcon.innerHTML = '<path d="M4 12.5L20 4L14 20L11.4 13.1L4 12.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>';
+        elements.sendBtn.classList.remove('busy');
+        if (elements.sendLabel) elements.sendLabel.textContent = 'Enviar';
+        elements.sendIcon.innerHTML = '<path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>';
       }
       if (elements.composer) {
         elements.composer.disabled = driveLocked;
@@ -3722,7 +3901,7 @@
         elements.modelTriggerBrand.innerHTML = brandIconSvg(activeId);
       }
       if (elements.modelTriggerMeta) {
-        const showLevel = levels.length > 1 && thinkingLevel && thinkingLevel !== defaultThinkingLevelForModel(activeId);
+        const showLevel = levels.length > 1 && !!thinkingLevel && thinkingLevel !== 'off';
         elements.modelTriggerMeta.textContent = showLevel ? thinkingLabel(thinkingLevel) : '';
         elements.modelTriggerMeta.classList.toggle('hidden', !showLevel);
       }
@@ -4409,7 +4588,42 @@
       return stripLegacyGuidedState(alt && typeof alt.content === 'string' ? alt.content : message.content);
     }
 
+    function relativeWhen(iso) {
+      const time = Date.parse(iso || '');
+      if (!time) return '';
+      const minutes = Math.round((Date.now() - time) / 60000);
+      if (minutes < 1) return 'ahora';
+      if (minutes < 60) return 'hace ' + minutes + ' min';
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return 'hace ' + hours + ' h';
+      const days = Math.round(hours / 24);
+      if (days === 1) return 'ayer';
+      if (days < 7) return 'hace ' + days + ' días';
+      return new Date(time).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    }
+
+    function updateTopTitle(chat) {
+      if (!elements.topTitleMain || !elements.topTitleSub) return;
+      let main = chat && chat.title ? chat.title : 'Nuevo chat';
+      let sub = '';
+      const course = chat && chat.guidedLearning ? courseOf(chat) : null;
+      if (course && course.units.length) {
+        main = course.title || main;
+        sub = guidedTitleSub(course);
+      } else if (course) {
+        main = 'Aprendizaje guiado';
+        sub = 'Elige qué quieres aprender';
+      } else if (chat && threadMessages(chat).length) {
+        sub = 'Chat · ' + relativeWhen(chat.updatedAt || chat.createdAt);
+      } else {
+        sub = 'Chat nuevo';
+      }
+      elements.topTitleMain.textContent = main;
+      elements.topTitleSub.textContent = sub;
+    }
+
     function syncGuidedBannerSlot(chat) {
+      updateTopTitle(chat);
       if (!elements.guidedBannerSlot) {
         return;
       }
@@ -4500,7 +4714,7 @@
         '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
         '  <div class="message-body">',
         '    <div class="message-meta">' + roleLabel + ' · ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-        '    <div class="bubble"><div class="bubble-content">',
+        '    <div class="bubble"><div class="bubble-content">' + (isUser ? '' : guidedChapterMarkup(message, chat)),
         '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>',
         '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + quickMarkup,
         '    </div></div>',
@@ -5262,14 +5476,15 @@
       var html = '';
       if (pinned.length) {
         html += '<div class="sidebar-section-label">Fijadas</div>' + pinned.map(chatRowMarkup).join('');
-        if (unpinned.length) html += '<div class="sidebar-section-label">Recientes</div>';
       }
+      if (unpinned.length) html += '<div class="sidebar-section-label">Recientes</div>';
       html += unpinned.map(chatRowMarkup).join('');
       elements.chatList.innerHTML = html;
 
       elements.chatList.querySelectorAll('[data-chat-id]').forEach(function(btn) {
         btn.addEventListener('click', function() {
           appState.activeChatId = btn.dataset.chatId;
+          setChatsDrawer(false);
           saveState(); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
         });
       });
@@ -6446,6 +6661,11 @@
         if (e.key === 'Escape') {
           closeModelMenu();
           closeProfileMenu();
+          document.getElementById('usage-popup').classList.add('hidden');
+          if (document.getElementById('sidebar').classList.contains('open')) {
+            setChatsDrawer(false);
+            document.getElementById('hamburger-btn').focus();
+          }
         }
       });
       window.addEventListener('focus', function() {
@@ -7246,6 +7466,10 @@
         provider: activeProviderName(chat),
         model: resolveRequestModelId(chat)
       });
+      if (chat.guidedLearning) {
+        const course = courseOf(chat);
+        if (course.status === 'learning' && course.currentLessonId) assistantMessage.lessonId = course.currentLessonId;
+      }
       chat.messages.push(userMessage, assistantMessage);
       touchChat(chat);
       appState.busy = true;
@@ -7385,23 +7609,31 @@
       }, 0);
     }
 
+    // The chat list is a drawer that slides in from the left at every width.
+    function setChatsDrawer(open) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const button = document.getElementById('hamburger-btn');
+      if (!sidebar || !overlay) return;
+      sidebar.classList.toggle('open', open);
+      overlay.classList.toggle('open', open);
+      if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        const target = sidebar.querySelector('.chat-item.active') || document.getElementById('new-chat-btn');
+        if (target && window.innerWidth > 768) target.focus({ preventScroll: true });
+      }
+    }
+
     function bindMobileMenu() {
       const hamburger = document.getElementById('hamburger-btn');
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('sidebar-overlay');
       if (!hamburger || !sidebar || !overlay) return;
-      hamburger.addEventListener('click', () => {
-        if (window.innerWidth <= 768) {
-          sidebar.classList.toggle('open');
-          overlay.classList.toggle('open');
-        } else {
-          document.querySelector('.layout').classList.toggle('sidebar-collapsed');
-        }
-      });
-      overlay.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('open');
-      });
+      hamburger.addEventListener('click', () => setChatsDrawer(!sidebar.classList.contains('open')));
+      overlay.addEventListener('click', () => setChatsDrawer(false));
+      const close = document.getElementById('sidebar-close');
+      if (close) close.addEventListener('click', () => { setChatsDrawer(false); hamburger.focus(); });
+      if (elements.newChatBtn) elements.newChatBtn.addEventListener('click', () => setChatsDrawer(false));
     }
 
     if (document.readyState === 'loading') {

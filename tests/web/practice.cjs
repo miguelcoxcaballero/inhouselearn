@@ -73,7 +73,8 @@ const SPECS = {
   const sys = await page.evaluate(() => window.__requests[window.__requests.length - 1].messages[0].content);
   check('next request tells the model which types it already used', /already used in this chat \(oldest first\): .*categorize.*truefalse/.test(sys), (sys.match(/Visual types you already used[^\n]*/) || [''])[0].slice(0, 160));
   // Guided quiz: a model that always writes the right answer first and longest.
-  await page.click('#new-chat-btn').catch(() => {});
+  await page.click('#hamburger-btn');
+  await page.click('#new-chat-btn');
   await page.click('#guided-btn');
   await page.evaluate(() => window.__replies.push({ text: 'Plan.', tools: [{ name: 'set_course_plan', args: { title: 'T', goal: 'G', units: [{ title: 'U', lessons: [{ title: 'L', objectives: ['o'] }] }] } }] }, { text: 'Listo.' }));
   await send(page, 'Quiero aprender algo');

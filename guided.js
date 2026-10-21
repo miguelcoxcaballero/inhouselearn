@@ -15,9 +15,9 @@ const GUIDED_PASS = 70;
 const GUIDED_TOOL_NAMES = new Set(['set_course_plan', 'quiz', 'final_exam']);
 const GUIDED_RESULT_KINDS = new Set(['quiz-result', 'exam-result']);
 const GUIDED_LEVELS = [
-  { id: 'cero', label: 'Desde cero', prompt: 'starts from zero' },
-  { id: 'base', label: 'Tengo base', prompt: 'has the basics' },
-  { id: 'avanzado', label: 'Avanzado', prompt: 'is advanced and wants depth' }
+  { id: 'cero', label: 'Desde cero', note: 'Empiezo de nada', prompt: 'starts from zero' },
+  { id: 'base', label: 'Tengo base', note: 'Repaso y avanzo', prompt: 'has the basics' },
+  { id: 'avanzado', label: 'Avanzado', note: 'Voy al grano', prompt: 'is advanced and wants depth' }
 ];
 const GUIDED_NEEDS_TOOLS = 'El aprendizaje guiado necesita un modelo que use herramientas: elige uno con el filtro «Herramientas» del selector de modelos.';
 const GUIDED_LENGTHS = [
@@ -571,7 +571,7 @@ const GUIDED_QUICK = {
 };
 
 document.addEventListener('click', (event) => {
-  const target = event.target.closest('[data-g-answer],[data-g-submit],[data-g-start],[data-g-quick],[data-g-tweak],[data-g-toggle-map],[data-g-skip],[data-g-level],[data-g-length],[data-g-change-plan]');
+  const target = event.target.closest('[data-g-answer],[data-g-submit],[data-g-start],[data-g-quick],[data-g-tweak],[data-g-toggle-map],[data-g-skip],[data-g-level],[data-g-length],[data-g-change-plan],[data-g-page]');
   if (!target) return;
   const chat = getActiveChat();
   if (!chat) return;
@@ -605,6 +605,8 @@ document.addEventListener('click', (event) => {
       course.lastEvent = null;
     }
     guidedSend(chat, quick.text, quick.kind ? { kind: quick.kind } : {});
+  } else if (target.dataset.gPage) {
+    guidedTurnPage(target.dataset.gPage);
   } else if (target.hasAttribute('data-g-toggle-map')) {
     const open = !(sessionGet('course-map::' + chat.id) === '1');
     sessionSet('course-map::' + chat.id, open ? '1' : '0');
@@ -628,6 +630,23 @@ document.addEventListener('click', (event) => {
   }
 });
 
+// Anterior / Siguiente jump between the chapter titles of the thread, like the pages of a book.
+function guidedTurnPage(direction) {
+  const wrap = document.querySelector('.thread-wrap');
+  if (!wrap) return;
+  const top = wrap.getBoundingClientRect().top;
+  const stops = Array.from(document.querySelectorAll('#thread [data-lesson-start]'))
+    .map((el) => el.getBoundingClientRect().top - top + wrap.scrollTop - 12);
+  const here = wrap.scrollTop + 4;
+  let current = -1;
+  stops.forEach((y, index) => { if (y <= here) current = index; });
+  let goal;
+  if (direction === 'prev') goal = current > 0 ? stops[current - 1] : 0;
+  else goal = current + 1 < stops.length ? stops[current + 1] : wrap.scrollHeight;
+  const smooth = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  wrap.scrollTo({ top: Math.max(0, goal), behavior: smooth ? 'smooth' : 'auto' });
+}
+
 function sessionGet(key) { try { return sessionStorage.getItem(key); } catch (_) { return null; } }
 function sessionSet(key, value) { try { sessionStorage.setItem(key, value); } catch (_) {} }
 
@@ -640,7 +659,10 @@ const G_ICON = {
   trophy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
   chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>',
   skip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>',
-  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>'
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>',
+  next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+  bulb: '<svg viewBox="25 23.5 58 58" aria-hidden="true"><path d="M54 25 C69 25 77 36 77 47 C77 57 69 62 66 68 H42 C39 62 31 57 31 47 C31 36 39 25 54 25 Z" fill="#F2A900" stroke="#F2A900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 73 H64 M47 79 H61" fill="none" stroke="#A97600" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 52.5 L54 43.5 L63 52.5" fill="none" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
@@ -651,6 +673,43 @@ function lessonStatusIcon(lesson) {
   return '<span class="g-dot"></span>';
 }
 
+function guidedTitleSub(course) {
+  const progress = courseProgress(course);
+  const lesson = currentLesson(course);
+  if (course.status === 'ready') return 'Índice · ' + progress.lessons.length + (progress.lessons.length === 1 ? ' lección' : ' lecciones');
+  if (course.status === 'exam') return 'Examen final';
+  if (course.status === 'done') return 'Curso completado' + (course.examScore != null ? ' · examen ' + course.examScore + ' %' : '');
+  if (lesson) return 'Lección ' + lesson.id.slice(1) + ' de ' + progress.lessons.length + ' · ' + lesson.title;
+  return 'Plan del curso';
+}
+
+function lessonUnit(course, lessonId) {
+  for (let i = 0; i < course.units.length; i++) {
+    if (course.units[i].lessons.some((lesson) => lesson.id === lessonId)) return { index: i, unit: course.units[i] };
+  }
+  return null;
+}
+
+// The first answer of each lesson opens with its chapter title. The pager uses them as stops.
+function guidedChapterMarkup(message, chat) {
+  if (!chat || !chat.guidedLearning || !message || !message.lessonId) return '';
+  const visible = chat.messages.filter((item) => !item.hidden && item.role === 'assistant');
+  const index = visible.findIndex((item) => item.id === message.id);
+  for (let i = index - 1; i >= 0; i--) {
+    if (visible[i].lessonId) {
+      if (visible[i].lessonId === message.lessonId) return '';
+      break;
+    }
+  }
+  const course = courseOf(chat);
+  const lesson = findLesson(course, message.lessonId);
+  if (!lesson) return '';
+  const place = lessonUnit(course, lesson.id);
+  return '<header class="g-chapter" data-lesson-start="' + escapeHtml(lesson.id) + '">' +
+    (place ? '<span class="g-chapter-unit">Unidad ' + (place.index + 1) + ' · ' + escapeHtml(place.unit.title) + '</span>' : '') +
+    '<span class="g-chapter-title"><span class="g-chapter-num">' + escapeHtml(lesson.id.slice(1)) + '</span><span class="g-chapter-name">' + escapeHtml(lesson.title) + '</span></span></header>';
+}
+
 function renderCourseHeader(chat) {
   if (!chat || !chat.guidedLearning) return '';
   const course = courseOf(chat);
@@ -658,28 +717,28 @@ function renderCourseHeader(chat) {
   const progress = courseProgress(course);
   const lesson = currentLesson(course);
   const open = sessionGet('course-map::' + chat.id) === '1';
-  const sub = course.status === 'ready' ? 'Plan listo · ' + progress.lessons.length + ' lecciones'
-    : course.status === 'exam' ? 'Examen final'
-    : course.status === 'done' ? 'Curso completado' + (course.examScore != null ? ' · examen ' + course.examScore + '%' : '')
-    : lesson ? 'Lección ' + lesson.id.slice(1) + ' de ' + progress.lessons.length + ' · ' + lesson.title : '';
-  const segments = progress.lessons.map((item) => '<span class="g-seg ' + item.status + '" title="' + escapeHtml(item.id + ' · ' + item.title) + '"></span>').join('') +
-    '<span class="g-seg exam ' + (course.status === 'done' ? 'done' : course.status === 'exam' ? 'current' : '') + '" title="Examen final">' + G_ICON.trophy + '</span>';
-  const map = !open ? '' : '<div class="g-map">' + course.units.map((unit, index) =>
+  const segments = progress.lessons.map((item) => '<span class="g-seg ' + item.status + '" title="' + escapeHtml('Lección ' + item.id.slice(1) + ' · ' + item.title) + '"></span>').join('');
+  const finished = course.status === 'done';
+  const bar = '<button type="button" class="g-bookbar" data-g-toggle-map aria-expanded="' + open + '" aria-label="Plan del curso: ' + progress.percent + ' % hecho">' +
+    '<span class="g-segs">' + segments + '</span>' +
+    '<span class="g-bk-end' + (finished ? ' lit' : '') + '">' + G_ICON.trophy + '<b>' + progress.percent + ' %</b></span></button>';
+  const pager = course.status === 'learning' && lesson
+    ? '<nav class="g-pager" aria-label="Lecciones"><button type="button" class="g-page-btn" data-g-page="prev">' + G_ICON.prev + '<span>Anterior</span></button>' +
+      '<span class="g-pager-mid"><b>Lección ' + escapeHtml(lesson.id.slice(1)) + ' de ' + progress.lessons.length + '</b>' +
+      '<button type="button" class="g-pager-plan" data-g-toggle-map>' + (open ? 'Cerrar plan' : 'Ver plan') + '</button></span>' +
+      '<button type="button" class="g-page-btn" data-g-page="next"><span>Siguiente</span>' + G_ICON.next + '</button></nav>'
+    : '';
+  const map = !open ? '' : '<div class="g-map"><div class="g-map-head"><span>Índice</span><b>' + escapeHtml(course.title) + '</b></div>' +
+    course.units.map((unit, index) =>
     '<div class="g-map-unit"><div class="g-map-unit-title">Unidad ' + (index + 1) + ' · ' + escapeHtml(unit.title) + '</div>' +
-    unit.lessons.map((item) => '<div class="g-map-row ' + item.status + '">' + lessonStatusIcon(item) +
-      '<span class="g-map-name">' + escapeHtml(item.title) + '</span>' +
-      (item.score != null ? '<span class="g-map-score">' + item.score + '%</span>' : '') +
+    unit.lessons.map((item) => '<div class="g-map-row ' + item.status + '"><span class="g-map-num">' + (item.status === 'done' ? G_ICON.check : escapeHtml(item.id.slice(1))) + '</span>' +
+      '<span class="g-map-name">' + escapeHtml(item.title) + (item.status === 'current' ? '<em>Ahora</em>' : item.status === 'skipped' ? '<em class="muted">Saltada</em>' : '') + '</span><span class="g-leader"></span>' +
+      (item.score != null ? '<span class="g-map-score">' + item.score + ' %</span>' : item.minutes ? '<span class="g-map-score">~' + item.minutes + ' min</span>' : '') +
       (item.status === 'current' && course.status === 'learning' ? '<button type="button" class="g-link" data-g-skip="' + item.id + '">Saltar</button>' : '') +
       '</div>').join('') + '</div>').join('') +
-    '<div class="g-map-row exam ' + (course.status === 'done' ? 'done' : '') + '"><span class="g-dot exam">' + G_ICON.trophy + '</span><span class="g-map-name">Examen final</span>' +
-    (course.examScore != null ? '<span class="g-map-score">' + course.examScore + '%</span>' : '') + '</div></div>';
-  return '<div class="g-course' + (open ? ' open' : '') + '">' +
-    '<button type="button" class="g-course-bar" data-g-toggle-map aria-expanded="' + open + '">' +
-      '<span class="g-course-icon">' + G_ICON.cap + '</span>' +
-      '<span class="g-course-text"><span class="g-course-title">' + escapeHtml(course.title) + '</span><span class="g-course-sub">' + escapeHtml(sub) + '</span></span>' +
-      '<span class="g-course-pct">' + progress.percent + '%</span><span class="g-course-chev">' + G_ICON.chevron + '</span>' +
-    '</button>' +
-    '<div class="g-track">' + segments + '</div>' + map + '</div>';
+    '<div class="g-map-row exam ' + (finished ? 'done' : '') + '"><span class="g-map-num">' + G_ICON.trophy + '</span><span class="g-map-name">Examen final</span><span class="g-leader"></span>' +
+    (course.examScore != null ? '<span class="g-map-score">' + course.examScore + ' %</span>' : '<span class="g-map-score">' + (course.status === 'exam' ? 'Ahora' : 'Al final') + '</span>') + '</div></div>';
+  return '<div class="g-course' + (open ? ' open' : '') + '">' + bar + (pager || map ? '<div class="g-course-body">' + pager + map + '</div>' : '') + '</div>';
 }
 
 function renderGuidedHero(chat) {
@@ -696,10 +755,10 @@ function renderGuidedHero(chat) {
     '<div class="g-hero-badge">' + G_ICON.cap + 'Aprendizaje guiado</div>' +
     '<h2>¿Qué quieres aprender?</h2>' +
     '<p class="hero-sub">Dime el tema o sube tus apuntes. Te preparo un plan por lecciones, te explico cada una con un mini test y terminamos con un examen final.</p>' +
-    '<ol class="g-steps"><li><b>1</b><span>Plan a tu medida</span></li><li><b>2</b><span>Lecciones y mini tests</span></li><li><b>3</b><span>Examen final</span></li></ol>' +
     '<div class="g-setup"><div class="g-setup-row"><span class="g-setup-label">Nivel</span><div class="g-pills">' + chips(GUIDED_LEVELS, 'data-g-level', course.level) + '</div></div>' +
     '<div class="g-setup-row"><span class="g-setup-label">Duración</span><div class="g-pills">' + chips(GUIDED_LENGTHS, 'data-g-length', course.length) + '</div></div></div>' +
-    '<div class="chips g-ideas">' + ideas.map((item) => '<button class="chip suggestion-chip" data-prompt="' + escapeHtml(item[1]) + '">' + escapeHtml(item[0]) + '</button>').join('') + '</div>' +
+    '<ol class="g-steps"><li><b>1</b><span>Plan a tu medida</span></li><li><b>2</b><span>Lecciones y mini tests</span></li><li><b>3</b><span>Examen final</span></li></ol>' +
+    '<div class="chips g-ideas">' + ideas.map((item) => '<button class="chip suggestion-chip" data-prompt="' + escapeHtml(item[1]) + '"><span class="g-idea-name">' + escapeHtml(item[0]) + '</span><span class="g-leader"></span></button>').join('') + '</div>' +
     '</section>';
 }
 
@@ -721,7 +780,7 @@ function planLessonMarkup(lesson) {
   const node = '<span class="g-node ' + lesson.status + '">' +
     (lesson.status === 'done' ? G_ICON.check : lesson.status === 'skipped' ? G_ICON.skip : escapeHtml(lesson.id.slice(1))) + '</span>';
   const meta = lesson.score != null ? lesson.score + '%' : lesson.status === 'skipped' ? 'Saltada' : lesson.minutes ? '~' + lesson.minutes + ' min' : '';
-  const head = node + '<span class="g-route-name">' + escapeHtml(lesson.title) + (lesson.status === 'current' ? '<em>Ahora</em>' : '') + '</span>' +
+  const head = node + '<span class="g-route-name">' + escapeHtml(lesson.title) + (lesson.status === 'current' ? '<em>Ahora</em>' : '') + '</span><span class="g-leader"></span>' +
     (meta ? '<span class="g-route-meta">' + escapeHtml(meta) + '</span>' : '');
   const objectives = lesson.objectives || [];
   if (!objectives.length) return '<div class="g-route-lesson ' + lesson.status + '"><div class="g-route-row">' + head + '</div></div>';
@@ -738,7 +797,7 @@ function renderPlanCard(chat) {
   const timed = lessons.length && lessons.every((lesson) => lesson.minutes);
   const stat = (value, label) => '<span class="g-stat"><b>' + escapeHtml(String(value)) + '</b>' + escapeHtml(label) + '</span>';
   const hero = '<header class="g-plan-hero">' +
-    '<span class="g-plan-badge">' + G_ICON.cap + (ready ? 'Tu plan de estudio' : 'Plan del curso') + '</span>' +
+    '<span class="g-plan-top"><span class="g-plan-badge">' + G_ICON.cap + (ready ? 'Tu plan de estudio' : 'Plan del curso') + '</span><span class="g-plan-kicker">Índice</span></span>' +
     '<span class="g-plan-title">' + escapeHtml(course.title) + '</span>' +
     (course.goal ? '<span class="g-plan-goal">' + escapeHtml(course.goal) + '</span>' : '') +
     (ready
@@ -751,7 +810,7 @@ function renderPlanCard(chat) {
     '<span class="g-route-unit-text"><small>Unidad ' + (index + 1) + '</small><b>' + escapeHtml(unit.title) + '</b></span></div>' +
     unit.lessons.map(planLessonMarkup).join('') + '</div>').join('') +
     '<div class="g-route-exam' + (course.status === 'done' ? ' done' : course.status === 'exam' ? ' current' : '') + '"><span class="g-node exam">' + G_ICON.trophy + '</span>' +
-    '<span class="g-route-unit-text"><b>Examen final</b><small>' + (course.examScore != null ? 'Nota: ' + course.examScore + '%' : 'De todo el curso · unas 2 preguntas por lección') + '</small></span></div>';
+    '<span class="g-route-unit-text"><b>Examen final</b><small>' + (course.examScore != null ? 'Nota: ' + course.examScore + ' %' : 'De todo el curso · unas 2 preguntas por lección') + '</small></span></div>';
   const foot = ready
     ? '<div class="g-plan-foot"><button type="button" class="g-start" data-g-start>' + G_ICON.play + 'Empezar el curso</button>' +
       '<div class="g-tweaks"><span>¿Lo ajustamos?</span>' + Object.keys(GUIDED_TWEAKS).map((key) => '<button type="button" class="g-tweak" data-g-tweak="' + key + '">' + GUIDED_TWEAKS[key].label + '</button>').join('') +
@@ -765,6 +824,14 @@ function questionMarkup(quiz, question, index, mode) {
   const answered = chosen !== undefined;
   const reveal = mode === 'check' ? answered : quiz.submitted;
   const right = reveal && chosen === question.correct;
+  if (mode === 'check' && answered) {
+    const pick = (optionIndex) => LETTERS[optionIndex] + ' · ' + renderMarkdown(question.options[optionIndex] || '');
+    return '<li class="g-q compact ' + (right ? 'right' : 'wrong') + '"><span class="g-q-mark">' + (right ? G_ICON.check : G_ICON.cross) + '</span>' +
+      '<div class="g-q-main"><div class="g-q-text">' + (index + 1) + '. ' + renderMarkdown(question.question) + '</div>' +
+      '<div class="g-q-sum">Elegiste <b class="' + (right ? 'right' : 'wrong') + '">' + pick(chosen) + '</b>. ' +
+      (right ? '<strong class="right">¡Bien!</strong> ' : '<strong class="wrong">Era la ' + LETTERS[question.correct] + '</strong>, <b class="right">' + renderMarkdown(question.options[question.correct] || '') + '</b>: ') +
+      renderMarkdown(question.explanation || '') + '</div></div></li>';
+  }
   const options = question.options.map((option, optionIndex) => {
     const classes = ['g-opt'];
     if (chosen === optionIndex) classes.push('chosen');
@@ -802,9 +869,11 @@ function renderQuizCard(course, quiz) {
     foot = '<span class="g-foot-note">' + (answered < total ? answered + ' de ' + total + ' respondidas' : right + ' de ' + total + ' bien') + '</span>' +
       '<button type="button" class="g-primary" data-g-submit="' + quiz.id + '"' + (answered < total ? ' disabled' : '') + '>Continuar</button>';
   }
+  const next = quiz.questions.findIndex((question, index) => quiz.answers[index] === undefined);
+  const position = quiz.submitted || next === -1 ? right + ' de ' + total + ' bien' : 'Pregunta ' + (next + 1) + ' de ' + total;
   return '<section class="g-card g-quiz' + (quiz.submitted ? ' submitted' : '') + '" data-g-quiz="' + quiz.id + '">' +
-    '<header class="g-card-head row"><div><span class="g-eyebrow">Mini test' + (lesson ? ' · Lección ' + lesson.id.slice(1) : '') + '</span>' +
-    '<span class="g-title">' + escapeHtml(lesson ? lesson.title : 'Comprueba lo aprendido') + '</span></div><div class="g-qdots">' + dots + '</div></header>' +
+    '<header class="g-card-head row"><div><span class="g-eyebrow">Mini test' + (lesson ? ' · Lección ' + lesson.id.slice(1) + '<span class="g-eyebrow-extra"> · ' + escapeHtml(lesson.title) + '</span>' : '') + '</span>' +
+    '<span class="g-title">Ejercicios del capítulo</span></div><div class="g-qside"><span class="g-qpos">' + position + '</span><div class="g-qdots">' + dots + '</div></div></header>' +
     '<ol class="g-questions">' + quiz.questions.map((question, index) => questionMarkup(quiz, question, index, 'check')).join('') + '</ol>' +
     '<div class="g-card-foot">' + foot + '</div></section>';
 }
@@ -820,25 +889,38 @@ function renderExamCard(course, quiz) {
   const answered = Object.keys(quiz.answers).length;
   const total = quiz.questions.length;
   const pct = Math.round((answered / Math.max(1, total)) * 100);
-  let summary = '';
-  let foot;
+  const questions = '<ol class="g-questions">' + quiz.questions.map((question, index) => questionMarkup(quiz, question, index, 'exam')).join('') + '</ol>';
+  const head = (title) => '<header class="g-card-head g-exam-head"><span class="g-exam-icon">' + G_ICON.trophy + '</span><div><span class="g-eyebrow">Examen final · ' + total + ' preguntas</span>' +
+    '<span class="g-title">' + escapeHtml(title) + '</span></div>' + (quiz.submitted ? '<span class="g-page-kicker">Última página</span>' : '') + '</header>';
   if (quiz.submitted) {
     const grade = gradeQuiz(quiz);
-    summary = '<div class="g-exam-summary">' + scoreRing(grade.percent) + '<div class="g-exam-summary-text"><strong>' + grade.right + ' de ' + grade.total + ' bien</strong><span>' +
-      (grade.percent >= 85 ? '¡Dominas el curso!' : grade.percent >= GUIDED_PASS ? 'Aprobado. Repasa lo marcado en rojo.' : 'Aún no: repasa las lecciones en rojo y repite el examen.') + '</span></div></div>' +
-      (quiz.byLesson && quiz.byLesson.length ? '<div class="g-breakdown">' + quiz.byLesson.map((item) => '<div class="g-break-row"><span class="g-break-name">' + escapeHtml(item.title) + '</span>' +
-        '<span class="g-break-bar"><span style="width:' + item.percent + '%" class="' + (item.percent >= GUIDED_PASS ? 'pass' : 'fail') + '"></span></span><span class="g-break-pct">' + item.right + '/' + item.total + '</span></div>').join('') + '</div>' : '');
-    foot = '<span class="g-foot-note">Corrección abajo: en verde la respuesta buena.</span>';
-  } else if (quiz.superseded) {
-    foot = '<span class="g-foot-note">Sustituido por otro examen.</span>';
-  } else {
-    foot = '<span class="g-foot-note">' + answered + ' de ' + total + ' respondidas</span><button type="button" class="g-primary" data-g-submit="' + quiz.id + '"' + (answered < total ? ' disabled' : '') + '>Entregar examen</button>';
+    const passed = grade.percent >= GUIDED_PASS;
+    const verdict = grade.percent >= 85 ? '¡Dominas el curso!' : passed ? 'Aprobado. Repasa lo marcado en rojo.' : 'Aún no: repasa las lecciones en rojo y repite el examen.';
+    const dots = quiz.questions.map((question, index) => '<span class="' + (quiz.answers[index] === question.correct ? 'right' : 'wrong') + '"></span>').join('');
+    const breakdown = quiz.byLesson && quiz.byLesson.length
+      ? '<div class="g-breakdown">' + quiz.byLesson.map((item) => {
+        const ok = item.percent >= GUIDED_PASS;
+        return '<div class="g-break-row' + (ok ? '' : ' fail') + '"><span class="g-break-num">' + escapeHtml(String(item.id).slice(1)) + '</span>' +
+          '<span class="g-break-name">' + escapeHtml(item.title) + (ok ? '' : '<em>Repasar</em>') + '</span><span class="g-leader"></span>' +
+          '<span class="g-break-pct">' + item.right + '/' + item.total + '</span></div>';
+      }).join('') + '</div>'
+      : '';
+    const done = course.status === 'done';
+    const fin = done
+      ? '<div class="g-fin"><span class="g-fin-bulb">' + G_ICON.bulb + '</span><span class="g-fin-text"><b>Fin</b><span>Curso completado · examen ' + grade.percent + ' %' +
+        (quiz.createdAt ? ' · ' + escapeHtml(new Date(quiz.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })) : '') + '</span></span></div>'
+      : '';
+    return '<section class="g-card g-exam submitted g-lastpage" data-g-quiz="' + quiz.id + '">' + head(passed && done ? 'Curso completado' : 'Examen corregido') +
+      '<div class="g-final"><span class="g-final-pct">' + grade.percent + '<small>%</small></span><div class="g-final-side">' +
+      '<span class="g-pass-chip ' + (passed ? 'pass' : 'fail') + '">' + (passed ? G_ICON.check : G_ICON.cross) + (passed ? 'Aprobado' : 'Suspendido') + ' · ' + grade.right + '/' + grade.total + '</span>' +
+      '<p>' + verdict + '</p><span class="g-final-dots">' + dots + '</span></div></div>' + breakdown +
+      '<details class="g-correction"><summary>Ver la corrección</summary>' + questions + '</details>' + fin + '</section>';
   }
-  return '<section class="g-card g-exam' + (quiz.submitted ? ' submitted' : '') + '" data-g-quiz="' + quiz.id + '">' +
-    '<header class="g-card-head g-exam-head"><span class="g-exam-icon">' + G_ICON.trophy + '</span><div><span class="g-eyebrow">Examen final · ' + total + ' preguntas</span>' +
-    '<span class="g-title">' + escapeHtml(course.title || 'Examen final') + '</span></div></header>' +
-    (quiz.submitted ? '' : '<div class="g-exam-progress"><span style="width:' + pct + '%"></span></div>') + summary +
-    '<ol class="g-questions">' + quiz.questions.map((question, index) => questionMarkup(quiz, question, index, 'exam')).join('') + '</ol>' +
+  const foot = quiz.superseded
+    ? '<span class="g-foot-note">Sustituido por otro examen.</span>'
+    : '<span class="g-foot-note">' + answered + ' de ' + total + ' respondidas</span><button type="button" class="g-primary" data-g-submit="' + quiz.id + '"' + (answered < total ? ' disabled' : '') + '>Entregar examen</button>';
+  return '<section class="g-card g-exam" data-g-quiz="' + quiz.id + '">' + head(course.title || 'Examen final') +
+    '<div class="g-exam-progress"><span style="width:' + pct + '%"></span></div>' + questions +
     '<div class="g-card-foot">' + foot + '</div></section>';
 }
 
