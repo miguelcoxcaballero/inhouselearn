@@ -18,11 +18,34 @@
 .dictation-settings input, .dictation-settings select { display: block; box-sizing: border-box; width: 100%; margin: 6px 0; padding: 12px; border: 1px solid var(--border, #ccc); border-radius: 10px; font: inherit; background: transparent; color: inherit; }
 .dictation-settings a { color: var(--accent, #a25127); }
 .dictation-privacy { opacity: .75; }
-.read-aloud-bar { display: flex; align-items: center; gap: 4px; padding: 10px 4px; border-bottom: 1px solid var(--border, #ddd); animation: dictation-enter 200ms ease-out; }
+.read-aloud-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 10px 4px; border-bottom: 1px solid var(--border, #ddd); animation: dictation-enter 200ms ease-out; }
 .read-aloud-bar[hidden] { display: none; }
-.read-aloud-status { flex: 1; font-size: 12px; line-height: 1.4; }
-.read-aloud-bar button { border: 0; background: transparent; color: inherit; border-radius: 20px; padding: 8px; min-height: 44px; font: inherit; font-size: 12px; cursor: pointer; }
+.read-aloud-status { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 1.4; }
+.read-aloud-bar button { flex: 0 0 auto; border: 0; background: transparent; color: inherit; border-radius: 20px; padding: 8px; min-height: 44px; font: inherit; font-size: 12px; cursor: pointer; }
+.voice-menu { margin: auto; inset: 0; width: min(380px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 14px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
+.voice-menu[open] { animation: model-popover-in 180ms var(--ease); }
+.voice-menu::backdrop { background: rgba(0,0,0,.16); }
+.voice-menu-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.voice-menu h2 { margin: 0 0 3px; font-size: .95rem; font-weight: 700; letter-spacing: -.01em; }
+.voice-menu-head p { font-size: .74rem; line-height: 1.45; color: var(--text-secondary); }
+.voice-menu-close { display: grid; place-items: center; flex: 0 0 36px; height: 36px; color: var(--muted); border-radius: var(--r-xs); }
+.voice-menu-close:hover { color: var(--text); background: var(--surface-hover); }
+.voice-menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; border-top: 1px solid var(--border); font-size: .8rem; }
+.voice-menu-row > span { flex-shrink: 0; color: var(--text-secondary); }
+.voice-menu-row select { min-width: 0; max-width: 65%; flex: 1; margin: 0; padding: 10px 0; border: 0; border-radius: 0; background: transparent; color: var(--text); text-align: right; font: inherit; cursor: pointer; }
+.voice-menu-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; padding: 2px 0 12px; }
+.voice-menu-option { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: .84rem; cursor: pointer; overflow-wrap: anywhere; }
+.voice-menu-option input { flex: 0 0 16px; width: 16px; height: 16px; margin: 0; accent-color: var(--orange); cursor: pointer; }
+.voice-menu-option:has(:checked) { color: var(--orange); font-weight: 600; }
+.voice-menu-option:hover { color: var(--orange); }
+.voice-menu :focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+.voice-menu-note { padding: 10px 0; border-top: 1px solid var(--border); font-size: .72rem; line-height: 1.5; color: var(--text-secondary); }
+.voice-menu-error:empty { display: none; }
+.voice-menu-error { font-size: .78rem; line-height: 1.5; color: #b42318; padding: 4px 0; }
+.voice-menu-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; }
+.voice-menu-foot a { font-size: .7rem; color: var(--muted); text-underline-offset: 3px; }
+.voice-menu-foot .btn { flex-shrink: 0; min-height: 40px; }
 @keyframes dictation-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes dictation-pulse { 50% { opacity: .35; } }
 @media (max-width: 480px) { .composer-row { gap: 5px; } .composer-row .usage-btn { width: 30px; min-width: 30px; } .composer-row .model-menu-wrap { min-width: 0; } }
-@media (prefers-reduced-motion: reduce) { .dictation-panel, .dictation-indicator, .read-aloud-bar { animation: none !important; } .dictation-btn { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .dictation-panel, .dictation-indicator, .read-aloud-bar, .voice-menu { animation: none !important; } .dictation-btn { transition: none; } }

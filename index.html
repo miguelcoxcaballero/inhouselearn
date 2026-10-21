@@ -1020,23 +1020,23 @@
 
     /* ─── MSG ACTIONS ────────────────────────────────── */
     .msg-actions {
-      display: flex; align-items: center; gap: 2px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
       padding: 3px 0 0; opacity: 0;
       transition: opacity 0.15s var(--ease);
     }
     .message:hover .msg-actions,
     .message .msg-actions:focus-within { opacity: 1; }
     .msg-action-btn {
-      width: 28px; height: 28px; border-radius: var(--r-xs);
+      width: 32px; min-height: 32px; flex: 0 0 auto; border-radius: var(--r-xs);
       display: inline-flex; align-items: center; justify-content: center;
       color: var(--muted); background: none; border: none; cursor: pointer;
       transition: color 0.15s, background 0.15s;
     }
     .msg-action-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); }
     .msg-action-btn svg { width: 14px; height: 14px; }
-    .msg-action-btn[data-repair-msg] { width: auto; padding: 0 8px; font: inherit; font-size: 0.75rem; }
+    .msg-action-btn[data-repair-msg] { width: auto; max-width: 100%; padding: 6px 8px; font: inherit; font-size: 0.75rem; }
     .msg-nav {
-      display: inline-flex; align-items: center; gap: 2px;
+      display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px;
       margin-left: 4px;
     }
     .msg-nav-label { font-size: 0.64rem; color: var(--muted); min-width: 24px; text-align: center; user-select: none; }
@@ -1052,6 +1052,7 @@
     .message.user-msg .msg-actions { justify-content: flex-end; }
     @media (max-width: 768px) {
       .msg-actions { opacity: 1; }
+      .msg-action-btn, .msg-nav-btn { min-width: 36px; min-height: 36px; }
     }
     .msg-attribution {
       display: inline-flex; align-items: center; gap: 5px;
@@ -1516,7 +1517,7 @@
     }
   </style>
   <link rel="stylesheet" href="guided.css?v=20261021-text-motion">
-  <link rel="stylesheet" href="dictation.css?v=20261021-voice1">
+  <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui2">
   <link rel="stylesheet" href="visuals.css?v=20261021-text-motion">
 </head>
 <body>
@@ -1773,7 +1774,7 @@
   <script src="haptics.js"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
-  <script type="module" src="read-aloud.js?v=20261021-voice1"></script>
+  <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
   <script src="stream.js"></script>
   <script src="visuals.js?v=20261021-text-motion"></script>
   <script src="scene.js?v=20261021-text-motion"></script>
@@ -4603,7 +4604,7 @@
         btns = '<button class="msg-action-btn" data-edit-msg="' + message.id + '" title="Editar">' + ic.edit + '</button>';
       } else {
         btns = '<button class="msg-action-btn" data-copy-msg="' + message.id + '" title="Copiar">' + ic.copy + '</button>';
-        btns += '<button class="msg-action-btn" data-listen-msg="' + message.id + '" title="Leer en voz alta">Escuchar</button>';
+        btns += '<button class="msg-action-btn" data-listen-msg="' + message.id + '" aria-label="Leer en voz alta" title="Leer en voz alta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4V4Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg></button>';
         if (InhousePi.textQualityIssues(getVisibleContent(message), tutorLanguageContext(getActiveChat())).length) {
           btns += '<button class="msg-action-btn" data-repair-msg="' + message.id + '" title="Corregir caracteres e idioma">Corregir texto</button>';
         }

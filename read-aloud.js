@@ -10,20 +10,37 @@ bar.className = 'read-aloud-bar'; bar.hidden = true;
 bar.innerHTML = '<span class="read-aloud-status" role="status" aria-live="polite"></span><button type="button" data-read="pause">Pausar</button><button type="button" data-read="settings">Voces</button><button type="button" data-read="stop" aria-label="Detener lectura">Cerrar</button>';
 document.querySelector('.composer-inner').prepend(bar);
 const status = bar.querySelector('[role=status]'), pause = bar.querySelector('[data-read=pause]');
-const dialog = document.createElement('dialog'); dialog.className = 'dictation-settings'; dialog.id = 'read-aloud-settings'; dialog.setAttribute('aria-labelledby', 'read-aloud-title');
-dialog.innerHTML = '<form><h2 id="read-aloud-title">Escuchar con voces naturales</h2><p>Las mismas voces Supertonic 3 de Inhouse Read, gratis y sin cuenta. El texto se lee dentro de tu dispositivo.</p><p>La primera lectura descarga unos 210 MB de voces y 15 MB del motor. Se guardan en la caché del navegador para reutilizarlos. En móviles lentos puede haber pausas mientras se genera el audio.</p><label>Idioma del texto<select name="language"><option value="">Detectar automáticamente por frase</option></select></label><label>Configurar voces de<select name="voice-language"></select></label><label>Voz<select name="voice"></select></label><label>Velocidad<select name="rate"><option value="0.8">0,8×</option><option value="1">1×</option><option value="1.2">1,2×</option><option value="1.5">1,5×</option></select></label><p>Predeterminadas: Carmen en español y Lucy en inglés. Puedes elegir y guardar una voz distinta para cada idioma.</p><a href="vendor/inhouse-read/licenses/supertonic3-OpenRAIL-M.txt" target="_blank" rel="noopener">Licencia de las voces · Supertone</a><p data-read="error" role="alert"></p><div class="dictation-actions"><button type="button" data-read="close">Cerrar</button><button type="submit">Guardar</button></div></form>';
+const dialog = document.createElement('dialog'); dialog.className = 'voice-menu'; dialog.id = 'read-aloud-settings'; dialog.setAttribute('aria-labelledby', 'read-aloud-title');
+dialog.innerHTML = `<form>
+  <header class="voice-menu-head"><div><h2 id="read-aloud-title">Voces de lectura</h2><p>Inhouse Read · Gratis, en tu dispositivo</p></div><button type="button" class="voice-menu-close" data-read="close" aria-label="Cerrar ajustes de voz" title="Cerrar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+  <label class="voice-menu-row"><span>Idioma del texto</span><select name="language" title="Detectar el idioma automáticamente en cada frase"><option value="">Automático</option></select></label>
+  <label class="voice-menu-row"><span>Velocidad</span><select name="rate"><option value="0.8">0,8×</option><option value="1">1×</option><option value="1.2">1,2×</option><option value="1.5">1,5×</option></select></label>
+  <label class="voice-menu-row"><span>Voces para</span><select name="voice-language"></select></label>
+  <div class="voice-menu-options" role="group" aria-label="Voz para el idioma seleccionado"></div>
+  <p class="voice-menu-note">Primera descarga: 225 MB. Después se reutiliza. La velocidad depende del dispositivo.</p>
+  <p class="voice-menu-error" data-read="error" role="alert"></p>
+  <footer class="voice-menu-foot"><a href="vendor/inhouse-read/licenses/supertonic3-OpenRAIL-M.txt" target="_blank" rel="noopener">Licencia · Supertone</a><button type="submit" class="btn btn-primary btn-sm">Guardar</button></footer>
+</form>`;
 document.body.append(dialog);
-const language = dialog.querySelector('[name=language]'), voiceLanguage = dialog.querySelector('[name=voice-language]'), voice = dialog.querySelector('[name=voice]'), rate = dialog.querySelector('[name=rate]');
+const language = dialog.querySelector('[name=language]'), voiceLanguage = dialog.querySelector('[name=voice-language]'), voiceList = dialog.querySelector('.voice-menu-options'), rate = dialog.querySelector('[name=rate]');
 const names = new Intl.DisplayNames(['es'], { type: 'language' });
 for (const lang of [...SUPERTONIC_LANGUAGES].sort((a, b) => names.of(a).localeCompare(names.of(b)))) {
   for (const select of [language, voiceLanguage]) { const option = new Option(names.of(lang), lang); select.add(option); }
 }
 let draftVoices;
 function renderVoices() {
-  voice.replaceChildren(...SUPERTONIC_STYLES.map(style => new Option(supertonicVoiceName(voiceLanguage.value, style), style)));
-  voice.value = draftVoices[voiceLanguage.value] || 'F1';
+  voiceList.replaceChildren(...SUPERTONIC_STYLES.map(style => {
+    const label = document.createElement('label'); label.className = 'voice-menu-option';
+    const input = document.createElement('input'); input.type = 'radio'; input.name = 'voice'; input.value = style;
+    input.checked = style === (draftVoices[voiceLanguage.value] || 'F1');
+    input.onchange = () => { if (input.checked) draftVoices[voiceLanguage.value] = style; };
+    label.append(input, document.createTextNode(supertonicVoiceName(voiceLanguage.value, style)));
+    return label;
+  }));
 }
 function configure(text) {
+  window.closeProfileMenu?.();
+  window.closeModelMenu?.();
   pendingText = typeof text === 'string' ? text : null;
   draftVoices = { ...preferences.voices };
   language.value = preferences.language; voiceLanguage.value = 'es'; rate.value = String(preferences.rate); renderVoices();
@@ -31,7 +48,6 @@ function configure(text) {
   dialog.showModal();
 }
 voiceLanguage.onchange = renderVoices;
-voice.onchange = () => { draftVoices[voiceLanguage.value] = voice.value; };
 dialog.querySelector('[data-read=close]').onclick = () => { pendingText = null; dialog.close(); };
 dialog.querySelector('form').onsubmit = event => {
   event.preventDefault();
@@ -42,6 +58,13 @@ dialog.querySelector('form').onsubmit = event => {
   if (text) play(text);
 };
 dialog.addEventListener('cancel', () => { pendingText = null; });
+dialog.addEventListener('click', event => {
+  if (event.target !== dialog) return;
+  const bounds = dialog.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+    pendingText = null; dialog.close();
+  }
+});
 function stop() {
   const s = session; session = null;
   s?.worker.terminate();
