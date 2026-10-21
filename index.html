@@ -16,7 +16,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#f5f5f0">
   <title>inhouse learn</title>
-  <script>try{var u=new URLSearchParams(location.search).get("ui");if(u)document.documentElement.dataset.ui=u;}catch(e){}</script>
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -1523,7 +1522,7 @@
     .profile-btn-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
     .profile-btn-text b { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .profile-btn-text small { font-size: 0.75rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sidebar-account .profile-popover { top: auto; bottom: calc(100% + 8px); left: 0; right: 0; width: auto; }
+    .sidebar-account .profile-popover { position: absolute; top: auto; bottom: calc(100% + 8px); left: 0; right: 0; width: auto; }
     .sidebar { overflow: visible; }
     .sidebar-body { overflow: hidden; }
 
@@ -1541,16 +1540,15 @@
       display: flex; flex-direction: column; gap: 2px; animation: model-popover-in 0.16s var(--ease);
     }
     .plus-menu.hidden { display: none; }
-    .plus-item, .plus-item.attach-btn, .plus-item.guided-btn, .plus-item.usage-btn {
+    .plus-item, .plus-item.attach-btn, .plus-item.guided-btn {
       width: 100%; height: auto; min-height: 56px; padding: 8px 10px; gap: 12px; border: 0; border-radius: 12px;
       display: flex; align-items: center; justify-content: flex-start; text-align: left; background: none; color: var(--text);
       font-size: 0.92rem; font-weight: 500; transform: none; box-shadow: none;
     }
     .plus-item:hover, .plus-item:focus-visible { background: rgba(0,0,0,0.045); transform: none; }
-    .plus-item > svg, .plus-item.guided-btn > svg, .plus-item.usage-btn > svg {
+    .plus-item > svg, .plus-item.guided-btn > svg {
       width: 38px; height: 38px; padding: 9px; flex-shrink: 0; border-radius: 12px; background: var(--surface-hover); border: 1px solid var(--border); color: var(--text); box-sizing: border-box;
     }
-    .plus-item.usage-btn > svg { padding: 6px; }
     .plus-item-text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; white-space: normal; }
     .plus-item-text b { font-weight: 600; font-size: 0.92rem; }
     .plus-item-text small { font-size: 0.76rem; color: var(--ink-3); font-weight: 400; }
@@ -1577,12 +1575,18 @@
       .plus-menu { width: auto; right: 0; }
       .model-menu-wrap { flex: 1 1 auto; max-width: none; }
       .model-trigger { width: 100%; }
+      .usage-btn { width: 34px; height: 34px; }
+      .composer-row { gap: 6px; }
+      .model-trigger { padding: 0 12px 0 6px; gap: 6px; }
+      .model-trigger-caret { display: none; }
+      .model-trigger-brand { width: 28px; height: 28px; }
+      .usage-btn svg { width: 26px; height: 26px; }
       .model-trigger-main { font-size: 0.78rem; }
     }
   </style>
   <link rel="stylesheet" href="guided.css?v=20261021-text-motion">
-  <link rel="stylesheet" href="ui-variants.css">
-  <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui2">
+  <link rel="stylesheet" href="model-picker.css?v=20261021">
+  <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261021-text-motion">
 </head>
 <body>
@@ -1706,7 +1710,7 @@
             <textarea id="composer" class="composer" rows="1" placeholder="Pregunta lo que quieras"></textarea>
             <div class="composer-row">
               <div class="plus-wrap">
-                <button class="plus-btn" id="plus-btn" type="button" aria-label="Más opciones" aria-haspopup="menu" aria-expanded="false" title="Adjuntar, aprendizaje guiado y uso">
+                <button class="plus-btn" id="plus-btn" type="button" aria-label="Más opciones" aria-haspopup="menu" aria-expanded="false" title="Adjuntar y aprendizaje guiado">
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                 </button>
                 <div class="plus-menu hidden" id="plus-menu" role="menu" aria-label="Más opciones">
@@ -1723,12 +1727,11 @@
                 </svg>
                 <span class="plus-item-text"><b class="guided-btn-label">Aprendizaje guiado</b><small>Un curso por lecciones con mini tests</small></span><span class="plus-switch" aria-hidden="true"></span>
               </button>
-              <button class="plus-item usage-btn" id="usage-btn" type="button" role="menuitem" aria-label="Uso y saldo">
-                <svg id="usage-donut" viewBox="0 0 36 36"></svg>
-                <span class="plus-item-text"><b>Uso y saldo</b><small id="plus-usage-sub">Lo que llevas gastado en OpenRouter</small></span>
-              </button>
                 </div>
               </div>
+              <button class="usage-btn" id="usage-btn" type="button" aria-label="Uso y saldo">
+                <svg id="usage-donut" viewBox="0 0 36 36"></svg>
+              </button>
               <button class="guided-chip hidden" id="guided-chip" type="button" aria-label="Quitar el aprendizaje guiado" title="Quitar el aprendizaje guiado">
                 <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>
                 <span>Guiado</span>

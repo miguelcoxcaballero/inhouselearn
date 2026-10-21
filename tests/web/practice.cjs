@@ -75,6 +75,7 @@ const SPECS = {
   // Guided quiz: a model that always writes the right answer first and longest.
   await page.click('#hamburger-btn');
   await page.click('#new-chat-btn');
+  await page.click('#plus-btn');
   await page.click('#guided-btn');
   await page.evaluate(() => window.__replies.push({ text: 'Plan.', tools: [{ name: 'set_course_plan', args: { title: 'T', goal: 'G', units: [{ title: 'U', lessons: [{ title: 'L', objectives: ['o'] }] }] } }] }, { text: 'Listo.' }));
   await send(page, 'Quiero aprender algo');

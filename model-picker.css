@@ -1,0 +1,56 @@
+/* Selector de modelos compacto (tabla densa) y menú «+». Carga tras index.html y guided.css. */
+
+:root .composer-area .model-popover { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+:root .model-popover > * { flex-shrink: 0; }
+:root .model-popover .model-popover-section:has(.model-list) { flex: 1 1 auto; min-height: 0; display: flex; }
+:root .model-list { max-height: none; flex: 1; overflow-y: auto; }
+:root .model-card-name { font-size: 0.9rem; }
+:root .model-card-sub { font-size: 0.74rem; }
+:root .composer-area .model-popover { width: min(560px, 100%); border-radius: 16px; max-height: min(620px, calc(100dvh - var(--topbar-h) - 150px)); }
+:root .model-popover-head { padding: 12px 14px 8px; margin: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+:root .model-popover-title { font-size: 0.95rem; }
+:root .model-popover-status { font-size: 0.74rem; }
+:root .model-search-row { padding: 8px 14px 6px; margin: 0; }
+:root .model-search input { height: 38px; border-radius: 10px; }
+:root .filter-toggle { height: 38px; border-radius: 10px; }
+:root .company-chips { margin: 0; padding: 0 14px 6px; }
+:root .company-chip { height: 30px; font-size: 0.78rem; border-radius: 8px; }
+:root .filter-panel { margin: 0 14px 6px; }
+:root .model-popover-section:has(.model-list) { padding: 0; border-top: 1px solid var(--border); }
+:root .model-list-heading { position: sticky; top: 0; z-index: 1; background: var(--surface-hover); padding: 6px 14px; margin: 0; border-bottom: 1px solid var(--border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
+:root .model-card { border-radius: 0; min-height: 46px; padding: 6px 14px; gap: 10px; border-bottom: 1px solid var(--border); }
+:root .model-card-icon { width: 18px; height: 18px; }
+:root .model-card-name { font-size: 0.84rem; }
+:root .model-card-sub { font-size: 0.7rem; }
+:root .model-card.active { background: var(--orange-soft); box-shadow: inset 3px 0 0 var(--orange); }
+:root #thinking-section, :root .api-key-section { margin: 0; padding: 10px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+:root .thinking-segmented { flex: 1; }
+:root .api-key-row { flex: 1; }
+:root .api-key-hint { flex-basis: 100%; }
+:root .model-popover-section-label { margin: 0; }
+:root .plus-menu { width: 260px; padding: 4px; border-radius: 14px; }
+:root .plus-item { min-height: 44px; padding: 6px 8px; }
+:root .plus-item > svg { width: 30px; height: 30px; padding: 6px; border-radius: 8px; }
+:root .plus-item-text small { display: none; }
+
+/* Móvil: anclado a los bordes y con lo mínimo para elegir rápido */
+@media (max-width: 768px) {
+  :root .composer-area .model-popover { width: auto; left: 8px; right: 8px; border-radius: 18px; max-height: calc(100dvh - var(--topbar-h) - 24px); }
+  :root .model-popover-head { padding: 14px 16px 6px; border-bottom: 0; }
+  :root .model-popover-title { font-size: 1rem; }
+  :root .model-popover-status, :root .model-list-heading small, :root .api-key-hint, :root .model-gauge { display: none; }
+  :root .model-search-row { padding: 4px 12px 8px; gap: 8px; }
+  :root .model-search input, :root .filter-toggle { height: 40px; }
+  :root .company-chips { padding: 0 12px 8px; }
+  :root .model-list-heading { padding: 6px 16px; }
+  :root .model-card { min-height: 52px; padding: 8px 16px; gap: 12px; }
+  :root .model-card-icon { width: 22px; height: 22px; }
+  :root .model-card-name { font-size: 0.9rem; }
+  :root .model-card-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  :root #thinking-section, :root .api-key-section { padding: 10px 16px; gap: 10px; flex-wrap: nowrap; }
+  :root .api-key-section { padding-bottom: 14px; }
+  :root .model-popover-section-label { font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; }
+  :root .api-key-section .model-popover-section-label { display: none; }
+  :root .api-key-row { min-width: 0; }
+  :root .plus-menu { width: auto; }
+}

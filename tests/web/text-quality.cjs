@@ -61,7 +61,7 @@ const { openApp, send, idle, SCRATCH } = require('./mock.cjs');
     console.log('PASS cancelling a correction preserves the saved message');
 
     // Drive the actual course tools through OpenRouter, including repaired JSON.
-    await page.click('#hamburger-btn'); await page.click('#new-chat-btn'); await page.click('#guided-btn');
+    await page.click('#hamburger-btn'); await page.click('#new-chat-btn'); await page.click('#plus-btn'); await page.click('#guided-btn');
     await queue({ text: 'Plan.', tools: [{ name: 'set_course_plan', args: { title: 'Historia', goal: 'Comprender el cambio', units: [{ title: 'España', lessons: [{ title: 'La monarquía', objectives: ['Comprender el cambio'] }] }] } }] }, { text: 'Listo.' });
     await send(page, 'Quiero aprender historia de España.'); await idle(page);
     await queue({ text: 'Empezamos.' }); await page.click('[data-g-start]'); await idle(page);
