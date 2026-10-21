@@ -62,3 +62,13 @@ para que siempre sepas qué se ha tocado.
    rechazas, no se guarda.
 3. Elige «Acceso total» y pide un commit en GitHub: se aprueba solo y sale un aviso.
 4. Cambia de chat: el botón muestra el modo de ese chat, no el del anterior.
+
+## Notas de diseño
+
+- El modo es de cada chat y no global: un chat de trabajo puede ir en «Preguntar» mientras
+  otro va en «Acceso total», y se guarda con el chat (y en Drive), así que el móvil y el
+  ordenador van igual.
+- «Auto» es el modo por defecto porque es el que mantiene el comportamiento de siempre:
+  los archivos del chat se guardan sin preguntar y GitHub se pregunta.
+- El botón solo aparece junto al selector de modelo, no en un menú aparte: se cambia de
+  modo con un toque, como en Claude o ChatGPT.
