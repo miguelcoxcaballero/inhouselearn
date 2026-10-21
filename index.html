@@ -7719,6 +7719,7 @@
         transportPill.title = hasKey ? 'Conectado a OpenRouter desde el navegador' : 'Pega tu API key en el selector de modelo';
       }
       elements.modelBadge.textContent = activeModelBadge();
+        renderApprovalUi();
       renderModelControls();
       elements.configCopy.style.display = 'block';
       elements.configCopy.textContent = hasKey
