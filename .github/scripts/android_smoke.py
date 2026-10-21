@@ -65,6 +65,32 @@ def tap(dump, label):
     raise SystemExit(f'{label!r} is not on screen')
 
 
+def wait_for_network(seconds=90):
+    # Right after boot the emulator can still be without internet: wait until
+    # Android has a validated network before opening the app.
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        state = adb('shell', 'dumpsys', 'connectivity', check=False).stdout
+        if re.search(r'NetworkAgentInfo.*VALIDATED', state) or 'everValidated{true}' in state or 'everValidated=true' in state:
+            return True
+        time.sleep(3)
+    print('warning: no validated network after', seconds, 's; continuing')
+    return False
+
+
+def open_hosted_page():
+    # The offline page has its own "Reintentar": use it while the network settles.
+    for attempt in range(6):
+        text = screen('1-launch')
+        if re.search(r'inhouse learn', text, re.I) and 'Sin conexión' not in text and 'Sin conexion' not in text:
+            return text
+        if 'Reintentar' in text:
+            print('offline page shown (attempt', attempt + 1, '); tapping Reintentar')
+            tap(OUT / '1-launch.xml', 'Reintentar')
+        time.sleep(8)
+    return wait_for('1-launch', r'inhouse learn')
+
+
 def alive():
     return adb('shell', 'pidof', PACKAGE, check=False).stdout.strip() != ''
 
@@ -73,11 +99,11 @@ def main(apk):
     OUT.mkdir(exist_ok=True)
     adb('logcat', '-c', check=False)
     adb('install', '-r', apk)
+    wait_for_network()
     adb('shell', 'am', 'start', '-W', '-n', f'{PACKAGE}/.MainActivity')
     # The hosted page, drawn by its own script: brand plus sign-in or chat.
-    wait_for('1-launch', r'inhouse learn')
-    text = screen('1-launch')
-    if 'Sin conexión' in text:
+    text = open_hosted_page()
+    if 'Sin conexión' in text or 'Sin conexion' in text:
         raise SystemExit('The app showed its offline page instead of the hosted web app')
 
     # A stale sign-in return must be ignored by the page, never crash the app.
