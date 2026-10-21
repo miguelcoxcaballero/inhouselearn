@@ -35,6 +35,11 @@ Mandatory guidance for every AI and developer working in this repository.
   model only teaches and calls `set_course_plan`, `quiz` and `final_exam`, defined in
   `engine/src/guided.js`; rebuild `vendor/pi-engine.js` after changing the engine). Keep the
   model's task in `courseTaskText()` explicit, and never let the model own course state.
+  `scene.js` adds the animated `scene` (declarative) and `sandbox` (iframe with
+  `sandbox="allow-scripts"` only and a CSP with `default-src 'none'`; never add
+  `allow-same-origin`, never relax the CSP) types; schema in `docs/visual-schema.json`, tests
+  in `tests/web`. `haptics.js` sends `{type: 'haptic', style}` to the Android shell
+  (`MainActivity.haptic`), with `navigator.vibrate` as the browser fallback.
 - Never edit `vendor/inhouse-services-updater/`, `android/app/src/main/assets/updates/` or
   `android/app/src/main/java/com/inhouse/services/updater/` by hand: they are written by the
   canonical repository's `tools/sync.py`, and `vendor/inhouse-services-updater/verify.py`

@@ -31,7 +31,15 @@ const VISUALS_PROMPT = [
   '- check (one quick question with instant feedback): {"type":"check","question":"…","options":["…","…"],"correct":0,"explanation":"…"}',
   '- cards (key ideas at a glance): {"type":"cards","title":"…","items":[{"icon":"⚡","title":"…","body":"…"}]}',
   'For processes, hierarchies, cycles and concept maps use a ```mermaid block (flowchart TD, mindmap, sequenceDiagram, timeline) with short labels in quotes.',
-  'Text fields accept markdown and LaTeX \\( … \\). Prefer sliders with sensible ranges, real numbers and short labels. One or two visuals per answer at most.'
+  '- scene (ANIMATED or hands-on: things that move, flow, oscillate, collide, or that the student drags, taps or draws). Declarative JSON, world coordinates with y up (camera); every number may be an expression of the control ids, t (seconds), vars, state and functions; radius/strokeWidth/size are pixels, other lengths world units:',
+  '  {"type":"scene","title":"…","alt":"one sentence: what is drawn and what changes when you move the controls","width":800,"height":360,"camera":{"xmin":0,"xmax":12,"ymin":0,"ymax":5},"background":"#fbfaf7",',
+  '   "controls":[{"kind":"slider","id":"q","label":"Caudal","min":0.2,"max":2,"value":1,"unit":"L/s"},{"kind":"toggle","id":"show","label":"Ver presión","value":true},{"kind":"button","id":"r","label":"Reiniciar","action":"reset"}],',
+  '   "functions":{"w":"x<4 ? 1.2 : x<5 ? 1.2-0.7*(x-4) : 0.5"}, "vars":{"v0":"q/1.2"}, "state":{"th":{"init":0.5,"rate":"om"},"om":{"init":0,"rate":"-9.8*sin(th)"}},',
+  '   "layers":[{"kind":"path","id":"c","d":"M0,2.5 L12,2.5","stroke":"none"},{"kind":"flow","along":"c","count":60,"speed":"q/w(x)","spread":"0.9*w(x)","radius":4},{"kind":"label","at":[6,4.5],"text":"v = {q/0.5:1} m/s"}],',
+  '   "readouts":[{"label":"Velocidad","expr":"q/0.5","unit":"m/s"}],"triggers":[{"when":"q>1.8","label":"caudal máximo"}]}',
+  '  layer kinds: grid{step}, path{id,d (M L H V Q C Z, world coords),stroke,fill,strokeWidth,dash}, line/arrow{from,to,label}, circle{at,r,fill,label}, rect{x,y,w,h,fill}, polygon{points}, label{at,text with {expr} or {expr:digits},size,anchor}, plot{fn of x and t}, flow{along,count,speed and spread of x,y,s}, vectorField{fx,fy of x,y,t,step,scale}, heatmap{fn of x,y,min,max,colors}, spring{from,to,coils}, pendulum{id,pivot,length,gravity,angle (deg),damping} (gives id_angle, id_x, id_y), handle{id,at,label,axis} (draggable: id_x, id_y), points{id,editable,max,connect} (tap to add/remove: id_n, id_mx, id_my), draw{id} (free drawing: id_len). Any layer: "visible": expression. state: {name:{init, rate}} is integrated over time (rate = d name/dt). triggers fire once when "when" becomes true; the app tells you what the student did.',
+  '- sandbox (only when a scene cannot express it: custom algorithms, games, step-by-step algorithm animations): {"type":"sandbox","title":"…","alt":"…","height":380,"html":"<canvas id=c></canvas><script>…</script>","emit":["sorted"]}. Plain HTML/JS, no libraries, no network, under 64 KB; use requestAnimationFrame; call inhouse.emit("sorted", {steps: 12}) to tell the app something happened.',
+  'Text fields accept markdown and LaTeX \\( … \\). Prefer sliders with sensible ranges, real numbers and short labels. You may use up to 4 visuals in one answer, each right after the paragraph it illustrates; at most 2 of them animated. One animation, one idea; never decorate, never repeat in the visual what the text already says, and visuals never replace the quiz tool for grading.'
 ].join('\n');
 
 const VISUALS_REMINDER = 'Before you answer: if this answer explains something visual, numeric, sequential or worth memorising, include one ```visual block (or a ```mermaid diagram) for it.';
@@ -39,6 +47,8 @@ const VISUALS_REMINDER = 'Before you answer: if this answer explains something v
 const VIZ_FENCES = /^(visual|widget|viz|interactive|visualization)$/;
 const VIZ_COLORS = ['#E07A3C', '#3B82F6', '#16A34A', '#9333EA', '#DC2626', '#0EA5E9', '#CA8A04', '#DB2777'];
 const vizState = new Map();
+const vizOrder = new Map(); // message id → visual hashes in order of appearance
+const vizAnimatedHashes = new Set();
 const vizMermaidCache = new Map();
 let vizMermaidPromise = null;
 let vizSeq = 0;
@@ -126,18 +136,24 @@ const VIZ_FUNCS = {
   arcsin: Math.asin, arccos: Math.acos, arctan: Math.atan, sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
   sec: (v) => 1 / Math.cos(v), csc: (v) => 1 / Math.sin(v), cot: (v) => 1 / Math.tan(v),
   sqrt: Math.sqrt, cbrt: Math.cbrt, abs: Math.abs, exp: Math.exp, ln: Math.log, log: Math.log10, log10: Math.log10, log2: Math.log2,
-  floor: Math.floor, ceil: Math.ceil, round: Math.round, sign: Math.sign, min: Math.min, max: Math.max, pow: Math.pow, atan2: Math.atan2
+  floor: Math.floor, ceil: Math.ceil, round: Math.round, sign: Math.sign, min: Math.min, max: Math.max, pow: Math.pow, atan2: Math.atan2,
+  hypot: Math.hypot, mod: (a, b) => ((a % b) + b) % b, clamp: (v, a, b) => Math.min(Math.max(v, a), b),
+  lerp: (a, b, k) => a + (b - a) * k, step: (edge, v) => (v < edge ? 0 : 1), deg: (v) => v * 180 / Math.PI, rad: (v) => v * Math.PI / 180
 };
 const VIZ_CONSTS = { pi: Math.PI, e: Math.E, tau: 2 * Math.PI };
 
 // "a*sin(b x) + 2x^2" → function(scope). Implicit products ("2x", "ax" with
-// known names) are accepted; anything else is an error, never code.
-function vizCompile(source, names) {
+// known names) are accepted; anything else is an error, never code. Also
+// comparisons, && || !, % and "cond ? a : b" (true is 1, false 0), and the
+// scene's own one-argument functions (extra: {name: fn}).
+function vizCompile(source, names, extra) {
   const text = String(source == null ? '' : source)
     .replace(/\*\*/g, '^').replace(/π/g, 'pi').replace(/[·×]/g, '*').replace(/[−–]/g, '-').replace(/÷/g, '/')
-    .replace(/^\s*[a-zA-Z]\w*\s*\(\s*x\s*\)\s*=/, '').replace(/^\s*y\s*=/, '');
+    .replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/≠/g, '!=')
+    .replace(/^\s*[a-zA-Z]\w*\s*\(\s*x\s*\)\s*=(?!=)/, '').replace(/^\s*y\s*=(?!=)/, '');
+  const funcs = Object.assign({}, VIZ_FUNCS, extra || {});
   const tokens = [];
-  const re = /\s*(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?|[A-Za-z_][A-Za-z_0-9]*|[-+*/^(),])/y;
+  const re = /\s*(\d+\.?\d*(?:[eE][+-]?\d+)?|\.\d+(?:[eE][+-]?\d+)?|[A-Za-z_][A-Za-z_0-9]*|<=|>=|==|!=|&&|\|\||[-+*/^(),%?:<>!])/y;
   let at = 0;
   while (at < text.length) {
     if (/^\s*$/.test(text.slice(at))) break;
@@ -168,6 +184,34 @@ function vizCompile(source, names) {
     }
     return (s) => parts.reduce((acc, part) => acc * part(s), 1);
   };
+  function ternary() {
+    const cond = orExpr();
+    if (peek() !== '?') return cond;
+    next();
+    const a = ternary();
+    if (next() !== ':') throw new Error('Falta «:» en la condición');
+    const b = ternary();
+    return (s) => (cond(s) ? a(s) : b(s));
+  }
+  function orExpr() {
+    let left = andExpr();
+    while (peek() === '||') { next(); const a = left, b = andExpr(); left = (s) => (a(s) || b(s) ? 1 : 0); }
+    return left;
+  }
+  function andExpr() {
+    let left = compare();
+    while (peek() === '&&') { next(); const a = left, b = compare(); left = (s) => (a(s) && b(s) ? 1 : 0); }
+    return left;
+  }
+  function compare() {
+    const left = expr();
+    const op = peek();
+    if (!['<', '>', '<=', '>=', '==', '!='].includes(op)) return left;
+    next();
+    const right = expr();
+    const test = { '<': (a, b) => a < b, '>': (a, b) => a > b, '<=': (a, b) => a <= b, '>=': (a, b) => a >= b, '==': (a, b) => Math.abs(a - b) < 1e-9, '!=': (a, b) => Math.abs(a - b) >= 1e-9 }[op];
+    return (s) => (test(left(s), right(s)) ? 1 : 0);
+  }
   function expr() {
     let left = term();
     while (peek() === '+' || peek() === '-') {
@@ -181,10 +225,10 @@ function vizCompile(source, names) {
     let left = unary();
     for (;;) {
       const t = peek();
-      if (t === '*' || t === '/') {
+      if (t === '*' || t === '/' || t === '%') {
         next();
         const a = left, b = unary();
-        left = t === '*' ? (s) => a(s) * b(s) : (s) => a(s) / b(s);
+        left = t === '*' ? (s) => a(s) * b(s) : t === '/' ? (s) => a(s) / b(s) : (s) => a(s) % b(s);
       } else if (isNum(t) || isIdent(t) || t === '(') {
         const a = left, b = power();
         left = (s) => a(s) * b(s);
@@ -196,6 +240,7 @@ function vizCompile(source, names) {
   function unary() {
     if (peek() === '-') { next(); const a = unary(); return (s) => -a(s); }
     if (peek() === '+') { next(); return unary(); }
+    if (peek() === '!') { next(); const a = unary(); return (s) => (a(s) ? 0 : 1); }
     return power();
   }
   function power() {
@@ -212,17 +257,17 @@ function vizCompile(source, names) {
     if (t === undefined) throw new Error('Expresión incompleta');
     if (isNum(t)) { const v = parseFloat(t); return () => v; }
     if (t === '(') {
-      const inner = expr();
+      const inner = ternary();
       if (next() !== ')') throw new Error('Falta un paréntesis');
       return inner;
     }
     if (isIdent(t)) {
-      const fn = VIZ_FUNCS[t.toLowerCase()];
+      const fn = funcs[t] || funcs[t.toLowerCase()];
       if (fn && !known.has(t)) {
         if (peek() === '(') {
           next();
-          const args = [expr()];
-          while (peek() === ',') { next(); args.push(expr()); }
+          const args = [ternary()];
+          while (peek() === ',') { next(); args.push(ternary()); }
           if (next() !== ')') throw new Error('Falta un paréntesis');
           return (s) => fn.apply(null, args.map((arg) => arg(s)));
         }
@@ -233,7 +278,7 @@ function vizCompile(source, names) {
     }
     throw new Error('No se entiende «' + t + '»');
   }
-  const compiled = expr();
+  const compiled = ternary();
   if (pos < tokens.length) throw new Error('Sobra «' + tokens[pos] + '»');
   return (scope) => {
     try { return compiled(scope); } catch (_) { return NaN; }
@@ -325,6 +370,7 @@ function vizBindSliders(root, params, values, state, onChange) {
     const param = params.find((item) => item.name === input.dataset.vizParam);
     const output = input.parentElement.querySelector('output');
     input.addEventListener('input', () => {
+      haptic('drag');
       values[param.name] = Number(input.value);
       state.values = values;
       output.textContent = vizFmt(values[param.name]) + (param.unit ? ' ' + param.unit : '');
@@ -762,6 +808,7 @@ function vizCheck(spec, state) {
     const button = event.target.closest('.viz-check-opt');
     if (!button || state.chosen != null) return;
     state.chosen = Number(button.dataset.opt);
+    haptic(state.chosen === correct ? 'success' : 'error');
     update();
   });
   update();
@@ -829,12 +876,37 @@ function enhanceVisuals(root, options) {
     if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards)"/.test(source))) return;
     const spec = parseVisualSpec(source, typed);
     const render = spec && VIZ_RENDERERS[String(spec.type).toLowerCase()];
-    if (!render) return;
+    if (!render) {
+      // A ```visual block that cannot be read: a neutral note, never raw JSON.
+      if (VIZ_FENCES.test(lang)) pre.replaceWith(vizFallback(spec, spec ? 'Tipo desconocido: «' + spec.type + '».' : 'El JSON no es válido.', source));
+      return;
+    }
     const article = pre.closest('[data-msg-id]');
-    const key = ((options && options.msgId) || (article && article.dataset.msgId) || 'any') + ':' + vizHash(source);
+    const msgId = (options && options.msgId) || (article && article.dataset.msgId) || 'any';
+    // Stable order and id per message: msgId + index; limits per message.
+    const order = vizOrder.get(msgId) || [];
+    const hash = vizHash(source);
+    if (!order.includes(hash)) order.push(hash);
+    vizOrder.set(msgId, order);
+    const index = order.indexOf(hash);
+    const key = msgId + ':' + hash;
     if (!vizState.has(key)) vizState.set(key, {});
-    let el = null;
-    try { el = render(spec, vizState.get(key)); } catch (error) { console.warn('Visual failed:', error); }
+    const animated = /^(scene|animation|simulation|sandbox)$/i.test(spec.type);
+    const animatedIndex = order.slice(0, index + 1).filter((item) => vizAnimatedHashes.has(item)).length + (animated && !vizAnimatedHashes.has(hash) ? 1 : 0);
+    if (animated) vizAnimatedHashes.add(hash);
+    const mount = () => {
+      let el = null;
+      try { el = render(spec, vizState.get(key), { key, source, index }); } catch (error) { console.warn('Visual failed:', error); el = vizFallback(spec, 'Error al dibujarla.', source); }
+      if (el) el.dataset.vizId = msgId + '-' + index;
+      return el;
+    };
+    if (index >= SCENE_LIMITS.perMessage || (animated && animatedIndex > SCENE_LIMITS.animatedPerMessage && !vizState.get(key).opened)) {
+      const button = vizElement('<button type="button" class="viz viz-more">▶ Mostrar ' + (animated ? 'la simulación' : 'la vista') + (spec.title ? ' «' + escapeHtml(String(spec.title)) + '»' : '') + '</button>');
+      button.addEventListener('click', () => { vizState.get(key).opened = true; const el = mount(); if (el) button.replaceWith(el); });
+      pre.replaceWith(button);
+      return;
+    }
+    const el = mount();
     if (el) pre.replaceWith(el);
   });
 }

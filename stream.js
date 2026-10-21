@@ -277,7 +277,10 @@ class StreamView {
       this.shown = Math.min(length, this.shown + Math.max(1, revealRate(backlog, this.done) * dt / 1000));
     }
     this.renderSide();
-    this.renderText(this.target.slice(0, Math.floor(this.shown)), this.done && this.shown >= length);
+    const visibleLength = Math.floor(this.shown);
+    // A soft, steady texture while words appear (throttled in haptic()).
+    if (visibleLength > (this.hapticAt || 0) + 2) { this.hapticAt = visibleLength; haptic('tick'); }
+    this.renderText(this.target.slice(0, visibleLength), this.done && this.shown >= length);
     followThread();
     if (this.shown < this.target.length) { this.schedule(); return; }
     if (this.done) this.finishWaiters.splice(0).forEach((resolve) => resolve());

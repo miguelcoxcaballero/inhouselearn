@@ -482,6 +482,8 @@ function guidedAnswer(chat, quizId, questionIndex, optionIndex) {
   // Mini tests lock each answer (instant feedback); the exam lets you change it until you hand it in.
   if (quiz.kind === 'check' && quiz.answers[questionIndex] !== undefined) return;
   quiz.answers[questionIndex] = optionIndex;
+  if (quiz.kind === 'check') haptic(optionIndex === quiz.questions[questionIndex].correct ? 'success' : 'error');
+  else haptic('select');
   touchCourse(course);
   chat.updatedAt = nowIso();
   saveState();

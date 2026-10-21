@@ -53,6 +53,19 @@ Cada petición manda al modelo el estado del curso y una única tarea concreta (
 
 El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el chat normal, si una respuesta larga no trae ninguna vista, debajo aparece «Muéstramelo en visual».
 
+### Simulaciones animadas e interactivas
+
+Además, dos tipos más (`scene.js`):
+
+- **`scene`**: animaciones y escenas interactivas descritas en JSON, sin código: formas, etiquetas con valores en vivo, curvas que cambian con el tiempo, partículas que fluyen por un camino (y aceleran donde el camino se estrecha), campos vectoriales, mapas de calor, muelles, un péndulo real, puntos que se arrastran, puntos que se añaden tocando y dibujo libre. Cualquier número puede ser una expresión de los controles, del tiempo `t`, de variables, de un estado que se integra en el tiempo (física sencilla) y de funciones propias. Controles: deslizadores, interruptores y botones; reproducir, pausar, reiniciar y velocidad.
+- **`sandbox`**: para lo que no cabe en una escena (un algoritmo animado, un juego), HTML y JavaScript del modelo dentro de un `iframe` con `sandbox="allow-scripts"` y una CSP que bloquea toda conexión; no puede tocar la página ni la red, se puede pausar y se pausa sola si gasta demasiada CPU.
+
+Puede haber varias vistas por mensaje, intercaladas con el texto (hasta 8; desde la quinta animación, o la novena vista, aparecen tras un botón). Solo se animan las que se ven (como mucho 4 a la vez, a 30 fps en el móvil) y, si el sistema pide menos movimiento, empiezan en pausa. Lo que hace el alumno con ellas (mover un control, un evento) le llega al tutor en el siguiente mensaje, y «Enviar al tutor» se lo manda al momento. Formato completo en [`docs/visual-schema.json`](docs/visual-schema.json), tres ejemplos listos para pegar en [`docs/visual-examples.md`](docs/visual-examples.md) y pruebas en [`tests/web`](tests/web).
+
+## Vibración
+
+En la app Android el chat vibra como ChatGPT: un toque suave al pulsar, uno más firme al enviar, una textura muy ligera mientras se escribe la respuesta, un pulso al terminar y un doble golpe en errores o respuestas falladas. Usa la vibración del propio sistema (respeta el ajuste del teléfono). En el navegador del móvil usa `navigator.vibrate`. Se apaga en el menú de perfil → «Vibración».
+
 ## Respuestas fluidas
 
 Mientras el modelo escribe (`stream.js`), cada párrafo terminado se dibuja una sola vez y ya no se toca; solo se redibuja el último, una vez por fotograma, y el texto aparece a ritmo constante. Las fórmulas, enlaces y vistas que aún están llegando esperan a estar completas en vez de enseñar su código, y el chat solo baja solo si estás abajo del todo (si subes a leer, se queda quieto y aparece un botón para volver al final).

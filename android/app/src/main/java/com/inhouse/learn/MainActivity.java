@@ -7,9 +7,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Base64;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
@@ -214,12 +216,57 @@ public class MainActivity extends ComponentActivity {
                 case "open":
                     openExternal(Uri.parse(message.optString("url")));
                     break;
+                case "haptic":
+                    haptic(message.optString("style"));
+                    break;
                 default:
                     break;
             }
         } catch (JSONException | IllegalArgumentException error) {
             // Malformed messages are ignored; only the app's own page can send them.
         }
+    }
+
+    // --- Haptics -------------------------------------------------------------
+    // The page asks for ChatGPT-like feedback (haptics.js). The system plays it
+    // with its own haptic engine, so it follows the phone's haptics setting and
+    // needs no VIBRATE permission. Streaming ticks come at most every 60 ms.
+
+    private long lastTick;
+
+    private void haptic(String style) {
+        int sdk = Build.VERSION.SDK_INT;
+        int constant;
+        switch (style) {
+            case "tick":
+            case "drag": {
+                long now = SystemClock.uptimeMillis();
+                if (now - lastTick < 60) return;
+                lastTick = now;
+                constant = sdk >= 34 ? HapticFeedbackConstants.SEGMENT_FREQUENT_TICK
+                        : sdk >= 27 ? HapticFeedbackConstants.TEXT_HANDLE_MOVE : HapticFeedbackConstants.CLOCK_TICK;
+                break;
+            }
+            case "select":
+                constant = sdk >= 34 ? HapticFeedbackConstants.SEGMENT_TICK : HapticFeedbackConstants.CLOCK_TICK;
+                break;
+            case "light":
+                constant = sdk >= 27 ? HapticFeedbackConstants.KEYBOARD_RELEASE : HapticFeedbackConstants.VIRTUAL_KEY;
+                break;
+            case "send":
+                constant = sdk >= 27 ? HapticFeedbackConstants.KEYBOARD_PRESS : HapticFeedbackConstants.VIRTUAL_KEY;
+                break;
+            case "success":
+                constant = sdk >= 30 ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.CONTEXT_CLICK;
+                break;
+            case "error":
+                constant = sdk >= 30 ? HapticFeedbackConstants.REJECT : HapticFeedbackConstants.LONG_PRESS;
+                break;
+            default:
+                return;
+        }
+        final int feedback = constant;
+        webView.post(() -> webView.performHapticFeedback(feedback));
     }
 
     // --- Google sign-in -------------------------------------------------------

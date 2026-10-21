@@ -1464,6 +1464,7 @@
             <div class="profile-menu-name" id="profile-menu-name">Sin iniciar sesión</div>
             <div class="profile-menu-email" id="profile-menu-email">Entra con Google para guardar el historial en Drive.</div>
             <div class="profile-menu-actions">
+              <label class="haptics-switch"><input type="checkbox" role="switch" id="haptics-toggle"><span class="haptics-track" aria-hidden="true"></span>Vibración</label>
               <button class="btn btn-outline hidden" id="app-updates-btn" type="button">Actualizaciones</button>
               <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
             </div>
@@ -1571,8 +1572,10 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
   <script src="vendor/pi-engine.js"></script>
+  <script src="haptics.js"></script>
   <script src="stream.js"></script>
   <script src="visuals.js"></script>
+  <script src="scene.js"></script>
   <script src="guided.js"></script>
   <script>
     const APP_CONFIG = {
@@ -6673,6 +6676,8 @@
           ? 'Archivos actuales: ' + files.map((file) => file.path).join(', ') + '.'
           : 'Ahora mismo no hay archivos.',
         '',
+        visualEventsText(chat),
+        '',
         // Last, where models pay most attention: the course task, or the visuals reminder.
         guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER
       ].join('\n');
@@ -7118,6 +7123,7 @@
       // If busy, stop the current request (intentional user action)
       if (appState.busy) {
         if (appState.activeController) {
+          haptic('light');
           appState.activeController.abort();
         }
         return;
@@ -7150,6 +7156,7 @@
         resetComposerAttachments();
         autoResizeComposer();
         if (chat.guidedLearning) guidedBeforeUserTurn(chat, prompt);
+        haptic('send');
         // busy is set synchronously inside, so the lock can go right after.
         runAssistantTurn(chat, userMessage);
       } finally {
@@ -7229,6 +7236,8 @@
       let nudge = null;
       try {
         keepText = await streamAssistantReply(chat, assistantMessage);
+        haptic('success');
+        clearVisualEvents(chat);
         touchChat(chat);
         setComposerStatus('');
         if (chat.guidedLearning) nudge = guidedAfterTurn(chat, assistantMessage, { nudged: !!settings.nudged });
@@ -7237,6 +7246,7 @@
           chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id && !(settings.nudged && message.id === userMessage.id));
           setComposerStatus('Solicitud cancelada.');
         } else {
+          haptic('error');
           assistantMessage.content = 'Error: ' + error.message;
           assistantMessage.parts = [{ text: assistantMessage.content }];
           assistantMessage.toolSteps = error.partial && error.partial.steps ? error.partial.steps : (assistantMessage.toolSteps || []);
@@ -7274,8 +7284,16 @@
       });
     }
 
+    function bindHapticsToggle() {
+      const toggle = document.getElementById('haptics-toggle');
+      if (!toggle) return;
+      toggle.checked = hapticsEnabled();
+      toggle.addEventListener('change', () => { setHapticsEnabled(toggle.checked); if (toggle.checked) haptic('select'); });
+    }
+
     function boot() {
       configureEngine();
+      bindHapticsToggle();
       initThreadFollow();
       loadModelCatalogFromCache();
       loadState();
