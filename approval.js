@@ -51,6 +51,18 @@ const APPROVAL_FILE_TOOLS = {
   edit_file: 'Editar archivo',
   delete_file: 'Borrar archivo'
 };
+// Nombres legibles de los pasos de las herramientas de GitHub.
+const APPROVAL_GITHUB_LABELS = {
+  github_list_repos: 'GitHub: repositorios',
+  github_list_files: 'GitHub: archivos',
+  github_read_file: 'GitHub: leer archivo',
+  github_search_code: 'GitHub: buscar código',
+  github_commit_files: 'GitHub: commit',
+  github_edit_file: 'GitHub: editar archivo',
+  github_create_pull_request: 'GitHub: abrir PR',
+  github_list_issues: 'GitHub: issues y PRs',
+  github_comment: 'GitHub: comentar'
+};
 
 function approvalIconSvg(id) {
   const mode = APPROVAL_MODES.find((item) => item.id === id) || APPROVAL_MODES[0];
@@ -264,6 +276,13 @@ document.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   closeApprovalMenu();
+});
+
+// Los pasos de las herramientas de GitHub se enseñan con su nombre corto.
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof TOOL_LABELS === 'object' && TOOL_LABELS) {
+    Object.assign(TOOL_LABELS, APPROVAL_GITHUB_LABELS);
+  }
 });
 
 mountApprovalButton();
