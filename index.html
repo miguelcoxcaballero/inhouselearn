@@ -222,6 +222,10 @@
       width: min(420px, calc(100vw - 24px));
       padding: 14px 14px 12px;
       animation: model-popover-in 0.18s var(--ease);
+      /* With the filters open it can be taller than a phone: scroll inside. */
+      max-height: calc(100dvh - var(--topbar-h) - 24px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
     @keyframes model-popover-in {
       from { opacity: 0; transform: translateY(-4px) scale(0.98); }
@@ -2341,15 +2345,77 @@
     .model-popover-status.error { color: #b42318; }
     .model-card-badge.price { font-variant-numeric: tabular-nums; }
     .model-card-badge.pick { color: #c2410c; font-weight: 600; }
-    .capability-chips { margin-top: -2px; }
-    .filter-chip.active { background: var(--orange-soft); color: #c2410c; }
-    .model-card-score {
-      font-size: 0.68rem; font-weight: 700; min-width: 24px; text-align: center; padding: 2px 5px;
-      border-radius: 7px; flex: 0 0 auto; font-variant-numeric: tabular-nums;
+    /* Search + "Filtros" */
+    .model-search-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .model-search-row .model-search { flex: 1; min-width: 0; margin-bottom: 0; }
+    .filter-toggle {
+      flex: 0 0 auto; height: 36px; padding: 0 11px; display: inline-flex; align-items: center; gap: 6px;
+      border: none; border-radius: 10px; background: rgba(0,0,0,0.045); color: var(--text-secondary);
+      font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s;
     }
-    .model-card-score.high { background: rgba(34,197,94,0.14); color: #15803d; }
-    .model-card-score.mid { background: rgba(234,179,8,0.16); color: #a16207; }
-    .model-card-score.low { background: rgba(0,0,0,0.05); color: var(--muted); }
+    .filter-toggle svg { width: 15px; height: 15px; }
+    .filter-toggle:hover, .filter-toggle.open { background: rgba(0,0,0,0.07); color: var(--text); }
+    .filter-toggle.has-filters { color: #c2410c; }
+    .filter-count {
+      min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: #e07a3c; color: #fff;
+      font-size: 0.66rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+    }
+    /* Collapsible panel: capabilities, minimum intelligence, order */
+    .filter-panel { margin: 0 0 8px; padding: 10px 2px 2px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 12px; animation: fadeIn 0.15s var(--ease) both; }
+    .filter-panel.hidden { display: none; }
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .filter-chip {
+      display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 9px; border: none; border-radius: 8px;
+      background: rgba(0,0,0,0.04); color: var(--text-secondary); font: inherit; font-size: 0.74rem; font-weight: 500; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .filter-chip svg { width: 13px; height: 13px; flex: 0 0 auto; }
+    .filter-chip:hover { background: rgba(0,0,0,0.07); color: var(--text); }
+    .filter-chip.active { background: rgba(224,122,60,0.14); color: #c2410c; font-weight: 600; }
+    .filter-chip-count { font-size: 0.66rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .filter-chip.active .filter-chip-count { color: rgba(194,65,12,0.7); }
+    .filter-label { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); }
+    .filter-row-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; min-height: 20px; }
+    .filter-iq-value { display: inline-flex; align-items: center; gap: 5px; font-size: 0.74rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+    .filter-iq-gauge svg { width: 26px; height: 15px; display: block; overflow: visible; }
+    .iq-range {
+      --fill: 0%;
+      -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; margin: 0; cursor: pointer;
+    }
+    .iq-range::-webkit-slider-runnable-track {
+      height: 6px; border-radius: 999px;
+      background: linear-gradient(90deg, #ef4444 0 33%, #eab308 33% 66%, #22c55e 66%);
+      opacity: 0.85;
+    }
+    .iq-range::-moz-range-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #ef4444 0 33%, #eab308 33% 66%, #22c55e 66%); opacity: 0.85; }
+    .iq-range::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+      background: #fff; border: 2px solid #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .iq-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .iq-range:focus-visible { outline: 2px solid var(--orange-soft); outline-offset: 2px; }
+    .filter-sort { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .filter-sort-options { display: flex; gap: 4px; flex-wrap: wrap; }
+    .filter-sort-option {
+      height: 28px; padding: 0 10px; border: none; border-radius: 8px; background: transparent; color: var(--text-secondary);
+      font: inherit; font-size: 0.74rem; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .filter-sort-option:hover { background: rgba(0,0,0,0.04); color: var(--text); }
+    .filter-sort-option.active { background: rgba(0,0,0,0.07); color: var(--text); font-weight: 600; }
+    .filter-foot { display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; color: var(--muted); min-height: 18px; }
+    .filter-clear { border: none; background: none; padding: 0; font: inherit; font-size: 0.72rem; font-weight: 600; color: #c2410c; cursor: pointer; }
+    .filter-clear.hidden { display: none; }
+    /* Row: intelligence speedometer and price fraction */
+    .model-gauge { flex: 0 0 auto; width: 34px; display: flex; flex-direction: column; align-items: center; }
+    .model-gauge svg { width: 34px; height: 20px; display: block; overflow: visible; }
+    .model-gauge-num { font-size: 0.56rem; font-weight: 700; line-height: 1; margin-top: 1px; color: #44403c; font-variant-numeric: tabular-nums; }
+    .model-price {
+      flex: 0 0 auto; min-width: 34px; display: flex; flex-direction: column; align-items: center;
+      font-size: 0.62rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums;
+    }
+    .model-price-out { color: #dc2626; width: 100%; text-align: center; padding-bottom: 1px; border-bottom: 1px solid rgba(0,0,0,0.14); }
+    .model-price-in { color: #16a34a; padding-top: 1px; }
+    .model-price.free { color: #16a34a; font-size: 0.66rem; }
   </style>
 </head>
 <body>
@@ -2413,12 +2479,35 @@
               <div class="model-popover-status" id="model-menu-status"></div>
             </div>
 
-            <div class="model-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
-              <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
+            <div class="model-search-row">
+              <div class="model-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
+                <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
+              </div>
+              <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                <span>Filtros</span><span class="filter-count hidden" id="filter-count"></span>
+              </button>
             </div>
             <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
-            <div class="company-chips capability-chips" id="capability-chips" role="group" aria-label="Filtros"></div>
+            <div class="filter-panel hidden" id="filter-panel">
+              <div class="filter-chips" id="capability-chips" role="group" aria-label="Capacidades"></div>
+              <div class="filter-iq">
+                <div class="filter-row-head">
+                  <span class="filter-label">Inteligencia mínima</span>
+                  <span class="filter-iq-value" id="iq-value"></span>
+                </div>
+                <input type="range" class="iq-range" id="iq-range" min="0" max="60" step="1" value="0" aria-label="Inteligencia mínima">
+              </div>
+              <div class="filter-sort">
+                <span class="filter-label">Ordenar</span>
+                <div class="filter-sort-options" id="sort-options" role="radiogroup" aria-label="Ordenar"></div>
+              </div>
+              <div class="filter-foot">
+                <span id="filter-result"></span>
+                <button type="button" class="filter-clear hidden" id="filter-clear">Quitar filtros</button>
+              </div>
+            </div>
             <div class="model-popover-section">
               <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
             </div>
@@ -3431,6 +3520,14 @@
       modelSearchInput: document.getElementById('model-search-input'),
       companyChips: document.getElementById('company-chips'),
       capabilityChips: document.getElementById('capability-chips'),
+      filterToggle: document.getElementById('filter-toggle'),
+      filterCount: document.getElementById('filter-count'),
+      filterPanel: document.getElementById('filter-panel'),
+      iqRange: document.getElementById('iq-range'),
+      iqValue: document.getElementById('iq-value'),
+      sortOptions: document.getElementById('sort-options'),
+      filterResult: document.getElementById('filter-result'),
+      filterClear: document.getElementById('filter-clear'),
       modelList: document.getElementById('model-list'),
       thinkingSegmented: document.getElementById('thinking-segmented'),
       thinkingSection: document.getElementById('thinking-section'),
@@ -3519,15 +3616,24 @@
     const MODEL_LIST_LIMIT = 60;
     // Solo mientras no ha llegado la lista: OpenRouter elige el modelo.
     const FALLBACK_MODEL_ID = 'openrouter/auto';
-    const modelCatalog = { entries: [], byId: new Map(), search: new Map(), fetchedAt: 0, loading: null, error: '', smartThreshold: null, scoreMid: null };
-    const modelPicker = { query: '', company: '', filters: [] };
+    const modelCatalog = { entries: [], byId: new Map(), search: new Map(), fetchedAt: 0, loading: null, error: '', scoreScale: 60 };
+    const modelPicker = { query: '', company: '', filters: [], minIq: 0, sort: 'popular' };
+    const FILTER_PANEL_KEY = 'inhouse-learn-filters-open';
 
-    // Filters by what the OpenRouter listing says about each model. "Inteligente"
-    // uses the Artificial Analysis intelligence index that OpenRouter publishes
-    // per model (entry.intelligence), so new models get their score automatically.
+    // Filters by what the OpenRouter listing says about each model. The
+    // intelligence score is the Artificial Analysis index OpenRouter publishes
+    // per model (entry.intelligence), so new models bring their own score.
+    const FILTER_ICON = {
+      free: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+      reasoning: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+      images: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 16-5-5L5 20"/>',
+      audio: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+      video: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3z"/>',
+      files: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+      tools: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'
+    };
     const CAPABILITY_FILTERS = [
       { id: 'free', label: 'Gratis', title: 'Sin coste por token', test: (e) => !e.price.input && !e.price.output },
-      { id: 'smart', label: 'Inteligente', title: () => 'Índice de inteligencia de Artificial Analysis ≥ ' + modelCatalog.smartThreshold + ': el cuarto superior de la lista, de mayor a menor', test: (e) => typeof e.intelligence === 'number' && modelCatalog.smartThreshold !== null && e.intelligence >= modelCatalog.smartThreshold },
       { id: 'reasoning', label: 'Razona', title: 'Modelos con razonamiento', test: (e) => !!e.reasoning },
       { id: 'images', label: 'Imágenes', title: 'Aceptan imágenes', test: (e) => !!e.images },
       { id: 'audio', label: 'Audio', title: 'Aceptan audio', test: (e) => !!e.audio },
@@ -3535,11 +3641,55 @@
       { id: 'files', label: 'Archivos', title: 'Aceptan PDF y otros archivos', test: (e) => !!e.files },
       { id: 'tools', label: 'Herramientas', title: 'Pueden usar las herramientas del chat (JavaScript y archivos)', test: (e) => !!e.tools }
     ];
+    const SORT_OPTIONS = [
+      { id: 'popular', label: 'Populares', title: 'Los más usados esta semana en OpenRouter' },
+      { id: 'smart', label: 'Más inteligentes', title: 'Por índice de inteligencia, de mayor a menor' },
+      { id: 'cheap', label: 'Más baratos', title: 'Por precio de entrada + salida, de menor a mayor' }
+    ];
 
-    function scoreLevel(score) {
-      if (modelCatalog.smartThreshold !== null && score >= modelCatalog.smartThreshold) return 'high';
-      if (modelCatalog.scoreMid !== null && score >= modelCatalog.scoreMid) return 'mid';
-      return 'low';
+    // Speedometer: red, yellow and green thirds of the scale, needle at the score.
+    // The scale is the best score in the list rounded up to ten, so it grows with new models.
+    function gaugeSvg(score) {
+      const scale = modelCatalog.scoreScale || 60;
+      const f = Math.max(0.02, Math.min(1, score / scale));
+      const cx = 20, cy = 20, r = 14;
+      const pt = (t, rad) => { const a = Math.PI * (1 - t); return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)]; };
+      const arc = (t0, t1) => { const [x0, y0] = pt(t0, r), [x1, y1] = pt(t1, r); return 'M' + x0.toFixed(2) + ' ' + y0.toFixed(2) + ' A' + r + ' ' + r + ' 0 0 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2); };
+      let g = '<path d="' + arc(0, 0.33) + '" fill="none" stroke="#ef4444" stroke-width="2.6"/>' +
+        '<path d="' + arc(0.33, 0.66) + '" fill="none" stroke="#eab308" stroke-width="2.6"/>' +
+        '<path d="' + arc(0.66, 1) + '" fill="none" stroke="#22c55e" stroke-width="2.6"/>';
+      for (let i = 0; i <= 6; i++) {
+        const [a, b] = pt(i / 6, r - 3.6), [c, d] = pt(i / 6, r - 2);
+        g += '<line x1="' + a.toFixed(2) + '" y1="' + b.toFixed(2) + '" x2="' + c.toFixed(2) + '" y2="' + d.toFixed(2) + '" stroke="#a8a29e" stroke-width="0.8"/>';
+      }
+      const [nx, ny] = pt(f, r - 3);
+      g += '<line x1="20" y1="20" x2="' + nx.toFixed(2) + '" y2="' + ny.toFixed(2) + '" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="20" r="1.9" fill="#1a1a1a"/>';
+      return '<svg viewBox="0 0 40 22" aria-hidden="true">' + g + '</svg>';
+    }
+
+    function gaugeMarkup(score) {
+      return '<span class="model-gauge" title="Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)">' + gaugeSvg(score) +
+        '<span class="model-gauge-num">' + Math.round(score) + '</span></span>';
+    }
+
+    // Price as a fraction: output (dearer) in red over input (cheaper) in green, per million tokens.
+    function priceMarkup(entry) {
+      if (!entry) return '';
+      if (!entry.price.input && !entry.price.output) return '<span class="model-price free">Gratis</span>';
+      return '<span class="model-price"><span class="model-price-out">$' + formatPerMillion(entry.price.output) + '</span>' +
+        '<span class="model-price-in">$' + formatPerMillion(entry.price.input) + '</span></span>';
+    }
+
+    function activeFilterCount() {
+      return modelPicker.filters.length + (modelPicker.minIq > 0 ? 1 : 0) + (modelPicker.sort !== 'popular' ? 1 : 0);
+    }
+
+    function setFilterPanelOpen(open) {
+      if (!elements.filterPanel) return;
+      elements.filterPanel.classList.toggle('hidden', !open);
+      elements.filterToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      elements.filterToggle.classList.toggle('open', open);
+      try { localStorage.setItem(FILTER_PANEL_KEY, open ? '1' : '0'); } catch (_) {}
     }
 
     function searchKey(text) {
@@ -3551,9 +3701,8 @@
       modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
       modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
       modelCatalog.fetchedAt = fetchedAt || 0;
-      const scores = entries.map((entry) => entry.intelligence).filter((value) => typeof value === 'number').sort((a, b) => a - b);
-      modelCatalog.smartThreshold = scores.length ? scores[Math.floor(scores.length * 0.75)] : null;
-      modelCatalog.scoreMid = scores.length ? scores[Math.floor(scores.length * 0.4)] : null;
+      const best = entries.reduce((max, entry) => typeof entry.intelligence === 'number' ? Math.max(max, entry.intelligence) : max, 0);
+      modelCatalog.scoreScale = Math.max(10, Math.ceil(best / 10) * 10);
       InhousePi.registerOpenRouterModels(entries);
     }
 
@@ -4486,6 +4635,7 @@
         savedAt: typeof snapshot.savedAt === 'string' ? snapshot.savedAt : nowIso(),
         activeChatId: typeof snapshot.activeChatId === 'string' ? snapshot.activeChatId : chats[0].id,
         settings: normalizeSyncedSettings(snapshot.settings),
+        deletedChats: normalizeDeletedChats(snapshot.deletedChats),
         chats
       };
     }
@@ -4498,6 +4648,7 @@
         activeChatId: appState.activeChatId,
         guidedLearning: !!appState.guidedLearning,
         settings: buildSyncedSettings(),
+        deletedChats: readDeletedChats(),
         chats: appState.chats.map((chat) => {
           const normalizedChat = normalizeStoredChat(chat, opts);
           normalizedChat.messages = normalizedChat.messages.filter((message) => !message.pending);
@@ -4548,6 +4699,130 @@
       }
       return true;
     }
+
+    /* ─── DRIVE MERGE ─────────────────────────────────── */
+    // Chats are merged one by one with Drive (the newer copy of each chat wins),
+    // so signing in never drops the chats of this browser or of another device.
+    // Deleted chats are remembered for 90 days so a stale copy cannot bring them back.
+    const DELETED_CHATS_KEY = STORAGE_KEY + '::deletedChats';
+    const DELETED_CHATS_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+    const DRIVE_PULL_MIN_INTERVAL_MS = 45 * 1000;
+
+    function normalizeDeletedChats(value) {
+      const out = {};
+      if (!value || typeof value !== 'object') return out;
+      const cutoff = Date.now() - DELETED_CHATS_MAX_AGE_MS;
+      Object.keys(value).forEach((id) => {
+        const at = typeof value[id] === 'string' ? value[id] : '';
+        if (id && parseSnapshotMoment(at) > cutoff) out[id] = at;
+      });
+      return out;
+    }
+
+    function readDeletedChats() {
+      try {
+        return normalizeDeletedChats(JSON.parse(localStorage.getItem(DELETED_CHATS_KEY) || '{}'));
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeDeletedChats(map) {
+      try {
+        localStorage.setItem(DELETED_CHATS_KEY, JSON.stringify(normalizeDeletedChats(map)));
+      } catch (_) {}
+    }
+
+    function rememberDeletedChat(chatId) {
+      const map = readDeletedChats();
+      map[chatId] = nowIso();
+      writeDeletedChats(map);
+    }
+
+    function chatFreshness(chat) {
+      let newest = Math.max(parseSnapshotMoment(chat.updatedAt), parseSnapshotMoment(chat.createdAt));
+      (chat.messages || []).forEach((message) => {
+        newest = Math.max(newest, parseSnapshotMoment(message.createdAt));
+      });
+      return newest;
+    }
+
+    // Returns true when this browser's chats changed.
+    function mergeRemoteSnapshot(remote) {
+      if (!remote || !Array.isArray(remote.chats)) return false;
+      const deleted = Object.assign({}, readDeletedChats());
+      Object.entries(remote.deletedChats || {}).forEach(([id, at]) => {
+        if (!deleted[id] || parseSnapshotMoment(at) > parseSnapshotMoment(deleted[id])) deleted[id] = at;
+      });
+      writeDeletedChats(deleted);
+      const localHadContent = appState.chats.some((chat) => chatHasMeaningfulContent(chat));
+      const before = JSON.stringify(appState.chats.map((chat) => [chat.id, chatFreshness(chat), (chat.messages || []).length, chat.title, !!chat.pinned]));
+      const byId = new Map();
+      appState.chats.forEach((chat) => byId.set(chat.id, chat));
+      remote.chats.forEach((remoteChat) => {
+        if (!remoteChat || typeof remoteChat.id !== 'string') return;
+        if (!chatHasMeaningfulContent(remoteChat)) return;
+        const local = byId.get(remoteChat.id);
+        const remoteTime = chatFreshness(remoteChat);
+        if (!local || remoteTime > chatFreshness(local) ||
+            (remoteTime === chatFreshness(local) && (remoteChat.messages || []).length > (local.messages || []).length)) {
+          byId.set(remoteChat.id, remoteChat);
+        }
+      });
+      let merged = Array.from(byId.values()).filter((chat) => {
+        const deletedAt = deleted[chat.id];
+        if (deletedAt && chatFreshness(chat) <= parseSnapshotMoment(deletedAt)) return false;
+        // Empty "Nuevo chat" placeholders of this browser give way to Drive's chats.
+        return localHadContent || chatHasMeaningfulContent(chat) || !remote.chats.some((c) => chatHasMeaningfulContent(c));
+      });
+      merged.sort((a, b) => chatFreshness(b) - chatFreshness(a));
+      appState.chats = merged;
+      mergeBinariesIntoChats(appState.chats, remote);
+      if (!localHadContent && remote.activeChatId && byId.has(remote.activeChatId)) {
+        appState.activeChatId = remote.activeChatId;
+      }
+      if (!appState.chats.some((chat) => chat.id === appState.activeChatId)) {
+        appState.activeChatId = appState.chats.length ? appState.chats[0].id : '';
+      }
+      ensureActiveChat();
+      const after = JSON.stringify(appState.chats.map((chat) => [chat.id, chatFreshness(chat), (chat.messages || []).length, chat.title, !!chat.pinned]));
+      saveState({ skipDrive: true });
+      return before !== after;
+    }
+
+    // Brings in what other devices saved, e.g. when the app comes back to the front.
+    function pullDriveChanges(force) {
+      if (!hasDrivePersistenceReady() || appState.busy || appState.drivePullPromise) return Promise.resolve(false);
+      if (!force && Date.now() - (appState.lastDrivePullAt || 0) < DRIVE_PULL_MIN_INTERVAL_MS) return Promise.resolve(false);
+      appState.lastDrivePullAt = Date.now();
+      const activeBefore = JSON.stringify(getActiveChat() || null);
+      appState.drivePullPromise = (async () => {
+        appState.driveRemoteSettings = null;
+        const remote = await readDriveSnapshot();
+        applyRemoteApiSettings(appState.driveRemoteSettings);
+        if (appState.busy || !mergeRemoteSnapshot(remote)) return false;
+        renderHistory();
+        if (JSON.stringify(getActiveChat() || null) !== activeBefore) renderThread();
+        updateConfigUi();
+        scheduleDriveSync();
+        return true;
+      })().catch((error) => {
+        console.warn('No se pudo leer Drive:', error);
+        return false;
+      }).finally(() => {
+        appState.drivePullPromise = null;
+      });
+      return appState.drivePullPromise;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Leaving the app: save now instead of after the debounce.
+        if (appState.driveSyncTimer) scheduleDriveSync({ immediate: true });
+      } else {
+        pullDriveChanges(false);
+      }
+    });
 
     function applySnapshotToState(snapshot) {
       const normalized = normalizeSnapshot(snapshot, {
@@ -5612,8 +5887,8 @@
           '<span class="model-card-name">' + escapeHtml(entry ? entry.name : modelId) + '</span>' +
           '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
         '</span>' +
-        (score !== null ? '<span class="model-card-score ' + scoreLevel(score) + '" title="Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)">' + Math.round(score) + '</span>' : '') +
-        (price ? '<span class="model-card-badge price' + (price === 'Gratis' ? ' pick' : '') + '">' + escapeHtml(price) + '</span>' : '') +
+        (score !== null ? gaugeMarkup(score) : '') +
+        priceMarkup(entry) +
         '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
         '</button>';
     }
@@ -5638,13 +5913,35 @@
 
     function renderCapabilityChips() {
       if (!elements.capabilityChips) return;
-      elements.capabilityChips.classList.toggle('hidden', !modelCatalog.entries.length);
       elements.capabilityChips.innerHTML = CAPABILITY_FILTERS.map((filter) => {
         const count = modelCatalog.entries.filter(filter.test).length;
         const active = modelPicker.filters.includes(filter.id);
-        const title = (typeof filter.title === 'function' ? filter.title() : filter.title) + ' · ' + count + ' modelos';
-        return '<button type="button" class="company-chip filter-chip' + (active ? ' active' : '') + '" data-filter-id="' + filter.id + '" aria-pressed="' + (active ? 'true' : 'false') + '" title="' + escapeHtml(title) + '">' + escapeHtml(filter.label) + '</button>';
+        return '<button type="button" class="filter-chip' + (active ? ' active' : '') + '" data-filter-id="' + filter.id + '" aria-pressed="' + (active ? 'true' : 'false') + '" title="' + escapeHtml(filter.title + ' · ' + count + ' modelos') + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + FILTER_ICON[filter.id] + '</svg>' +
+          escapeHtml(filter.label) + '<span class="filter-chip-count">' + count + '</span></button>';
       }).join('');
+      if (elements.iqRange) {
+        elements.iqRange.max = String(modelCatalog.scoreScale);
+        if (Number(elements.iqRange.value) !== modelPicker.minIq) elements.iqRange.value = String(modelPicker.minIq);
+        const pct = (modelPicker.minIq / modelCatalog.scoreScale) * 100;
+        elements.iqRange.style.setProperty('--fill', pct + '%');
+        elements.iqValue.innerHTML = modelPicker.minIq > 0
+          ? '<span class="filter-iq-gauge">' + gaugeSvg(modelPicker.minIq) + '</span>' + modelPicker.minIq + ' o más'
+          : 'Cualquiera';
+      }
+      if (elements.sortOptions) {
+        elements.sortOptions.innerHTML = SORT_OPTIONS.map((option) => {
+          const active = option.id === modelPicker.sort;
+          return '<button type="button" class="filter-sort-option' + (active ? ' active' : '') + '" data-sort-id="' + option.id + '" role="radio" aria-checked="' + (active ? 'true' : 'false') + '" title="' + escapeHtml(option.title) + '">' + escapeHtml(option.label) + '</button>';
+        }).join('');
+      }
+      const count = activeFilterCount();
+      if (elements.filterCount) {
+        elements.filterCount.textContent = String(count);
+        elements.filterCount.classList.toggle('hidden', !count);
+        elements.filterToggle.classList.toggle('has-filters', !!count);
+      }
+      if (elements.filterClear) elements.filterClear.classList.toggle('hidden', !count);
     }
 
     function renderModelList() {
@@ -5653,11 +5950,19 @@
       const query = modelPicker.query.trim();
       const terms = searchKey(query).split(/\s+/).filter(Boolean);
       const activeFilters = CAPABILITY_FILTERS.filter((filter) => modelPicker.filters.includes(filter.id));
-      const browsing = !terms.length && !modelPicker.company && !activeFilters.length;
+      const browsing = !terms.length && !modelPicker.company && !activeFilterCount();
       let filtered = modelCatalog.entries.filter((entry) => (!modelPicker.company || entry.companyId === modelPicker.company) &&
         activeFilters.every((filter) => filter.test(entry)) &&
+        (!modelPicker.minIq || (typeof entry.intelligence === 'number' && entry.intelligence >= modelPicker.minIq)) &&
         terms.every((term) => modelCatalog.search.get(entry.id).indexOf(term) !== -1));
-      if (modelPicker.filters.includes('smart')) filtered = filtered.slice().sort((a, b) => (b.intelligence || 0) - (a.intelligence || 0));
+      if (modelPicker.sort === 'smart') {
+        filtered = filtered.slice().sort((a, b) => (typeof b.intelligence === 'number' ? b.intelligence : -1) - (typeof a.intelligence === 'number' ? a.intelligence : -1));
+      } else if (modelPicker.sort === 'cheap') {
+        filtered = filtered.slice().sort((a, b) => (a.price.input + a.price.output) - (b.price.input + b.price.output));
+      }
+      if (elements.filterResult) {
+        elements.filterResult.textContent = filtered.length + (filtered.length === 1 ? ' modelo' : ' modelos');
+      }
       const heading = (title, note) => '<div class="model-list-heading"><span>' + escapeHtml(title) + '</span>' + (note ? '<small>' + escapeHtml(note) + '</small>' : '') + '</div>';
       const note = (text) => '<div class="model-list-note">' + escapeHtml(text) + '</div>';
       const parts = [];
@@ -5679,7 +5984,7 @@
       if (rest.length > MODEL_LIST_LIMIT) {
         parts.push(note('Y ' + (rest.length - MODEL_LIST_LIMIT) + ' más. Busca o elige una compañía para verlos.'));
       }
-      if ((terms.length || activeFilters.length) && !filtered.length) {
+      if ((terms.length || activeFilterCount()) && !filtered.length) {
         parts.push(note(terms.length ? 'Ningún modelo coincide con «' + query + '».' : 'Ningún modelo cumple esos filtros.'));
       }
       // Escribir un ID completo (compañía/modelo) permite usar cualquier modelo de OpenRouter.
@@ -7617,6 +7922,7 @@
       if (!fileId) {
         return null;
       }
+      const modifiedTime = await readDriveSnapshotVersion(fileId);
       const raw = await driveFetchText(
         'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media',
         {
@@ -7626,8 +7932,37 @@
         'No se pudo descargar el historial de Drive.'
       );
       const parsed = JSON.parse(raw);
+      appState.driveKnownVersion = modifiedTime;
       appState.driveRemoteSettings = normalizeSyncedSettings(parsed && parsed.settings);
       return normalizeSnapshot(parsed);
+    }
+
+    async function readDriveSnapshotVersion(fileId) {
+      const meta = await driveFetchJson(
+        'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=modifiedTime',
+        { method: 'GET' },
+        true,
+        'No se pudo leer el historial de Drive.'
+      );
+      return (meta && meta.modifiedTime) || '';
+    }
+
+    // Read-merge-write: if another device saved since we last looked, take its
+    // chats in first, so this upload never overwrites them.
+    async function syncDriveNow() {
+      const folderId = await findDriveFolderId();
+      const fileId = folderId ? await findDriveSnapshotFileId(folderId) : '';
+      if (fileId && (await readDriveSnapshotVersion(fileId)) !== appState.driveKnownVersion) {
+        const activeBefore = JSON.stringify(getActiveChat() || null);
+        appState.driveRemoteSettings = null;
+        const remote = await readDriveSnapshot();
+        applyRemoteApiSettings(appState.driveRemoteSettings);
+        if (remote && mergeRemoteSnapshot(remote)) {
+          renderHistory();
+          if (!appState.busy && JSON.stringify(getActiveChat() || null) !== activeBefore) renderThread();
+        }
+      }
+      await persistDriveSnapshot(buildStateSnapshot());
     }
 
     async function persistDriveSnapshot(snapshot) {
@@ -7670,6 +8005,7 @@
       );
       appState.driveFolderId = folderId;
       appState.driveSnapshotFileId = response && response.id ? response.id : existingFileId;
+      appState.driveKnownVersion = (response && response.modifiedTime) || '';
       appState.driveReady = true;
     }
 
@@ -7743,20 +8079,17 @@
       const localHasContent = snapshotHasMeaningfulContent(localSnapshot);
       const remoteHasContent = snapshotHasMeaningfulContent(remoteSnapshot);
 
-      if (remoteHasContent && (!localHasContent || snapshotFreshness(remoteSnapshot) > snapshotFreshness(localSnapshot))) {
-        applySnapshotToState(remoteSnapshot);
-        appState.driveReady = true;
-        return;
+      if (remoteSnapshot) {
+        // Chat by chat: Drive's chats appear here and this browser's go to Drive.
+        mergeRemoteSnapshot(remoteSnapshot);
       }
-
-      if (remoteHasContent) {
-        mergeBinariesIntoChats(appState.chats, remoteSnapshot);
-      }
-
       appState.driveReady = true;
-      scheduleDriveSync({
-        immediate: true
-      });
+      appState.lastDrivePullAt = Date.now();
+      if (localHasContent || !remoteHasContent || snapshotFreshness(buildStateSnapshot({ includeBinaries: false })) > snapshotFreshness(remoteSnapshot)) {
+        scheduleDriveSync({
+          immediate: true
+        });
+      }
     }
 
     function scheduleDriveSync(options) {
@@ -7775,7 +8108,7 @@
           appState.driveSyncQueued = true;
           return;
         }
-        appState.driveSyncPromise = persistDriveSnapshot(buildStateSnapshot())
+        appState.driveSyncPromise = syncDriveNow()
           .catch((error) => {
             console.error('Drive sync error:', error);
             showToast('Drive', 'No se pudo guardar el chat en Drive. Revisa que la API de Google Drive esté activada.');
@@ -7915,6 +8248,7 @@
       }
 
       appState.chats = appState.chats.filter((chat) => chat.id !== targetId);
+      rememberDeletedChat(targetId);
 
       if (!appState.chats.length) {
         const chat = createChat();
@@ -8676,6 +9010,8 @@
         modelPicker.query = '';
         modelPicker.company = '';
         modelPicker.filters = [];
+        modelPicker.minIq = 0;
+        modelPicker.sort = 'popular';
         if (elements.modelSearchInput) elements.modelSearchInput.value = '';
         renderModelControls();
         if (elements.modelList) elements.modelList.scrollTop = 0;
@@ -8940,15 +9276,48 @@
           elements.modelList.scrollTop = 0;
         });
       }
+      const refilter = () => {
+        renderCapabilityChips();
+        renderModelList();
+        elements.modelList.scrollTop = 0;
+      };
+      if (elements.filterToggle) {
+        let open = false;
+        try { open = localStorage.getItem(FILTER_PANEL_KEY) === '1'; } catch (_) {}
+        setFilterPanelOpen(open);
+        elements.filterToggle.addEventListener('click', () => setFilterPanelOpen(elements.filterPanel.classList.contains('hidden')));
+      }
       if (elements.capabilityChips) {
         elements.capabilityChips.addEventListener('click', (event) => {
           const chip = event.target.closest('[data-filter-id]');
           if (!chip) return;
           const id = chip.getAttribute('data-filter-id');
           modelPicker.filters = modelPicker.filters.includes(id) ? modelPicker.filters.filter((f) => f !== id) : modelPicker.filters.concat(id);
-          renderCapabilityChips();
-          renderModelList();
-          elements.modelList.scrollTop = 0;
+          refilter();
+        });
+      }
+      if (elements.iqRange) {
+        elements.iqRange.addEventListener('input', () => {
+          modelPicker.minIq = Number(elements.iqRange.value) || 0;
+          // Asking for a minimum intelligence also shows the smartest first.
+          if (modelPicker.minIq > 0 && modelPicker.sort === 'popular') modelPicker.sort = 'smart';
+          refilter();
+        });
+      }
+      if (elements.sortOptions) {
+        elements.sortOptions.addEventListener('click', (event) => {
+          const option = event.target.closest('[data-sort-id]');
+          if (!option) return;
+          modelPicker.sort = option.getAttribute('data-sort-id');
+          refilter();
+        });
+      }
+      if (elements.filterClear) {
+        elements.filterClear.addEventListener('click', () => {
+          modelPicker.filters = [];
+          modelPicker.minIq = 0;
+          modelPicker.sort = 'popular';
+          refilter();
         });
       }
       if (elements.thinkingSegmented) {
