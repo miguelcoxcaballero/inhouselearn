@@ -145,7 +145,11 @@ def main(apk):
 
     log = adb('logcat', '-d').stdout
     (OUT / 'logcat.txt').write_text(log, encoding='utf-8')
-    crashes = [line for line in log.splitlines() if 'FATAL EXCEPTION' in line or f'Process: {PACKAGE}' in line]
+    # Only crashes of the app itself: test tools such as uiautomator (process
+    # UiAutomation) sometimes crash on the emulator, and that is not ours.
+    lines = log.splitlines()
+    crashes = [line for k, line in enumerate(lines) if 'FATAL EXCEPTION' in line
+               and any(f'Process: {PACKAGE}' in after for after in lines[k + 1:k + 3])]
     if crashes:
         raise SystemExit('The app crashed: ' + ' | '.join(crashes[:5]))
     if not alive():
