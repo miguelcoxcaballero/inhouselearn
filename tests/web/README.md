@@ -25,6 +25,7 @@ CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/github.cjs
 ```
 
 `latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
@@ -36,6 +37,10 @@ within seconds (conversations.json polling).
 
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
 40 small files) and checks the search, the manifest the model gets and the three library tools.
+
+`github.cjs` connects the GitHub connector to a fake GitHub API: the model reads a file, edits it
+on a new branch after the user approves the commit (files and +/− shown), opens a PR, and a
+rejected commit changes nothing.
 
 `text-quality.cjs` uses mocked OpenRouter responses to reproduce accidental
 Cyrillic/Chinese insertions, check automatic repair and stored transcripts,

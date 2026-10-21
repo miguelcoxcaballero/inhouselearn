@@ -926,7 +926,16 @@
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
     .confirm-title { margin: 0 0 6px; font-size: 1.02rem; font-weight: 600; color: var(--text); }
-    .confirm-message { margin: 0 0 18px; font-size: 0.9rem; line-height: 1.45; color: var(--muted); }
+    .confirm-message { margin: 0 0 18px; font-size: 0.9rem; line-height: 1.45; color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
+    .confirm-detail { list-style: none; margin: -6px 0 18px; padding: 0; max-height: 40vh; overflow: auto; border: 1px solid var(--border); border-radius: 12px; }
+    .confirm-detail.hidden, .confirm-input.hidden { display: none; }
+    .confirm-detail li { display: flex; align-items: baseline; gap: 8px; padding: 7px 10px; font-size: 0.82rem; border-top: 1px solid var(--border); }
+    .confirm-detail li:first-child { border-top: 0; }
+    .confirm-detail code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.8rem; }
+    .confirm-detail .cd-status { flex-shrink: 0; color: var(--muted); font-size: 0.74rem; }
+    .confirm-detail .cd-add { color: #15803d; flex-shrink: 0; }
+    .confirm-detail .cd-del { color: #b91c1c; flex-shrink: 0; }
+    .confirm-input { width: 100%; box-sizing: border-box; height: 42px; margin: -6px 0 18px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 10px; font: inherit; font-size: 0.9rem; background: var(--surface); color: var(--text); }
     .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .confirm-btn {
       appearance: none; border: 1px solid var(--border);
@@ -1560,6 +1569,11 @@
     .plus-item.guided-btn.active > svg { background: var(--orange); color: #fff; border-color: var(--orange); }
     .plus-item.guided-btn.active .plus-switch { background: var(--orange); }
     .plus-item.guided-btn.active .plus-switch::after { transform: translateX(14px); }
+    .plus-item.hidden { display: none; }
+    .plus-item.github-btn.active { background: rgba(0,0,0,0.05); }
+    .plus-item.github-btn.active > svg { background: var(--text); color: #fff; border-color: var(--text); }
+    .plus-item.github-btn.active .plus-switch { background: var(--text); }
+    .plus-item.github-btn.active .plus-switch::after { transform: translateX(14px); }
     .model-trigger-main { font-size: 0.8rem; }
     .model-menu-wrap { max-width: 320px; }
     .dictation-btn { width: 40px; height: 40px; border: 1px solid var(--border-strong); border-radius: 50%; }
@@ -1735,6 +1749,14 @@
                 </svg>
                 <span class="plus-item-text"><b class="guided-btn-label">Aprendizaje guiado</b><small>Un curso por lecciones con mini tests</small></span><span class="plus-switch" aria-hidden="true"></span>
               </button>
+              <button class="plus-item github-btn" id="github-btn" type="button" role="menuitemcheckbox" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+                <span class="plus-item-text"><b>GitHub</b><small id="github-sub">Conecta tu cuenta para cambiar repos</small></span><span class="plus-switch" aria-hidden="true"></span>
+              </button>
+              <button class="plus-item github-account-btn hidden" id="github-account-btn" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                <span class="plus-item-text"><b>Cuenta de GitHub</b><small id="github-account-sub">Desconectar o cambiar el token</small></span>
+              </button>
                 </div>
               </div>
               <button class="usage-btn" id="usage-btn" type="button" aria-label="Uso y saldo">
@@ -1842,6 +1864,8 @@
     <div class="confirm-card">
       <h3 class="confirm-title" id="confirm-title"></h3>
       <p class="confirm-message" id="confirm-message"></p>
+      <ul class="confirm-detail hidden" id="confirm-detail"></ul>
+      <input class="confirm-input hidden" id="confirm-input" autocomplete="off" spellcheck="false">
       <div class="confirm-actions">
         <button type="button" class="confirm-btn" id="confirm-cancel"></button>
         <button type="button" class="confirm-btn primary" id="confirm-ok"></button>
@@ -1858,7 +1882,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="library.js?v=20261021-library"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261021-library"></script>
+  <script src="vendor/pi-engine.js?v=20261021-github"></script>
   <script src="haptics.js"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2577,7 +2601,9 @@
           ? chat.guidedLearning
           : defaultGuidedLearning,
         course: normalizeCourse(chat && chat.course),
-        files: normalizeChatFiles(chat && chat.files)
+        files: normalizeChatFiles(chat && chat.files),
+        github: !!(chat && chat.github),
+        githubRepo: chat && typeof chat.githubRepo === 'string' ? chat.githubRepo : ''
       });
     }
 
@@ -3953,16 +3979,31 @@
       }
       titleEl.textContent = opts.title || 'Confirmar';
       messageEl.textContent = opts.message || '';
+      const detailEl = document.getElementById('confirm-detail');
+      const inputEl = document.getElementById('confirm-input');
+      if (detailEl) {
+        const items = Array.isArray(opts.items) ? opts.items : [];
+        detailEl.classList.toggle('hidden', !items.length);
+        detailEl.innerHTML = items.map((item) => '<li><span class="cd-status">' + escapeHtml(item.status || '') + '</span><code>' + escapeHtml(item.path || '') + '</code>' +
+          (item.added ? '<span class="cd-add">+' + Number(item.added) + '</span>' : '') + (item.removed ? '<span class="cd-del">−' + Number(item.removed) + '</span>' : '') + '</li>').join('');
+      }
+      if (inputEl) {
+        inputEl.classList.toggle('hidden', !opts.input);
+        inputEl.value = (opts.input && opts.input.value) || '';
+        inputEl.placeholder = (opts.input && opts.input.placeholder) || '';
+        inputEl.type = (opts.input && opts.input.type) || 'text';
+      }
       okBtn.textContent = opts.confirmText || 'Confirmar';
       cancelBtn.textContent = opts.cancelText || 'Cancelar';
       okBtn.classList.toggle('danger', !!opts.danger);
       okBtn.classList.toggle('primary', !opts.danger);
       backdrop.classList.remove('hidden');
       const previouslyFocused = document.activeElement;
-      window.setTimeout(function() { okBtn.focus(); }, 20);
+      window.setTimeout(function() { (opts.input && inputEl ? inputEl : okBtn).focus(); }, 20);
       return new Promise(function(resolve) {
         function close(result) {
           backdrop.classList.add('hidden');
+          if (opts.input && inputEl) result = result ? inputEl.value.trim() : null;
           okBtn.removeEventListener('click', onOk);
           cancelBtn.removeEventListener('click', onCancel);
           backdrop.removeEventListener('click', onBackdrop);
@@ -4055,6 +4096,96 @@
         plus.classList.toggle('has-guided', active);
         plus.setAttribute('aria-label', active ? 'Más opciones (aprendizaje guiado activo)' : 'Más opciones');
       }
+      updateGithubUi();
+    }
+
+    /* ─── CONECTOR DE GITHUB ──────────────────────────── */
+    // A fine-grained token of the user, kept only in this browser (never in
+    // Drive). Per chat, the + menu turns the GitHub tools on; every write the
+    // model wants (commit, branch, PR, comment) is shown and approved first.
+    const GITHUB_TOKEN_KEY = STORAGE_KEY + '::githubToken';
+    const GITHUB_LOGIN_KEY = STORAGE_KEY + '::githubLogin';
+
+    function githubToken() {
+      try { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; } catch (_) { return ''; }
+    }
+
+    function githubLogin() {
+      try { return localStorage.getItem(GITHUB_LOGIN_KEY) || ''; } catch (_) { return ''; }
+    }
+
+    function updateGithubUi() {
+      const btn = document.getElementById('github-btn');
+      if (!btn) return;
+      const chat = getActiveChat();
+      const connected = !!githubToken();
+      const on = connected && !!(chat && chat.github);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      const sub = document.getElementById('github-sub');
+      const account = document.getElementById('github-account-btn');
+      if (account) account.classList.toggle('hidden', !connected);
+      if (sub) sub.textContent = connected ? (on ? 'Activo en este chat · @' : 'Conectado como @') + githubLogin() : 'Conecta tu cuenta para cambiar repos';
+    }
+
+    async function connectGithub() {
+      const token = await confirmDialog({
+        title: 'Conectar GitHub',
+        message: 'Pega un token de GitHub (github.com → Settings → Developer settings → Fine-grained tokens). Dale acceso solo a los repositorios que quieras, con Contents y Pull requests en lectura y escritura (e Issues si quieres que comente).\nSe guarda solo en este navegador. Cada cambio que el modelo quiera hacer te lo enseño antes y lo apruebas tú.',
+        input: { placeholder: 'github_pat_…', type: 'password' },
+        confirmText: 'Conectar'
+      });
+      if (!token) return false;
+      try {
+        const user = await InhousePi.githubWhoAmI(token);
+        localStorage.setItem(GITHUB_TOKEN_KEY, token);
+        localStorage.setItem(GITHUB_LOGIN_KEY, user.login || '');
+        showToast('GitHub', 'Conectado como @' + user.login + '.');
+        return true;
+      } catch (error) {
+        showToast('GitHub', error.message);
+        return false;
+      }
+    }
+
+    async function onGithubItem() {
+      if (appState.busy) return;
+      const chat = getActiveChat();
+      if (!githubToken()) {
+        if (!(await connectGithub())) return;
+        chat.github = true;
+      } else if (chat.github) {
+        chat.github = false;
+      } else {
+        chat.github = true;
+      }
+      saveState({ skipDrive: true });
+      updateGithubUi();
+    }
+
+    async function disconnectGithub() {
+      const ok = await confirmDialog({ title: 'GitHub · @' + githubLogin(), message: 'Desconectar borra el token de este navegador. Para cambiarlo, desconecta y vuelve a conectar con el nuevo.', confirmText: 'Desconectar', danger: true });
+      if (!ok) return;
+      localStorage.removeItem(GITHUB_TOKEN_KEY);
+      localStorage.removeItem(GITHUB_LOGIN_KEY);
+      updateGithubUi();
+    }
+
+    function githubToolsFor(chat, signal) {
+      if (!chat.github || !githubToken()) return [];
+      return InhousePi.createGithubTools({
+        token: githubToken,
+        signal,
+        onRepo: (repo) => { chat.githubRepo = repo; },
+        confirm: (request) => confirmDialog({ title: request.title, message: request.summary, items: request.items, confirmText: 'Aprobar', cancelText: 'No' })
+      });
+    }
+
+    function githubPromptText(chat) {
+      if (!chat.github || !githubToken()) return '';
+      return '- GitHub (cuenta @' + githubLogin() + '): con las herramientas github_* puedes ver los repositorios del usuario, leer y buscar código, hacer commits, abrir pull requests y comentar.' +
+        (chat.githubRepo ? ' Último repositorio usado en este chat: ' + chat.githubRepo + '.' : '') +
+        ' Lee los archivos antes de cambiarlos y sigue el estilo del proyecto (y su AGENTS.md o README si existen). Salvo que el usuario pida otra cosa, trabaja en una rama nueva y abre un PR en vez de tocar la rama principal. El usuario aprueba cada escritura: si la rechaza, pregúntale qué cambiar. Al terminar, da los enlaces del commit o del PR.';
     }
 
     /* ─── MENÚ «+» ─────────────────────────────────────── */
@@ -7255,6 +7386,12 @@
         await addFilesToComposer(elements.fileInput.files);
         elements.fileInput.value = '';
       });
+      const githubBtn = document.getElementById('github-btn');
+      if (githubBtn) {
+        githubBtn.addEventListener('click', onGithubItem);
+      }
+      const githubAccountBtn = document.getElementById('github-account-btn');
+      if (githubAccountBtn) githubAccountBtn.addEventListener('click', disconnectGithub);
       const folderInput = document.getElementById('folder-input');
       const folderBtn = document.getElementById('folder-btn');
       if (folderInput && folderBtn) {
@@ -7820,6 +7957,7 @@
           ? 'Archivos actuales: ' + files.map((file) => file.path).join(', ') + '.'
           : 'Ahora mismo no hay archivos.',
         libraryPromptText(chat, libraryForModel),
+        githubPromptText(chat),
         '',
         visualEventsText(chat),
         '',
@@ -8052,7 +8190,7 @@
       let result;
       try {
         try {
-          result = await run(guidedTools.concat(libraryTools, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          result = await run(guidedTools.concat(libraryTools, githubToolsFor(chat, signal), InhousePi.createWorkspaceTools(chatWorkspace(chat))));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
           if (error.name !== 'AbortError' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {

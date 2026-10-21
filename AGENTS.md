@@ -45,6 +45,11 @@ Mandatory guidance for every AI and developer working in this repository.
   (`library-<id>.json`); the model reaches them only through the `search_library`,
   `read_library`, `list_library` and `view_library_image` tools (`engine/src/library.js`).
   Big uploads never go into the message itself, only a short manifest.
+- **GitHub connector:** `engine/src/github.js` gives the model `github_*` tools (list repos and
+  files, read, search code, one-commit multi-file writes through the git data API, exact edits,
+  pull requests, issues and comments) with the user's fine-grained token, kept only in that
+  browser's localStorage, never in Drive. Tools are on per chat (+ menu → GitHub) and every write
+  goes through `confirmDialog` with the files and +/− lines; never add a write that skips it.
 - **Live sync:** devices of the same account open WebRTC data channels to each other, signalled
   through `peer-<deviceId>.json` files in the Drive folder; the answering device sends every change
   at once and a `saved` notice after each Drive save. When a direct connection is not possible,
