@@ -11,8 +11,9 @@ import { Agent } from '@earendil-works/pi-agent-core';
 import JSZip from 'jszip';
 import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
 import { createGuidedTools } from './guided.js';
+import { createLibraryTools } from './library.js';
 
-export { createWorkspaceTools, createGuidedTools, normalizePath, runInSandbox };
+export { createWorkspaceTools, createGuidedTools, createLibraryTools, normalizePath, runInSandbox };
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

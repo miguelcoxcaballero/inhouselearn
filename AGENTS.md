@@ -40,6 +40,13 @@ Mandatory guidance for every AI and developer working in this repository.
   `allow-same-origin`, never relax the CSP) types; schema in `docs/visual-schema.json`, tests
   in `tests/web`. `haptics.js` sends `{type: 'haptic', style}` to the Android shell
   (`MainActivity.haptic`), with `navigator.vibrate` as the browser fallback.
+- **Chat library:** `library.js` keeps the files a user uploads to a chat (folders, PDFs page by
+  page, photos and scanned pages read with OCR) in IndexedDB and in the user's Drive folder
+  (`library-<id>.json`); the model reaches them only through the `search_library`,
+  `read_library`, `list_library` and `view_library_image` tools (`engine/src/library.js`).
+  Big uploads never go into the message itself, only a short manifest.
+- **Live sync:** the answering device writes `live.json` in the Drive folder; other devices poll
+  it and draw the answer as it grows (`liveShareStart`, `liveTick` in `index.html`).
 - Never edit `vendor/inhouse-services-updater/`, `android/app/src/main/assets/updates/` or
   `android/app/src/main/java/com/inhouse/services/updater/` by hand: they are written by the
   canonical repository's `tools/sync.py`, and `vendor/inhouse-services-updater/verify.py`

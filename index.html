@@ -1577,6 +1577,16 @@
       .usage-btn svg { width: 26px; height: 26px; }
       .model-trigger-main { font-size: 0.78rem; }
     }
+    /* ─── Biblioteca del chat ─── */
+    .workspace-library { background: var(--orange-soft); border-color: transparent; color: #A84F1A; font-family: inherit; font-weight: 600; }
+    .library-panel { width: 100%; max-width: 720px; max-height: 100%; overflow: auto; align-self: flex-start; padding: 18px 20px 8px; border-radius: 18px; background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
+    .library-intro, .library-empty { color: var(--ink-3); font-size: 0.9rem; margin: 0 0 14px; }
+    .library-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+    .library-row { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+    .library-ref { flex-shrink: 0; min-width: 34px; font-size: 0.75rem; font-weight: 700; color: #A84F1A; }
+    .library-name { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .library-name b { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .library-name small { color: var(--ink-3); font-size: 0.78rem; }
   </style>
   <link rel="stylesheet" href="guided.css?v=20261021-text-motion">
   <link rel="stylesheet" href="model-picker.css?v=20261021">
@@ -1714,6 +1724,10 @@
                 </svg>
                 <span class="plus-item-text"><b>Adjuntar archivos</b><small>PDF, fotos, apuntes</small></span>
               </button>
+              <button class="plus-item folder-btn" id="folder-btn" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                <span class="plus-item-text"><b>Subir carpeta</b><small>Muchos archivos: el modelo busca en ellos</small></span>
+              </button>
               <button class="plus-item guided-btn" id="guided-btn" type="button" role="menuitemcheckbox" aria-pressed="false" aria-label="Aprendizaje guiado" title="Aprendizaje guiado: un curso por lecciones con mini tests y examen final">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M22 10L12 5 2 10l10 5 10-5z"/>
@@ -1823,6 +1837,7 @@
     <div class="preview-body" id="preview-body"></div>
   </div>
   <input type="file" multiple id="file-input" style="display:none">
+  <input type="file" multiple webkitdirectory id="folder-input" style="display:none">
   <div class="confirm-backdrop hidden" id="confirm-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
     <div class="confirm-card">
       <h3 class="confirm-title" id="confirm-title"></h3>
@@ -1838,11 +1853,12 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex/dist/contrib/auto-render.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="library.js?v=20261021-library"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261021-text-motion"></script>
+  <script src="vendor/pi-engine.js?v=20261021-library"></script>
   <script src="haptics.js"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2932,6 +2948,10 @@
       elements.composerAttachments.innerHTML = items.map((item) => attachmentBadgeMarkup(item, true)).join('');
       Array.from(elements.composerAttachments.querySelectorAll('[data-remove-attachment-id]')).forEach((button) => {
         button.addEventListener('click', () => {
+          const removed = appState.composerAttachments.find((item) => item.id === button.dataset.removeAttachmentId);
+          if (removed && removed.source === 'library' && window.InhouseLibrary) {
+            Promise.all(removed.docIds.map((id) => window.InhouseLibrary.remove(removed.chatId, id))).then(refreshLibraryCount);
+          }
           appState.composerAttachments = appState.composerAttachments.filter((item) => item.id !== button.dataset.removeAttachmentId);
           renderComposerAttachments();
           updateSendUi();
@@ -3008,7 +3028,7 @@
         throw new Error('pdf.js no esta cargado.');
       }
       if (window.pdfjsLib.GlobalWorkerOptions && !window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
       }
       const buffer = await file.arrayBuffer();
       const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
@@ -3167,18 +3187,55 @@
       return buildInlineAttachment(file, mimeType, kind);
     }
 
+    // A few small files go into the message as before (and into the library).
+    // Folders, many files or big PDFs only go to the chat's library: the
+    // message says what was added and the model searches it with tools.
+    const LIBRARY_INLINE_MAX_FILES = 3;
+    const LIBRARY_INLINE_MAX_BYTES = 4 * 1024 * 1024;
+
+    function fileItems(fileList) {
+      return Array.from(fileList || []).map((entry) => (entry && entry.file
+        ? entry
+        : { file: entry, path: (entry && (entry.webkitRelativePath || entry.name)) || '' })).filter((item) => item.file);
+    }
+
     async function addFilesToComposer(fileList) {
-      const files = Array.from(fileList || []);
-      if (!files.length) {
+      const items = fileItems(fileList);
+      if (!items.length) {
         return;
       }
+      const chat = getActiveChat();
+      const library = window.InhouseLibrary && window.indexedDB ? window.InhouseLibrary : null;
+      const fromFolder = items.some((item) => item.path.includes('/'));
+      const totalBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
+      const inline = !library || (!fromFolder && items.length <= LIBRARY_INLINE_MAX_FILES && totalBytes <= LIBRARY_INLINE_MAX_BYTES);
       appState.attachmentBusy = true;
       updateSendUi();
       setComposerStatus('Procesando adjuntos...');
       try {
-        for (const file of files) {
-          const attachment = await prepareAttachment(file);
-          appState.composerAttachments.push(attachment);
+        if (inline) {
+          for (const item of items) {
+            appState.composerAttachments.push(await prepareAttachment(item.file));
+          }
+          // Also searchable later; failures here never block the message.
+          if (library) library.ingest(chat.id, items).then(refreshLibraryCount).catch((error) => console.warn('Biblioteca:', error));
+        } else {
+          const { added, skipped } = await library.ingest(chat.id, items);
+          if (!added.length) throw new Error('No pude leer ninguno de esos archivos' + (skipped[0] ? ' (' + skipped[0].reason + ')' : '') + '.');
+          const folder = fromFolder ? items[0].path.split('/')[0] : '';
+          appState.composerAttachments.push({
+            id: uid('att'),
+            name: (folder ? folder + ' · ' : '') + (added.length === 1 ? added[0].path : added.length + ' archivos'),
+            size: totalBytes,
+            mimeType: 'application/x-inhouse-library',
+            kind: 'library',
+            source: 'library',
+            chatId: chat.id,
+            docIds: added.map((doc) => doc.id),
+            part: { text: library.manifestText(added, skipped) }
+          });
+          if (skipped.length) showToast('Biblioteca', skipped.length + (skipped.length === 1 ? ' archivo no se pudo leer' : ' archivos no se pudieron leer') + ': ' + skipped.slice(0, 3).map((item) => item.path).join(', ') + (skipped.length > 3 ? '…' : ''));
+          refreshLibraryCount();
         }
         renderComposerAttachments();
         if (!appState.busy) {
@@ -3198,6 +3255,150 @@
           }, 1200);
         }
       }
+    }
+
+    // Dropped folders: walk them (only possible while the drop event lasts).
+    function droppedEntries(dataTransfer) {
+      return Array.from((dataTransfer && dataTransfer.items) || [])
+        .map((item) => (item && item.kind === 'file' && item.webkitGetAsEntry ? item.webkitGetAsEntry() : null))
+        .filter(Boolean);
+    }
+
+    async function entriesToItems(entries) {
+      const out = [];
+      const walk = async (entry, prefix) => {
+        if (entry.isFile) {
+          const file = await new Promise((resolve) => entry.file(resolve, () => resolve(null)));
+          if (file) out.push({ file, path: prefix + file.name });
+          return;
+        }
+        if (!entry.isDirectory) return;
+        const reader = entry.createReader();
+        for (;;) {
+          const batch = await new Promise((resolve) => reader.readEntries(resolve, () => resolve([])));
+          if (!batch.length) break;
+          for (const child of batch) await walk(child, prefix + entry.name + '/');
+        }
+      };
+      for (const entry of entries) await walk(entry, '');
+      return out;
+    }
+
+    /* ─── BIBLIOTECA DEL CHAT ─────────────────────────── */
+    // Library documents also live in the Drive folder (one JSON per document),
+    // so another device gets them when the chat is used there.
+    function setupLibrary() {
+      const library = window.InhouseLibrary;
+      if (!library || !window.indexedDB) return;
+      library.onChange((state) => {
+        if (state.busy && state.label) setComposerStatus(state.label);
+      });
+      const propsQuery = (props) => Object.keys(props).map((key) => "appProperties has { key='" + key + "' and value='" + escapeDriveQueryValue(props[key]) + "' }").join(' and ');
+      library.configureDrive({
+        upload: async (name, text, appProperties, existingId) => {
+          if (!hasDrivePersistenceReady()) return '';
+          const folderId = await ensureDriveFolderId();
+          const metadata = existingId ? { name } : { name, mimeType: 'application/json', parents: [folderId], appProperties };
+          const base = 'https://www.googleapis.com/upload/drive/v3/files' + (existingId ? '/' + encodeURIComponent(existingId) : '');
+          if (text.length < 4.5 * 1024 * 1024) {
+            const multipart = buildDriveMultipartBody(metadata, text, 'application/json');
+            const result = await driveFetchJson(base + '?uploadType=multipart&fields=id', {
+              method: existingId ? 'PATCH' : 'POST', headers: { 'Content-Type': multipart.contentType }, body: multipart.body
+            }, true, 'No se pudo subir el archivo a Drive.');
+            return (result && result.id) || existingId;
+          }
+          // Big documents (many scanned pages): resumable upload.
+          const start = await driveFetch(base + '?uploadType=resumable&fields=id', {
+            method: existingId ? 'PATCH' : 'POST',
+            headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': 'application/json' },
+            body: JSON.stringify(metadata)
+          }, true);
+          const location = start.ok && start.headers.get('Location');
+          if (!location) throw new Error('Drive no aceptó la subida (HTTP ' + start.status + ').');
+          const done = await fetch(location, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: text });
+          const result = await done.json().catch(() => null);
+          if (!done.ok) throw new Error('No se pudo subir el archivo a Drive (HTTP ' + done.status + ').');
+          return (result && result.id) || existingId;
+        },
+        list: async (props) => {
+          if (!hasDrivePersistenceReady()) return [];
+          const folderId = await findDriveFolderId();
+          if (!folderId) return [];
+          return listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and " + propsQuery(props), 1000);
+        },
+        download: (id) => driveFetchText('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media', { method: 'GET' }, true, 'No se pudo descargar de Drive.'),
+        remove: async (id) => {
+          if (!hasDrivePersistenceReady()) return;
+          await driveFetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id), { method: 'DELETE' }, true);
+        }
+      });
+    }
+
+    function refreshLibraryCount() {
+      const chat = getActiveChat();
+      if (!chat || !window.InhouseLibrary || !window.indexedDB) return Promise.resolve([]);
+      return window.InhouseLibrary.list(chat.id).then((docs) => {
+        appState.libraryCounts = Object.assign({}, appState.libraryCounts, { [chat.id]: docs.length });
+        renderWorkspaceBar();
+        return docs;
+      }).catch(() => []);
+    }
+
+    async function openLibraryPanel() {
+      const chat = getActiveChat();
+      const library = window.InhouseLibrary;
+      if (!chat || !library) return;
+      if (hasDrivePersistenceReady()) await library.pullFromDrive(chat.id).catch(() => 0);
+      const docs = await library.list(chat.id);
+      const overlay = document.getElementById('preview-overlay');
+      const body = document.getElementById('preview-body');
+      document.getElementById('preview-title').textContent = 'Biblioteca del chat · ' + docs.length + (docs.length === 1 ? ' archivo' : ' archivos');
+      const ocr = library.status().ocrQueue;
+      body.innerHTML = '<div class="library-panel">' +
+        '<p class="library-intro">El modelo busca en estos archivos cuando le preguntas por ellos.' + (ocr ? ' Leyendo fotos y páginas escaneadas: quedan ' + ocr + '.' : '') + '</p>' +
+        (docs.length ? '<ul class="library-list">' + docs.map((doc) => '<li class="library-row"><span class="library-ref">' + escapeHtml(doc.ref) + '</span>' +
+          '<span class="library-name"><b>' + escapeHtml(doc.path) + '</b><small>' + escapeHtml(library.describe(doc)) + '</small></span>' +
+          '<button type="button" class="btn btn-outline btn-sm" data-library-remove="' + escapeHtml(doc.id) + '">Quitar</button></li>').join('') + '</ul>'
+          : '<p class="library-empty">Aún no hay archivos. Usa + → Subir carpeta o arrastra una carpeta aquí.</p>') +
+        '</div>';
+      body.querySelectorAll('[data-library-remove]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          await library.remove(chat.id, button.dataset.libraryRemove);
+          await refreshLibraryCount();
+          openLibraryPanel();
+        });
+      });
+      overlay.classList.remove('hidden');
+    }
+
+    // What the model gets for this chat's library (null when it is empty).
+    async function chatLibraryForModel(chat, acceptsImages) {
+      const library = window.InhouseLibrary;
+      if (!library || !window.indexedDB) return null;
+      if (hasDrivePersistenceReady()) {
+        await Promise.race([library.pullFromDrive(chat.id), new Promise((resolve) => setTimeout(resolve, 4000))]).catch(() => 0);
+        library.uploadMissing(chat.id).catch(() => 0);
+      }
+      const docs = await library.list(chat.id).catch(() => []);
+      if (!docs.length) return null;
+      return {
+        docs,
+        acceptsImages,
+        list: () => library.list(chat.id),
+        search: (query, options) => library.search(chat.id, query, options),
+        read: (ref, pages) => library.read(chat.id, ref, pages),
+        image: (ref) => library.image(chat.id, ref)
+      };
+    }
+
+    function libraryPromptText(chat, libraryForModel) {
+      if (!libraryForModel) return '';
+      const docs = libraryForModel.docs;
+      const shown = docs.slice(0, 40).map((doc) => doc.ref + ' ' + doc.path).join(', ') + (docs.length > 40 ? ', … (' + (docs.length - 40) + ' más)' : '');
+      return [
+        '- Biblioteca del chat: el usuario ha subido ' + docs.length + (docs.length === 1 ? ' archivo' : ' archivos') + ' (' + shown + '). No están en tu contexto. Antes de responder sobre su contenido usa search_library (varias búsquedas con palabras distintas si hace falta), lee las páginas útiles con read_library y mira fotos o páginas escaneadas con view_library_image. Basa la respuesta en lo que encuentres, cita la fuente así: (D3, pág. 12), y si algo no está, dilo.',
+        chat.guidedLearning ? '- En Guided Learning, si el alumno quiere estudiar sus materiales, revisa primero su contenido (list_library, índices, títulos) y construye el plan y las lecciones a partir de ellos.' : ''
+      ].filter(Boolean).join('\n');
     }
 
     function clonePartForStorage(part) {
@@ -3233,6 +3434,10 @@
       };
       if (typeof attachment.extractedText === 'string' && attachment.extractedText) {
         out.extractedText = attachment.extractedText;
+      }
+      if (Array.isArray(attachment.docIds)) {
+        out.docIds = attachment.docIds.filter((id) => typeof id === 'string');
+        out.chatId = typeof attachment.chatId === 'string' ? attachment.chatId : '';
       }
       if (opts.includeBinaries) {
         if (Array.isArray(attachment.parts) && attachment.parts.length) {
@@ -5941,6 +6146,7 @@
       }
 
       appState.chats = appState.chats.filter((chat) => chat.id !== targetId);
+      if (window.InhouseLibrary && window.indexedDB) window.InhouseLibrary.removeChat(targetId).catch(() => {});
       if (appState.activeChatId === targetId) {
         window.InhouseDictation?.cancel();
         window.InhouseReadAloud?.stop();
@@ -6328,22 +6534,32 @@
       if (!bar) return;
       const chat = getActiveChat();
       const files = chatWorkspace(chat).list();
-      bar.classList.toggle('hidden', !files.length);
-      if (!files.length) {
+      const counts = appState.libraryCounts || {};
+      if (!(chat.id in counts) && window.InhouseLibrary && window.indexedDB) {
+        appState.libraryCounts = Object.assign({}, counts, { [chat.id]: 0 });
+        refreshLibraryCount();
+      }
+      const libraryCount = counts[chat.id] || 0;
+      bar.classList.toggle('hidden', !files.length && !libraryCount);
+      if (!files.length && !libraryCount) {
         bar.innerHTML = '';
         return;
       }
       bar.innerHTML = [
         '<span class="workspace-label">Archivos</span>',
         '<div class="workspace-files">',
+        libraryCount ? '<button type="button" class="workspace-file workspace-library" id="workspace-library-btn" title="Archivos que has subido a este chat">Biblioteca · ' + libraryCount + '</button>' : '',
         files.map((file) => '<button type="button" class="workspace-file" data-workspace-file="' + escapeHtml(file.path) + '" title="' + escapeHtml(file.path) + '">' + escapeHtml(file.path) + '</button>').join(''),
         '</div>',
-        '<button type="button" class="workspace-zip" id="workspace-zip-btn"><span class="workspace-zip-long">Descargar </span>ZIP</button>'
+        files.length ? '<button type="button" class="workspace-zip" id="workspace-zip-btn"><span class="workspace-zip-long">Descargar </span>ZIP</button>' : ''
       ].join('');
       bar.querySelectorAll('[data-workspace-file]').forEach((button) => {
         button.addEventListener('click', () => openWorkspaceFile(button.dataset.workspaceFile));
       });
-      document.getElementById('workspace-zip-btn').addEventListener('click', downloadWorkspaceZip);
+      const zip = document.getElementById('workspace-zip-btn');
+      if (zip) zip.addEventListener('click', downloadWorkspaceZip);
+      const libraryBtn = document.getElementById('workspace-library-btn');
+      if (libraryBtn) libraryBtn.addEventListener('click', openLibraryPanel);
     }
 
     function closeAttachmentPreview() {
@@ -6833,6 +7049,15 @@
         await addFilesToComposer(elements.fileInput.files);
         elements.fileInput.value = '';
       });
+      const folderInput = document.getElementById('folder-input');
+      const folderBtn = document.getElementById('folder-btn');
+      if (folderInput && folderBtn) {
+        folderBtn.addEventListener('click', () => { if (!appState.busy && !appState.attachmentBusy) folderInput.click(); });
+        folderInput.addEventListener('change', async () => {
+          await addFilesToComposer(folderInput.files);
+          folderInput.value = '';
+        });
+      }
       elements.composerShell.addEventListener('dragenter', (event) => {
         if (!transferHasFiles(event.dataTransfer)) {
           return;
@@ -6863,14 +7088,15 @@
         }
       });
       elements.composerShell.addEventListener('drop', async (event) => {
+        const entries = droppedEntries(event.dataTransfer);
         const files = extractFilesFromDataTransfer(event.dataTransfer);
-        if (!files.length) {
+        if (!files.length && !entries.length) {
           return;
         }
         event.preventDefault();
         appState.composerDragDepth = 0;
         setComposerDragActive(false);
-        await addFilesToComposer(files);
+        await addFilesToComposer(entries.some((entry) => entry.isDirectory) ? await entriesToItems(entries) : files);
       });
       elements.sendBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -7372,7 +7598,7 @@
       };
     }
 
-    function buildAgentSystemPrompt(chat) {
+    function buildAgentSystemPrompt(chat, libraryForModel) {
       const files = chatWorkspace(chat).list();
       const guided = !!(chat && chat.guidedLearning);
       return [
@@ -7387,6 +7613,7 @@
         files.length
           ? 'Archivos actuales: ' + files.map((file) => file.path).join(', ') + '.'
           : 'Ahora mismo no hay archivos.',
+        libraryPromptText(chat, libraryForModel),
         '',
         visualEventsText(chat),
         '',
@@ -7402,7 +7629,7 @@
       const images = [];
       if (window.pdfjsLib && window.pdfjsLib.getDocument) {
         if (window.pdfjsLib.GlobalWorkerOptions && !window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.js';
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
         }
         try {
           const bytes = Uint8Array.from(atob(part.inlineData.data), (char) => char.charCodeAt(0));
@@ -7514,7 +7741,9 @@
       return messages.map((message) => {
         if (message.role !== 'toolResult') return message;
         return Object.assign({}, message, {
-          content: message.content.map((block) => (block.type === 'text' && block.text.length > MAX_STORED_TOOL_RESULT
+          content: message.content.map((block) => (block.type === 'image'
+            ? { type: 'text', text: '[imagen de la biblioteca vista en este turno]' }
+            : block.type === 'text' && block.text.length > MAX_STORED_TOOL_RESULT
             ? { type: 'text', text: block.text.slice(0, MAX_STORED_TOOL_RESULT) + '\n…' }
             : block))
         });
@@ -7581,12 +7810,14 @@
       const modelId = resolveRequestModelId(chat);
       const model = InhousePi.getModel(modelId);
       const { history, prompt } = await buildPiConversation(chat, model.input.includes('image'));
+      const libraryForModel = await chatLibraryForModel(chat, model.input.includes('image'));
+      const libraryTools = libraryForModel ? InhousePi.createLibraryTools(libraryForModel) : [];
       const languageContext = tutorLanguageContext(chat);
       const repairedToolArgs = new Map();
       let lastCleanText = '';
       const run = (tools) => InhousePi.runAgent({
         model,
-        systemPrompt: buildAgentSystemPrompt(chat),
+        systemPrompt: buildAgentSystemPrompt(chat, libraryForModel),
         history,
         prompt,
         thinkingLevel: currentThinkingLevel(chat) || 'off',
@@ -7615,7 +7846,7 @@
       let result;
       try {
         try {
-          result = await run(guidedTools.concat(InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          result = await run(guidedTools.concat(libraryTools, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
           if (error.name !== 'AbortError' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {
@@ -8149,6 +8380,7 @@
       setComposerStatus('');
       renderUsageDonut();
       startLiveSync();
+      setupLibrary();
 
       refreshOpenRouterCredits();
       refreshModelCatalog(false);

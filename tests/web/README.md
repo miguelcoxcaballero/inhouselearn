@@ -24,6 +24,7 @@ CHROMIUM=/usr/bin/chromium node tests/web/practice.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 ```
 
 `latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
@@ -32,6 +33,9 @@ feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by
 `live-sync.cjs` opens two devices on a fake Google Drive: the second one sees the
 first one's answer grow (live.json), ends with the same chat and gets new chats
 within seconds (conversations.json polling).
+
+`library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
+40 small files) and checks the search, the manifest the model gets and the three library tools.
 
 `text-quality.cjs` uses mocked OpenRouter responses to reproduce accidental
 Cyrillic/Chinese insertions, check automatic repair and stored transcripts,

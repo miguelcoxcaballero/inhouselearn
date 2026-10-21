@@ -99,6 +99,18 @@ async function device(browser) {
   const newId = await B.page.evaluate(() => appState.activeChatId);
   const reached = await A.page.waitForFunction((id) => appState.chats.some((c) => c.id === id && c.messages.some((m) => m.content === 'Respuesta en B.')), newId, { timeout: 15000 }).then(() => true, () => false);
   check('a chat made on B reaches A within seconds', reached);
+  // A library document added on A is downloaded by B for the same chat.
+  await A.page.evaluate(async (id) => {
+    const file = new File(['Resumen: la meiosis produce cuatro células haploides.'], 'resumen.txt', { type: 'text/plain' });
+    await InhouseLibrary.ingest(id, [{ file, path: 'resumen.txt' }]);
+  }, chatId);
+  await A.page.waitForFunction(() => true);
+  for (let i = 0; i < 20 && ![...files.values()].some((f) => /^library-/.test(f.name)); i++) await A.page.waitForTimeout(250);
+  const fromDrive = await B.page.evaluate(async (id) => {
+    await InhouseLibrary.pullFromDrive(id);
+    return (await InhouseLibrary.search(id, 'meiosis')).hits.map((h) => h.name);
+  }, chatId);
+  check('a library file added on A is found by B through Drive', fromDrive[0] === 'resumen.txt', fromDrive);
   // No pending message ever lands in conversations.json.
   const snap = [...files.values()].find((f) => f.name === 'conversations.json');
   check('conversations.json holds no pending messages', snap && !JSON.parse(snap.content).chats.some((c) => c.messages.some((m) => m.pending)));
