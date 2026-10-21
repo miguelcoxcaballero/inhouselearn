@@ -2004,6 +2004,7 @@
       };
       if (visible('confirm-backdrop')) { document.getElementById('confirm-cancel').click(); return true; }
         if (visible('approval-popup')) { closeApprovalMenu(); return true; }
+        if (visible('approval-popup')) { closeApprovalMenu(); return true; }
       if (visible('preview-overlay')) { closeAttachmentPreview(); return true; }
       if (elements.modelMenuPopup && !elements.modelMenuPopup.classList.contains('hidden')) { closeModelMenu(); return true; }
       if (elements.profilePopup && !elements.profilePopup.classList.contains('hidden')) { closeProfileMenu(); return true; }
