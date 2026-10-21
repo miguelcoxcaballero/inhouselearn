@@ -8192,7 +8192,7 @@
       let result;
       try {
         try {
-          result = await run(guidedTools.concat(libraryTools, githubToolsFor(chat, signal), InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          result = await run(guidedTools.concat(libraryTools, githubToolsFor(chat, signal), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat)))));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
           if (error.name !== 'AbortError' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {
