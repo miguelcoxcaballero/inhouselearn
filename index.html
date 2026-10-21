@@ -4179,7 +4179,7 @@
         token: githubToken,
         signal,
         onRepo: (repo) => { chat.githubRepo = repo; },
-        confirm: (request) => confirmDialog({ title: request.title, message: request.summary, items: request.items, confirmText: 'Aprobar', cancelText: 'No' })
+        confirm: (request) => approveChange(chat, request)
       });
     }
 
