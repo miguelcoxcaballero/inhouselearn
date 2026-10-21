@@ -40,13 +40,19 @@ Cada respuesta muestra los pasos con herramientas que ha dado (plegados). Si un 
 
 ## Aprobación de cambios
 
-El botón del compositor, junto al selector de modelo, decide cuánto le preguntas al modelo antes de que cambie algo. El modo es de cada chat y se guarda con él (también en Drive):
+En el menú **+**, «Aprobación de cambios» decide cuánto le preguntas al modelo antes de que cambie algo. El modo es de cada chat y se guarda con él (también en Drive):
 
-- **Preguntar**: pide permiso para escribir o borrar archivos del chat y para hacer commits, pull requests o comentarios en GitHub.
-- **Auto**: los archivos del chat se guardan sin preguntar; en GitHub te lo sigue preguntando.
-- **Acceso total**: no pregunta nada, tampoco en GitHub.
+- **Preguntar**: pide permiso para escribir o borrar archivos del chat y para subir a GitHub.
+- **Auto**: los archivos del chat se guardan sin preguntar; cada subida a GitHub se pregunta una vez, con todos sus archivos.
+- **Acceso total**: no pregunta nada, tampoco en GitHub (el + lleva un punto rojo).
 
-Las lecturas (archivos del chat, repositorios, biblioteca) nunca preguntan. En «Acceso total» cada cambio automático se avisa con un aviso, para que siempre sepas qué se ha tocado.
+Las aprobaciones salen en una tarjeta encima del cuadro de texto, no a pantalla completa. Las lecturas nunca preguntan, y en GitHub el modelo prepara todos los cambios y los sube juntos en un solo commit; lo que deje preparado aparece encima del cuadro con «Subir en un commit» y «Descartar». Detalles en `docs/approval.md`.
+
+## Mientras el modelo trabaja
+
+- Puedes seguir escribiendo: **Enter** pone el mensaje en la cola (encima del cuadro) y sale solo cuando termina la respuesta anterior. **Parar** deja la cola en pausa («Seguir» la reanuda).
+- **Ahora** en un mensaje de la cola (o **Ctrl/Cmd+Enter**) lo mete en el trabajo en curso: entra en cuanto acaba el paso actual, sin cancelar nada, y el modelo sigue con eso.
+- En el hilo se ve qué está haciendo en cada momento (leyendo un archivo, buscando, preparando un cambio, subiendo…), con el tiempo y los pasos ya hechos.
 
 ## Aprendizaje guiado
 

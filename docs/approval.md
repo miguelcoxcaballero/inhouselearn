@@ -1,74 +1,56 @@
 # Aprobación de cambios
 
-El botón del compositor (junto al selector de modelo) elige cuánto le preguntas al modelo
-antes de que cambie algo. El modo es de cada chat (`chat.approvalMode`) y se guarda con él,
-también en Drive.
+La sección «Aprobación de cambios» del menú **+** elige cuánto le preguntas al modelo antes
+de que cambie algo. El modo es de cada chat (`chat.approvalMode`) y se guarda con él, también
+en Drive. Con «Acceso total», el **+** lleva un punto rojo.
 
-| Modo | Archivos del chat | GitHub (commits, PR, comentarios) |
+| Modo | Archivos del chat | Subir a GitHub (push, PR, comentario) |
 | --- | --- | --- |
-| **Preguntar** | Pide permiso | Pide permiso |
-| **Auto** | Los aprueba | Pide permiso |
+| **Preguntar** | Pide permiso | Pide permiso, una vez por subida |
+| **Auto** | Los aprueba | Pide permiso, una vez por subida |
 | **Acceso total** | Los aprueba | Los aprueba (con un aviso) |
 
-Las lecturas nunca preguntan. En «Acceso total» cada cambio automático se avisa con un aviso,
-para que siempre sepas qué se ha tocado.
+Las lecturas nunca preguntan, y **preparar** cambios de GitHub tampoco: el modelo los prepara
+con `github_edit_file` / `github_write_files` y los sube todos juntos en un solo commit.
+
+## La tarjeta de aprobación
+
+Las aprobaciones salen en una tarjeta **encima del cuadro de texto** (`dockApprove`,
+`composer-dock.js`), no en un diálogo a pantalla completa: título, resumen (repositorio, rama,
+mensaje del commit, PR) y cada archivo con sus líneas +/−. Mientras está abierta se puede
+seguir escribiendo; en el hilo, el paso en curso dice «Esperando tu aprobación». Si el turno
+se para, la tarjeta se cierra como «No». Si se sube a la rama principal, la tarjeta sale en rojo.
 
 ## Herramientas y qué se pregunta
 
-| Herramienta | Cambio | Pregunta en «Preguntar» | Pregunta en «Auto» | Pregunta en «Acceso total» |
+| Herramienta | Cambio | «Preguntar» | «Auto» | «Acceso total» |
 | --- | --- | --- | --- | --- |
 | `run_js` | Calcula (sandbox sin red) | No | No | No |
 | `run_js` | Guarda archivos (`writeFile`) | Sí | No | No |
 | `write_file` / `edit_file` / `delete_file` | Archivos del chat | Sí | No | No |
-| `read_file` / `list_files` | Lectura | No | No | No |
-| `search_library` / `read_library` | Biblioteca del chat | No | No | No |
-| `github_*` de lectura | Ver repos, leer, buscar | No | No | No |
-| `github_commit_files` / `github_edit_file` | Commit | Sí | Sí | No |
-| `github_create_pull_request` / `github_comment` | PR y comentarios | Sí | Sí | No |
+| `read_file` / `list_files` / biblioteca | Lectura | No | No | No |
+| `github_*` de lectura (`read_file`, `grep`, `list_files`, `ci_status`…) | Lectura | No | No | No |
+| `github_edit_file` / `github_write_files` / `github_discard` | Preparar (no sube nada) | No | No | No |
+| `github_push` / `github_create_pull_request` | Subir lo preparado en un commit | Sí | Sí | No |
+| `github_comment` | Comentario | Sí | Sí | No |
+
+Lo que el modelo deja preparado sin subir aparece encima del cuadro con «Subir en un commit»
+(pulsarlo es la aprobación) y «Descartar».
 
 ## Dónde está
 
-- `approval.js`: los tres modos, el botón y su menú, y la puerta de entrada
-  (`approveChange`) que decide entre el diálogo de confirmación y la aprobación sola.
-- `approval.css`: el botón y el menú (en el móvil, solo el icono).
-- `index.html`: carga el módulo, guarda el modo con el chat (`normalizeStoredChat`) y
-  envuelve las herramientas de archivos del chat (`approvalWorkspaceTools`).
-
-## Reglas
-
-- Toda escritura de GitHub pasa por `ctx.confirm()` (`engine/src/github.js`): con «Preguntar»
-  o «Auto» la ve el usuario con sus archivos y las líneas +/−; con «Acceso total» se aprueba
-  sola y se avisa.
-- Las herramientas de archivos del chat (`write_file`, `edit_file`, `delete_file`) solo
-  preguntan en «Preguntar». `run_js` pregunta si su código guarda archivos.
-- El modelo recibe el modo en el prompt del sistema (`approvalPromptText`) para que sepa si
-  va a tener que pedir permiso.
-
-## Accesibilidad
-
-- El botón es un `<button>` real, con `aria-haspopup="listbox"` y `aria-expanded`; el menú es
-  una lista de opciones con `role="option"` y `aria-selected`.
-- El menú se cierra con Escape y con un clic fuera, y el botón Atrás de la app Android lo
-  cierra antes de salir de la app.
-- El icono del botón cambia con el modo (escudo, rayo, candado abierto) y su color avisa:
-  ámbar para «Preguntar», verde para «Auto» y rojo para «Acceso total».
-- En el móvil el botón se queda solo con el icono; el menú se abre a pantalla casi completa
-  desde abajo, como el de modelos.
+- `approval.js`: los tres modos, su sección del menú + y `approveChange`, que decide entre
+  la tarjeta de aprobación y la aprobación sola.
+- `composer-dock.js`: la tarjeta, los cambios preparados, la cola de mensajes y la
+  actividad en vivo de las herramientas.
+- `index.html`: guarda el modo con el chat (`normalizeStoredChat`) y envuelve las
+  herramientas de archivos del chat (`approvalWorkspaceTools`).
 
 ## Probarlo a mano
 
-1. Abre un chat y pulsa el botón del compositor: salen los tres modos con su descripción.
-2. Elige «Preguntar» y pide al modelo que guarde un archivo: sale el diálogo y, si lo
-   rechazas, no se guarda.
-3. Elige «Acceso total» y pide un commit en GitHub: se aprueba solo y sale un aviso.
-4. Cambia de chat: el botón muestra el modo de ese chat, no el del anterior.
-
-## Notas de diseño
-
-- El modo es de cada chat y no global: un chat de trabajo puede ir en «Preguntar» mientras
-  otro va en «Acceso total», y se guarda con el chat (y en Drive), así que el móvil y el
-  ordenador van igual.
-- «Auto» es el modo por defecto porque es el que mantiene el comportamiento de siempre:
-  los archivos del chat se guardan sin preguntar y GitHub se pregunta.
-- El botón solo aparece junto al selector de modelo, no en un menú aparte: se cambia de
-  modo con un toque, como en Claude o ChatGPT.
+1. Abre el **+**: abajo están los tres modos en una fila.
+2. Elige «Preguntar» y pide al modelo que guarde un archivo: sale la tarjeta encima del
+   cuadro y, si dices «No», no se guarda.
+3. Con GitHub activo, pide un cambio en varios archivos y un PR: no pregunta nada hasta el
+   final, y entonces sale una sola tarjeta con todos los archivos.
+4. Elige «Acceso total»: el + lleva un punto rojo y las subidas se aprueban solas con un aviso.

@@ -1,0 +1,119 @@
+/* ─── Encima del cuadro de texto (composer-dock.js) ──────────────────
+   Aprobación, cambios de GitHub preparados y cola de mensajes, apilados
+   justo encima del cuadro donde se escribe; y la actividad en vivo de las
+   herramientas en el hilo. */
+
+.composer-dock {
+  max-width: 700px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.dock-slot:empty { display: none; }
+.dock-slot { display: flex; flex-direction: column; gap: 6px; }
+.composer-dock:has(.dock-card) { margin-bottom: 8px; }
+
+.dock-card {
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 16px; box-shadow: var(--shadow);
+  padding: 10px 12px; font-size: 0.84rem; color: var(--text);
+  animation: dock-in 0.18s var(--ease);
+}
+@keyframes dock-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.dock-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface);
+  color: var(--text); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.dock-btn svg { width: 14px; height: 14px; }
+.dock-btn:hover { background: var(--surface-hover); }
+.dock-btn.primary { background: var(--text); border-color: var(--text); color: #fff; }
+.dock-btn.primary:hover { background: #333; }
+.dock-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.dock-btn.steer { height: 28px; padding: 0 10px; border-color: rgba(224,122,60,0.45); color: #A84F1A; background: var(--orange-soft); }
+.dock-btn.steer:hover { background: rgba(224,122,60,0.2); }
+.dock-icon-btn {
+  width: 28px; height: 28px; flex: 0 0 auto; border: 0; border-radius: 50%; background: none;
+  color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.dock-icon-btn svg { width: 14px; height: 14px; }
+.dock-icon-btn:hover { background: rgba(0,0,0,0.06); color: var(--text); }
+.dock-link { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: #A84F1A; font: inherit; font-weight: 700; cursor: pointer; }
+.dock-link svg { width: 13px; height: 13px; }
+
+/* Aprobación */
+.dock-approve { border-color: rgba(224,122,60,0.55); box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow); }
+.dock-approve.danger { border-color: rgba(185,28,28,0.5); box-shadow: 0 0 0 3px rgba(185,28,28,0.1), var(--shadow); }
+.dock-approve-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dock-approve-head b { font-size: 0.92rem; }
+.dock-approve-stats { color: var(--muted); font-size: 0.78rem; }
+.dock-approve-msg { margin: 4px 0 0; color: var(--text-secondary); white-space: pre-line; overflow-wrap: anywhere; line-height: 1.45; font-size: 0.8rem; }
+.dock-approve.danger .dock-approve-msg { color: #991b1b; }
+.dock-approve-files { list-style: none; margin: 8px 0 0; padding: 0; max-height: 132px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+.dock-approve-files li { display: flex; align-items: baseline; gap: 8px; padding: 5px 9px; border-top: 1px solid var(--border); font-size: 0.78rem; }
+.dock-approve-files li:first-child { border-top: 0; }
+.dock-approve-files code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.76rem; }
+.dock-approve-files .st { flex: 0 0 auto; color: var(--muted); font-size: 0.72rem; }
+.dock-card .add { color: #15803d; flex: 0 0 auto; }
+.dock-card .del { color: #b91c1c; flex: 0 0 auto; }
+.dock-approve-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+/* Cambios preparados */
+.dock-stage-head { display: flex; align-items: flex-start; gap: 8px; color: var(--text-secondary); line-height: 1.4; }
+.dock-stage-head svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; color: #A84F1A; }
+.dock-stage-head b { color: var(--text); }
+.dock-stage-files { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.dock-stage-files code, .dock-stage-files span { font-size: 0.74rem; padding: 2px 7px; border-radius: 6px; background: var(--surface-hover); border: 1px solid var(--border); color: var(--text-secondary); }
+
+/* Cola */
+.dock-queue { padding: 8px 10px; }
+.dock-queue-head { display: flex; align-items: center; gap: 7px; font-size: 0.76rem; color: var(--muted); font-weight: 600; margin: 0 2px 6px; }
+.dock-queue-head svg { width: 14px; height: 14px; }
+.dock-queue-head.paused { color: #A84F1A; }
+.dock-queue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.dock-queue-item { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border-radius: 10px; background: var(--surface-hover); }
+.dock-queue-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dock-queue-files { flex: 0 0 auto; font-size: 0.72rem; color: var(--muted); }
+.dock-queue-item.steering { background: var(--orange-soft); }
+.dock-queue-state { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; font-size: 0.76rem; font-weight: 600; color: #A84F1A; }
+.dock-queue-state svg { width: 13px; height: 13px; animation: live-pulse 1s ease-in-out infinite; }
+
+/* Actividad en vivo en el hilo */
+.live-steps { margin: 2px 0 10px; font-size: 0.84rem; }
+.live-now {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border: 1px solid rgba(224,122,60,0.35); border-radius: 12px;
+  background: linear-gradient(90deg, var(--orange-soft), transparent 70%);
+}
+.live-now.waiting { border-color: rgba(185,28,28,0.35); background: linear-gradient(90deg, rgba(185,28,28,0.08), transparent 70%); }
+.live-spin {
+  width: 15px; height: 15px; flex: 0 0 auto; border-radius: 50%;
+  border: 2px solid rgba(224,122,60,0.25); border-top-color: var(--orange);
+  animation: live-spin 0.8s linear infinite;
+}
+.live-now.waiting .live-spin { border-color: rgba(185,28,28,0.2); border-top-color: #b91c1c; animation-duration: 1.6s; }
+.live-now-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
+.live-now-text b { color: var(--text); font-weight: 600; }
+.live-target { color: var(--text); font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.8rem; }
+.live-time { flex: 0 0 auto; font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.live-history { list-style: none; margin: 6px 0 0; padding: 0 0 0 4px; display: flex; flex-direction: column; gap: 2px; }
+.live-done { display: flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 0.78rem; min-width: 0; }
+.live-mark { flex: 0 0 auto; width: 14px; color: #15803d; font-weight: 700; text-align: center; }
+.live-done.error .live-mark { color: #b91c1c; }
+.live-done-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-done-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b91c1c; }
+.live-done-time { margin-left: auto; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.live-tally { margin: 4px 0 0 4px; font-size: 0.72rem; color: var(--muted); }
+/* With the live card, the three typing dots are redundant. */
+.bubble-content:has(.live-steps) .md-root > .typing { display: none; }
+
+@keyframes live-spin { to { transform: rotate(360deg); } }
+@keyframes live-pulse { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) {
+  .live-spin, .dock-queue-state svg { animation: none; }
+  .dock-card { animation: none; }
+}
+@media (max-width: 768px) {
+  .composer-dock { max-height: 46dvh; overflow-y: auto; }
+  .live-where { display: none; }
+}

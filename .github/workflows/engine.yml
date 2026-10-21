@@ -1,0 +1,50 @@
+name: Engine
+# Rebuilds vendor/pi-engine.js (the browser bundle of engine/src) whenever the
+# engine changes, and commits it to the same branch. So a change to engine/
+# made from anywhere (including inhouse learn's own GitHub connector, which
+# cannot run npm) ships with its bundle. The bot commit only touches vendor/,
+# so it does not trigger this workflow again.
+on:
+  push:
+    paths:
+      - 'engine/src/**'
+      - 'engine/package.json'
+      - 'engine/package-lock.json'
+      - '.github/workflows/engine.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: engine/package-lock.json
+      - name: Build the bundle
+        working-directory: engine
+        run: |
+          npm ci
+          npm run build
+      - name: Check the bundle loads
+        run: node -e "require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js', 'utf8')); if (typeof InhousePi.runAgent !== 'function') { console.error('InhousePi missing'); process.exit(1); }"
+      - name: Commit vendor/pi-engine.js if it changed
+        run: |
+          if git diff --quiet -- vendor/pi-engine.js; then
+            echo "vendor/pi-engine.js is up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor/pi-engine.js
+          git commit -m "Motor: recompila vendor/pi-engine.js (${GITHUB_SHA::7})"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

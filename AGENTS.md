@@ -40,10 +40,17 @@ Mandatory guidance for every AI and developer working in this repository.
   `allow-same-origin`, never relax the CSP) types; schema in `docs/visual-schema.json`, tests
   in `tests/web`. `haptics.js` sends `{type: 'haptic', style}` to the Android shell
   (`MainActivity.haptic`), with `navigator.vibrate` as the browser fallback.
-  `approval.js` + `approval.css` own the composer's approval button: the mode is per chat
-  (`chat.approvalMode`) and can be «Preguntar» (the user approves every change), «Auto» (the
-  chat's own files are approved, GitHub still asks) or «Acceso total» (nothing asks). It
-  wraps the workspace tools and the GitHub `confirm` hook; every write still goes through it.
+  `approval.js` + `approval.css` own the approval mode, a section of the + menu: per chat
+  (`chat.approvalMode`), «Preguntar» (the user approves every change), «Auto» (the chat's own
+  files are approved, GitHub uploads still ask) or «Acceso total» (nothing asks). It wraps the
+  workspace tools and the GitHub `confirm` hook; every write still goes through it.
+  `composer-dock.js` + `composer-dock.css` own what sits right above the composer: the approval
+  card (`dockApprove`, never a fullscreen dialog for tool approvals), the GitHub changes prepared
+  but not uploaded (`githubStageStore`), the message queue (Enter while the model works queues;
+  each queued message goes out when the previous turn has fully ended) and steering («Ahora» or
+  Ctrl/Cmd+Enter: pi's `agent.steer`, the message enters the running turn after the current
+  tool, and the answer is split there into two messages). It also draws the live tool activity
+  in the thread (`renderLiveSteps`).
 - **Chat library:** `library.js` keeps the files a user uploads to a chat (folders, PDFs page by
   page, photos and scanned pages read with OCR) in IndexedDB and in the user's Drive folder
   (`library-<id>.json`); the model reaches them only through the `search_library`,

@@ -1,16 +1,17 @@
 /* ─── Aprobación de cambios ─────────────────────────────────────────────
-   El botón del compositor decide cuánto le pregunta la app al modelo antes
-   de cada cambio:
+   La sección «Aprobación de cambios» del menú + decide cuánto le pregunta la
+   app al modelo antes de cada cambio:
 
    • Preguntar: pide permiso para escribir o borrar archivos del chat y para
-     hacer commits, pull requests o comentarios en GitHub.
-   • Auto: los archivos del chat se guardan sin preguntar; en GitHub se le
-     pregunta igual que siempre.
+     subir a GitHub (commit, pull request o comentario).
+   • Auto: los archivos del chat se guardan sin preguntar; cada subida a
+     GitHub se pregunta una vez, con todos sus archivos.
    • Acceso total: no se pregunta nada, tampoco en GitHub.
 
    El modo es de cada chat (chat.approvalMode) y se guarda con él. La app es
    quien aprueba: GitHub llama a ctx.confirm() (engine/src/github.js) y aquí
-   se decide si se enseña el diálogo o se aprueba solo; las herramientas de
+   se decide si se enseña la tarjeta de aprobación encima del cuadro de texto
+   (dockApprove, composer-dock.js) o se aprueba solo; las herramientas de
    archivos del chat se envuelven para pasar por el mismo sitio.
 
    Loaded before the main script of index.html; uses its globals at call
@@ -21,21 +22,21 @@ const APPROVAL_MODES = [
     id: 'ask',
     label: 'Preguntar',
     hint: 'Te pregunta antes de cada cambio',
-    description: 'Pide permiso para escribir o borrar archivos del chat y para hacer commits, pull requests o comentarios en GitHub.',
+    description: 'Pide permiso para guardar o borrar archivos del chat y para subir a GitHub.',
     icon: 'shield'
   },
   {
     id: 'auto',
     label: 'Auto',
     hint: 'Aprueba los cambios de este chat',
-    description: 'Escribe y borra archivos del chat sin preguntar. En GitHub te sigue preguntando.',
+    description: 'Guarda archivos del chat sin preguntar; para subir a GitHub te pregunta una vez.',
     icon: 'zap'
   },
   {
     id: 'full',
     label: 'Acceso total',
     hint: 'No pregunta nada',
-    description: 'Aprueba todo solo: también los commits, los pull requests y los comentarios de GitHub.',
+    description: 'No pregunta nada, tampoco para subir a GitHub.',
     icon: 'lock'
   }
 ];
@@ -57,8 +58,12 @@ const APPROVAL_GITHUB_LABELS = {
   github_list_files: 'GitHub: archivos',
   github_read_file: 'GitHub: leer archivo',
   github_search_code: 'GitHub: buscar código',
-  github_commit_files: 'GitHub: commit',
-  github_edit_file: 'GitHub: editar archivo',
+  github_grep: 'GitHub: buscar en los archivos',
+  github_write_files: 'GitHub: preparar archivos',
+  github_edit_file: 'GitHub: preparar edición',
+  github_discard: 'GitHub: descartar preparado',
+  github_push: 'GitHub: subir',
+  github_ci_status: 'GitHub: estado de la CI',
   github_create_pull_request: 'GitHub: abrir PR',
   github_list_issues: 'GitHub: issues y PRs',
   github_comment: 'GitHub: comentar'
@@ -83,99 +88,61 @@ function approvalModeInfo(id) {
   return APPROVAL_MODES.find((mode) => mode.id === id) || APPROVAL_MODES[1];
 }
 
-/* ─── Botón y menú ──────────────────────────────────────────────────── */
+/* ─── En el menú «+» ────────────────────────────────────────────────── */
 
 function approvalMarkup() {
   return [
-    '<div class="approval-wrap" id="approval-wrap">',
-    '  <button class="approval-trigger" id="approval-btn" type="button" aria-haspopup="listbox" aria-expanded="false" data-mode="auto" title="Aprobación de cambios">',
-    '    <span class="approval-trigger-icon" id="approval-trigger-icon" aria-hidden="true"></span>',
-    '    <span class="approval-trigger-label" id="approval-trigger-label">Auto</span>',
-    '    <svg class="approval-trigger-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>',
-    '  </button>',
-    '  <div class="topbar-popover approval-popover hidden" id="approval-popup" role="listbox" aria-label="Aprobación de cambios">',
-    '    <div class="approval-popover-title">Aprobación de cambios</div>',
-    '    <div class="approval-popover-status">Cuánto le preguntas al modelo antes de que cambie algo.</div>',
-    '    <div class="approval-options" id="approval-options"></div>',
+    '<div class="plus-approval" id="approval-section" role="radiogroup" aria-label="Aprobación de cambios">',
+    '  <div class="plus-approval-head">',
+    '    <span class="plus-approval-icon" id="approval-trigger-icon" aria-hidden="true"></span>',
+    '    <span class="plus-item-text"><b>Aprobación de cambios</b><small id="approval-hint"></small></span>',
     '  </div>',
+    '  <div class="plus-approval-options" id="approval-options"></div>',
     '</div>'
   ].join('');
 }
 
 function mountApprovalButton() {
-  if (document.getElementById('approval-btn')) return;
-  const row = document.querySelector('.composer-row');
-  const spacer = row && row.querySelector('.composer-spacer');
-  if (!row || !spacer) return;
+  if (document.getElementById('approval-section')) return;
+  const menu = document.getElementById('plus-menu');
+  if (!menu) return;
   const template = document.createElement('template');
   template.innerHTML = approvalMarkup();
-  row.insertBefore(template.content.firstElementChild, spacer);
-  bindApprovalUi();
-}
-
-function bindApprovalUi() {
-  const btn = document.getElementById('approval-btn');
-  const popup = document.getElementById('approval-popup');
-  if (!btn || !popup || btn.dataset.bound === '1') return;
-  btn.dataset.bound = '1';
-  btn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    setApprovalMenu(popup.classList.contains('hidden'));
-  });
-  popup.addEventListener('click', (event) => {
+  menu.appendChild(template.content.firstElementChild);
+  const options = document.getElementById('approval-options');
+  options.addEventListener('click', (event) => {
     const option = event.target.closest('[data-approval-mode]');
     if (!option) return;
+    event.stopPropagation();
     setApprovalMode(option.getAttribute('data-approval-mode'));
   });
 }
 
-function setApprovalMenu(open) {
-  const popup = document.getElementById('approval-popup');
-  const btn = document.getElementById('approval-btn');
-  if (!popup || !btn) return;
-  popup.classList.toggle('hidden', !open);
-  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (!open) return;
-  // Solo un menú abierto a la vez.
-  if (typeof closeModelMenu === 'function') closeModelMenu();
-  if (typeof setPlusMenu === 'function') setPlusMenu(false);
-  renderApprovalUi();
-}
-
-function closeApprovalMenu() {
-  setApprovalMenu(false);
-}
-
 function renderApprovalUi() {
-  const chat = getActiveChat();
+  const chat = typeof getActiveChat === 'function' ? getActiveChat() : null;
   const mode = approvalModeOf(chat);
   const info = approvalModeInfo(mode);
-  const btn = document.getElementById('approval-btn');
-  if (btn) {
-    btn.dataset.mode = mode;
-    btn.title = 'Aprobación de cambios: ' + info.hint;
-    btn.setAttribute('aria-label', 'Aprobación de cambios: ' + info.label);
-  }
   const icon = document.getElementById('approval-trigger-icon');
-  if (icon) icon.innerHTML = approvalIconSvg(mode);
-  const label = document.getElementById('approval-trigger-label');
-  if (label) label.textContent = info.label;
+  if (icon) {
+    icon.innerHTML = approvalIconSvg(mode);
+    icon.dataset.mode = mode;
+  }
+  const hint = document.getElementById('approval-hint');
+  if (hint) hint.textContent = info.description;
   const options = document.getElementById('approval-options');
   if (options) {
     options.innerHTML = APPROVAL_MODES.map((item) => (
-      '<button type="button" class="approval-option' + (item.id === mode ? ' active' : '') + '" role="option" aria-selected="' + (item.id === mode ? 'true' : 'false') + '" data-approval-mode="' + item.id + '">' +
-      '<span class="approval-option-icon">' + approvalIconSvg(item.id) + '</span>' +
-      '<span class="approval-option-text"><b>' + escapeHtml(item.label) + '</b><small>' + escapeHtml(item.description) + '</small></span>' +
-      '<svg class="approval-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
-      '</button>'
+      '<button type="button" class="plus-approval-option' + (item.id === mode ? ' active' : '') + '" role="radio" aria-checked="' + (item.id === mode ? 'true' : 'false') + '" data-approval-mode="' + item.id + '" title="' + escapeHtml(item.hint) + '">' +
+      approvalIconSvg(item.id) + '<span>' + escapeHtml(item.label) + '</span></button>'
     )).join('');
   }
+  const plus = document.getElementById('plus-btn');
+  if (plus) plus.classList.toggle('has-full-access', mode === 'full');
 }
 
 function setApprovalMode(mode) {
   const chat = getActiveChat();
   const next = normalizeApprovalMode(mode);
-  closeApprovalMenu();
   if (approvalModeOf(chat) === next) {
     renderApprovalUi();
     return;
@@ -198,13 +165,16 @@ async function approveChange(chat, request) {
     showToast('Acceso total', (options.title || 'Cambio') + ': aprobado automáticamente.');
     return true;
   }
-  return confirmDialog({
+  // Above the composer, not over the whole screen: the user can keep writing.
+  const card = {
     title: options.title || 'Confirmar',
     message: options.summary || options.message || '',
     items: options.items || [],
+    danger: !!options.mainBranch,
     confirmText: options.confirmText || 'Aprobar',
     cancelText: options.cancelText || 'No'
-  });
+  };
+  return typeof dockApprove === 'function' ? dockApprove(card) : confirmDialog(card);
 }
 
 function approvalFileRequest(toolName, params) {
@@ -260,29 +230,16 @@ function approvalPromptText(chat) {
     return '- Aprobación de cambios: el usuario ha dado acceso total. Haz los cambios (archivos del chat y GitHub) sin preguntarle y dile al final qué has hecho.';
   }
   if (mode === 'ask') {
-    return '- Aprobación de cambios: el usuario te pide permiso antes de cada cambio (archivos del chat y commits, pull requests o comentarios en GitHub). Pídele lo que necesites y, si lo rechaza, no repitas el cambio.';
+    return '- Aprobación de cambios: el usuario aprueba cada archivo del chat que guardes o borres y cada subida a GitHub (preparar cambios no pregunta; github_push, el PR y los comentarios sí). Si rechaza algo, no lo repitas.';
   }
-  return '- Aprobación de cambios: los archivos del chat se guardan sin preguntar, pero GitHub (commits, pull requests y comentarios) se lo preguntas al usuario.';
+  return '- Aprobación de cambios: los archivos del chat se guardan sin preguntar; en GitHub el usuario aprueba cada subida (github_push o el PR, una vez con todos los archivos) y cada comentario. Preparar cambios no pregunta nada.';
 }
 
-document.addEventListener('click', (event) => {
-  const popup = document.getElementById('approval-popup');
-  const btn = document.getElementById('approval-btn');
-  if (!popup || !btn || popup.classList.contains('hidden')) return;
-  if (popup.contains(event.target) || btn.contains(event.target)) return;
-  closeApprovalMenu();
-});
-
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') return;
-  closeApprovalMenu();
-});
-
 // Los pasos de las herramientas de GitHub se enseñan con su nombre corto.
+// The section is drawn by updateConfigUi (renderApprovalUi) once the chats are loaded.
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof TOOL_LABELS === 'object' && TOOL_LABELS) {
     Object.assign(TOOL_LABELS, APPROVAL_GITHUB_LABELS);
   }
+  mountApprovalButton();
 });
-
-mountApprovalButton();

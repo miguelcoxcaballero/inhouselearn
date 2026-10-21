@@ -26,6 +26,7 @@ CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/github.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/queue.cjs
 ```
 
 `latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
@@ -38,9 +39,15 @@ within seconds (conversations.json polling).
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
 40 small files) and checks the search, the manifest the model gets and the three library tools.
 
-`github.cjs` connects the GitHub connector to a fake GitHub API: the model reads a file, edits it
-on a new branch after the user approves the commit (files and +/− shown), opens a PR, and a
-rejected commit changes nothing.
+`queue.cjs` checks the message queue (Enter while busy, one per finished turn, Stop pauses)
+and steering (Ctrl+Enter enters the running turn after the current tool, same request chain).
+
+All of them run in GitHub Actions (`.github/workflows/web-tests.yml` → `run-ci.sh`).
+
+`github.cjs` runs the GitHub connector against a fake GitHub API: edits are only prepared (reads
+and grep see them), one approval card above the composer uploads them in one commit and opens
+the PR, two pushes in a row chain, search falls back to grep, CI status is read, and a rejected
+upload keeps the changes prepared for «Subir» / «Descartar».
 
 `text-quality.cjs` uses mocked OpenRouter responses to reproduce accidental
 Cyrillic/Chinese insertions, check automatic repair and stored transcripts,

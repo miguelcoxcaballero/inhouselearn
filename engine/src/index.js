@@ -12,9 +12,9 @@ import JSZip from 'jszip';
 import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
 import { createGuidedTools } from './guided.js';
 import { createLibraryTools } from './library.js';
-import { createGithubTools, githubWhoAmI } from './github.js';
+import { createGithubTools, githubWhoAmI, githubPushStaged } from './github.js';
 
-export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, normalizePath, runInSandbox };
+export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, githubPushStaged, normalizePath, runInSandbox };
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -220,7 +220,13 @@ function abortError() {
  * history: mensajes de pi anteriores (user / assistant / toolResult)
  * prompt: mensaje de usuario de pi
  * onUpdate({ text, thinking, steps }) se llama con cada avance.
- * Devuelve { text, thinking, steps, messages, usage } o lanza con el error del modelo.
+ * steering (opcional): la función le pone steering.steer(userMessage), que mete
+ * un mensaje del usuario en cuanto acaba la llamada al modelo o la herramienta
+ * en curso, sin cancelar nada. Cuando entra se llama a
+ * onSteer({ message, segment: { text, thinking, steps, messages } }) con lo
+ * hecho hasta ahí, y el resto de la ejecución es un segmento nuevo.
+ * Devuelve { text, thinking, steps, messages, usage } (del último segmento) o
+ * lanza con el error del modelo.
  */
 export async function runAgent(options) {
   const model = options.model;
@@ -239,10 +245,17 @@ export async function runAgent(options) {
     toolExecution: 'sequential'
   });
 
-  const doneTexts = [];
-  const doneThinking = [];
-  const steps = [];
-  const messages = [];
+  let doneTexts = [];
+  let doneThinking = [];
+  let steps = [];
+  let messages = [];
+  const steered = new Set();
+  if (options.steering) {
+    options.steering.steer = (message) => {
+      steered.add(message);
+      agent.steer(message);
+    };
+  }
   const usage = { input: 0, output: 0, cost: 0 };
   let liveText = '';
   let liveThinking = '';
@@ -256,6 +269,19 @@ export async function runAgent(options) {
   };
 
   agent.subscribe((event) => {
+    if (event.type === 'message_end' && event.message.role === 'user' && steered.has(event.message)) {
+      steered.delete(event.message);
+      const segment = { text: join(doneTexts, ''), thinking: join(doneThinking, ''), steps, messages };
+      doneTexts = [];
+      doneThinking = [];
+      steps = [];
+      messages = [];
+      liveText = '';
+      liveThinking = '';
+      if (typeof options.onSteer === 'function') options.onSteer({ message: event.message, segment });
+      emit();
+      return;
+    }
     if (event.type === 'message_update' && event.message.role === 'assistant') {
       liveText = textOf(event.message, 'text');
       liveThinking = textOf(event.message, 'thinking');
@@ -300,6 +326,12 @@ export async function runAgent(options) {
     await agent.prompt(options.prompt);
   } finally {
     if (signal) signal.removeEventListener('abort', onAbort);
+    // A steer that arrived too late for this run goes back to the app.
+    if (options.steering) {
+      options.steering.steer = null;
+      options.steering.undelivered = Array.from(steered);
+      agent.clearAllQueues();
+    }
   }
 
   if ((signal && signal.aborted) || (failure && failure.stopReason === 'aborted')) throw abortError();
