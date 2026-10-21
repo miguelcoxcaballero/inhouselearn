@@ -1979,6 +1979,8 @@
     const DRIVE_FOLDER_TAG = 'inhouseLearnFolder';
     const DRIVE_SNAPSHOT_TAG = 'inhouseLearnSnapshot';
     const DRIVE_SYNC_DEBOUNCE_MS = 900;
+    const DRIVE_LIVE_NAME = 'live.json';
+    const DRIVE_LIVE_TAG = 'inhouseLearnLive';
     const OAUTH_TOKEN_STORAGE_KEY = STORAGE_KEY + '::oauthToken';
     const OAUTH_REMEMBER_KEY = STORAGE_KEY + '::oauthRemember';
     const OAUTH_HINT_EMAIL_KEY = STORAGE_KEY + '::oauthHintEmail';
@@ -2835,6 +2837,9 @@
       }
       appState.driveFolderId = '';
       appState.driveSnapshotFileId = '';
+      appState.driveLiveFileId = '';
+      appState.driveLiveLookupAt = 0;
+      appState.liveSeenVersion = '';
       appState.driveReady = false;
       appState.driveSyncTimer = 0;
       appState.driveSyncPromise = null;
@@ -5566,6 +5571,249 @@
 
 
 
+    /* ─── DRIVE EN DIRECTO ───────────────────────────── */
+    // Drive cannot push to a browser, so live sync is a small file and polling.
+    // The device that is answering writes live.json (its last user message and
+    // the answer so far) every LIVE_WRITE_MS; every other device signed in to
+    // the same Drive reads it every LIVE_POLL_MS and draws the answer as it
+    // grows. They also check conversations.json every LIVE_SNAPSHOT_MS, so new
+    // chats, renames and deletions arrive within seconds. Pending messages never
+    // reach conversations.json; the full chat lands there when the turn ends.
+    const LIVE_WRITE_MS = 1200;
+    const LIVE_POLL_MS = 2000;
+    const LIVE_SNAPSHOT_MS = 8000;
+    const LIVE_FIND_RETRY_MS = 20000;
+    const LIVE_MAX_AGE_MS = 10 * 60 * 1000;
+    const LIVE_DEVICE_KEY = STORAGE_KEY + '::deviceId';
+
+    function liveDeviceId() {
+      if (appState.liveDeviceId) return appState.liveDeviceId;
+      let id = '';
+      try { id = localStorage.getItem(LIVE_DEVICE_KEY) || ''; } catch (_) {}
+      if (!id) {
+        id = uid('device');
+        try { localStorage.setItem(LIVE_DEVICE_KEY, id); } catch (_) {}
+      }
+      appState.liveDeviceId = id;
+      return id;
+    }
+
+    async function findDriveLiveFileId(create) {
+      if (appState.driveLiveFileId) return appState.driveLiveFileId;
+      if (!create && Date.now() - (appState.driveLiveLookupAt || 0) < LIVE_FIND_RETRY_MS) return '';
+      appState.driveLiveLookupAt = Date.now();
+      const folderId = create ? await ensureDriveFolderId() : await findDriveFolderId();
+      if (!folderId) return '';
+      const files = await listDriveFiles(
+        "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and appProperties has { key='" + DRIVE_LIVE_TAG + "' and value='1' }",
+        5
+      );
+      if (files[0] && files[0].id) {
+        appState.driveLiveFileId = files[0].id;
+        return files[0].id;
+      }
+      if (!create) return '';
+      const multipart = buildDriveMultipartBody({
+        name: DRIVE_LIVE_NAME,
+        mimeType: 'application/json',
+        description: 'inhouse learn: answer being written right now',
+        parents: [folderId],
+        appProperties: { [DRIVE_LIVE_TAG]: '1' }
+      }, '{}', 'application/json');
+      const created = await driveFetchJson(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        { method: 'POST', headers: { 'Content-Type': multipart.contentType }, body: multipart.body },
+        true,
+        'No se pudo crear el archivo en directo de Drive.'
+      );
+      appState.driveLiveFileId = (created && created.id) || '';
+      return appState.driveLiveFileId;
+    }
+
+    function liveMessageCopy(message) {
+      const copy = normalizeStoredMessage(message, { includeBinaries: false });
+      copy.pending = !!message.pending;
+      copy.piMessages = [];
+      copy.toolSteps = copy.toolSteps.map((step) => Object.assign({}, step, {
+        output: typeof step.output === 'string' && step.output.length > 4000 ? step.output.slice(0, 4000) + '…' : step.output
+      }));
+      return copy;
+    }
+
+    function buildLivePayload(share, done) {
+      const chat = share.chat;
+      const ids = [share.userMessage.id, share.assistantMessage.id];
+      const present = ids.filter((id) => chat.messages.some((message) => message.id === id));
+      return {
+        v: 1,
+        device: liveDeviceId(),
+        turn: share.turn,
+        at: nowIso(),
+        done: !!done,
+        drop: ids.filter((id) => !present.includes(id)),
+        chat: {
+          id: chat.id, title: chat.title, customTitle: chat.customTitle || null, createdAt: chat.createdAt, updatedAt: chat.updatedAt,
+          provider: chat.provider, model: chat.model, thinkingLevel: chat.thinkingLevel,
+          guidedLearning: !!chat.guidedLearning, course: chat.course || null
+        },
+        messages: chat.messages.filter((message) => present.includes(message.id)).map(liveMessageCopy)
+      };
+    }
+
+    async function writeLivePayload(payload) {
+      const fileId = await findDriveLiveFileId(true);
+      if (!fileId) return;
+      await driveFetchJson(
+        'https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(fileId) + '?uploadType=media&fields=id',
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify(payload) },
+        true,
+        'No se pudo compartir la respuesta en directo.'
+      );
+    }
+
+    function liveShareStart(chat, userMessage, assistantMessage) {
+      if (!hasDrivePersistenceReady()) return null;
+      const share = { chat, userMessage, assistantMessage, turn: uid('turn'), last: '', writing: null, timer: 0 };
+      const tick = () => {
+        if (share.writing) return;
+        const payload = buildLivePayload(share, false);
+        const key = JSON.stringify(payload.messages);
+        if (key === share.last) return;
+        share.last = key;
+        share.writing = writeLivePayload(payload)
+          .catch((error) => console.warn('Drive en directo:', error))
+          .finally(() => { share.writing = null; });
+      };
+      tick();
+      share.timer = window.setInterval(tick, LIVE_WRITE_MS);
+      return share;
+    }
+
+    async function liveShareStop(share) {
+      if (!share) return;
+      window.clearInterval(share.timer);
+      // The full chat goes to conversations.json now, not after the debounce.
+      scheduleDriveSync({ immediate: true });
+      try {
+        if (share.writing) await share.writing;
+        if (hasDrivePersistenceReady()) await writeLivePayload(buildLivePayload(share, true));
+      } catch (error) {
+        console.warn('Drive en directo:', error);
+      }
+    }
+
+    // Another device's answer, as far as it has got.
+    function applyLivePayload(payload) {
+      if (!payload || payload.v !== 1 || !payload.chat || typeof payload.chat.id !== 'string' || !Array.isArray(payload.messages)) return;
+      if (payload.device === liveDeviceId()) return;
+      if (Date.now() - parseSnapshotMoment(payload.at) > LIVE_MAX_AGE_MS) return;
+      if (readDeletedChats()[payload.chat.id]) return;
+      if (appState.busy && appState.activeChatId === payload.chat.id) return;
+      let chat = appState.chats.find((item) => item.id === payload.chat.id);
+      if (!chat) {
+        if (!payload.messages.length) return;
+        chat = normalizeStoredChat(Object.assign({}, payload.chat, { messages: [] }));
+        appState.chats.unshift(chat);
+      }
+      if (parseSnapshotMoment(payload.chat.updatedAt) >= parseSnapshotMoment(chat.updatedAt)) {
+        chat.title = payload.chat.title || chat.title;
+        chat.customTitle = payload.chat.customTitle || chat.customTitle || null;
+        chat.updatedAt = payload.chat.updatedAt;
+        chat.guidedLearning = !!payload.chat.guidedLearning;
+        if (payload.chat.course) chat.course = normalizeCourse(payload.chat.course);
+      }
+      const visible = chat.id === appState.activeChatId;
+      const drop = new Set(payload.drop || []);
+      if (drop.size && chat.messages.some((message) => drop.has(message.id))) {
+        chat.messages = chat.messages.filter((message) => !drop.has(message.id));
+        if (visible) renderThread({ preserveScroll: true });
+      }
+      payload.messages.forEach((raw) => {
+        const incoming = normalizeStoredMessage(raw);
+        incoming.pending = !payload.done && !!raw.pending;
+        let message = chat.messages.find((item) => item.id === incoming.id);
+        const isNew = !message;
+        if (isNew) {
+          message = incoming;
+          chat.messages.push(message);
+        } else {
+          Object.assign(message, incoming);
+        }
+        if (!visible || message.hidden) return;
+        if (isNew || !findMessageElement(message.id)) {
+          appendThreadMessage(message, chat);
+        }
+        if (message.pending) {
+          const view = streamViewFor(message);
+          if (view) view.push({ text: message.content });
+          return;
+        }
+        const view = streamViews.has(message.id) ? streamViewFor(message) : null;
+        if (view) {
+          // Let the text finish typing, then draw the final message around it.
+          view.finish(message.content).then(() => {
+            const kept = view.renderedText;
+            dropStreamView(message);
+            patchThreadMessage(message, chat, { keepText: kept });
+          });
+        } else if (!isNew) {
+          patchThreadMessage(message, chat);
+        }
+      });
+      renderHistory();
+      if (visible) syncGuidedBannerSlot(chat);
+      if (payload.done) {
+        saveState({ skipDrive: true });
+        if (visible) {
+          const last = payload.messages[payload.messages.length - 1];
+          if (last) refreshGuidedCardSlots(chat, last.id);
+        }
+        // conversations.json is written right after: bring it in soon.
+        appState.liveSnapshotCheckAt = Date.now() - LIVE_SNAPSHOT_MS + 2500;
+      }
+    }
+
+    async function liveTick() {
+      if (document.hidden || appState.liveTickBusy || !hasDrivePersistenceReady()) return;
+      appState.liveTickBusy = true;
+      try {
+        const fileId = await findDriveLiveFileId(false);
+        if (fileId) {
+          const meta = await driveFetchJson(
+            'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=modifiedTime',
+            { method: 'GET' }, true, 'No se pudo leer Drive en directo.'
+          );
+          const version = (meta && meta.modifiedTime) || '';
+          if (version && version !== appState.liveSeenVersion) {
+            appState.liveSeenVersion = version;
+            const raw = await driveFetchText(
+              'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media',
+              { method: 'GET' }, true, 'No se pudo leer Drive en directo.'
+            );
+            let payload = null;
+            try { payload = JSON.parse(raw); } catch (_) {}
+            applyLivePayload(payload);
+          }
+        }
+        if (Date.now() - (appState.liveSnapshotCheckAt || 0) >= LIVE_SNAPSHOT_MS && !appState.busy && !appState.driveSyncPromise && !appState.driveSyncTimer) {
+          appState.liveSnapshotCheckAt = Date.now();
+          const snapshotId = await findDriveSnapshotFileId(await findDriveFolderId());
+          if (snapshotId && (await readDriveSnapshotVersion(snapshotId)) !== appState.driveKnownVersion) {
+            await pullDriveChanges(true);
+          }
+        }
+      } catch (error) {
+        console.warn('Drive en directo:', error);
+      } finally {
+        appState.liveTickBusy = false;
+      }
+    }
+
+    function startLiveSync() {
+      if (appState.liveTimer) return;
+      appState.liveTimer = window.setInterval(liveTick, LIVE_POLL_MS);
+    }
+
     async function logoutGoogle() {
       if (window.google && google.accounts && google.accounts.oauth2 && appState.accessToken) {
         google.accounts.oauth2.revoke(appState.accessToken, function() {});
@@ -7782,6 +8030,7 @@
         renderThread();
       }
 
+      const liveShare = liveShareStart(chat, userMessage, assistantMessage);
       let keepText = null;
       let nudge = null;
       try {
@@ -7817,6 +8066,7 @@
         }
         refreshGuidedCardSlots(chat, assistantMessage.id);
         syncGuidedBannerSlot(chat);
+        liveShareStop(liveShare);
       }
       if (nudge && chat.id === appState.activeChatId) {
         runAssistantTurn(chat, nudge, { nudged: true });
@@ -7898,6 +8148,7 @@
       });
       setComposerStatus('');
       renderUsageDonut();
+      startLiveSync();
 
       refreshOpenRouterCredits();
       refreshModelCatalog(false);

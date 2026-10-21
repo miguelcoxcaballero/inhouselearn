@@ -23,10 +23,15 @@ CHROMIUM=/usr/bin/chromium node tests/web/text-quality.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/practice.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
 ```
 
 `latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
 feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by KaTeX.
+
+`live-sync.cjs` opens two devices on a fake Google Drive: the second one sees the
+first one's answer grow (live.json), ends with the same chat and gets new chats
+within seconds (conversations.json polling).
 
 `text-quality.cjs` uses mocked OpenRouter responses to reproduce accidental
 Cyrillic/Chinese insertions, check automatic repair and stored transcripts,
