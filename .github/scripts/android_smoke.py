@@ -123,6 +123,8 @@ def main(apk):
         raise SystemExit('The update provider is not registered with UpdateFileProvider')
     if 'android.permission.REQUEST_INSTALL_PACKAGES' not in packages:
         raise SystemExit('REQUEST_INSTALL_PACKAGES is missing')
+    if 'android.permission.RECORD_AUDIO' not in packages:
+        raise SystemExit('RECORD_AUDIO is missing for local dictation')
 
     # The updater settings are not exported; the emulator's root shell opens them
     # the way the profile menu's "Actualizaciones" does.

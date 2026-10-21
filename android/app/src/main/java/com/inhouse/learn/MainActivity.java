@@ -1,6 +1,8 @@
 package com.inhouse.learn;
 
 import android.annotation.SuppressLint;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
@@ -14,6 +16,7 @@ import android.util.Base64;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -86,6 +89,39 @@ public class MainActivity extends ComponentActivity {
     private byte[] pendingSave;
     private String pendingSaveMime = "application/octet-stream";
     private NativeUpdates updates;
+    private PermissionRequest pendingMicrophone;
+    private boolean microphonePromptOpen;
+
+    private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                microphonePromptOpen = false;
+                PermissionRequest request = pendingMicrophone;
+                pendingMicrophone = null;
+                if (request == null) return;
+                if (granted && trustedMicrophoneRequest(request)) {
+                    request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                } else {
+                    request.deny();
+                }
+            });
+
+    private boolean trustedMicrophoneRequest(PermissionRequest request) {
+        Uri origin = request.getOrigin();
+        return !isFinishing() && !isDestroyed() && webView != null
+                && "https".equals(origin.getScheme())
+                && "miguelcoxcaballero.github.io".equals(origin.getHost())
+                && (origin.getPort() == -1 || origin.getPort() == 443)
+                && webView.getUrl() != null && isAppUrl(Uri.parse(webView.getUrl()))
+                && request.getResources().length == 1
+                && PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(request.getResources()[0]);
+    }
+
+    private void cancelPendingMicrophone() {
+        if (pendingMicrophone != null) {
+            pendingMicrophone.deny();
+            pendingMicrophone = null;
+        }
+    }
 
     private final ActivityResultLauncher<Intent> filePicker = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), this::deliverPickedFiles);
@@ -385,6 +421,11 @@ public class MainActivity extends ComponentActivity {
 
     private final class ShellClient extends WebViewClient {
         @Override
+        public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            cancelPendingMicrophone();
+        }
+
+        @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
             if (APP_SCHEME.equals(uri.getScheme())) {
@@ -419,6 +460,29 @@ public class MainActivity extends ComponentActivity {
     }
 
     private final class ShellChrome extends WebChromeClient {
+        @Override
+        public void onPermissionRequest(PermissionRequest request) {
+            runOnUiThread(() -> {
+                if (!trustedMicrophoneRequest(request) || microphonePromptOpen) {
+                    request.deny();
+                    return;
+                }
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                } else {
+                    pendingMicrophone = request;
+                    microphonePromptOpen = true;
+                    microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
+                }
+            });
+        }
+
+        @Override
+        public void onPermissionRequestCanceled(PermissionRequest request) {
+            runOnUiThread(() -> { if (pendingMicrophone == request) pendingMicrophone = null; });
+        }
+
         @Override
         public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
             if (fileCallback != null) fileCallback.onReceiveValue(null);
@@ -457,6 +521,8 @@ public class MainActivity extends ComponentActivity {
     @Override
     protected void onPause() {
         if (updates != null) updates.onPaused(this);
+        webView.evaluateJavascript("window.InhouseDictation && window.InhouseDictation.suspend()", null);
+        webView.evaluateJavascript("window.InhouseReadAloud && window.InhouseReadAloud.suspend()", null);
         webView.onPause();
         CookieManager.getInstance().flush();
         super.onPause();
@@ -464,6 +530,7 @@ public class MainActivity extends ComponentActivity {
 
     @Override
     protected void onDestroy() {
+        cancelPendingMicrophone();
         if (updates != null) updates.onDestroyed(this);
         webView.destroy();
         super.onDestroy();

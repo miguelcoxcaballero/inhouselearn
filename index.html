@@ -1516,6 +1516,7 @@
     }
   </style>
   <link rel="stylesheet" href="guided.css?v=20261021-text-motion">
+  <link rel="stylesheet" href="dictation.css?v=20261021-voice1">
   <link rel="stylesheet" href="visuals.css?v=20261021-text-motion">
 </head>
 <body>
@@ -1581,6 +1582,8 @@
             <div class="profile-menu-actions">
               <label class="haptics-switch"><input type="checkbox" role="switch" id="haptics-toggle"><span class="haptics-track" aria-hidden="true"></span>Vibración</label>
               <button class="btn btn-outline hidden" id="app-updates-btn" type="button">Actualizaciones</button>
+              <button class="btn btn-outline" id="dictation-settings-btn" type="button">Dictado con IA</button>
+              <button class="btn btn-outline" id="read-aloud-settings-btn" type="button">Voces de lectura</button>
               <button class="btn btn-outline hidden" id="logout-menu-btn" type="button">Cerrar sesión</button>
             </div>
           </div>
@@ -1769,6 +1772,8 @@
   <script src="vendor/pi-engine.js?v=20261021-text-motion"></script>
   <script src="haptics.js"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
+  <script src="dictation.js?v=20261021-voice1"></script>
+  <script type="module" src="read-aloud.js?v=20261021-voice1"></script>
   <script src="stream.js"></script>
   <script src="visuals.js?v=20261021-text-motion"></script>
   <script src="scene.js?v=20261021-text-motion"></script>
@@ -1876,6 +1881,8 @@
 
     // Android's back button: close what is open before leaving the app.
     window.inhouseLearnBack = function() {
+      if (window.InhouseReadAloud?.back()) return true;
+      if (window.InhouseDictation?.back()) return true;
       const visible = (id) => {
         const el = document.getElementById(id);
         return !!el && !el.classList.contains('hidden');
@@ -3746,6 +3753,7 @@
       if (elements.guidedBtn) {
         elements.guidedBtn.disabled = driveLocked;
       }
+      window.InhouseDictation?.syncUi();
     }
 
     function updateGuidedLearningUi() {
@@ -4595,6 +4603,7 @@
         btns = '<button class="msg-action-btn" data-edit-msg="' + message.id + '" title="Editar">' + ic.edit + '</button>';
       } else {
         btns = '<button class="msg-action-btn" data-copy-msg="' + message.id + '" title="Copiar">' + ic.copy + '</button>';
+        btns += '<button class="msg-action-btn" data-listen-msg="' + message.id + '" title="Leer en voz alta">Escuchar</button>';
         if (InhousePi.textQualityIssues(getVisibleContent(message), tutorLanguageContext(getActiveChat())).length) {
           btns += '<button class="msg-action-btn" data-repair-msg="' + message.id + '" title="Corregir caracteres e idioma">Corregir texto</button>';
         }
@@ -4940,6 +4949,14 @@
         if (btn.dataset.boundClick === '1') return;
         btn.dataset.boundClick = '1';
         btn.addEventListener('click', function() { copyMessageContent(btn.dataset.copyMsg); });
+      });
+      scope.querySelectorAll('[data-listen-msg]').forEach(function(btn) {
+        if (btn.dataset.boundClick === '1') return;
+        btn.dataset.boundClick = '1';
+        btn.addEventListener('click', function() {
+          const message = getActiveChat()?.messages.find(item => item.id === btn.dataset.listenMsg);
+          if (message) window.InhouseReadAloud?.play(getVisibleContent(message));
+        });
       });
       scope.querySelectorAll('[data-repair-msg]').forEach(function(btn) {
         if (btn.dataset.boundClick === '1') return;
@@ -5520,6 +5537,8 @@
 
       elements.chatList.querySelectorAll('[data-chat-id]').forEach(function(btn) {
         btn.addEventListener('click', function() {
+          window.InhouseDictation?.cancel();
+          window.InhouseReadAloud?.stop();
           appState.activeChatId = btn.dataset.chatId;
           setChatsDrawer(false);
           saveState(); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
@@ -5562,6 +5581,10 @@
       }
 
       appState.chats = appState.chats.filter((chat) => chat.id !== targetId);
+      if (appState.activeChatId === targetId) {
+        window.InhouseDictation?.cancel();
+        window.InhouseReadAloud?.stop();
+      }
       rememberDeletedChat(targetId);
 
       if (!appState.chats.length) {
@@ -5582,6 +5605,8 @@
 
 
     function newChat() {
+      window.InhouseDictation?.cancel();
+      window.InhouseReadAloud?.stop();
       const chat = createChat();
       appState.chats.unshift(chat);
       appState.activeChatId = chat.id;
@@ -5595,6 +5620,8 @@
     }
 
     async function clearActiveChat() {
+      window.InhouseDictation?.cancel();
+      window.InhouseReadAloud?.stop();
       const chat = getActiveChat();
       if (!chat.messages.length) {
         return;
@@ -7522,6 +7549,7 @@
     let _sendLock = false;
 
     async function handleSend() {
+      if (window.InhouseDictation?.handleSend()) return;
       // If busy, stop the current request (intentional user action)
       if (appState.busy) {
         if (appState.activeController) {
@@ -7746,6 +7774,12 @@
       updateGuidedLearningUi();
       bindEvents();
       bindMobileMenu();
+      window.InhouseDictation?.init({
+        composer: elements.composer, sendButton: elements.sendBtn, sendLabel: elements.sendLabel,
+        chatId: () => appState.activeChatId,
+        busy: () => appState.busy || appState.attachmentBusy,
+        refresh: updateSendUi, resize: autoResizeComposer, status: setComposerStatus, send: handleSend
+      });
       setComposerStatus('');
       renderUsageDonut();
 

@@ -19,6 +19,9 @@ https://miguelcoxcaballero.github.io/inhouselearn/. Cada cambio en `index.html` 
 - Botón Atrás: primero cierra lo que tenga abierto la web (diálogos, menús, barra lateral).
 - Sin conexión: usa la copia en caché y, si no hay, una pantalla «Sin conexión» con «Reintentar».
 - Selector de archivos para adjuntos (varios a la vez).
+- Micrófono (desde 1.0.3): permiso de audio solicitado al grabar, únicamente para
+  el origen de Learn. La web usa MediaRecorder y Whisper local, sin cuentas ni envío de audio; nunca el dictado
+  del teclado. Al salir de la app se detiene la grabación para revisar el texto.
 - Sin copia de seguridad de Android (`allowBackup=false`): el almacenamiento del WebView
   guarda el token de Google y la key de OpenRouter. Los chats ya se sincronizan con Drive.
 
