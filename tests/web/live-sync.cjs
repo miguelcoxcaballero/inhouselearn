@@ -22,10 +22,11 @@ async function drive(route) {
   const id = (url.pathname.match(/\/files\/([^/]+)$/) || [])[1];
   if (req.method() === 'GET' && !id) {
     const q = url.searchParams.get('q') || '';
-    const key = (/key='([^']+)'/.exec(q) || [])[1];
+    const props = [...q.matchAll(/key='([^']+)' and value='([^']*)'/g)].map((m) => [m[1], m[2]]);
     const name = (/name='([^']+)'/.exec(q) || [])[1];
+    const contains = (/name contains '([^']+)'/.exec(q) || [])[1];
     const parent = (/'([^']+)' in parents/.exec(q) || [])[1];
-    const found = [...files.values()].filter((f) => (!key || (f.appProperties || {})[key] === '1') && (!name || f.name === name) && (!parent || (f.parents || []).includes(parent)));
+    const found = [...files.values()].filter((f) => props.every(([k, v]) => (f.appProperties || {})[k] === v) && (!name || f.name === name) && (!contains || (f.name || '').includes(contains)) && (!parent || (f.parents || []).includes(parent)));
     return json({ files: found.map((f) => ({ id: f.id, name: f.name, modifiedTime: f.modifiedTime })) });
   }
   if (req.method() === 'GET' && id) {
@@ -67,9 +68,12 @@ async function device(browser) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
+  // Two contexts of one browser reach each other through host candidates.
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined, args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const A = await device(browser);
   const B = await device(browser);
+  const direct = await Promise.all([A, B].map((d) => d.page.waitForFunction(() => peerOpenCount() > 0, null, { timeout: 30000 }).then(() => true, () => false)));
+  check('A and B connect directly (WebRTC, signalled through Drive)', direct.every(Boolean), direct);
   const text = 'Primera parte de una respuesta larga que se escribe poco a poco. '.repeat(14) + 'FIN.';
   await A.page.evaluate((t) => window.__replies.push({ text: t, chunk: 6, delay: 70 }), text);
   await send(A.page, 'Explícame algo despacio');
@@ -79,10 +83,18 @@ async function device(browser) {
   await B.page.click('#hamburger-btn'); await B.page.waitForTimeout(350);
   await B.page.click('.chat-item[data-chat-id="' + chatId + '"]');
   const lengths = [];
-  for (let k = 0; k < 4; k++) {
-    await B.page.waitForTimeout(1800);
-    lengths.push(await B.page.evaluate(() => { const el = [...document.querySelectorAll('#thread .message')].pop(); return el ? el.innerText.length : 0; }));
+  const lags = [];
+  for (let k = 0; k < 12; k++) {
+    await B.page.waitForTimeout(300);
+    const [a, b] = await Promise.all([
+      A.page.evaluate(() => { const m = getActiveChat().messages.slice(-1)[0]; return m ? m.content.length : 0; }),
+      B.page.evaluate((id) => { const c = appState.chats.find((x) => x.id === id); const m = c && c.messages.slice(-1)[0]; return m && m.role === 'assistant' ? m.content.length : 0; }, chatId)
+    ]);
+    lags.push(a - b);
+    if (k % 3 === 2) lengths.push(await B.page.evaluate(() => { const el = [...document.querySelectorAll('#thread .message')].pop(); return el ? el.innerText.length : 0; }));
   }
+  lags.sort((x, y) => x - y);
+  check('B is at most a few characters behind A (instant)', lags[Math.floor(lags.length / 2)] <= 20, lags);
   const aBusy = await A.page.evaluate(() => appState.busy);
   const userShown = await B.page.evaluate(() => /Explícame algo despacio/.test(document.getElementById('thread').innerText));
   check('B shows the question and the answer growing while A is still answering', aBusy && userShown && lengths[0] > 0 && lengths[3] > lengths[0], { aBusy, userShown, lengths });
@@ -97,8 +109,8 @@ async function device(browser) {
   await B.page.click('#hamburger-btn'); await B.page.waitForTimeout(350); await B.page.click('#new-chat-btn');
   await send(B.page, 'Chat nuevo desde B'); await idle(B.page);
   const newId = await B.page.evaluate(() => appState.activeChatId);
-  const reached = await A.page.waitForFunction((id) => appState.chats.some((c) => c.id === id && c.messages.some((m) => m.content === 'Respuesta en B.')), newId, { timeout: 15000 }).then(() => true, () => false);
-  check('a chat made on B reaches A within seconds', reached);
+  const reached = await A.page.waitForFunction((id) => appState.chats.some((c) => c.id === id && c.messages.some((m) => m.content === 'Respuesta en B.')), newId, { timeout: 4000 }).then(() => true, () => false);
+  check('a chat made on B reaches A within 4 s', reached);
   // A library document added on A is downloaded by B for the same chat.
   await A.page.evaluate(async (id) => {
     const file = new File(['Resumen: la meiosis produce cuatro células haploides.'], 'resumen.txt', { type: 'text/plain' });

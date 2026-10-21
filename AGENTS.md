@@ -45,8 +45,11 @@ Mandatory guidance for every AI and developer working in this repository.
   (`library-<id>.json`); the model reaches them only through the `search_library`,
   `read_library`, `list_library` and `view_library_image` tools (`engine/src/library.js`).
   Big uploads never go into the message itself, only a short manifest.
-- **Live sync:** the answering device writes `live.json` in the Drive folder; other devices poll
-  it and draw the answer as it grows (`liveShareStart`, `liveTick` in `index.html`).
+- **Live sync:** devices of the same account open WebRTC data channels to each other, signalled
+  through `peer-<deviceId>.json` files in the Drive folder; the answering device sends every change
+  at once and a `saved` notice after each Drive save. When a direct connection is not possible,
+  it writes `live.json` in Drive and the others poll it every second (`liveShareStart`, `liveTick`,
+  `peerTick` in `index.html`).
 - Never edit `vendor/inhouse-services-updater/`, `android/app/src/main/assets/updates/` or
   `android/app/src/main/java/com/inhouse/services/updater/` by hand: they are written by the
   canonical repository's `tools/sync.py`, and `vendor/inhouse-services-updater/verify.py`

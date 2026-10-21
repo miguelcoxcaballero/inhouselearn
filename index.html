@@ -2856,6 +2856,8 @@
       appState.driveLiveFileId = '';
       appState.driveLiveLookupAt = 0;
       appState.liveSeenVersion = '';
+      if (appState.peerNet) appState.peerNet.peers.forEach((peer) => { try { peer.pc.close(); } catch (_) {} });
+      appState.peerNet = null;
       appState.driveReady = false;
       appState.driveSyncTimer = 0;
       appState.driveSyncPromise = null;
@@ -5658,6 +5660,7 @@
       appState.driveSnapshotFileId = response && response.id ? response.id : existingFileId;
       appState.driveKnownVersion = (response && response.modifiedTime) || '';
       appState.driveReady = true;
+      peerBroadcast({ t: 'saved' });
     }
 
     function partsHaveInlineData(parts) {
@@ -5784,10 +5787,11 @@
     // grows. They also check conversations.json every LIVE_SNAPSHOT_MS, so new
     // chats, renames and deletions arrive within seconds. Pending messages never
     // reach conversations.json; the full chat lands there when the turn ends.
-    const LIVE_WRITE_MS = 1200;
-    const LIVE_POLL_MS = 2000;
+    const LIVE_WRITE_MS = 700;
+    const LIVE_POLL_MS = 1000;
+    const LIVE_PEER_SEND_MS = 60;
     const LIVE_SNAPSHOT_MS = 8000;
-    const LIVE_FIND_RETRY_MS = 20000;
+    const LIVE_FIND_RETRY_MS = 4000;
     const LIVE_MAX_AGE_MS = 10 * 60 * 1000;
     const LIVE_DEVICE_KEY = STORAGE_KEY + '::deviceId';
 
@@ -5849,10 +5853,12 @@
       const chat = share.chat;
       const ids = [share.userMessage.id, share.assistantMessage.id];
       const present = ids.filter((id) => chat.messages.some((message) => message.id === id));
+      share.seq = (share.seq || 0) + 1;
       return {
         v: 1,
         device: liveDeviceId(),
         turn: share.turn,
+        seq: share.seq,
         at: nowIso(),
         done: !!done,
         drop: ids.filter((id) => !present.includes(id)),
@@ -5878,9 +5884,19 @@
 
     function liveShareStart(chat, userMessage, assistantMessage) {
       if (!hasDrivePersistenceReady()) return null;
-      const share = { chat, userMessage, assistantMessage, turn: uid('turn'), last: '', writing: null, timer: 0 };
+      const share = { chat, userMessage, assistantMessage, turn: uid('turn'), last: '', peerLast: '', writing: null, timer: 0, peerTimer: 0 };
+      // Devices connected directly get every change at once.
+      const peerTick = () => {
+        if (!peerOpenCount()) return;
+        const payload = buildLivePayload(share, false);
+        const key = JSON.stringify(payload.messages);
+        if (key === share.peerLast) return;
+        share.peerLast = key;
+        peerBroadcast({ t: 'live', payload });
+      };
+      // Drive is the fallback for devices without a direct connection.
       const tick = () => {
-        if (share.writing) return;
+        if (share.writing || peersAllConnected()) return;
         const payload = buildLivePayload(share, false);
         const key = JSON.stringify(payload.messages);
         if (key === share.last) return;
@@ -5889,7 +5905,9 @@
           .catch((error) => console.warn('Drive en directo:', error))
           .finally(() => { share.writing = null; });
       };
+      peerTick();
       tick();
+      share.peerTimer = window.setInterval(peerTick, LIVE_PEER_SEND_MS);
       share.timer = window.setInterval(tick, LIVE_WRITE_MS);
       return share;
     }
@@ -5897,6 +5915,8 @@
     async function liveShareStop(share) {
       if (!share) return;
       window.clearInterval(share.timer);
+      window.clearInterval(share.peerTimer);
+      if (peerOpenCount()) peerBroadcast({ t: 'live', payload: buildLivePayload(share, true) });
       // The full chat goes to conversations.json now, not after the debounce.
       scheduleDriveSync({ immediate: true });
       try {
@@ -5912,6 +5932,10 @@
       if (!payload || payload.v !== 1 || !payload.chat || typeof payload.chat.id !== 'string' || !Array.isArray(payload.messages)) return;
       if (payload.device === liveDeviceId()) return;
       if (Date.now() - parseSnapshotMoment(payload.at) > LIVE_MAX_AGE_MS) return;
+      // The same answer can arrive by the direct connection and by Drive: never go back.
+      const lastSeen = appState.liveLastSeq || {};
+      if (lastSeen.turn === payload.turn && (payload.seq || 0) <= lastSeen.seq) return;
+      appState.liveLastSeq = { turn: payload.turn, seq: payload.seq || 0 };
       if (readDeletedChats()[payload.chat.id]) return;
       if (appState.busy && appState.activeChatId === payload.chat.id) return;
       let chat = appState.chats.find((item) => item.id === payload.chat.id);
@@ -5982,6 +6006,7 @@
       if (document.hidden || appState.liveTickBusy || !hasDrivePersistenceReady()) return;
       appState.liveTickBusy = true;
       try {
+        await peerTick().catch((error) => console.warn('Conexión directa:', error));
         const fileId = await findDriveLiveFileId(false);
         if (fileId) {
           const meta = await driveFetchJson(
@@ -6012,6 +6037,187 @@
       } finally {
         appState.liveTickBusy = false;
       }
+    }
+
+    /* ─── CONEXIÓN DIRECTA ENTRE DISPOSITIVOS ─────────── */
+    // WebRTC data channels between the devices of the same Google account, so
+    // the answer and every saved change reach the other screen at once. Drive
+    // is only the meeting point: each device keeps peer-<id>.json in the folder
+    // (a heartbeat and its offers/answers); the device with the smaller id
+    // offers. If a connection cannot be made (strict networks), the Drive
+    // polling above keeps working.
+    const PEER_TAG = 'inhouseLearnPeer';
+    const PEER_SCAN_MS = 3000;
+    const PEER_HEARTBEAT_MS = 30000;
+    const PEER_STALE_MS = 2 * 60 * 1000;
+    const PEER_RETRY_MS = 20000;
+    const PEER_RTC_CONFIG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+
+    function peerState() {
+      if (!appState.peerNet) appState.peerNet = { peers: new Map(), signals: {}, seen: {}, handled: {}, fileId: '', wroteAt: 0, scanAt: 0, recent: new Set(), dirty: true };
+      return appState.peerNet;
+    }
+
+    function peerOpenCount() {
+      if (!appState.peerNet) return 0;
+      let open = 0;
+      appState.peerNet.peers.forEach((peer) => { if (peer.channel && peer.channel.readyState === 'open') open++; });
+      return open;
+    }
+
+    // True when every device seen recently is connected directly.
+    function peersAllConnected() {
+      const net = appState.peerNet;
+      if (!net || !net.recent.size) return false;
+      return Array.from(net.recent).every((id) => { const peer = net.peers.get(id); return peer && peer.channel && peer.channel.readyState === 'open'; });
+    }
+
+    function peerBroadcast(message) {
+      const net = appState.peerNet;
+      if (!net) return;
+      const text = JSON.stringify(message);
+      net.peers.forEach((peer) => {
+        if (peer.channel && peer.channel.readyState === 'open') {
+          try { peer.channel.send(text); } catch (_) {}
+        }
+      });
+    }
+
+    function onPeerMessage(event) {
+      let message = null;
+      try { message = JSON.parse(event.data); } catch (_) { return; }
+      if (!message) return;
+      if (message.t === 'live') applyLivePayload(message.payload);
+      if (message.t === 'saved' && !appState.busy) {
+        window.clearTimeout(appState.peerSavedTimer);
+        appState.peerSavedTimer = window.setTimeout(() => pullDriveChanges(true), 150);
+      }
+    }
+
+    function closePeer(id) {
+      const net = peerState();
+      const peer = net.peers.get(id);
+      if (!peer) return;
+      try { peer.pc.close(); } catch (_) {}
+      net.peers.delete(id);
+    }
+
+    function newPeerConnection(id, role) {
+      const net = peerState();
+      closePeer(id);
+      const pc = new RTCPeerConnection(PEER_RTC_CONFIG);
+      const peer = { id, pc, role, channel: null, startedAt: Date.now(), offerAt: '' };
+      const bind = (channel) => {
+        peer.channel = channel;
+        channel.onmessage = onPeerMessage;
+        channel.onclose = () => { if (net.peers.get(id) === peer) closePeer(id); };
+      };
+      if (role === 'offer') bind(pc.createDataChannel('live', { ordered: true }));
+      else pc.ondatachannel = (event) => bind(event.channel);
+      pc.onconnectionstatechange = () => {
+        if (['failed', 'closed'].includes(pc.connectionState) && net.peers.get(id) === peer) closePeer(id);
+      };
+      net.peers.set(id, peer);
+      return peer;
+    }
+
+    // Whole SDP with candidates: one exchange through Drive, no trickle.
+    function iceComplete(pc) {
+      return new Promise((resolve) => {
+        if (pc.iceGatheringState === 'complete') return resolve();
+        const done = () => { if (pc.iceGatheringState === 'complete') resolve(); };
+        pc.addEventListener('icegatheringstatechange', done);
+        window.setTimeout(resolve, 3000);
+      });
+    }
+
+    async function writePeerFile() {
+      const net = peerState();
+      const body = JSON.stringify({ v: 1, device: liveDeviceId(), at: nowIso(), signals: net.signals });
+      if (!net.fileId) {
+        const folderId = await ensureDriveFolderId();
+        const found = await listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and appProperties has { key='" + PEER_TAG + "' and value='" + escapeDriveQueryValue(liveDeviceId()) + "' }", 5);
+        if (found[0]) {
+          net.fileId = found[0].id;
+        } else {
+          const multipart = buildDriveMultipartBody({ name: 'peer-' + liveDeviceId() + '.json', mimeType: 'application/json', parents: [folderId], appProperties: { [PEER_TAG]: liveDeviceId() } }, body, 'application/json');
+          const created = await driveFetchJson('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': multipart.contentType }, body: multipart.body }, true, 'No se pudo crear la señal.');
+          net.fileId = (created && created.id) || '';
+          net.wroteAt = Date.now();
+          net.dirty = false;
+          return;
+        }
+      }
+      await driveFetchJson('https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(net.fileId) + '?uploadType=media&fields=id', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body
+      }, true, 'No se pudo escribir la señal.');
+      net.wroteAt = Date.now();
+      net.dirty = false;
+    }
+
+    async function peerOffer(id) {
+      const net = peerState();
+      const peer = newPeerConnection(id, 'offer');
+      await peer.pc.setLocalDescription(await peer.pc.createOffer());
+      await iceComplete(peer.pc);
+      peer.offerAt = nowIso();
+      net.signals[id] = { type: 'offer', sdp: peer.pc.localDescription.sdp, at: peer.offerAt };
+      net.dirty = true;
+    }
+
+    async function peerAnswer(id, offer) {
+      const net = peerState();
+      const peer = newPeerConnection(id, 'answer');
+      await peer.pc.setRemoteDescription({ type: 'offer', sdp: offer.sdp });
+      await peer.pc.setLocalDescription(await peer.pc.createAnswer());
+      await iceComplete(peer.pc);
+      net.handled[id] = offer.at;
+      net.signals[id] = { type: 'answer', sdp: peer.pc.localDescription.sdp, at: nowIso(), for: offer.at };
+      net.dirty = true;
+    }
+
+    async function peerTick() {
+      if (!window.RTCPeerConnection) return;
+      const net = peerState();
+      const me = liveDeviceId();
+      if (Date.now() - net.scanAt >= PEER_SCAN_MS) {
+        net.scanAt = Date.now();
+        const folderId = await findDriveFolderId();
+        if (folderId) {
+          const files = await listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and name contains 'peer-'", 100);
+          const recent = new Set();
+          for (const file of files) {
+            const match = /^peer-(.+)\.json$/.exec(file.name || '');
+            if (!match || match[1] === me) continue;
+            const id = match[1];
+            if (Date.now() - parseSnapshotMoment(file.modifiedTime) > PEER_STALE_MS) continue;
+            recent.add(id);
+            if (net.seen[id] === file.modifiedTime) continue;
+            let info = null;
+            try {
+              info = JSON.parse(await driveFetchText('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(file.id) + '?alt=media', { method: 'GET' }, true, 'No se pudo leer la señal.'));
+            } catch (_) { continue; }
+            net.seen[id] = file.modifiedTime;
+            const signal = info && info.signals && info.signals[me];
+            const peer = net.peers.get(id);
+            if (signal && signal.type === 'offer' && me > id && net.handled[id] !== signal.at) {
+              await peerAnswer(id, signal);
+            } else if (signal && signal.type === 'answer' && peer && peer.role === 'offer' && signal.for === peer.offerAt && peer.pc.signalingState === 'have-local-offer') {
+              await peer.pc.setRemoteDescription({ type: 'answer', sdp: signal.sdp });
+            }
+          }
+          net.recent = recent;
+          // The smaller id offers; a stuck attempt is retried.
+          recent.forEach((id) => {
+            if (me > id) return;
+            const peer = net.peers.get(id);
+            const open = peer && peer.channel && peer.channel.readyState === 'open';
+            if (!open && (!peer || Date.now() - peer.startedAt > PEER_RETRY_MS)) peerOffer(id).catch((error) => console.warn('Conexión directa:', error));
+          });
+          net.peers.forEach((peer, id) => { if (!recent.has(id)) closePeer(id); });
+        }
+      }
+      if (net.dirty || Date.now() - net.wroteAt >= PEER_HEARTBEAT_MS) await writePeerFile();
     }
 
     function startLiveSync() {

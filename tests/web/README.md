@@ -30,8 +30,8 @@ CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 `latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
 feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by KaTeX.
 
-`live-sync.cjs` opens two devices on a fake Google Drive: the second one sees the
-first one's answer grow (live.json), ends with the same chat and gets new chats
+`live-sync.cjs` opens two devices on a fake Google Drive: they connect directly (WebRTC
+signalled through Drive), the second one stays within a few characters of the first one's answer, ends with the same chat and gets new chats
 within seconds (conversations.json polling).
 
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
