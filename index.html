@@ -2003,6 +2003,7 @@
         return !!el && !el.classList.contains('hidden');
       };
       if (visible('confirm-backdrop')) { document.getElementById('confirm-cancel').click(); return true; }
+        if (visible('approval-popup')) { closeApprovalMenu(); return true; }
       if (visible('preview-overlay')) { closeAttachmentPreview(); return true; }
       if (elements.modelMenuPopup && !elements.modelMenuPopup.classList.contains('hidden')) { closeModelMenu(); return true; }
       if (elements.profilePopup && !elements.profilePopup.classList.contains('hidden')) { closeProfileMenu(); return true; }
@@ -7719,6 +7720,7 @@
         transportPill.title = hasKey ? 'Conectado a OpenRouter desde el navegador' : 'Pega tu API key en el selector de modelo';
       }
       elements.modelBadge.textContent = activeModelBadge();
+        renderApprovalUi();
       renderModelControls();
       elements.configCopy.style.display = 'block';
       elements.configCopy.textContent = hasKey
