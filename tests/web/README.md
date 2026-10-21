@@ -22,7 +22,11 @@ node --test tests/web/text-quality.mjs
 CHROMIUM=/usr/bin/chromium node tests/web/text-quality.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/practice.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 ```
+
+`latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
+feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by KaTeX.
 
 `text-quality.cjs` uses mocked OpenRouter responses to reproduce accidental
 Cyrillic/Chinese insertions, check automatic repair and stored transcripts,

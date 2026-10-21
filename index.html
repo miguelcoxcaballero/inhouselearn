@@ -1532,7 +1532,9 @@
       display: grid; place-items: center; position: relative; transition: transform 0.18s var(--ease), background 0.18s var(--ease);
     }
     .plus-btn:hover { background: rgba(0,0,0,0.04); }
-    .plus-btn[aria-expanded="true"] { transform: rotate(45deg); background: var(--text); color: #fff; border-color: var(--text); }
+    .plus-btn svg { transition: transform 0.18s var(--ease); }
+    .plus-btn[aria-expanded="true"] { background: var(--text); color: #fff; border-color: var(--text); }
+    .plus-btn[aria-expanded="true"] svg { transform: rotate(45deg); }
     .plus-btn.has-guided::after { content: ''; position: absolute; top: 1px; right: 1px; width: 10px; height: 10px; border-radius: 50%; background: var(--orange); border: 2px solid var(--surface); }
     .plus-menu {
       position: absolute; left: 0; bottom: calc(100% + 12px); z-index: 150; width: min(320px, 100%);
@@ -1558,20 +1560,12 @@
     .plus-item.guided-btn.active > svg { background: var(--orange); color: #fff; border-color: var(--orange); }
     .plus-item.guided-btn.active .plus-switch { background: var(--orange); }
     .plus-item.guided-btn.active .plus-switch::after { transform: translateX(14px); }
-    .guided-chip {
-      display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px 0 10px; flex-shrink: 0;
-      border-radius: 999px; background: var(--orange-soft); color: #A84F1A; font-size: 0.82rem; font-weight: 600;
-    }
-    .guided-chip.hidden { display: none; }
-    .guided-chip-x { opacity: 0.7; }
-    .guided-chip:hover .guided-chip-x { opacity: 1; }
     .model-trigger-main { font-size: 0.8rem; }
     .model-menu-wrap { max-width: 320px; }
     .dictation-btn { width: 40px; height: 40px; border: 1px solid var(--border-strong); border-radius: 50%; }
     @media (max-width: 768px) {
       .plus-btn { width: 44px; height: 44px; }
       .dictation-btn { width: 44px; height: 44px; }
-      .guided-chip span { display: none; }
       .plus-menu { width: auto; right: 0; }
       .model-menu-wrap { flex: 1 1 auto; max-width: none; }
       .model-trigger { width: 100%; }
@@ -1732,11 +1726,6 @@
               <button class="usage-btn" id="usage-btn" type="button" aria-label="Uso y saldo">
                 <svg id="usage-donut" viewBox="0 0 36 36"></svg>
               </button>
-              <button class="guided-chip hidden" id="guided-chip" type="button" aria-label="Quitar el aprendizaje guiado" title="Quitar el aprendizaje guiado">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>
-                <span>Guiado</span>
-                <svg class="guided-chip-x" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-              </button>
                 <div class="model-menu-wrap">
                   <button class="model-trigger" id="model-menu-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
                     <span class="model-trigger-brand" id="model-trigger-brand" data-provider="codex" aria-hidden="true"></span>
@@ -1859,10 +1848,10 @@
   <script src="dictation.js?v=20261021-voice1"></script>
   <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
   <script src="stream.js"></script>
-  <script src="visuals.js?v=20261021-text-motion"></script>
+  <script src="visuals.js?v=20261021-latex"></script>
   <script src="scene.js?v=20261021-text-motion"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
-  <script src="guided.js?v=20261021-text-motion"></script>
+  <script src="guided.js?v=20261021-latex"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -3849,10 +3838,11 @@
       elements.guidedBtn.title = active
         ? 'Aprendizaje guiado activo. Toca para quitarlo.'
         : 'Aprendizaje guiado: un curso por lecciones con mini tests y examen final.';
-      const chip = document.getElementById('guided-chip');
-      if (chip) chip.classList.toggle('hidden', !active);
       const plus = document.getElementById('plus-btn');
-      if (plus) plus.classList.toggle('has-guided', active);
+      if (plus) {
+        plus.classList.toggle('has-guided', active);
+        plus.setAttribute('aria-label', active ? 'Más opciones (aprendizaje guiado activo)' : 'Más opciones');
+      }
     }
 
     /* ─── MENÚ «+» ─────────────────────────────────────── */
@@ -3872,7 +3862,6 @@
     function bindPlusMenu() {
       const btn = document.getElementById('plus-btn');
       const menu = document.getElementById('plus-menu');
-      const chip = document.getElementById('guided-chip');
       if (!btn || !menu) return;
       btn.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -3888,7 +3877,6 @@
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !menu.classList.contains('hidden')) { setPlusMenu(false); btn.focus(); }
       });
-      if (chip) chip.addEventListener('click', () => { if (elements.guidedBtn && !appState.busy) elements.guidedBtn.click(); });
     }
 
     function providerLetterIcon(letter) {

@@ -88,12 +88,48 @@ function vizHash(text) {
   return (h >>> 0).toString(36);
 }
 
+// Widget text (visual specs, quiz tool arguments) arrives through JSON, where a
+// model's LaTeX is often damaged: "\frac" parsed as a form feed + "rac", "\$x\$"
+// escaped for Markdown, "\\," doubled, or a bare "x^2" with no delimiters.
+// vizMath repairs it and wraps bare formulas so KaTeX draws them.
+const VIZ_MATH_SPAN = /\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$/g;
+const VIZ_MATH_WORDS = /\\[a-zA-Z]+|\b(?:sin|cos|tan|cot|sec|csc|sinh|cosh|tanh|arcsin|arccos|arctan|ln|log|exp|lim|max|min|det|mod|sqrt|frac|dx|dy|dt)\b/g;
+
+function vizLooksLikeMath(text) {
+  if (!/[\^_\\]/.test(text) && !/^[\d\s.,+\-*/=()<>a-zA-Z']*\d[a-zA-Z]\b/.test(text)) return false;
+  if (/_/.test(text) && !/\^|\\|_\{|_\d|_[a-zA-Z]\b/.test(text)) return false;
+  // No ordinary words left once commands and function names are removed.
+  return !/[a-zA-ZáéíóúñÁÉÍÓÚÑ]{3,}/.test(text.replace(VIZ_MATH_WORDS, ' '));
+}
+
+function vizMath(value) {
+  let text = String(value == null ? '' : value)
+    .replace(/\f/g, '\\f').replace(/\x08/g, '\\b').replace(/\v/g, '\\v')
+    .replace(/\t(?=[a-zA-Z])/g, '\\t').replace(/\r(?=[a-zA-Z])/g, '\\r')
+    // Doubled delimiters: "\\(x\\)" → "\(x\)".
+    .replace(/\\\\([()[\]])/g, '\\$1')
+    // "\$x^2\$" was escaped for Markdown but meant math.
+    .replace(/\\\$([^$\n]+?)\\\$/g, (match, body) => (/[\\^_{}=]/.test(body) ? '$' + body + '$' : match));
+  // Inside math, "\\frac" or "\\," is one command, not a line break.
+  text = text.replace(VIZ_MATH_SPAN, (span) => span.replace(/\\\\(?=[a-zA-Z,;:!{}|%])/g, '\\'));
+  if (VIZ_MATH_SPAN.test(text)) { VIZ_MATH_SPAN.lastIndex = 0; return text; }
+  VIZ_MATH_SPAN.lastIndex = 0;
+  if (/`/.test(text)) return text;
+  const whole = text.trim();
+  if (whole && whole.length <= 120 && !/\n/.test(whole) && vizLooksLikeMath(whole)) {
+    return text.replace(whole, '$' + whole.replace(/\\\\(?=[a-zA-Z,;:!{}|%])/g, '\\') + '$');
+  }
+  // Mixed text: wrap each formula-like word ("x^2", "a_1", "\pi").
+  return text.replace(/(^|[\s(¿¡"«])([^\s"«»]+?)(?=[,;:.?!)»"]*(?:\s|$))/g, (match, lead, word) =>
+    (/[\^\\]|_[\d{]/.test(word) && vizLooksLikeMath(word) ? lead + '$' + word + '$' : match));
+}
+
 function vizInline(text) {
-  return renderMarkdown(String(text == null ? '' : text)).trim().replace(/^<p>([\s\S]*)<\/p>$/, '$1');
+  return renderMarkdown(vizMath(text)).trim().replace(/^<p>([\s\S]*)<\/p>$/, '$1');
 }
 
 function vizBlock(text) {
-  return renderMarkdown(String(text == null ? '' : text));
+  return renderMarkdown(vizMath(text));
 }
 
 function vizFmt(value, digits) {

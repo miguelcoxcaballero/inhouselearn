@@ -822,18 +822,32 @@ function renderPlanCard(chat) {
   return '<section class="g-card g-plan' + (ready ? ' ready' : '') + '">' + hero + '<div class="g-route">' + route + '</div>' + foot + '</section>';
 }
 
+// Quiz text comes from tool arguments: same LaTeX repair as the visuals.
+function gMath(text) {
+  return renderMarkdown(typeof vizMath === 'function' ? vizMath(text) : String(text == null ? '' : text));
+}
+
+// When most options are formulas, a bare "x" or "3" among them is one too.
+function gOption(question, optionIndex) {
+  const text = String(question.options[optionIndex] == null ? '' : question.options[optionIndex]);
+  if (typeof vizMath !== 'function') return renderMarkdown(text);
+  const formulas = question.options.filter((option) => /\$|\\\(/.test(vizMath(option))).length;
+  const plain = /^[a-zA-Z]$|^[-+]?\d+(?:[.,]\d+)?\s*[a-zA-Z]?$|^[a-zA-Z0-9+\-*/=().' ]{1,12}$/.test(text.trim()) && !/[a-zA-Z]{2,}/.test(text) && !/\$/.test(text);
+  return formulas * 2 > question.options.length && plain ? renderMarkdown('$' + text.trim() + '$') : gMath(text);
+}
+
 function questionMarkup(quiz, question, index, mode) {
   const chosen = quiz.answers[index];
   const answered = chosen !== undefined;
   const reveal = mode === 'check' ? answered : quiz.submitted;
   const right = reveal && chosen === question.correct;
   if (mode === 'check' && answered) {
-    const pick = (optionIndex) => LETTERS[optionIndex] + ' · ' + renderMarkdown(question.options[optionIndex] || '');
+    const pick = (optionIndex) => LETTERS[optionIndex] + ' · ' + gOption(question, optionIndex);
     return '<li data-motion-key="question:' + index + '" class="g-q compact ' + (right ? 'right' : 'wrong') + '"><span class="g-q-mark">' + (right ? G_ICON.check : G_ICON.cross) + '</span>' +
-      '<div class="g-q-main"><div class="g-q-text">' + (index + 1) + '. ' + renderMarkdown(question.question) + '</div>' +
+      '<div class="g-q-main"><div class="g-q-text">' + (index + 1) + '. ' + gMath(question.question) + '</div>' +
       '<div class="g-q-sum">Elegiste <b class="' + (right ? 'right' : 'wrong') + '">' + pick(chosen) + '</b>. ' +
-      (right ? '<strong class="right">¡Bien!</strong> ' : '<strong class="wrong">Era la ' + LETTERS[question.correct] + '</strong>, <b class="right">' + renderMarkdown(question.options[question.correct] || '') + '</b>: ') +
-      renderMarkdown(question.explanation || '') + '</div></div></li>';
+      (right ? '<strong class="right">¡Bien!</strong> ' : '<strong class="wrong">Era la ' + LETTERS[question.correct] + '</strong>, <b class="right">' + gOption(question, question.correct) + '</b>: ') +
+      gMath(question.explanation || '') + '</div></div></li>';
   }
   const options = question.options.map((option, optionIndex) => {
     const classes = ['g-opt'];
@@ -842,14 +856,14 @@ function questionMarkup(quiz, question, index, mode) {
     if (reveal && chosen === optionIndex && optionIndex !== question.correct) classes.push('wrong');
     const locked = quiz.submitted || quiz.superseded || (mode === 'check' && answered);
     return '<button type="button" class="' + classes.join(' ') + '"' + (locked ? ' disabled' : '') + ' data-g-answer="' + quiz.id + ':' + index + ':' + optionIndex + '">' +
-      '<span class="g-opt-key">' + LETTERS[optionIndex] + '</span><span class="g-opt-text">' + renderMarkdown(option) + '</span>' +
+      '<span class="g-opt-key">' + LETTERS[optionIndex] + '</span><span class="g-opt-text">' + gOption(question, optionIndex) + '</span>' +
       (reveal && optionIndex === question.correct ? '<span class="g-opt-mark">' + G_ICON.check + '</span>' : reveal && chosen === optionIndex ? '<span class="g-opt-mark">' + G_ICON.cross + '</span>' : '') +
       '</button>';
   }).join('');
   const feedback = reveal
-    ? '<div class="g-feedback ' + (right ? 'right' : 'wrong') + '"><strong>' + (right ? '¡Bien!' : 'Era la ' + LETTERS[question.correct] + '.') + '</strong> ' + renderMarkdown(question.explanation || '') + '</div>'
+    ? '<div class="g-feedback ' + (right ? 'right' : 'wrong') + '"><strong>' + (right ? '¡Bien!' : 'Era la ' + LETTERS[question.correct] + '.') + '</strong> ' + gMath(question.explanation || '') + '</div>'
     : '';
-  return '<li data-motion-key="question:' + index + '" class="g-q' + (reveal ? (right ? ' right' : ' wrong') : '') + '"><div class="g-q-num">' + (index + 1) + '</div><div class="g-q-main"><div class="g-q-text">' + renderMarkdown(question.question) + '</div>' +
+  return '<li data-motion-key="question:' + index + '" class="g-q' + (reveal ? (right ? ' right' : ' wrong') : '') + '"><div class="g-q-num">' + (index + 1) + '</div><div class="g-q-main"><div class="g-q-text">' + gMath(question.question) + '</div>' +
     '<div class="g-options">' + options + '</div>' + feedback + '</div></li>';
 }
 
