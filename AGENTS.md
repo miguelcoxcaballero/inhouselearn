@@ -29,6 +29,12 @@ Mandatory guidance for every AI and developer working in this repository.
   `MainActivity` calls `NativeUpdates`, and the popup and settings are `UpdateActivity`.
   The web page never receives an install bridge; it only asks the shell to open the
   updater settings (`{type: 'updates'}`).
+- **Chat modules:** `stream.js` (smooth streaming: block renderer and thread follow),
+  `visuals.js` (```visual / ```mermaid cards; `VISUALS_PROMPT` is the model-facing format),
+  `guided.js` + `guided.css` (Guided Learning: the app owns the course state machine; the
+  model only teaches and calls `set_course_plan`, `quiz` and `final_exam`, defined in
+  `engine/src/guided.js`; rebuild `vendor/pi-engine.js` after changing the engine). Keep the
+  model's task in `courseTaskText()` explicit, and never let the model own course state.
 - Never edit `vendor/inhouse-services-updater/`, `android/app/src/main/assets/updates/` or
   `android/app/src/main/java/com/inhouse/services/updater/` by hand: they are written by the
   canonical repository's `tools/sync.py`, and `vendor/inhouse-services-updater/verify.py`

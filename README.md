@@ -34,7 +34,28 @@ El chat corre sobre [pi](https://github.com/earendil-works/pi): `@earendil-works
 - **Ejecutar JavaScript** (`run_js`): en un Web Worker aparte, sin red ni acceso a la página, con 15 s de límite. Sirve para cálculos exactos, comprobar soluciones o generar datos.
 - **Archivos del chat** (`write_file`, `read_file`, `edit_file`, `list_files`, `delete_file`): apuntes, esquemas, código o CSV que se guardan con el chat. Aparecen encima del cuadro de texto, se pueden abrir y se descargan todos en un ZIP.
 
-Cada respuesta muestra los pasos con herramientas que ha dado (plegados). Si un modelo no admite herramientas, la petición se repite sin ellas.
+- **Aprendizaje guiado** (`set_course_plan`, `quiz`, `final_exam`, en `engine/src/guided.js`): solo en ese modo; ver más abajo.
+
+Cada respuesta muestra los pasos con herramientas que ha dado (plegados). Si un modelo no admite herramientas, la petición se repite sin ellas (salvo en el aprendizaje guiado, que las necesita).
+
+## Aprendizaje guiado
+
+El botón del birrete convierte el chat en un curso. La lógica la lleva la app (`guided.js`), no el modelo:
+
+1. **Plan**: eliges nivel y duración, dices el tema (o subes apuntes) y el tutor llama a `set_course_plan`. El plan sale como tarjeta con «Empezar» y «Cambiar el plan».
+2. **Lecciones**: una barra arriba enseña el curso, la lección actual y el progreso, y se despliega en el mapa del temario (con «Saltar» si ya la dominas). Debajo de cada respuesta hay respuestas rápidas: Sigue, Otro ejemplo, No lo entiendo, Ponme a prueba.
+3. **Mini test** por lección (`quiz`): corrección al momento con explicación. Con un 70 % se aprueba y se pasa a la siguiente; si no, el tutor vuelve a explicar justo lo que fallaste y repite el test con preguntas nuevas.
+4. **Examen final** (`final_exam`) de todo el curso, con nota por lección, y repaso final. Se puede repetir.
+
+Cada petición manda al modelo el estado del curso y una única tarea concreta («enseña L3», «llama a `final_exam` ahora»), así que no se pierde ni se olvida del examen. Si se salta un paso, la app se lo recuerda con un aviso oculto y lo vuelve a pedir. Todo (plan, notas, respuestas) se guarda con el chat y se sincroniza en Drive.
+
+## Vistas visuales e interactivas en el chat
+
+El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`.
+
+## Respuestas fluidas
+
+Mientras el modelo escribe (`stream.js`), cada párrafo terminado se dibuja una sola vez y ya no se toca; solo se redibuja el último, una vez por fotograma, y el texto aparece a ritmo constante. Las fórmulas, enlaces y vistas que aún están llegando esperan a estar completas en vez de enseñar su código, y el chat solo baja solo si estás abajo del todo (si subes a leer, se queda quieto y aparece un botón para volver al final).
 
 ### Recompilar el motor
 
@@ -52,7 +73,6 @@ npm run build   # genera ../vendor/pi-engine.js
 - Los bloques de código ```latex se muestran como vista previa dentro del chat (título, secciones, listas, teoremas, tablas y fórmulas con KaTeX, incluidos los macros del paquete `physics`), con «Ver código» y «Copiar» al lado. No es un motor TeX: los comandos que no conoce conservan su texto.
 - Adjuntos: PDF, Word, Excel y texto se extraen en el navegador; las imágenes se mandan al modelo si las admite y los PDF escaneados van como imágenes de sus páginas.
 - Historial en el navegador. Si entras con Google (botón de arriba a la derecha), también se sincroniza en tu Google Drive, chat a chat: al entrar aparecen los chats de Drive y los de este navegador se suben; si dos dispositivos cambian cosas distintas se juntan (gana la copia más nueva de cada chat), un chat borrado no vuelve, cada guardado lee Drive antes de escribir para no pisar lo que guardó otro dispositivo, al salir de la app se guarda en el momento y al volver se traen los cambios de otros dispositivos.
-- Guided Learning (modo tutor con mapa del temario y mini tests) sigue disponible.
 
 Para el login de Google en la web de GitHub Pages, el origen `https://miguelcoxcaballero.github.io` tiene que estar en los orígenes de JavaScript autorizados del cliente OAuth, con los permisos `drive.file`, `userinfo.email` y `userinfo.profile`.
 

@@ -10,8 +10,9 @@ import { openRouterCost } from '@earendil-works/pi-ai/providers/openrouter-api';
 import { Agent } from '@earendil-works/pi-agent-core';
 import JSZip from 'jszip';
 import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
+import { createGuidedTools } from './guided.js';
 
-export { createWorkspaceTools, normalizePath, runInSandbox };
+export { createWorkspaceTools, createGuidedTools, normalizePath, runInSandbox };
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 // xhigh solo se ofrece si el modelo no tiene max (ver thinkingLevels).

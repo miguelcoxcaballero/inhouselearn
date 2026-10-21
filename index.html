@@ -608,1066 +608,13 @@
     .chip:hover { color: var(--orange); }
     .chip:hover::after { color: var(--orange); transform: translateX(3px); }
 
-    /* GUIDED LEARNING */
-    .guided-shell {
-      display: grid;
-      gap: 14px;
-      margin: 0 0 20px;
-      padding: 18px;
-      border: 1px solid var(--orange-border);
-      border-radius: 22px;
-      background:
-        radial-gradient(circle at top right, rgba(224, 122, 60, 0.14), transparent 32%),
-        linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.92));
-      box-shadow: var(--shadow);
-      animation: fadeSlideUp 0.3s var(--ease) both;
-    }
-    .guided-shell.empty-state {
-      margin-top: 8px;
-    }
-    .guided-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .guided-head-copy {
-      min-width: 0;
-      display: grid;
-      gap: 5px;
-    }
-    .guided-kicker {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--orange);
-    }
-    .guided-title {
-      font-size: 1.02rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-    .guided-sub {
-      font-size: 0.82rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-      max-width: 62ch;
-    }
-    .guided-badge {
-      flex: 0 0 auto;
-      padding: 7px 11px;
-      border-radius: var(--r-full);
-      border: 1px solid var(--orange-border);
-      background: rgba(255,255,255,0.9);
-      color: var(--orange);
-      font-size: 0.72rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .guided-overview-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr);
-      gap: 12px;
-    }
-    .guided-panel,
-    .guided-roadmap,
-    .guided-quiz {
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.9);
-      box-shadow: var(--shadow-sm);
-    }
-    .guided-panel {
-      padding: 16px;
-      display: grid;
-      gap: 14px;
-    }
-    .guided-panel-title {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.01em;
-    }
-    .guided-panel-sub {
-      font-size: 0.74rem;
-      color: var(--muted);
-    }
-    .guided-meter-block {
-      display: grid;
-      gap: 6px;
-    }
-    .guided-meter-head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .guided-meter-label {
-      font-size: 0.74rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .guided-meter-value {
-      font-size: 0.74rem;
-      font-weight: 700;
-      color: var(--orange);
-      white-space: nowrap;
-    }
-    .guided-meter {
-      width: 100%;
-      height: 10px;
-      border-radius: var(--r-full);
-      background: rgba(0,0,0,0.06);
-      overflow: hidden;
-      position: relative;
-    }
-    .guided-meter > span {
-      display: block;
-      height: 100%;
-      width: 0;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #e07a3c, #f2b46d);
-    }
-    .guided-meter.mastery > span {
-      background: linear-gradient(90deg, #d65245, #22c55e);
-    }
-    .guided-crumbs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .guided-crumb {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 10px;
-      border-radius: var(--r-full);
-      background: rgba(0,0,0,0.04);
-      color: var(--text-secondary);
-      font-size: 0.74rem;
-      font-weight: 600;
-    }
-    .guided-crumb.current {
-      background: var(--orange-soft);
-      color: var(--text);
-      border: 1px solid var(--orange-border);
-    }
-    .guided-topic-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-    }
-    .guided-topic-card {
-      display: grid;
-      gap: 8px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.86);
-      min-width: 0;
-    }
-    .guided-topic-card.current {
-      border-color: var(--orange-border);
-      box-shadow: 0 0 0 2px rgba(224, 122, 60, 0.1);
-      background: rgba(255,247,241,0.96);
-    }
-    .guided-topic-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .guided-topic-name {
-      min-width: 0;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .guided-topic-status {
-      flex: 0 0 auto;
-      font-size: 0.64rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .guided-topic-status.done { color: var(--green); }
-    .guided-topic-status.in_progress { color: var(--orange); }
-    .guided-topic-status.locked,
-    .guided-topic-status.planned { color: var(--muted); }
-    .guided-topic-meta {
-      font-size: 0.68rem;
-      color: var(--muted);
-    }
-    .guided-side-grid {
-      display: grid;
-      gap: 12px;
-    }
-    .guided-side-card {
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: rgba(255,255,255,0.9);
-      box-shadow: var(--shadow-sm);
-      display: grid;
-      gap: 10px;
-    }
-    .guided-stat {
-      display: grid;
-      gap: 4px;
-    }
-    .guided-stat-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    .guided-stat-value {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.3;
-    }
-    .guided-lock {
-      font-size: 0.78rem;
-      line-height: 1.45;
-      color: var(--text-secondary);
-    }
-    .guided-lock.good {
-      color: #15803d;
-      font-weight: 600;
-    }
-    .guided-roadmap {
-      padding: 16px;
-      display: grid;
-      gap: 14px;
-    }
-    .guided-roadmap-top {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .guided-roadmap-title {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .guided-roadmap-sub {
-      font-size: 0.72rem;
-      color: var(--muted);
-    }
-    .guided-block-list {
-      display: grid;
-      gap: 10px;
-    }
-    .guided-block {
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: rgba(0,0,0,0.02);
-      display: grid;
-      gap: 10px;
-    }
-    .guided-block.current {
-      border-color: var(--orange-border);
-      background: rgba(255,248,243,0.9);
-    }
-    .guided-block-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .guided-block-name {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .guided-section-list {
-      display: grid;
-      gap: 8px;
-    }
-    .guided-section {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.92);
-      border: 1px solid transparent;
-    }
-    .guided-section.current {
-      border-color: var(--orange-border);
-      box-shadow: 0 0 0 2px rgba(224, 122, 60, 0.08);
-    }
-    .guided-section-main {
-      min-width: 0;
-      display: grid;
-      gap: 3px;
-    }
-    .guided-section-name {
-      font-size: 0.76rem;
-      font-weight: 700;
-      color: var(--text);
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .guided-section-meta {
-      font-size: 0.68rem;
-      color: var(--muted);
-    }
-    .guided-section-badge {
-      flex: 0 0 auto;
-      padding: 5px 8px;
-      border-radius: var(--r-full);
-      background: rgba(0,0,0,0.05);
-      color: var(--muted);
-      font-size: 0.64rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .guided-section-badge.done {
-      background: rgba(34,197,94,0.14);
-      color: #15803d;
-    }
-    .guided-section-badge.in_progress {
-      background: var(--orange-soft);
-      color: var(--orange);
-    }
-    .guided-section-badge.locked,
-    .guided-section-badge.planned {
-      background: rgba(0,0,0,0.05);
-      color: var(--muted);
-    }
-    .guided-quiz {
-      padding: 16px;
-      display: grid;
-      gap: 14px;
-    }
-    .guided-quiz-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .guided-quiz-copy {
-      min-width: 0;
-      display: grid;
-      gap: 5px;
-    }
-    .guided-quiz-title {
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .guided-quiz-sub {
-      font-size: 0.74rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-    }
-    .guided-quiz-score {
-      flex: 0 0 auto;
-      padding: 8px 10px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.92);
-      font-size: 0.73rem;
-      font-weight: 700;
-      color: var(--text);
-      text-align: right;
-      white-space: nowrap;
-    }
-    .guided-quiz-items {
-      display: grid;
-      gap: 12px;
-    }
-    .guided-question {
-      padding: 14px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: rgba(0,0,0,0.02);
-      display: grid;
-      gap: 10px;
-    }
-    .guided-question-title {
-      font-size: 0.77rem;
-      font-weight: 700;
-      line-height: 1.45;
-      color: var(--text);
-    }
-    .guided-option-list {
-      display: grid;
-      gap: 8px;
-    }
-    .guided-option {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.94);
-      color: var(--text-secondary);
-      text-align: left;
-      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease), color 0.18s var(--ease);
-    }
-    .guided-option:hover {
-      border-color: var(--orange-border);
-      color: var(--text);
-      transform: translateY(-1px);
-    }
-    .guided-option.active {
-      border-color: rgba(224, 122, 60, 0.28);
-      background: rgba(255,247,241,0.96);
-      color: var(--text);
-    }
-    .guided-option.correct {
-      border-color: rgba(34,197,94,0.32);
-      background: rgba(34,197,94,0.1);
-      color: #166534;
-    }
-    .guided-option.wrong {
-      border-color: rgba(220,38,38,0.22);
-      background: rgba(220,38,38,0.08);
-      color: #991b1b;
-    }
-    .guided-option-key {
-      flex: 0 0 auto;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.05);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--muted);
-    }
-    .guided-option.active .guided-option-key,
-    .guided-option.correct .guided-option-key,
-    .guided-option.wrong .guided-option-key {
-      background: rgba(255,255,255,0.86);
-      color: inherit;
-    }
-    .guided-option-text {
-      font-size: 0.75rem;
-      line-height: 1.45;
-    }
-    .guided-answer-note {
-      font-size: 0.72rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-      padding-top: 2px;
-    }
-    .guided-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .guided-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 38px;
-      padding: 0 14px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.94);
-      color: var(--text);
-      font-size: 0.77rem;
-      font-weight: 700;
-      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
-    }
-    .guided-action:hover:not(:disabled) {
-      border-color: var(--orange-border);
-      transform: translateY(-1px);
-    }
-    .guided-action.primary {
-      border-color: rgba(224, 122, 60, 0.18);
-      background: var(--orange);
-      color: #fff;
-      box-shadow: 0 8px 16px rgba(224, 122, 60, 0.16);
-    }
-    .guided-action.secondary {
-      background: rgba(0,0,0,0.03);
-    }
-    .guided-action:disabled {
-      opacity: 0.48;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-    .guided-empty {
-      padding: 14px;
-      border-radius: 16px;
-      border: 1px dashed var(--orange-border);
-      background: rgba(255,247,241,0.7);
-      font-size: 0.78rem;
-      line-height: 1.55;
-      color: var(--text-secondary);
-    }
-    .guided-empty strong {
-      color: var(--text);
-    }
-
-    /* GUIDED LEARNING COMPACT */
-    .guided-banner {
-      margin: 0 0 16px;
-      border: 1px solid rgba(224, 122, 60, 0.22);
-      border-radius: 20px;
-      background:
-        linear-gradient(180deg, rgba(255,253,251,0.98), rgba(255,255,255,0.94));
-      box-shadow: 0 10px 28px -18px rgba(224, 122, 60, 0.38), 0 1px 2px rgba(0,0,0,0.04);
-      overflow: hidden;
-      position: sticky;
-      top: 0;
-      z-index: 8;
-      backdrop-filter: saturate(1.15) blur(12px);
-      -webkit-backdrop-filter: saturate(1.15) blur(12px);
-    }
-    .guided-banner.empty-state { margin-top: 8px; }
-    .guided-banner summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 14px 16px 12px;
-      display: grid;
-      gap: 11px;
-      position: relative;
-    }
-    .guided-banner summary::-webkit-details-marker { display: none; }
-    .guided-banner summary::after {
-      content: '';
-      position: absolute;
-      right: 16px;
-      top: 20px;
-      width: 10px;
-      height: 10px;
-      border-right: 2px solid var(--orange);
-      border-bottom: 2px solid var(--orange);
-      transform: rotate(45deg);
-      transition: transform 0.22s var(--ease);
-      opacity: 0.7;
-    }
-    .guided-banner[open] summary::after {
-      transform: rotate(-135deg) translate(-2px, -2px);
-    }
-    .guided-banner-line {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding-right: 20px;
-    }
-    .guided-banner-current {
-      min-width: 0;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--text);
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      letter-spacing: -0.005em;
-    }
-    .guided-banner-current::before {
-      content: '';
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--orange);
-      margin-right: 8px;
-      vertical-align: middle;
-      box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.18);
-      animation: guidedPulse 2s var(--ease) infinite;
-    }
-    @keyframes guidedPulse {
-      0%, 100% { box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.18); }
-      50% { box-shadow: 0 0 0 5px rgba(224, 122, 60, 0.08); }
-    }
-    .guided-banner-meta {
-      flex: 0 0 auto;
-      font-size: 0.78rem;
-      font-weight: 800;
-      color: var(--orange);
-      letter-spacing: 0.01em;
-      font-variant-numeric: tabular-nums;
-    }
-    .guided-progress {
-      position: relative;
-      width: 100%;
-      height: 10px;
-      border-radius: var(--r-full);
-      background: rgba(224, 122, 60, 0.1);
-      overflow: hidden;
-      box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .guided-progress > span {
-      display: block;
-      height: 100%;
-      width: 0;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #e07a3c 0%, #f2b46d 50%, #e07a3c 100%);
-      background-size: 200% 100%;
-      animation: guidedShimmer 3s linear infinite;
-      box-shadow: 0 1px 3px rgba(224, 122, 60, 0.35);
-      transition: width 0.4s var(--ease);
-    }
-    @keyframes guidedShimmer {
-      0% { background-position: 0% 0; }
-      100% { background-position: -200% 0; }
-    }
-    .guided-topic-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .guided-topic-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      min-height: 24px;
-      padding: 2px 10px;
-      border-radius: var(--r-full);
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--muted);
-      background: rgba(0,0,0,0.04);
-      border: 1px solid transparent;
-      transition: transform 0.18s var(--ease);
-    }
-    .guided-topic-pill.done {
-      background: rgba(34,197,94,0.14);
-      color: #166534;
-      border-color: rgba(34,197,94,0.2);
-    }
-    .guided-topic-pill.done::before { content: '✓ '; font-weight: 900; }
-    .guided-topic-pill.current {
-      background: linear-gradient(135deg, rgba(242, 180, 109, 0.22), rgba(224, 122, 60, 0.14));
-      color: var(--orange);
-      border-color: rgba(224, 122, 60, 0.28);
-      transform: scale(1.04);
-      box-shadow: 0 3px 10px -5px rgba(224, 122, 60, 0.4);
-    }
-    .guided-topic-pill.locked,
-    .guided-topic-pill.planned {
-      background: rgba(0,0,0,0.04);
-      color: var(--muted);
-      opacity: 0.72;
-    }
-    .guided-banner-panel {
-      padding: 2px 14px 14px;
-      border-top: 1px solid rgba(0,0,0,0.06);
-      display: grid;
-      gap: 8px;
-    }
-    .guided-detail-row {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 0.75rem;
-      color: var(--text-secondary);
-    }
-    .guided-detail-row strong {
-      color: var(--text);
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-align: right;
-    }
-    .guided-note {
-      font-size: 0.73rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-    }
-    .guided-outline {
-      display: grid;
-      gap: 4px;
-      padding-top: 4px;
-    }
-    .guided-outline-line {
-      display: grid;
-      grid-template-columns: 8px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.74rem;
-      color: var(--text-secondary);
-      min-width: 0;
-    }
-    .guided-outline-mark {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.14);
-    }
-    .guided-outline-line.done .guided-outline-mark { background: var(--green); }
-    .guided-outline-line.current .guided-outline-mark { background: var(--orange); }
-    .guided-outline-line.locked .guided-outline-mark { background: rgba(0,0,0,0.18); }
-    .guided-outline-name {
-      min-width: 0;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      color: var(--text);
-      font-weight: 600;
-    }
-    .guided-outline-state {
-      font-size: 0.66rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .guided-banner-actions,
-    .guided-inline-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .guided-mini-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 30px;
-      padding: 0 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(0,0,0,0.03);
-      color: var(--text);
-      font-size: 0.71rem;
-      font-weight: 700;
-      transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease);
-    }
-    .guided-mini-btn:hover:not(:disabled) {
-      border-color: var(--orange-border);
-      background: rgba(224, 122, 60, 0.08);
-    }
-    .guided-mini-btn.primary {
-      background: var(--orange);
-      border-color: rgba(224, 122, 60, 0.22);
-      color: #fff;
-    }
-    .guided-mini-btn:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-    .guided-inline-quiz {
-      margin-top: 16px;
-      padding: 16px;
-      border-radius: 18px;
-      background:
-        linear-gradient(180deg, rgba(255, 249, 243, 0.9), rgba(255, 255, 255, 0.94));
-      border: 1px solid rgba(224, 122, 60, 0.18);
-      box-shadow: 0 6px 20px -14px rgba(224, 122, 60, 0.3);
-      display: grid;
-      gap: 14px;
-    }
-    .guided-inline-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .guided-inline-title {
-      font-size: 0.92rem;
-      font-weight: 800;
-      color: var(--text);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      letter-spacing: -0.005em;
-    }
-    .guided-inline-title::before {
-      content: '';
-      width: 20px;
-      height: 20px;
-      border-radius: 6px;
-      background:
-        linear-gradient(135deg, #e07a3c, #f2b46d);
-      box-shadow: 0 2px 6px -2px rgba(224, 122, 60, 0.5);
-      flex: 0 0 auto;
-      position: relative;
-    }
-    .guided-inline-title::after {
-      content: '?';
-      position: absolute;
-      color: #fff;
-      font-weight: 900;
-      font-size: 0.72rem;
-      left: calc(0px + 6px);
-      top: 50%;
-      transform: translateY(-50%);
-      line-height: 1;
-      pointer-events: none;
-    }
-    .guided-inline-score {
-      flex: 0 0 auto;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--orange);
-      background: rgba(224, 122, 60, 0.1);
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-variant-numeric: tabular-nums;
-    }
-    .guided-inline-foot,
-    .guided-inline-note,
-    .guided-inline-feedback {
-      font-size: 0.78rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-    }
-    .guided-inline-feedback {
-      background: rgba(0,0,0,0.03);
-      border-left: 3px solid rgba(0,0,0,0.12);
-      padding: 8px 10px;
-      border-radius: 0 10px 10px 0;
-      margin-top: 4px;
-    }
-    .guided-inline-item.answered.correct .guided-inline-feedback {
-      background: rgba(34,197,94,0.08);
-      border-left-color: #22c55e;
-      color: #166534;
-    }
-    .guided-inline-item.answered.wrong .guided-inline-feedback {
-      background: rgba(220,38,38,0.06);
-      border-left-color: #dc2626;
-      color: #991b1b;
-    }
-    .guided-inline-status {
-      font-size: 0.8rem;
-      line-height: 1.45;
-      font-weight: 800;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      align-self: flex-start;
-    }
-    .guided-inline-status.correct {
-      color: #166534;
-      background: rgba(34,197,94,0.14);
-    }
-    .guided-inline-status.correct::before { content: '✓'; font-size: 0.95rem; }
-    .guided-inline-status.wrong {
-      color: #991b1b;
-      background: rgba(220,38,38,0.1);
-    }
-    .guided-inline-status.wrong::before { content: '✗'; font-size: 0.95rem; }
-    .guided-inline-status.neutral {
-      color: var(--text-secondary);
-      background: rgba(0,0,0,0.05);
-    }
-    .guided-inline-list {
-      display: grid;
-      gap: 14px;
-    }
-    .guided-inline-item {
-      display: grid;
-      gap: 8px;
-      padding: 12px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.6);
-      border: 1px solid rgba(0,0,0,0.05);
-    }
-    .guided-inline-item.answered.correct {
-      background: linear-gradient(180deg, rgba(34,197,94,0.06), rgba(255,255,255,0.7));
-      border-color: rgba(34,197,94,0.22);
-    }
-    .guided-inline-item.answered.wrong {
-      background: linear-gradient(180deg, rgba(220,38,38,0.05), rgba(255,255,255,0.7));
-      border-color: rgba(220,38,38,0.2);
-    }
-    .guided-inline-prompt {
-      font-size: 0.88rem;
-      line-height: 1.5;
-      color: var(--text);
-      font-weight: 700;
-      letter-spacing: -0.005em;
-    }
-    .guided-inline-options {
-      display: grid;
-      gap: 8px;
-    }
-    .guided-inline-option {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1.5px solid rgba(0,0,0,0.08);
-      background: rgba(255,255,255,0.85);
-      color: var(--text);
-      text-align: left;
-      font-size: 0.86rem;
-      line-height: 1.35;
-      font-weight: 500;
-      cursor: pointer;
-      transition: transform 0.14s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
-      position: relative;
-    }
-    .guided-inline-option:hover:not(:disabled) {
-      background: #fff;
-      border-color: rgba(224, 122, 60, 0.35);
-      box-shadow: 0 4px 14px -8px rgba(224, 122, 60, 0.45);
-      transform: translateY(-1px);
-    }
-    .guided-inline-option:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    .guided-inline-option:disabled {
-      cursor: default;
-    }
-    .guided-inline-option.active {
-      border-color: var(--orange);
-      background: rgba(255,247,241,1);
-      box-shadow: 0 0 0 3px rgba(224, 122, 60, 0.12);
-    }
-    .guided-inline-option.correct {
-      background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(34,197,94,0.04));
-      border-color: rgba(34,197,94,0.5);
-      color: #14532d;
-    }
-    .guided-inline-option.correct .guided-inline-key {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      color: #fff;
-      border-color: transparent;
-    }
-    .guided-inline-option.correct::after {
-      content: '✓';
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #16a34a;
-      font-weight: 900;
-      font-size: 1.1rem;
-      animation: fadeIn 0.3s var(--ease) both;
-    }
-    .guided-inline-option.wrong {
-      background: linear-gradient(135deg, rgba(220,38,38,0.1), rgba(220,38,38,0.03));
-      border-color: rgba(220,38,38,0.4);
-      color: #7f1d1d;
-    }
-    .guided-inline-option.wrong .guided-inline-key {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: #fff;
-      border-color: transparent;
-    }
-    .guided-inline-option.wrong::after {
-      content: '✗';
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #dc2626;
-      font-weight: 900;
-      font-size: 1.1rem;
-      animation: fadeIn 0.3s var(--ease) both;
-    }
-    .guided-inline-key {
-      flex: 0 0 auto;
-      width: 28px;
-      height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      border: 1.5px solid rgba(0,0,0,0.1);
-      background: rgba(255,255,255,0.9);
-      color: var(--text-secondary);
-      font-weight: 800;
-      font-size: 0.82rem;
-      letter-spacing: 0.02em;
-      transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
-    }
-    .guided-inline-option:hover:not(:disabled) .guided-inline-key {
-      background: var(--orange-soft, rgba(224, 122, 60, 0.1));
-      border-color: rgba(224, 122, 60, 0.4);
-      color: var(--orange);
-    }
-    .guided-inline-option.active .guided-inline-key {
-      background: var(--orange);
-      color: #fff;
-      border-color: transparent;
-    }
-    .guided-inline-waiting {
-      margin-top: 14px;
-      padding: 16px 18px;
-      border-radius: 16px;
-      border: 1px dashed rgba(224, 122, 60, 0.3);
-      background: rgba(255, 249, 243, 0.55);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: fadeIn 0.3s var(--ease) both;
-    }
-    .guided-inline-waiting-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--orange);
-      flex: 0 0 auto;
-      animation: guidedPulse 1.4s var(--ease) infinite;
-    }
-    .guided-inline-waiting-text {
-      font-size: 0.8rem;
-      line-height: 1.45;
-      color: var(--text-secondary);
-    }
-    .guided-inline-waiting-text strong {
-      color: var(--text);
-      display: block;
-      font-size: 0.86rem;
-      margin-bottom: 2px;
-    }
-    @media (max-width: 768px) {
-      .guided-banner summary { padding: 11px 12px; }
-      .guided-banner-panel { padding: 2px 12px 12px; }
-      .guided-inline-head { flex-direction: column; align-items: flex-start; }
-      .guided-inline-actions,
-      .guided-banner-actions { flex-direction: column; }
-      .guided-mini-btn { width: 100%; }
-    }
-    @media (max-width: 480px) {
-      .guided-banner-line,
-      .guided-detail-row {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .guided-detail-row strong { text-align: left; }
-      .guided-outline-line {
-        grid-template-columns: 8px minmax(0, 1fr);
-      }
-      .guided-outline-state {
-        grid-column: 2;
-      }
-    }
-
     /* ─── MESSAGES ───────────────────────────────────── */
     .message {
       display: flex; align-items: flex-start; gap: 0;
       padding: 8px 0; max-width: 100%;
-      animation: fadeSlideUp 0.3s var(--ease) both;
     }
+    /* Only a message that just arrived slides in; redraws never replay it. */
+    .message.appear { animation: fadeSlideUp 0.3s var(--ease) both; }
     .message.user-msg {
       align-self: flex-end; flex-direction: row-reverse; max-width: 80%;
     }
@@ -1697,13 +644,6 @@
     }
     .bubble-content {
       min-width: 0;
-    }
-    .bubble-content.stream-chunk {
-      animation: chunkReveal 0.18s var(--ease) both;
-    }
-    @keyframes chunkReveal {
-      from { opacity: 0.92; transform: translateY(1px); }
-      to { opacity: 1; transform: translateY(0); }
     }
     .reasoning {
       margin-bottom: 8px;
@@ -2035,11 +975,6 @@
       .composer-area { padding: 8px 10px 14px; }
       .message.user-msg { max-width: 88%; }
       .hero { padding: 8vh 0 24px; }
-      .guided-shell { padding: 14px; gap: 12px; }
-      .guided-overview-grid { grid-template-columns: 1fr; }
-      .guided-topic-list { grid-template-columns: 1fr 1fr; }
-      .guided-actions { flex-direction: column; }
-      .guided-action { width: 100%; }
       .chat-delete { opacity: 1; }
     }
     @media (max-width: 480px) {
@@ -2063,18 +998,6 @@
       .composer { font-size: 0.87rem; }
       .message.user-msg { max-width: 92%; }
       .hero { padding: 5vh 4px 16px; }
-      .guided-topic-list { grid-template-columns: 1fr; }
-      .guided-head,
-      .guided-quiz-head,
-      .guided-roadmap-top,
-      .guided-block-head {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      .guided-section {
-        flex-direction: column;
-        align-items: flex-start;
-      }
     }
 
     /* ─── MSG ACTIONS ────────────────────────────────── */
@@ -2417,6 +1340,8 @@
     .model-price-in { color: #16a34a; padding-top: 1px; }
     .model-price.free { color: #16a34a; font-size: 0.66rem; }
   </style>
+  <link rel="stylesheet" href="guided.css">
+  <link rel="stylesheet" href="visuals.css">
 </head>
 <body>
 
@@ -2646,6 +1571,9 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
   <script src="vendor/pi-engine.js"></script>
+  <script src="stream.js"></script>
+  <script src="visuals.js"></script>
+  <script src="guided.js"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -2655,36 +1583,6 @@
       DEFAULT_MODEL: '',
       DEFAULT_THINKING_LEVEL: '',
       SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension, but never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
-      GUIDED_LEARNING_PROMPT: [
-        'Estás en modo "Guided Learning" de inhouse learn. El usuario está estudiando: quiere entender en profundidad, no correr. Habla siempre en español, tuteo informal, tono cercano.',
-        '',
-        'REGLAS (en orden de prioridad):',
-        '',
-        '1. TODO mensaje tuyo empieza SIN EXCEPCIÓN con una línea de progreso del tema actual, indicando los apartados cubiertos y pendientes. Formato exacto:',
-        '   Progreso: [█████████░] 90% (Fundamentos 🌍 | Órbitas 🛰️ | Cónicas 📐 | Energía 🔋)',
-        '   Rellena la barra de forma proporcional a los apartados completados sobre el total del tema activo. Usa los nombres del índice acordado y un emoji por apartado para anclaje visual.',
-        '',
-        '2. Cuando el usuario suba documentos o diga que tiene material, lo PRIMERO es proponer un índice: detecta los temas de los archivos y sugiere una jerarquía Tema → Bloque → Apartado (como carpetas). Pide confirmación o ajustes antes de enseñar nada. No empieces con teoría hasta que el índice esté acordado.',
-        '',
-        '3. Enseña UN apartado por mensaje. Nunca vuelques el bloque entero, ni mucho menos el tema, de golpe. Nunca listes todos los apartados a la vez con su contenido. Quédate en el apartado actual hasta que el usuario lo entienda de verdad — no hasta que diga "ok", sino hasta que sus respuestas muestren comprensión intuitiva.',
-        '',
-        '4. Al final de cada apartado, plantea 2 o 3 retos / preguntas de lógica cortas (NO problemas completos — solo preguntas de razonamiento o pequeños desafíos conceptuales). Espera la respuesta del usuario. Si detectas huecos, vuelve a explicar ESE hueco concreto con otro ángulo: metáfora distinta, caso más simple, derivación alternativa. Cuando las respuestas sean sólidas, pregunta: "¿Seguimos con el siguiente apartado o quieres profundizar más en este?"',
-        '',
-        '5. POR NINGÚN MOTIVO pases al siguiente apartado sin confirmación explícita del usuario. Lo mismo para saltar de bloque o de tema.',
-        '',
-        '6. Estilo de enseñanza:',
-        '   - Asume que el usuario NO sabe nada del tema. Todo concepto es nuevo.',
-        '   - El usuario tiene TDA/TDAH: mensajes en trozos cortos, viñetas, negritas como anclas, nada de muros de texto. PERO no sacrifiques profundidad — reparte la profundidad entre turnos, no la aplanes.',
-        '   - Prioriza INTUICIÓN y ORIGEN: de dónde sale cada fórmula, qué mide de verdad, por qué tiene esa forma. Deriva, no la sueltes sin más. Si algo es pura convención, dilo claramente ("esto es convención, memorízalo").',
-        '   - Usa metáforas y ejemplos cortos ilustrativos, NO problemas completos. Aquí el usuario no resuelve ejercicios, solo entiende.',
-        '   - Profundiza progresivamente. Empieza desde cero, pero cada apartado/bloque debe ir acercándose al nivel de examen. Se va a examinar de todo.',
-        '',
-        '7. Formato: LaTeX para matemáticas — inline \\(...\\) y display $$...$$. NUNCA pongas matemáticas dentro de bloques de código cercados. Headings, bullets y negritas con moderación, para ayudar a comprender, no para decorar.',
-        '',
-        '8. Si el usuario pregunta algo fuera del apartado actual, apúntalo como "lo vemos luego" y sigue con el apartado actual, salvo que él quiera saltar expresamente.',
-        '',
-        'Arranca cada respuesta con la línea de Progreso. Sin excepciones.'
-      ].join('\n'),
       MAX_OUTPUT_TOKENS: 32768,
       TEMPERATURE: 1.0,
       TOP_P: 0.95
@@ -2795,106 +1693,6 @@
       return false;
     };
 
-    APP_CONFIG.GUIDED_LEARNING_PROMPT = [
-      'Estas en modo "Guided Learning" de inhouse learn. Eres el tutor.',
-      '',
-      'La UI del producto se encarga de renderizar:',
-      '- Barra de progreso global y del apartado (NO la pongas en el texto).',
-      '- Mapa jerarquico Tema -> Bloque -> Apartado (NO lo pongas en el texto).',
-      '- Mini test interactivo con botones clicables y feedback visual (NO imprimas preguntas ni opciones con letras A/B/C en el texto visible; el usuario las ve y clica en la tarjeta interactiva de abajo).',
-      '',
-      'CONTRATO DE SALIDA (obligatorio):',
-      '',
-      '1) El texto visible es SOLO la explicacion del apartado actual. Nada de barras ASCII, nada de listas de apartados, nada de preguntas A/B/C escritas. Puedes cerrar con una linea tipo: "Cuando lo tengas, dale a las opciones del mini test de abajo." y nada mas.',
-      '',
-      '2) DESPUES del texto visible, y SIEMPRE, acabas el mensaje con un unico bloque:',
-      '   <guided-state>{...JSON valido...}</guided-state>',
-      '   Sin texto, ni markdown, ni ``` despues del bloque. Si omites este bloque, la UI no puede mostrar el test y el usuario pierde el progreso. No es opcional.',
-      '',
-      '3) El JSON dentro de <guided-state> sigue EXACTAMENTE este schema (los ids son strings estables, reusalos entre mensajes del mismo apartado):',
-      '{',
-      '  "syllabusTitle": "Fisica 1 - Dinamica",',
-      '  "topics": [',
-      '    {',
-      '      "id": "t-dinamica",',
-      '      "title": "Dinamica",',
-      '      "emoji": "🚀",',
-      '      "status": "in_progress",',
-      '      "progress": 25,',
-      '      "blocks": [',
-      '        {',
-      '          "id": "b-fuerzas",',
-      '          "title": "Fuerzas",',
-      '          "status": "in_progress",',
-      '          "progress": 40,',
-      '          "sections": [',
-      '            { "id": "s-newton1", "title": "Primera ley", "status": "done", "progress": 100 },',
-      '            { "id": "s-newton2", "title": "Segunda ley", "status": "in_progress", "progress": 60 },',
-      '            { "id": "s-newton3", "title": "Tercera ley", "status": "locked", "progress": 0 }',
-      '          ]',
-      '        }',
-      '      ]',
-      '    }',
-      '  ],',
-      '  "current": {',
-      '    "topicId": "t-dinamica",',
-      '    "topicTitle": "Dinamica",',
-      '    "blockId": "b-fuerzas",',
-      '    "blockTitle": "Fuerzas",',
-      '    "sectionId": "s-newton2",',
-      '    "sectionTitle": "Segunda ley",',
-      '    "overallProgress": 25,',
-      '    "topicProgress": 25,',
-      '    "depthPercent": 60,',
-      '    "canAdvance": false',
-      '  },',
-      '  "quiz": {',
-      '    "title": "Chequeo: Segunda ley",',
-      '    "intro": "Responde sin calcular, solo con intuicion.",',
-      '    "requiredAccuracy": 70,',
-      '    "answerKey": { "q1": "b", "q2": "a" },',
-      '    "items": [',
-      '      {',
-      '        "id": "q1",',
-      '        "prompt": "Si duplicas la fuerza neta sobre un cuerpo de masa constante, la aceleracion...",',
-      '        "correctOptionId": "b",',
-      '        "solutionLetter": "B",',
-      '        "options": [',
-      '          { "id": "a", "text": "Se mantiene igual", "correct": false },',
-      '          { "id": "b", "text": "Se duplica", "correct": true },',
-      '          { "id": "c", "text": "Se reduce a la mitad", "correct": false }',
-      '        ],',
-      '        "explanation": "F = m*a, con m fija, a es proporcional a F."',
-      '      }',
-      '    ]',
-      '  },',
-      '  "teacherNote": "Si falla q1, repasar por que la masa no cambia."',
-      '}',
-      '',
-      '4) Reglas del quiz (criticas):',
-      '   - 2 o 3 preguntas, conceptuales, cortas, tipo examen rapido.',
-      '   - 3 o 4 opciones por pregunta, exactamente UNA correcta.',
-      '   - En CADA pregunta pon "correctOptionId" apuntando al id exacto, "solutionLetter" (A/B/C/D) y marca la opcion correcta con "correct": true.',
-      '   - En el quiz completo pon "answerKey" con cada id->opcion correcta.',
-      '   - "explanation" corta por pregunta (max 1-2 frases).',
-      '   - Si no puedes verificar la solucion, NO emitas esa pregunta.',
-      '   - Cada vez que envias un mensaje de apartado con teoria, DEBES incluir quiz.items no vacio. Si el usuario solo esta confirmando el indice, puedes mandar items vacio.',
-      '',
-      '5) Reglas de ensenanza:',
-      '   - Si el usuario sube documentos o dice que tiene temario, primero propone la jerarquia Tema -> Bloque -> Apartado y pide confirmacion. No metas teoria hasta que confirme.',
-      '   - Un apartado por mensaje. Sin saltos. Sin volcar bloques ni temas enteros.',
-      '   - Parte de cero: prioriza intuicion, origen de formulas, significado real. Usa analogias cortas y ejemplos pequenos, NO problemas completos ni ejercicios cerrados (esos van en el quiz).',
-      '   - TDA/TDAH amigable: fragmenta, anclas visuales con **negrita**, viñetas cuando ayuden, nada de muros de texto. Sin sacrificar profundidad: reparte la profundidad entre turnos.',
-      '   - Si la UI indica que el siguiente apartado esta bloqueado, NO avances aunque el usuario insista; dile que responda el test primero.',
-      '   - Si el usuario pregunta algo fuera del apartado actual, aparcalo con "lo vemos luego" y vuelve al foco.',
-      '',
-      '6) LaTeX para matematicas: inline \\(...\\) y display $$...$$. Nunca dentro de bloques de codigo.',
-      '',
-      '7) Tuteo informal, espanol, tono cercano.',
-      '',
-      'RECORDATORIO FINAL: si no cierras con <guided-state>{...}</guided-state> el producto se rompe. Ese bloque es obligatorio en TODOS tus mensajes mientras Guided Learning este activo.'
-    ].join('\n');
-
     const STORAGE_KEY = 'inhouseGeminiStandaloneV1';
     const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
     const DRIVE_FOLDER_NAME = 'inhouse learn';
@@ -2959,542 +1757,6 @@
       openRouterCredits: null,
       guidedLearning: false
     };
-
-    function isGuidedLearningEnabled(chatLike) {
-      const chat = chatLike || getActiveChat();
-      return !!(chat && chat.guidedLearning);
-    }
-
-    function getGuidedResolvedCurrent(session) {
-      if (!session || typeof session !== 'object') {
-        return {
-          topic: null,
-          block: null,
-          section: null
-        };
-      }
-      const topic = chooseGuidedCurrent(session.topics, session.current && session.current.topicId);
-      const block = topic ? chooseGuidedCurrent(topic.blocks, session.current && session.current.blockId) : null;
-      const section = block ? chooseGuidedCurrent(block.sections, session.current && session.current.sectionId) : null;
-      return {
-        topic,
-        block,
-        section
-      };
-    }
-
-    function ensureGuidedSectionRecord(session, sectionKey, requiredAccuracy) {
-      if (!session || !sectionKey) {
-        return null;
-      }
-      if (!session.sectionStats || typeof session.sectionStats !== 'object') {
-        session.sectionStats = {};
-      }
-      session.sectionStats[sectionKey] = normalizeGuidedSectionRecord(
-        session.sectionStats[sectionKey],
-        requiredAccuracy
-      );
-      return session.sectionStats[sectionKey];
-    }
-
-    function computeGuidedQuizStats(session, sectionKey) {
-      const quiz = session && session.quiz ? session.quiz : createEmptyGuidedQuiz();
-      const requiredAccuracy = clampNumber(quiz.requiredAccuracy, 0, 100);
-      const record = ensureGuidedSectionRecord(session, sectionKey, requiredAccuracy);
-      const items = Array.isArray(quiz.items) ? quiz.items : [];
-      let answered = 0;
-      let correct = 0;
-      const itemStates = items.map((item) => {
-        const response = record && record.responses ? record.responses[item.id] : null;
-        const selectedOptionId = response && response.selectedOptionId ? response.selectedOptionId : '';
-        const selectedOption = item.options.find((option) => option.id === selectedOptionId) || null;
-        const correctOption = item.options.find((option) => option.correct) || null;
-        const isAnswered = !!selectedOptionId;
-        const isCorrect = !!(isAnswered && selectedOption && selectedOption.correct);
-        if (isAnswered) answered += 1;
-        if (isCorrect) correct += 1;
-        return {
-          item,
-          response,
-          selectedOptionId,
-          selectedOption,
-          correctOption,
-          answered: isAnswered,
-          correct: isCorrect
-        };
-      });
-      const total = items.length;
-      const accuracy = total ? Math.round((correct / total) * 100) : 0;
-      const completed = total > 0 && answered === total;
-      const unlocked = total
-        ? !!((record && record.mastered) || (completed && accuracy >= requiredAccuracy))
-        : !!(session && session.current && session.current.canAdvance);
-      return {
-        record,
-        itemStates,
-        answered,
-        correct,
-        total,
-        accuracy,
-        completed,
-        requiredAccuracy,
-        unlocked,
-        hasQuiz: total > 0
-      };
-    }
-
-    function syncGuidedStatsToRecord(stats) {
-      if (!stats || !stats.record) {
-        return stats;
-      }
-      stats.record.lastAccuracy = stats.accuracy;
-      stats.record.requiredAccuracy = stats.requiredAccuracy;
-      stats.record.updatedAt = nowIso();
-      if (stats.accuracy > stats.record.bestAccuracy) {
-        stats.record.bestAccuracy = stats.accuracy;
-      }
-      if (stats.unlocked) {
-        stats.record.mastered = true;
-        if (!stats.record.completedAt) {
-          stats.record.completedAt = nowIso();
-        }
-      }
-      return stats;
-    }
-
-    function getGuidedCurrentMastery(chatLike) {
-      const chat = chatLike || getActiveChat();
-      if (!chat) {
-        return {
-          record: null,
-          itemStates: [],
-          answered: 0,
-          correct: 0,
-          total: 0,
-          accuracy: 0,
-          completed: false,
-          requiredAccuracy: 70,
-          unlocked: false,
-          hasQuiz: false
-        };
-      }
-      const session = ensureGuidedSession(chat);
-      const sectionKey = resolveGuidedSectionStatsKey(session);
-      return computeGuidedQuizStats(session, sectionKey);
-    }
-
-    function buildGuidedUiState(chatLike) {
-      const chat = chatLike || getActiveChat();
-      const session = ensureGuidedSession(chat);
-      const resolved = getGuidedResolvedCurrent(session);
-      const mastery = getGuidedCurrentMastery(chat);
-      const weakQuestions = mastery.itemStates
-        .filter((state) => state.answered && !state.correct)
-        .map((state) => state.item.prompt)
-        .slice(0, 3);
-      return JSON.stringify({
-        syllabusTitle: session.syllabusTitle || '',
-        current: {
-          topicId: session.current.topicId || '',
-          topicTitle: resolved.topic ? resolved.topic.title : session.current.topicTitle || '',
-          blockId: session.current.blockId || '',
-          blockTitle: resolved.block ? resolved.block.title : session.current.blockTitle || '',
-          sectionId: session.current.sectionId || '',
-          sectionTitle: resolved.section ? resolved.section.title : session.current.sectionTitle || '',
-          overallProgress: clampNumber(session.current.overallProgress, 0, 100),
-          topicProgress: clampNumber(session.current.topicProgress, 0, 100),
-          depthPercent: clampNumber(session.current.depthPercent, 0, 100)
-        },
-        uiLock: {
-          nextSectionLocked: mastery.hasQuiz ? !mastery.unlocked : false,
-          mastered: !!(mastery.record && mastery.record.mastered),
-          requiredAccuracy: mastery.requiredAccuracy,
-          accuracy: mastery.accuracy,
-          bestAccuracy: mastery.record ? mastery.record.bestAccuracy : mastery.accuracy,
-          answered: mastery.answered,
-          totalQuestions: mastery.total,
-          weakQuestions
-        },
-        teacherNote: session.teacherNote || '',
-        syllabusKnown: Array.isArray(session.topics) && session.topics.length > 0
-      }, null, 2);
-    }
-
-    function buildGuidedSystemPrompt(chatLike) {
-      const chat = chatLike || getActiveChat();
-      return [
-        APP_CONFIG.GUIDED_LEARNING_PROMPT,
-        '',
-        'UI_STATE (fuente de verdad de la app; respetalo):',
-        buildGuidedUiState(chat)
-      ].join('\n');
-    }
-
-    function getActiveSystemPrompt(chatLike) {
-      const chat = chatLike || getActiveChat();
-      return isGuidedLearningEnabled(chat)
-        ? buildGuidedSystemPrompt(chat)
-        : APP_CONFIG.SYSTEM_PROMPT;
-    }
-
-    function parseGuidedAssistantPayload(text) {
-      const raw = String(text || '');
-      const start = raw.indexOf(GUIDED_STATE_TAG_START);
-      if (start === -1) {
-        let partialTrimmed = raw;
-        for (let len = GUIDED_STATE_TAG_START.length - 1; len > 0; len -= 1) {
-          const prefix = GUIDED_STATE_TAG_START.slice(0, len);
-          if (raw.endsWith(prefix)) {
-            partialTrimmed = raw.slice(0, raw.length - len);
-            break;
-          }
-        }
-        return {
-          visibleText: partialTrimmed,
-          meta: null,
-          complete: false
-        };
-      }
-      const visibleText = raw.slice(0, start).replace(/\s+$/, '');
-      const end = raw.indexOf(GUIDED_STATE_TAG_END, start + GUIDED_STATE_TAG_START.length);
-      if (end === -1) {
-        return {
-          visibleText,
-          meta: null,
-          complete: false
-        };
-      }
-      const jsonText = raw.slice(start + GUIDED_STATE_TAG_START.length, end).trim();
-      let meta = null;
-      try {
-        meta = JSON.parse(jsonText);
-      } catch (error) {
-        meta = null;
-      }
-      return {
-        visibleText,
-        meta,
-        complete: true
-      };
-    }
-
-    function mergeGuidedStateIntoSession(sessionLike, rawState, sourceMessageId) {
-      const session = normalizeGuidedSession(sessionLike);
-      const prevSourceMessageId = session.quiz && typeof session.quiz.sourceMessageId === 'string'
-        ? session.quiz.sourceMessageId
-        : '';
-      const prevQuizSignature = guidedQuizItemsSignature(session.quiz);
-      if (!rawState || typeof rawState !== 'object') {
-        return session;
-      }
-      if (typeof rawState.syllabusTitle === 'string') {
-        session.syllabusTitle = rawState.syllabusTitle.trim();
-      }
-      if (typeof rawState.overview === 'string') {
-        session.overview = rawState.overview.trim();
-      }
-      if (Array.isArray(rawState.topics)) {
-        session.topics = rawState.topics.map((topic, index) => normalizeGuidedTopic(topic, index));
-      }
-      if (rawState.current && typeof rawState.current === 'object') {
-        session.current = Object.assign(createEmptyGuidedCurrent(), session.current, {
-          topicId: typeof rawState.current.topicId === 'string' ? rawState.current.topicId.trim() : session.current.topicId,
-          topicTitle: typeof rawState.current.topicTitle === 'string' ? rawState.current.topicTitle.trim() : session.current.topicTitle,
-          blockId: typeof rawState.current.blockId === 'string' ? rawState.current.blockId.trim() : session.current.blockId,
-          blockTitle: typeof rawState.current.blockTitle === 'string' ? rawState.current.blockTitle.trim() : session.current.blockTitle,
-          sectionId: typeof rawState.current.sectionId === 'string' ? rawState.current.sectionId.trim() : session.current.sectionId,
-          sectionTitle: typeof rawState.current.sectionTitle === 'string' ? rawState.current.sectionTitle.trim() : session.current.sectionTitle,
-          overallProgress: typeof rawState.current.overallProgress !== 'undefined'
-            ? clampNumber(rawState.current.overallProgress, 0, 100)
-            : session.current.overallProgress,
-          topicProgress: typeof rawState.current.topicProgress !== 'undefined'
-            ? clampNumber(rawState.current.topicProgress, 0, 100)
-            : session.current.topicProgress,
-          depthPercent: typeof rawState.current.depthPercent !== 'undefined'
-            ? clampNumber(rawState.current.depthPercent, 0, 100)
-            : session.current.depthPercent,
-          canAdvance: typeof rawState.current.canAdvance === 'boolean'
-            ? rawState.current.canAdvance
-            : session.current.canAdvance
-        });
-      }
-      if (rawState.quiz && typeof rawState.quiz === 'object') {
-        const nextQuiz = Object.assign({}, session.quiz, rawState.quiz);
-        if (Array.isArray(rawState.quiz.items)) {
-          nextQuiz.items = rawState.quiz.items;
-        }
-        session.quiz = normalizeGuidedQuiz(nextQuiz);
-      }
-      if (typeof rawState.teacherNote === 'string') {
-        session.teacherNote = rawState.teacherNote.trim();
-      }
-      if (sourceMessageId) {
-        session.quiz.sourceMessageId = sourceMessageId;
-      }
-      session.lastUpdatedAt = nowIso();
-      syncGuidedCurrentTitles(session);
-      const nextQuizSignature = guidedQuizItemsSignature(session.quiz);
-      const incomingQuizChanged = !!(
-        session.quiz
-        && Array.isArray(session.quiz.items)
-        && session.quiz.items.length
-        && (
-          (sourceMessageId && sourceMessageId !== prevSourceMessageId)
-          || (nextQuizSignature && nextQuizSignature !== prevQuizSignature)
-        )
-      );
-      if (incomingQuizChanged) {
-        guidedLinkedSectionKeys(session, session.quiz.sourceMessageId).forEach((key) => {
-          clearGuidedSectionRecord(session, key, session.quiz.requiredAccuracy);
-        });
-      }
-      const sectionKey = guidedSectionKey(
-        session.current.topicId,
-        session.current.blockId,
-        session.current.sectionId
-      );
-      if (sectionKey) {
-        ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
-      }
-      syncGuidedLinkedSectionRecords(session);
-      return session;
-    }
-
-    function cleanAssistantTextForUi(chat, message, rawText) {
-      const parsed = parseGuidedAssistantPayload(rawText);
-      if (chat && chat.guidedLearning && parsed.meta) {
-        chat.guidedSession = mergeGuidedStateIntoSession(
-          ensureGuidedSession(chat),
-          parsed.meta,
-          message && message.id ? message.id : ''
-        );
-      }
-      return parsed.visibleText;
-    }
-
-    function currentGuidedSectionKey(chatLike) {
-      const chat = chatLike || getActiveChat();
-      if (!chat || !chat.guidedLearning) {
-        return '';
-      }
-      const session = ensureGuidedSession(chat);
-      return resolveGuidedSectionStorageKey(session);
-    }
-
-    function resetGuidedQuizState(chatLike) {
-      const chat = chatLike || getActiveChat();
-      const session = ensureGuidedSession(chat);
-      const keys = guidedLinkedSectionKeys(session, session.quiz && session.quiz.sourceMessageId);
-      if (!keys.length) {
-        keys.push(
-          resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
-          || currentGuidedSectionKey(chat)
-          || resolveGuidedSectionStorageKey(session)
-          || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current')
-        );
-      }
-      keys.filter(Boolean).forEach((key) => {
-        clearGuidedSectionRecord(session, key, session.quiz.requiredAccuracy);
-      });
-      syncGuidedLinkedSectionRecords(session);
-      saveState({ skipDrive: true });
-      rerenderGuidedQuizMessage(chat);
-    }
-
-    function applyGuidedAnswerVisual(btn, questionId, optionId) {
-      if (!btn || !questionId || !optionId) return;
-      const itemEl = btn.closest('.guided-inline-item');
-      if (!itemEl) return;
-      const chat = getActiveChat();
-      if (!chat) return;
-      const session = ensureGuidedSession(chat);
-      const quizItem = (session.quiz && Array.isArray(session.quiz.items))
-        ? session.quiz.items.find((it) => it && it.id === questionId)
-        : null;
-      if (!quizItem) return;
-      const selectedOpt = quizItem.options.find((o) => o && o.id === optionId) || null;
-      const correctOptionId = quizItem.correctOptionId || (quizItem.options.find((o) => o && o.correct) || {}).id || '';
-      const isCorrect = !!(selectedOpt && (selectedOpt.correct || (correctOptionId && selectedOpt.id === correctOptionId)));
-      const options = itemEl.querySelectorAll('.guided-inline-option');
-      options.forEach((opt) => {
-        opt.disabled = true;
-        opt.classList.remove('active', 'correct', 'wrong');
-        if (opt === btn) {
-          opt.classList.add('active', isCorrect ? 'correct' : 'wrong');
-        } else if (!isCorrect && correctOptionId && opt.dataset.guidedOption === correctOptionId) {
-          opt.classList.add('correct');
-        }
-      });
-      itemEl.classList.remove('correct', 'wrong');
-      itemEl.classList.add('answered', isCorrect ? 'correct' : 'wrong');
-      const existingStatus = itemEl.querySelector('.guided-inline-status');
-      if (existingStatus) existingStatus.remove();
-      const existingFeedback = itemEl.querySelector('.guided-inline-feedback');
-      if (existingFeedback) existingFeedback.remove();
-      const statusClass = isCorrect ? 'correct' : 'wrong';
-      const statusText = isCorrect
-        ? 'Correcta'
-        : (correctOptionId
-            ? 'Incorrecta. Correcta: ' + String.fromCharCode(65 + Math.max(0, quizItem.options.findIndex((o) => o.id === correctOptionId))) + '. ' + (quizItem.options.find((o) => o.id === correctOptionId) || {}).text
-            : 'Incorrecta');
-      const statusEl = document.createElement('div');
-      statusEl.className = 'guided-inline-status ' + statusClass;
-      statusEl.textContent = statusText;
-      itemEl.appendChild(statusEl);
-      if (quizItem.explanation) {
-        const feedbackEl = document.createElement('div');
-        feedbackEl.className = 'guided-inline-feedback';
-        feedbackEl.textContent = quizItem.explanation;
-        itemEl.appendChild(feedbackEl);
-      }
-    }
-
-    function updateGuidedQuizMetaInPlace(chat) {
-      if (!chat || !chat.guidedLearning) return;
-      const session = ensureGuidedSession(chat);
-      const mastery = computeGuidedQuizStats(
-        session,
-        resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
-      );
-      const quizCards = document.querySelectorAll('.guided-inline-quiz');
-      quizCards.forEach((card) => {
-        const scoreEl = card.querySelector('.guided-inline-score');
-        if (scoreEl) {
-          scoreEl.textContent =
-            (mastery.total ? mastery.correct + '/' + mastery.total + ' · ' + mastery.accuracy + '%' : 'Sin responder')
-            + ' · objetivo ' + mastery.requiredAccuracy + '%';
-        }
-        const continueBtn = card.querySelector('[data-guided-action="continue"]');
-        if (continueBtn) {
-          if (!mastery.hasQuiz || !mastery.unlocked) {
-            continueBtn.setAttribute('disabled', '');
-          } else {
-            continueBtn.removeAttribute('disabled');
-          }
-        }
-        const footEl = card.querySelector('.guided-inline-foot');
-        const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
-        if (bestAccuracy) {
-          if (footEl) {
-            footEl.textContent = 'Mejor intento: ' + bestAccuracy + '%';
-          } else {
-            const newFoot = document.createElement('div');
-            newFoot.className = 'guided-inline-foot';
-            newFoot.textContent = 'Mejor intento: ' + bestAccuracy + '%';
-            card.appendChild(newFoot);
-          }
-        }
-      });
-    }
-
-    function answerGuidedQuizQuestion(questionId, optionId) {
-      const chat = getActiveChat();
-      if (!chat || !chat.guidedLearning) {
-        console.warn('[guided] answer ignored: no guided chat active');
-        return false;
-      }
-      const session = ensureGuidedSession(chat);
-      const sectionKey = resolveGuidedSectionStatsKey(session, session.quiz && session.quiz.sourceMessageId)
-        || currentGuidedSectionKey(chat)
-        || resolveGuidedSectionStorageKey(session)
-        || (session.quiz && session.quiz.sourceMessageId ? 'quiz::' + session.quiz.sourceMessageId : 'quiz::current');
-      const record = ensureGuidedSectionRecord(session, sectionKey, session.quiz.requiredAccuracy);
-      if (!record) {
-        console.warn('[guided] answer ignored: could not ensure section record for', sectionKey);
-        return false;
-      }
-      const item = session.quiz.items.find((quizItem) => quizItem.id === questionId);
-      if (!item) {
-        console.warn('[guided] answer ignored: item not found', { questionId, available: session.quiz.items.map((i) => i.id) });
-        return false;
-      }
-      const selected = item.options.find((option) => option.id === optionId);
-      if (!selected) {
-        console.warn('[guided] answer ignored: option not found', { optionId, available: item.options.map((o) => o.id) });
-        return false;
-      }
-      const correctOptionId = item.correctOptionId || (item.options.find((o) => o.correct) || {}).id || '';
-      const isCorrect = !!(selected.correct || (correctOptionId && selected.id === correctOptionId));
-      record.responses[questionId] = {
-        selectedOptionId: optionId,
-        answeredAt: nowIso(),
-        correct: isCorrect
-      };
-      syncGuidedStatsToRecord(computeGuidedQuizStats(session, sectionKey));
-      syncGuidedLinkedSectionRecords(session);
-      saveState({ skipDrive: true });
-      updateGuidedQuizMetaInPlace(chat);
-      syncGuidedBannerSlot(chat);
-      return true;
-    }
-
-    function guidedWeakAreasText(chatLike) {
-      const mastery = getGuidedCurrentMastery(chatLike);
-      const weak = mastery.itemStates
-        .filter((state) => state.answered && !state.correct)
-        .map((state) => '"' + state.item.prompt + '"');
-      return weak.length
-        ? weak.join(', ')
-        : 'Refuerza la intuicion general de este apartado antes de seguir.';
-    }
-
-    function sendGuidedActionPrompt(promptText) {
-      if (!promptText || appState.busy) {
-        return;
-      }
-      elements.composer.value = String(promptText);
-      autoResizeComposer();
-      updateSendUi();
-      handleSend();
-    }
-
-    function handleGuidedAction(action) {
-      const chat = getActiveChat();
-      if (!chat || !chat.guidedLearning) {
-        return;
-      }
-      const session = ensureGuidedSession(chat);
-      const current = getGuidedResolvedCurrent(session);
-      const mastery = getGuidedCurrentMastery(chat);
-      if (action === 'reset-quiz') {
-        resetGuidedQuizState(chat);
-        return;
-      }
-      if (action === 'reinforce') {
-        sendGuidedActionPrompt(
-          'Quedate en el mismo apartado y vuelve a explicarlo con otra intuicion. Mis huecos ahora mismo son: ' +
-          guidedWeakAreasText(chat)
-        );
-        return;
-      }
-      if (action === 'confirm-roadmap') {
-        sendGuidedActionPrompt('Índice confirmado. Empecemos por el primer apartado, paso a paso y sin saltar nada.');
-        return;
-      }
-      if (action === 'continue') {
-        const reportedAccuracy = mastery.record
-          ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0)
-          : mastery.accuracy;
-        if (!mastery.hasQuiz) {
-          showToast(
-            'Guided Learning',
-            'Todavía no hay mini test para este apartado. Espera a que el tutor lo genere antes de seguir.'
-          );
-          return;
-        }
-        if (mastery.hasQuiz && !mastery.unlocked) {
-          showToast(
-            'Guided Learning',
-            'Antes de seguir necesitas completar el mini test con al menos un ' + mastery.requiredAccuracy + '% de acierto.'
-          );
-          return;
-        }
-        const sectionTitle = current.section ? current.section.title : (session.current.sectionTitle || 'este apartado');
-        sendGuidedActionPrompt(
-          'He terminado el mini test de "' + sectionTitle + '" con un ' + reportedAccuracy + '% de acierto. Si no ves huecos, seguimos con el siguiente apartado.'
-        );
-      }
-    }
 
     const elements = {
       chatList: document.getElementById('chat-list'),
@@ -3886,9 +2148,6 @@
       return '$' + formatPerMillion(entry.price.input) + ' / $' + formatPerMillion(entry.price.output);
     }
 
-    const GUIDED_STATE_TAG_START = '<guided-state>';
-    const GUIDED_STATE_TAG_END = '</guided-state>';
-
     function clampNumber(value, min, max) {
       const num = Number(value);
       if (!Number.isFinite(num)) {
@@ -3905,616 +2164,6 @@
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
       return raw || fallback || uid('guided');
-    }
-
-    function guidedStatusValue(status, fallback) {
-      const raw = String(status || '').trim().toLowerCase();
-      if (raw === 'done' || raw === 'in_progress' || raw === 'locked' || raw === 'planned') {
-        return raw;
-      }
-      return fallback || 'planned';
-    }
-
-    function createEmptyGuidedCurrent() {
-      return {
-        topicId: '',
-        topicTitle: '',
-        blockId: '',
-        blockTitle: '',
-        sectionId: '',
-        sectionTitle: '',
-        overallProgress: 0,
-        topicProgress: 0,
-        depthPercent: 0,
-        canAdvance: false
-      };
-    }
-
-    function createEmptyGuidedQuiz() {
-      return {
-        title: '',
-        intro: '',
-        requiredAccuracy: 70,
-        items: [],
-        sourceMessageId: '',
-        updatedAt: ''
-      };
-    }
-
-    function createEmptyGuidedSession() {
-      return {
-        syllabusTitle: '',
-        overview: '',
-        topics: [],
-        current: createEmptyGuidedCurrent(),
-        quiz: createEmptyGuidedQuiz(),
-        sectionStats: {},
-        teacherNote: '',
-        lastUpdatedAt: ''
-      };
-    }
-
-    function normalizeGuidedOption(option, index) {
-      const label = option && typeof option.text === 'string'
-        ? option.text.trim()
-        : option && typeof option.label === 'string'
-          ? option.label.trim()
-          : '';
-      return {
-        id: option && typeof option.id === 'string' && option.id.trim()
-          ? option.id.trim()
-          : 'opt-' + String(index + 1),
-        text: label || ('Opcion ' + String(index + 1)),
-        correct: !!(option && (
-          option.correct === true ||
-          option.isCorrect === true ||
-          option.is_correct === true ||
-          option.answer === true ||
-          String(option.correct || '').trim().toLowerCase() === 'true' ||
-          String(option.isCorrect || '').trim().toLowerCase() === 'true' ||
-          String(option.is_correct || '').trim().toLowerCase() === 'true'
-        ))
-      };
-    }
-
-    function normalizeGuidedAnswerRef(value) {
-      return String(value || '')
-        .trim()
-        .toLowerCase()
-        .replace(/^[\(\[\{'"`]+|[\)\]\}'"`]+$/g, '');
-    }
-
-    function extractGuidedAnswerKeyRefs(rawQuiz, rawItem, index) {
-      const refs = [];
-      const questionId = rawItem && typeof rawItem.id === 'string' ? rawItem.id.trim() : '';
-      const numericKeys = [index + 1, String(index + 1)];
-      const answerKey = rawQuiz && rawQuiz.answerKey && typeof rawQuiz.answerKey === 'object'
-        ? rawQuiz.answerKey
-        : rawQuiz && rawQuiz.answer_key && typeof rawQuiz.answer_key === 'object'
-          ? rawQuiz.answer_key
-          : null;
-      if (answerKey) {
-        if (questionId && typeof answerKey[questionId] !== 'undefined') refs.push(answerKey[questionId]);
-        numericKeys.forEach((key) => {
-          if (typeof answerKey[key] !== 'undefined') refs.push(answerKey[key]);
-        });
-      }
-      const collections = [
-        rawQuiz && rawQuiz.solutions,
-        rawQuiz && rawQuiz.solutionLetters,
-        rawQuiz && rawQuiz.solution_letters,
-        rawQuiz && rawQuiz.correctOptionIds,
-        rawQuiz && rawQuiz.correct_option_ids,
-        rawQuiz && rawQuiz.correctAnswers,
-        rawQuiz && rawQuiz.correct_answers
-      ];
-      collections.forEach((value) => {
-        if (Array.isArray(value) && typeof value[index] !== 'undefined') {
-          refs.push(value[index]);
-          return;
-        }
-        if (value && typeof value === 'object') {
-          if (questionId && typeof value[questionId] !== 'undefined') refs.push(value[questionId]);
-          numericKeys.forEach((key) => {
-            if (typeof value[key] !== 'undefined') refs.push(value[key]);
-          });
-        }
-      });
-      return refs;
-    }
-
-    function extractGuidedExplanationAnswerRef(rawItem) {
-      const explanation = rawItem && typeof rawItem.explanation === 'string'
-        ? rawItem.explanation.trim()
-        : rawItem && typeof rawItem.feedback === 'string'
-          ? rawItem.feedback.trim()
-          : '';
-      if (!explanation) {
-        return '';
-      }
-      const patterns = [
-        /respuesta correcta\s*[:\-]?\s*([a-d]|\d+)/i,
-        /la correcta es\s*[:\-]?\s*([a-d]|\d+)/i,
-        /correcta\s*[:\-]?\s*([a-d]|\d+)/i,
-        /opcion correcta\s*[:\-]?\s*([a-d]|\d+)/i,
-        /answer\s*[:\-]?\s*([a-d]|\d+)/i,
-        /solution\s*[:\-]?\s*([a-d]|\d+)/i
-      ];
-      for (const pattern of patterns) {
-        const match = explanation.match(pattern);
-        if (match && match[1]) {
-          return match[1];
-        }
-      }
-      return '';
-    }
-
-    function resolveGuidedCorrectOptionId(rawItem, options, rawQuiz, index) {
-      if (!Array.isArray(options) || !options.length) {
-        return '';
-      }
-      const flagged = options.filter((option) => option.correct);
-      if (flagged.length === 1) {
-        return flagged[0].id;
-      }
-      const rawRefs = [
-        rawItem && rawItem.correctOptionId,
-        rawItem && rawItem.correctAnswerId,
-        rawItem && rawItem.correctOption,
-        rawItem && rawItem.correctAnswer,
-        rawItem && rawItem.answerId,
-        rawItem && rawItem.answer,
-        rawItem && rawItem.solution,
-        rawItem && rawItem.solutionLetter,
-        rawItem && rawItem.solution_letter,
-        rawItem && rawItem.correct_option_id,
-        rawItem && rawItem.correct_answer_id,
-        rawItem && rawItem.correct_option,
-        rawItem && rawItem.correct_answer,
-        rawItem && rawItem.answer_id,
-        rawItem && rawItem.answer_letter,
-        rawItem && rawItem.correctLetter,
-        rawItem && rawItem.correct_letter,
-        extractGuidedExplanationAnswerRef(rawItem)
-      ].concat(extractGuidedAnswerKeyRefs(rawQuiz, rawItem, index))
-        .filter((value) => typeof value !== 'undefined' && value !== null && String(value).trim());
-      if (!rawRefs.length) {
-        return flagged.length ? flagged[0].id : '';
-      }
-      const normalizedOptionMap = new Map();
-      options.forEach((option, index) => {
-        normalizedOptionMap.set(normalizeGuidedAnswerRef(option.id), option.id);
-        normalizedOptionMap.set(normalizeGuidedAnswerRef(option.text), option.id);
-        normalizedOptionMap.set(String.fromCharCode(97 + index), option.id);
-        normalizedOptionMap.set(String(index + 1), option.id);
-      });
-      for (const rawRef of rawRefs) {
-        const normalizedRef = normalizeGuidedAnswerRef(rawRef);
-        if (!normalizedRef) continue;
-        if (normalizedOptionMap.has(normalizedRef)) {
-          return normalizedOptionMap.get(normalizedRef);
-        }
-      }
-      return flagged.length ? flagged[0].id : '';
-    }
-
-    function normalizeGuidedQuizItem(item, index, rawQuiz) {
-      const prompt = item && typeof item.prompt === 'string'
-        ? item.prompt.trim()
-        : '';
-      const rawOptions = Array.isArray(item && item.options) && item.options.length
-        ? item.options.map((option, optionIndex) => normalizeGuidedOption(option, optionIndex))
-        : [];
-      const correctOptionId = resolveGuidedCorrectOptionId(item, rawOptions, rawQuiz, index);
-      return {
-        id: item && typeof item.id === 'string' && item.id.trim()
-          ? item.id.trim()
-          : slugify(prompt || ('pregunta-' + String(index + 1)), 'pregunta-' + String(index + 1)),
-        prompt: prompt || ('Pregunta ' + String(index + 1)),
-        explanation: item && typeof item.explanation === 'string' ? item.explanation.trim() : '',
-        correctOptionId,
-        options: rawOptions.map((option) => Object.assign({}, option, {
-          correct: !!(correctOptionId && option.id === correctOptionId)
-        }))
-      };
-    }
-
-    function normalizeGuidedQuiz(raw) {
-      const quiz = createEmptyGuidedQuiz();
-      if (!raw || typeof raw !== 'object') {
-        return quiz;
-      }
-      quiz.title = typeof raw.title === 'string' ? raw.title.trim() : '';
-      quiz.intro = typeof raw.intro === 'string' ? raw.intro.trim() : '';
-      quiz.requiredAccuracy = clampNumber(
-        typeof raw.requiredAccuracy !== 'undefined' ? raw.requiredAccuracy : 70,
-        0,
-        100
-      );
-      quiz.items = Array.isArray(raw.items)
-        ? raw.items
-            .map((item, index) => normalizeGuidedQuizItem(item, index, raw))
-            .filter((item) => item.options.length >= 2 && item.correctOptionId)
-        : [];
-      quiz.sourceMessageId = typeof raw.sourceMessageId === 'string' ? raw.sourceMessageId : '';
-      quiz.updatedAt = typeof raw.updatedAt === 'string' ? raw.updatedAt : '';
-      return quiz;
-    }
-
-    function normalizeGuidedSection(section, index) {
-      const title = section && typeof section.title === 'string' ? section.title.trim() : '';
-      return {
-        id: section && typeof section.id === 'string' && section.id.trim()
-          ? section.id.trim()
-          : slugify(title || ('apartado-' + String(index + 1)), 'apartado-' + String(index + 1)),
-        title: title || ('Apartado ' + String(index + 1)),
-        status: guidedStatusValue(section && section.status, 'planned'),
-        progress: clampNumber(section && section.progress, 0, 100),
-        summary: section && typeof section.summary === 'string' ? section.summary.trim() : ''
-      };
-    }
-
-    function normalizeGuidedBlock(block, index) {
-      const title = block && typeof block.title === 'string' ? block.title.trim() : '';
-      return {
-        id: block && typeof block.id === 'string' && block.id.trim()
-          ? block.id.trim()
-          : slugify(title || ('bloque-' + String(index + 1)), 'bloque-' + String(index + 1)),
-        title: title || ('Bloque ' + String(index + 1)),
-        status: guidedStatusValue(block && block.status, 'planned'),
-        progress: clampNumber(block && block.progress, 0, 100),
-        sections: Array.isArray(block && block.sections)
-          ? block.sections.map((section, sectionIndex) => normalizeGuidedSection(section, sectionIndex))
-          : []
-      };
-    }
-
-    function normalizeGuidedTopic(topic, index) {
-      const title = topic && typeof topic.title === 'string' ? topic.title.trim() : '';
-      return {
-        id: topic && typeof topic.id === 'string' && topic.id.trim()
-          ? topic.id.trim()
-          : slugify(title || ('tema-' + String(index + 1)), 'tema-' + String(index + 1)),
-        title: title || ('Tema ' + String(index + 1)),
-        emoji: topic && typeof topic.emoji === 'string' ? topic.emoji.trim() : '',
-        status: guidedStatusValue(topic && topic.status, 'planned'),
-        progress: clampNumber(topic && topic.progress, 0, 100),
-        blocks: Array.isArray(topic && topic.blocks)
-          ? topic.blocks.map((block, blockIndex) => normalizeGuidedBlock(block, blockIndex))
-          : []
-      };
-    }
-
-    function normalizeGuidedSectionRecord(raw, requiredAccuracy) {
-      const responses = {};
-      if (raw && raw.responses && typeof raw.responses === 'object') {
-        Object.keys(raw.responses).forEach((questionId) => {
-          const item = raw.responses[questionId];
-          if (!item || typeof item !== 'object') return;
-          responses[String(questionId)] = {
-            selectedOptionId: item && typeof item.selectedOptionId === 'string' ? item.selectedOptionId : '',
-            answeredAt: item && typeof item.answeredAt === 'string' ? item.answeredAt : '',
-            correct: typeof item.correct === 'boolean' ? item.correct : null
-          };
-        });
-      }
-      return {
-        responses,
-        bestAccuracy: clampNumber(raw && raw.bestAccuracy, 0, 100),
-        lastAccuracy: clampNumber(raw && raw.lastAccuracy, 0, 100),
-        requiredAccuracy: clampNumber(
-          raw && typeof raw.requiredAccuracy !== 'undefined' ? raw.requiredAccuracy : requiredAccuracy,
-          0,
-          100
-        ),
-        mastered: !!(raw && raw.mastered),
-        updatedAt: raw && typeof raw.updatedAt === 'string' ? raw.updatedAt : '',
-        completedAt: raw && typeof raw.completedAt === 'string' ? raw.completedAt : ''
-      };
-    }
-
-    function clearGuidedSectionRecord(sessionLike, sectionKey, requiredAccuracy) {
-      const record = ensureGuidedSectionRecord(sessionLike, sectionKey, requiredAccuracy);
-      if (!record) {
-        return null;
-      }
-      record.responses = {};
-      record.bestAccuracy = 0;
-      record.lastAccuracy = 0;
-      record.mastered = false;
-      record.completedAt = '';
-      record.updatedAt = nowIso();
-      return record;
-    }
-
-    function guidedQuizItemsSignature(quizLike) {
-      const quiz = quizLike && typeof quizLike === 'object' ? quizLike : createEmptyGuidedQuiz();
-      const items = Array.isArray(quiz.items) ? quiz.items : [];
-      if (!items.length) {
-        return '';
-      }
-      return items.map((item, index) => {
-        const itemId = item && typeof item.id === 'string' && item.id.trim()
-          ? item.id.trim()
-          : 'q' + String(index + 1);
-        const optionIds = Array.isArray(item && item.options)
-          ? item.options.map((option, optionIndex) => option && option.id ? option.id : 'o' + String(optionIndex + 1)).join('|')
-          : '';
-        return itemId + '>' + optionIds;
-      }).join('||');
-    }
-
-    function guidedLinkedSectionKeys(sessionLike, messageId) {
-      const session = sessionLike && typeof sessionLike === 'object'
-        ? sessionLike
-        : createEmptyGuidedSession();
-      const currentKey = guidedSectionKey(
-        session.current && session.current.topicId,
-        session.current && session.current.blockId,
-        session.current && session.current.sectionId
-      );
-      const sourceMessageId = typeof messageId === 'string' && messageId
-        ? messageId
-        : session.quiz && typeof session.quiz.sourceMessageId === 'string'
-          ? session.quiz.sourceMessageId
-          : '';
-      const messageKey = sourceMessageId ? 'quiz::' + sourceMessageId : '';
-      return Array.from(new Set([currentKey, messageKey].filter(Boolean)));
-    }
-
-    function guidedSectionRecordAnsweredCount(record) {
-      if (!record || !record.responses || typeof record.responses !== 'object') {
-        return 0;
-      }
-      return Object.keys(record.responses).reduce((count, questionId) => {
-        const response = record.responses[questionId];
-        return count + (response && response.selectedOptionId ? 1 : 0);
-      }, 0);
-    }
-
-    function guidedSectionRecordHasData(record) {
-      if (!record) {
-        return false;
-      }
-      return !!(
-        guidedSectionRecordAnsweredCount(record) > 0 ||
-        record.bestAccuracy > 0 ||
-        record.lastAccuracy > 0 ||
-        record.mastered
-      );
-    }
-
-    function guidedSectionRecordWeight(record) {
-      if (!record) {
-        return 0;
-      }
-      return (record.mastered ? 1000000 : 0)
-        + (guidedSectionRecordAnsweredCount(record) * 10000)
-        + (clampNumber(record.bestAccuracy, 0, 100) * 100)
-        + clampNumber(record.lastAccuracy, 0, 100);
-    }
-
-    function cloneGuidedSectionRecord(record, requiredAccuracy) {
-      const normalized = normalizeGuidedSectionRecord(record, requiredAccuracy);
-      const responses = {};
-      Object.keys(normalized.responses || {}).forEach((questionId) => {
-        const response = normalized.responses[questionId] || {};
-        responses[questionId] = {
-          selectedOptionId: response.selectedOptionId || '',
-          answeredAt: response.answeredAt || '',
-          correct: typeof response.correct === 'boolean' ? response.correct : null
-        };
-      });
-      return Object.assign({}, normalized, {
-        responses
-      });
-    }
-
-    function syncGuidedLinkedSectionRecords(sessionLike) {
-      const session = sessionLike && typeof sessionLike === 'object'
-        ? sessionLike
-        : createEmptyGuidedSession();
-      if (!session.sectionStats || typeof session.sectionStats !== 'object') {
-        session.sectionStats = {};
-      }
-      const keys = guidedLinkedSectionKeys(session, session.quiz && session.quiz.sourceMessageId);
-      if (keys.length < 2) {
-        return session;
-      }
-      const requiredAccuracy = clampNumber(session.quiz && session.quiz.requiredAccuracy, 0, 100);
-      let winnerKey = '';
-      let winnerRecord = null;
-      keys.forEach((key) => {
-        session.sectionStats[key] = normalizeGuidedSectionRecord(session.sectionStats[key], requiredAccuracy);
-        const record = session.sectionStats[key];
-        if (!winnerRecord || guidedSectionRecordWeight(record) > guidedSectionRecordWeight(winnerRecord)) {
-          winnerKey = key;
-          winnerRecord = record;
-        }
-      });
-      if (!winnerRecord || !guidedSectionRecordHasData(winnerRecord)) {
-        return session;
-      }
-      keys.forEach((key) => {
-        if (key !== winnerKey) {
-          session.sectionStats[key] = cloneGuidedSectionRecord(winnerRecord, requiredAccuracy);
-        }
-      });
-      return session;
-    }
-
-    function guidedAverageProgress(topics) {
-      if (!Array.isArray(topics) || !topics.length) {
-        return 0;
-      }
-      const total = topics.reduce((sum, topic) => sum + clampNumber(topic && topic.progress, 0, 100), 0);
-      return Math.round(total / topics.length);
-    }
-
-    function chooseGuidedCurrent(list, preferredId) {
-      if (!Array.isArray(list) || !list.length) {
-        return null;
-      }
-      if (preferredId) {
-        const exact = list.find((item) => item && item.id === preferredId);
-        if (exact) {
-          return exact;
-        }
-      }
-      return list.find((item) => item && item.status === 'in_progress')
-        || list.find((item) => item && item.status === 'planned')
-        || list.find((item) => item && item.status === 'locked')
-        || list.find((item) => item && item.status === 'done')
-        || list[0];
-    }
-
-    function syncGuidedCurrentTitles(session) {
-      if (!session || typeof session !== 'object') {
-        return session;
-      }
-      if (!session.current || typeof session.current !== 'object') {
-        session.current = createEmptyGuidedCurrent();
-      }
-      const topic = chooseGuidedCurrent(session.topics, session.current.topicId);
-      const block = topic ? chooseGuidedCurrent(topic.blocks, session.current.blockId) : null;
-      const section = block ? chooseGuidedCurrent(block.sections, session.current.sectionId) : null;
-      if (topic) {
-        session.current.topicId = topic.id;
-        session.current.topicTitle = topic.title;
-        if (!session.current.topicProgress) {
-          session.current.topicProgress = clampNumber(topic.progress, 0, 100);
-        }
-      }
-      if (block) {
-        session.current.blockId = block.id;
-        session.current.blockTitle = block.title;
-      }
-      if (section) {
-        session.current.sectionId = section.id;
-        session.current.sectionTitle = section.title;
-      }
-      if (!session.current.overallProgress) {
-        session.current.overallProgress = guidedAverageProgress(session.topics);
-      }
-      session.current.overallProgress = clampNumber(session.current.overallProgress, 0, 100);
-      session.current.topicProgress = clampNumber(session.current.topicProgress, 0, 100);
-      session.current.depthPercent = clampNumber(session.current.depthPercent, 0, 100);
-      session.current.canAdvance = !!session.current.canAdvance;
-      return session;
-    }
-
-    function normalizeGuidedSession(raw) {
-      const session = createEmptyGuidedSession();
-      if (raw && typeof raw === 'object') {
-        session.syllabusTitle = typeof raw.syllabusTitle === 'string' ? raw.syllabusTitle.trim() : '';
-        session.overview = typeof raw.overview === 'string' ? raw.overview.trim() : '';
-        session.topics = Array.isArray(raw.topics)
-          ? raw.topics.map((topic, index) => normalizeGuidedTopic(topic, index))
-          : [];
-        session.current = Object.assign(createEmptyGuidedCurrent(), raw.current && typeof raw.current === 'object' ? {
-          topicId: typeof raw.current.topicId === 'string' ? raw.current.topicId.trim() : '',
-          topicTitle: typeof raw.current.topicTitle === 'string' ? raw.current.topicTitle.trim() : '',
-          blockId: typeof raw.current.blockId === 'string' ? raw.current.blockId.trim() : '',
-          blockTitle: typeof raw.current.blockTitle === 'string' ? raw.current.blockTitle.trim() : '',
-          sectionId: typeof raw.current.sectionId === 'string' ? raw.current.sectionId.trim() : '',
-          sectionTitle: typeof raw.current.sectionTitle === 'string' ? raw.current.sectionTitle.trim() : '',
-          overallProgress: clampNumber(raw.current.overallProgress, 0, 100),
-          topicProgress: clampNumber(raw.current.topicProgress, 0, 100),
-          depthPercent: clampNumber(raw.current.depthPercent, 0, 100),
-          canAdvance: !!raw.current.canAdvance
-        } : {});
-        session.quiz = normalizeGuidedQuiz(raw.quiz);
-        session.teacherNote = typeof raw.teacherNote === 'string' ? raw.teacherNote.trim() : '';
-        session.lastUpdatedAt = typeof raw.lastUpdatedAt === 'string' ? raw.lastUpdatedAt : '';
-        if (raw.sectionStats && typeof raw.sectionStats === 'object') {
-          Object.keys(raw.sectionStats).forEach((key) => {
-            session.sectionStats[key] = normalizeGuidedSectionRecord(raw.sectionStats[key], session.quiz.requiredAccuracy);
-          });
-        }
-      }
-      syncGuidedCurrentTitles(session);
-      const currentKey = resolveGuidedSectionStorageKey(session);
-      if (currentKey) {
-        session.sectionStats[currentKey] = normalizeGuidedSectionRecord(
-          session.sectionStats[currentKey],
-          session.quiz.requiredAccuracy
-        );
-      }
-      syncGuidedLinkedSectionRecords(session);
-      return session;
-    }
-
-    function ensureGuidedSession(chat) {
-      if (!chat || typeof chat !== 'object') {
-        return createEmptyGuidedSession();
-      }
-      chat.guidedSession = normalizeGuidedSession(chat.guidedSession);
-      return chat.guidedSession;
-    }
-
-    function guidedSectionKey(topicId, blockId, sectionId) {
-      if (!topicId || !blockId || !sectionId) {
-        return '';
-      }
-      return [topicId, blockId, sectionId].join('::');
-    }
-
-    function resolveGuidedSectionStorageKey(sessionLike) {
-      const session = sessionLike && typeof sessionLike === 'object'
-        ? sessionLike
-        : createEmptyGuidedSession();
-      const currentKey = guidedSectionKey(
-        session.current && session.current.topicId,
-        session.current && session.current.blockId,
-        session.current && session.current.sectionId
-      );
-      if (currentKey) {
-        return currentKey;
-      }
-      if (session.quiz && typeof session.quiz.sourceMessageId === 'string' && session.quiz.sourceMessageId) {
-        return 'quiz::' + session.quiz.sourceMessageId;
-      }
-      if (session.quiz && Array.isArray(session.quiz.items) && session.quiz.items.length) {
-        return 'quiz::current';
-      }
-      return '';
-    }
-
-    function resolveGuidedSectionStatsKey(sessionLike, messageId) {
-      const session = sessionLike && typeof sessionLike === 'object'
-        ? sessionLike
-        : createEmptyGuidedSession();
-      const currentKey = guidedSectionKey(
-        session.current && session.current.topicId,
-        session.current && session.current.blockId,
-        session.current && session.current.sectionId
-      );
-      const sourceMessageId = typeof messageId === 'string' && messageId
-        ? messageId
-        : session.quiz && typeof session.quiz.sourceMessageId === 'string'
-          ? session.quiz.sourceMessageId
-          : '';
-      const messageKey = sourceMessageId ? 'quiz::' + sourceMessageId : '';
-      const keys = Array.from(new Set([currentKey, messageKey].filter(Boolean)));
-      const fallbackKey = currentKey
-        || messageKey
-        || (session.quiz && Array.isArray(session.quiz.items) && session.quiz.items.length ? 'quiz::current' : '');
-      if (!keys.length) {
-        return fallbackKey;
-      }
-      let bestKey = '';
-      let bestWeight = -1;
-      keys.forEach((key) => {
-        const record = session.sectionStats && session.sectionStats[key]
-          ? normalizeGuidedSectionRecord(session.sectionStats[key], session.quiz.requiredAccuracy)
-          : null;
-        const weight = guidedSectionRecordWeight(record);
-        if (weight > bestWeight) {
-          bestWeight = weight;
-          bestKey = key;
-        }
-      });
-      return bestWeight > 0 ? bestKey : fallbackKey;
     }
 
     function normalizeChatConfig(chat) {
@@ -4577,7 +2226,11 @@
         createdAt: message && typeof message.createdAt === 'string' ? message.createdAt : nowIso(),
         versionOrder: 'chronological',
         toolSteps: Array.isArray(message && message.toolSteps) ? message.toolSteps.filter((step) => step && typeof step.name === 'string') : [],
-        piMessages: Array.isArray(message && message.piMessages) ? message.piMessages : []
+        piMessages: Array.isArray(message && message.piMessages) ? message.piMessages : [],
+        kind: message && typeof message.kind === 'string' ? message.kind : '',
+        hidden: !!(message && message.hidden),
+        result: message && message.result && typeof message.result === 'object' ? message.result : null,
+        guidedCards: Array.isArray(message && message.guidedCards) ? message.guidedCards.filter((card) => card && typeof card.type === 'string') : []
       };
     }
 
@@ -4619,7 +2272,7 @@
         guidedLearning: chat && typeof chat.guidedLearning === 'boolean'
           ? chat.guidedLearning
           : defaultGuidedLearning,
-        guidedSession: normalizeGuidedSession(chat && chat.guidedSession),
+        course: normalizeCourse(chat && chat.course),
         files: normalizeChatFiles(chat && chat.files)
       });
     }
@@ -4849,7 +2502,10 @@
       if (!message || message.pending) {
         return false;
       }
-      if (typeof parseGuidedAssistantPayload(message && message.content).visibleText === 'string' && parseGuidedAssistantPayload(message && message.content).visibleText.trim()) {
+      if (message.hidden) {
+        return false;
+      }
+      if (stripLegacyGuidedState(message.content).trim()) {
         return true;
       }
       return Array.isArray(message.parts) && message.parts.some((part) => {
@@ -5659,7 +3315,7 @@
         model,
         thinkingLevel: normalizeThinkingLevelForModel(model, recent ? recent.thinkingLevel : ''),
         guidedLearning: !!appState.guidedLearning,
-        guidedSession: createEmptyGuidedSession()
+        course: null
       };
     }
 
@@ -5681,7 +3337,10 @@
       if (chat && typeof chat.customTitle === 'string' && chat.customTitle.trim()) {
         return chat.customTitle;
       }
-      const firstUser = messages.find((message) => message.role === 'user' && message.content.trim());
+      if (chat && chat.guidedLearning && chat.course && chat.course.title) {
+        return chat.course.title;
+      }
+      const firstUser = messages.find((message) => message.role === 'user' && !message.hidden && message.content.trim());
       if (!firstUser) {
         const firstAttachmentMessage = messages.find((message) => message.role === 'user' && Array.isArray(message.attachments) && message.attachments.length);
         if (firstAttachmentMessage) {
@@ -5808,7 +3467,9 @@
 
     function scrollThreadToBottom() {
       const wrap = document.querySelector('.thread-wrap');
+      threadFollow.pinned = true;
       wrap.scrollTop = wrap.scrollHeight;
+      syncThreadJump();
     }
 
     function autoResizeComposer() {
@@ -5834,7 +3495,7 @@
         elements.composer.placeholder = driveLocked
           ? 'Inicia sesión con Google para continuar...'
           : (guidedActive
-            ? 'Sube apuntes, pide un índice o responde al apartado actual'
+            ? guidedComposerPlaceholder(activeChat)
             : 'Pregunta lo que quieras');
       }
       if (elements.attachBtn) {
@@ -6090,7 +3751,8 @@
     }
 
     function normalizeMathMarkdown(text) {
-      return String(text || '').replace(/```(?:latex|tex)?\s*([\s\S]*?)```/gi, function(match, code) {
+      // Only unlabelled, latex or tex fences: ```visual, ```python… stay code.
+      return String(text || '').replace(/```(?:latex|tex|math)?[ \t]*\n([\s\S]*?)```/gi, function(match, code) {
         var raw = String(code || '').trim();
         if (!looksLikeLatexMathBlock(raw)) {
           return match;
@@ -6503,6 +4165,29 @@
       }
     });
 
+    // Replaces fenced code blocks and inline code spans with keep(match).
+    function protectMarkdownCode(text, keep) {
+      var out = [];
+      var buf = [];
+      var fence = null;
+      String(text).split('\n').forEach(function(line) {
+        if (fence) {
+          buf.push(line);
+          if (fence.test(line)) { out.push(keep(buf.join('\n'))); buf = []; fence = null; }
+          return;
+        }
+        var open = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+        if (open) {
+          fence = new RegExp('^\\s{0,3}' + (open[1][0] === '`' ? '`' : '~') + '{' + open[1].length + ',}\\s*$');
+          buf = [line];
+          return;
+        }
+        out.push(line.replace(/(`+)(?!`)(.+?)(?<!`)\1(?!`)/g, keep));
+      });
+      if (buf.length) out.push(keep(buf.join('\n')));
+      return out.join('\n');
+    }
+
     function renderMarkdown(text) {
       if (!text) {
         return '';
@@ -6514,13 +4199,17 @@
         return fallbackRenderMarkdown(text);
       }
 
-      // Protect LaTeX from Markdown parser
+      // Protect LaTeX from Markdown parser. Code (fences and `spans`) is left
+      // exactly as written: a ```visual block's JSON must not be touched.
+      var codeSpans = [];
+      var keepCode = function(m) { var i = codeSpans.length; codeSpans.push(m); return '\x00CODE' + i + '\x00'; };
       var mathBlocks = [];
-      var protected_ = text
+      var protected_ = protectMarkdownCode(text, keepCode)
         .replace(/\$\$([\s\S]+?)\$\$/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:true,c:c}); return '\x00MATH'+i+'\x00'; })
         .replace(/\\\[([\s\S]+?)\\\]/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:true,c:c}); return '\x00MATH'+i+'\x00'; })
         .replace(/\\\((.+?)\\\)/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:false,c:c}); return '\x00MATH'+i+'\x00'; })
-        .replace(/(?<!\\)\$([^\$\n]+?)\$/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:false,c:c}); return '\x00MATH'+i+'\x00'; });
+        .replace(/(?<!\\)\$([^\$\n]+?)\$/g, function(m, c) { var i = mathBlocks.length; mathBlocks.push({d:false,c:c}); return '\x00MATH'+i+'\x00'; })
+        .replace(/\x00CODE(\d+)\x00/g, function(m, i) { return codeSpans[Number(i)]; });
 
       var rawHtml = window.marked.parse(protected_, {
         gfm: true,
@@ -6531,7 +4220,7 @@
       rawHtml = rawHtml.replace(/\x00MATH(\d+)\x00/g, function(m, idx) {
         var block = mathBlocks[Number(idx)];
         if (!block) return m;
-        return block.d ? '$$' + block.c + '$$' : '$' + block.c + '$';
+        return block.d ? '$$' + escapeHtml(block.c) + '$$' : '$' + escapeHtml(block.c) + '$';
       });
 
       return window.DOMPurify.sanitize(rawHtml);
@@ -6548,10 +4237,14 @@
         link.rel = 'noopener noreferrer';
       });
 
+      // Visuals and LaTeX previews first: the math pass then draws their formulas too.
+      if (options.latexPreview !== false) {
+        enhanceVisuals(root, { msgId: options.msgId });
+        if (options.renderMath !== false && window.renderMathInElement) enhanceLatexBlocks(root);
+      }
       if (options.renderMath === false || !window.renderMathInElement) {
         return;
       }
-      if (options.latexPreview !== false) enhanceLatexBlocks(root);
 
       window.renderMathInElement(root, {
         delimiters: [
@@ -6676,670 +4369,51 @@
       return '<div class="msg-actions">' + btns + navHtml + '</div>';
     }
 
+    // Old Guided Learning answers ended in a <guided-state> JSON block: never shown.
+    function stripLegacyGuidedState(text) {
+      const raw = String(text || '');
+      const start = raw.indexOf('<guided-state>');
+      return start === -1 ? raw : raw.slice(0, start).trimEnd();
+    }
+
     function getVisibleContent(message) {
       const alts = message.alternatives || [];
       const idx = activeVersionIndex(message);
-      if (idx === alts.length) {
-        if (typeof message.streamDisplayContent === 'string' && (message._streamAnimating || message.pending)) {
-          return parseGuidedAssistantPayload(message.streamDisplayContent).visibleText;
-        }
-        return parseGuidedAssistantPayload(message.content).visibleText;
-      }
-      const alt = alts[idx];
-      return alt && typeof alt.content === 'string'
-        ? parseGuidedAssistantPayload(alt.content).visibleText
-        : parseGuidedAssistantPayload(message.content).visibleText;
+      const alt = idx === alts.length ? null : alts[idx];
+      return stripLegacyGuidedState(alt && typeof alt.content === 'string' ? alt.content : message.content);
     }
 
-    function isProgressiveGeminiRender(chat) {
-      return false;
-    }
-
-    function nextStreamRevealIndex(targetText, currentIndex) {
-      const target = String(targetText || '');
-      const current = Math.max(0, Number(currentIndex) || 0);
-      if (current >= target.length) {
-        return target.length;
-      }
-      const remaining = target.slice(current);
-      const minChunk = 18;
-      const maxChunk = 90;
-      if (remaining.length <= minChunk) {
-        return target.length;
-      }
-      const sample = remaining.slice(0, maxChunk);
-      const boundaryPatterns = [
-        /[.!?…]+["')\]»”]*\s+/g,
-        /[,;:]["')\]»”]*\s+/g,
-        /\n+/g
-      ];
-      for (const pattern of boundaryPatterns) {
-        let match;
-        while ((match = pattern.exec(sample))) {
-          const boundaryIndex = match.index + match[0].length;
-          if (boundaryIndex >= minChunk) {
-            return current + boundaryIndex;
-          }
-        }
-      }
-      const nextSpace = sample.indexOf(' ', minChunk);
-      if (nextSpace !== -1) {
-        return current + nextSpace + 1;
-      }
-      return Math.min(target.length, current + maxChunk);
-    }
-
-    function clearMessageStreamState(message) {
-      if (!message) return;
-      if (message._streamTimer) {
-        clearTimeout(message._streamTimer);
-      }
-      if (typeof message._streamResolve === 'function') {
-        message._streamResolve();
-      }
-      message._streamTimer = 0;
-      message._streamResolve = null;
-      message._streamPromise = null;
-      message._streamAnimating = false;
-      delete message.streamTargetContent;
-      delete message.streamDisplayContent;
-      delete message.streamDone;
-    }
-
-    function ensureMessageStreamPromise(message) {
-      if (!message._streamPromise) {
-        message._streamPromise = new Promise(function(resolve) {
-          message._streamResolve = resolve;
-        });
-      }
-      return message._streamPromise;
-    }
-
-    function resolveMessageStreamPromise(message) {
-      if (typeof message._streamResolve === 'function') {
-        const resolve = message._streamResolve;
-        message._streamResolve = null;
-        message._streamPromise = null;
-        resolve();
-      }
-    }
-
-    function finishMessageStream(message, chat) {
-      if (!message) return;
-      if (message._streamTimer) {
-        clearTimeout(message._streamTimer);
-        message._streamTimer = 0;
-      }
-      if (typeof message.streamTargetContent === 'string') {
-        message.streamDisplayContent = message.streamTargetContent;
-        message.content = message.streamTargetContent;
-      }
-      message._streamAnimating = false;
-      scheduleStreamRender(message, chat, false, true);
-      resolveMessageStreamPromise(message);
-    }
-
-    function pumpMessageStream(message, chat) {
-      if (!message || message._streamTimer) {
-        return;
-      }
-      message._streamAnimating = true;
-      const step = function() {
-        message._streamTimer = 0;
-        const target = String(message.streamTargetContent || '');
-        const shown = String(message.streamDisplayContent || '');
-        if (shown.length < target.length) {
-          const nextIndex = nextStreamRevealIndex(target, shown.length);
-          message.streamDisplayContent = target.slice(0, nextIndex);
-          message.content = message.streamDisplayContent;
-          message.pending = false;
-          scheduleStreamRender(message, chat, true, false);
-        }
-
-        const latestShown = String(message.streamDisplayContent || '');
-        if (latestShown.length < target.length) {
-          const backlog = target.length - latestShown.length;
-          const delay = backlog > 240 ? 24 : backlog > 120 ? 40 : 62;
-          message._streamTimer = window.setTimeout(step, delay);
-          return;
-        }
-
-        if (message.streamDone) {
-          finishMessageStream(message, chat);
-          return;
-        }
-
-        message._streamAnimating = false;
-      };
-
-      step();
-    }
-
-    function queueMessageStream(message, chat, targetText, done) {
-      if (!message) return null;
-      if (typeof targetText === 'string') {
-        message.streamTargetContent = targetText;
-      }
-      if (typeof message.streamDisplayContent !== 'string') {
-        message.streamDisplayContent = '';
-      }
-      if (done) {
-        message.streamDone = true;
-        ensureMessageStreamPromise(message);
-      }
-      pumpMessageStream(message, chat);
-      return message._streamPromise || null;
-    }
-
-    async function waitForMessageStream(message) {
-      if (message && message._streamPromise) {
-        await message._streamPromise;
-      }
-    }
-
-    function guidedStatusLabel(status) {
-      if (status === 'done') return 'Hecho';
-      if (status === 'in_progress') return 'En curso';
-      if (status === 'locked') return 'Bloqueado';
-      return 'Pendiente';
-    }
-
-    function renderGuidedMeter(value, extraClass) {
-      const width = clampNumber(value, 0, 100);
-      const cssClass = extraClass ? 'guided-meter ' + extraClass : 'guided-meter';
-      return '<div class="' + cssClass + '"><span style="width:' + width + '%"></span></div>';
-    }
-
-    function renderGuidedTopicCards(session) {
-      if (!Array.isArray(session.topics) || !session.topics.length) {
-        return '<div class="guided-empty"><strong>Sin índice aún.</strong> Sube apuntes o describe el tema y el chat te propondrá una ruta completa en formato tema, bloque y apartado.</div>';
-      }
-      return '<div class="guided-topic-list">' + session.topics.map((topic) => {
-        const currentClass = topic.id === session.current.topicId ? ' current' : '';
-        const emoji = topic.emoji ? escapeHtml(topic.emoji) + ' ' : '';
-        return [
-          '<div class="guided-topic-card' + currentClass + '">',
-          '  <div class="guided-topic-top">',
-          '    <div class="guided-topic-name">' + emoji + escapeHtml(topic.title) + '</div>',
-          '    <div class="guided-topic-status ' + topic.status + '">' + escapeHtml(guidedStatusLabel(topic.status)) + '</div>',
-          '  </div>',
-          '  ' + renderGuidedMeter(topic.progress),
-          '  <div class="guided-topic-meta">' + escapeHtml(String(clampNumber(topic.progress, 0, 100)) + '% completado') + '</div>',
-          '</div>'
-        ].join('');
-      }).join('') + '</div>';
-    }
-
-    function renderGuidedRoadmap(session) {
-      const resolved = getGuidedResolvedCurrent(session);
-      const activeTopic = resolved.topic || (Array.isArray(session.topics) ? session.topics[0] : null);
-      if (!activeTopic) {
-        return '';
-      }
-      return [
-        '<section class="guided-roadmap">',
-        '  <div class="guided-roadmap-top">',
-        '    <div>',
-        '      <div class="guided-roadmap-title">Mapa del tema actual</div>',
-        '      <div class="guided-roadmap-sub">' + escapeHtml(activeTopic.title) + '</div>',
-        '    </div>',
-        '    <div class="guided-roadmap-sub">' + escapeHtml(String(clampNumber(activeTopic.progress, 0, 100)) + '% del tema') + '</div>',
-        '  </div>',
-        '  <div class="guided-block-list">',
-        activeTopic.blocks.map((block) => {
-          const currentBlock = block.id === session.current.blockId;
-          return [
-            '<div class="guided-block' + (currentBlock ? ' current' : '') + '">',
-            '  <div class="guided-block-head">',
-            '    <div class="guided-block-name">' + escapeHtml(block.title) + '</div>',
-            '    <div class="guided-roadmap-sub">' + escapeHtml(String(clampNumber(block.progress, 0, 100)) + '%') + '</div>',
-            '  </div>',
-            '  <div class="guided-section-list">',
-            block.sections.map((section) => {
-              const key = guidedSectionKey(activeTopic.id, block.id, section.id);
-              const record = session.sectionStats && session.sectionStats[key] ? session.sectionStats[key] : null;
-              const effectiveStatus = record && record.mastered ? 'done' : section.status;
-              const sectionMeta = record && record.mastered
-                ? 'Superado'
-                : section.summary || 'Sin resumen todavía';
-              return [
-                '<div class="guided-section' + (section.id === session.current.sectionId ? ' current' : '') + '">',
-                '  <div class="guided-section-main">',
-                '    <div class="guided-section-name">' + escapeHtml(section.title) + '</div>',
-                '    <div class="guided-section-meta">' + escapeHtml(sectionMeta) + '</div>',
-                '  </div>',
-                '  <div class="guided-section-badge ' + effectiveStatus + '">' + escapeHtml(guidedStatusLabel(effectiveStatus)) + '</div>',
-                '</div>'
-              ].join('');
-            }).join(''),
-            '  </div>',
-            '</div>'
-          ].join('');
-        }).join(''),
-        '  </div>',
-        '</section>'
-      ].join('');
-    }
-
-    function renderGuidedQuiz(chat, session) {
-      const current = getGuidedResolvedCurrent(session);
-      const mastery = getGuidedCurrentMastery(chat);
-      const currentSectionTitle = current.section ? current.section.title : (session.current.sectionTitle || '');
-      const scoreValue = mastery.total
-        ? mastery.correct + '/' + mastery.total + ' correctas · ' + mastery.accuracy + '%'
-        : 'Esperando mini test';
-      let body = '';
-      if (!session.topics.length) {
-        body = '<div class="guided-empty"><strong>Paso 1.</strong> Activa este modo, sube tus documentos o describe la asignatura y el chat te devolverá primero el índice.</div>';
-      } else if (!currentSectionTitle) {
-        body = '<div class="guided-empty"><strong>Índice listo.</strong> Confirma la ruta y empezamos por el primer apartado sin saltos.</div>';
-      } else if (!mastery.hasQuiz) {
-        body = '<div class="guided-empty"><strong>Sin mini test aun.</strong> El siguiente mensaje del tutor deberia traer preguntas de comprobacion para este apartado.</div>';
-      } else {
-        body = '<div class="guided-quiz-items">' + mastery.itemStates.map((state, index) => {
-          return [
-            '<div class="guided-question">',
-            '  <div class="guided-question-title">' + escapeHtml(String(index + 1) + '. ' + state.item.prompt) + '</div>',
-            '  <div class="guided-option-list">',
-            state.item.options.map((option, optionIndex) => {
-              let optionClass = 'guided-option';
-              if (state.answered && option.id === state.selectedOptionId) {
-                optionClass += state.correct ? ' active correct' : ' active wrong';
-              } else if (state.answered && state.correctOption && option.id === state.correctOption.id) {
-                optionClass += ' correct';
-              }
-              const keyLabel = String.fromCharCode(65 + optionIndex);
-              return [
-                '<button class="' + optionClass + '" type="button" data-guided-answer="' + escapeHtml(state.item.id) + '" data-guided-option="' + escapeHtml(option.id) + '">',
-                '  <span class="guided-option-key">' + escapeHtml(keyLabel) + '</span>',
-                '  <span class="guided-option-text">' + escapeHtml(option.text) + '</span>',
-                '</button>'
-              ].join('');
-            }).join(''),
-            '  </div>',
-            state.answered && state.item.explanation
-              ? '  <div class="guided-answer-note">' + escapeHtml(state.item.explanation) + '</div>'
-              : '',
-            '</div>'
-          ].join('');
-        }).join('') + '</div>';
-      }
-      const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
-      const unlockLabel = mastery.hasQuiz
-        ? (mastery.unlocked
-          ? 'Desbloqueado para seguir.'
-          : 'Necesitas ' + mastery.requiredAccuracy + '% para desbloquear el siguiente apartado.')
-        : 'El avance se abrirá cuando haya índice y mini test.';
-      return [
-        '<section class="guided-quiz">',
-        '  <div class="guided-quiz-head">',
-        '    <div class="guided-quiz-copy">',
-        '      <div class="guided-quiz-title">' + escapeHtml(session.quiz.title || 'Chequeo del apartado') + '</div>',
-        '      <div class="guided-quiz-sub">' + escapeHtml(session.quiz.intro || unlockLabel) + '</div>',
-        '    </div>',
-        '    <div class="guided-quiz-score">' + escapeHtml(scoreValue) + '<br><span style="font-size:0.66rem;color:#777">Mejor: ' + bestAccuracy + '% · Objetivo: ' + mastery.requiredAccuracy + '%</span></div>',
-        '  </div>',
-        body,
-        '  <div class="guided-actions">',
-        currentSectionTitle
-          ? '<button class="guided-action secondary" type="button" data-guided-action="reinforce">Necesito otra explicación</button>'
-          : (session.topics.length
-            ? '<button class="guided-action secondary" type="button" data-guided-action="confirm-roadmap">Confirmar índice y empezar</button>'
-            : ''),
-        mastery.hasQuiz
-          ? '<button class="guided-action secondary" type="button" data-guided-action="reset-quiz">Resetear test</button>'
-          : '',
-        currentSectionTitle
-          ? '<button class="guided-action primary" type="button" data-guided-action="continue"' + ((!mastery.hasQuiz || !mastery.unlocked) ? ' disabled' : '') + '>Siguiente apartado</button>'
-          : '',
-        '  </div>',
-        '</section>'
-      ].join('');
-    }
-
-    function renderGuidedDashboard(chat, options) {
-      if (!chat || !chat.guidedLearning) {
-        return '';
-      }
-      const settings = Object.assign({ emptyState: false }, options);
-      const session = ensureGuidedSession(chat);
-      const current = getGuidedResolvedCurrent(session);
-      const mastery = getGuidedCurrentMastery(chat);
-      const overallProgress = clampNumber(
-        session.current.overallProgress || guidedAverageProgress(session.topics),
-        0,
-        100
-      );
-      const depthPercent = clampNumber(session.current.depthPercent, 0, 100);
-      const masteryPercent = mastery.record
-        ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0)
-        : mastery.accuracy;
-      const subtitle = current.section
-        ? 'Ahora mismo estas en ' + current.section.title + '. No se avanza hasta dominarlo.'
-        : session.topics.length
-          ? 'La ruta ya está montada. Confirma el índice o pide el primer apartado.'
-          : 'Sube documentos o describe el temario y el chat lo convertira en una ruta guiada.';
-      const lockCopy = mastery.hasQuiz
-        ? (mastery.unlocked
-          ? 'Mini test superado. Puedes pasar al siguiente apartado.'
-          : 'Paso bloqueado hasta llegar al ' + mastery.requiredAccuracy + '% de acierto.')
-        : 'Todavía no hay bloqueo activo porque falta índice o mini test.';
-      return [
-        '<section class="guided-shell' + (settings.emptyState ? ' empty-state' : '') + '">',
-        '  <div class="guided-head">',
-        '    <div class="guided-head-copy">',
-        '      <div class="guided-kicker">Guided Learning</div>',
-        '      <div class="guided-title">' + escapeHtml(session.syllabusTitle || 'Ruta de estudio') + '</div>',
-        '      <div class="guided-sub">' + escapeHtml(subtitle) + '</div>',
-        '    </div>',
-        '    <div class="guided-badge">' + escapeHtml(overallProgress + '% del temario') + '</div>',
-        '  </div>',
-        '  <section class="guided-panel">',
-        '    <div class="guided-panel-title">Progreso global del temario</div>',
-        '    <div class="guided-panel-sub">Tema por tema, con el apartado actual siempre visible arriba.</div>',
-        '    <div class="guided-meter-block">',
-        '      <div class="guided-meter-head"><div class="guided-meter-label">Temario completo</div><div class="guided-meter-value">' + escapeHtml(String(overallProgress) + '%') + '</div></div>',
-        '      ' + renderGuidedMeter(overallProgress),
-        '    </div>',
-        '    ' + renderGuidedTopicCards(session),
-        '  </section>',
-        '  <div class="guided-overview-grid">',
-        '    <div class="guided-panel">',
-        '      <div class="guided-panel-title">Donde estas ahora</div>',
-        '      <div class="guided-crumbs">',
-        '        <div class="guided-crumb">' + escapeHtml(current.topic ? current.topic.title : 'Tema pendiente') + '</div>',
-        '        <div class="guided-crumb">' + escapeHtml(current.block ? current.block.title : 'Bloque pendiente') + '</div>',
-        '        <div class="guided-crumb current">' + escapeHtml(current.section ? current.section.title : 'Apartado pendiente') + '</div>',
-        '      </div>',
-        '      <div class="guided-lock' + (mastery.unlocked ? ' good' : '') + '">' + escapeHtml(lockCopy) + '</div>',
-        '    </div>',
-        '    <div class="guided-side-grid">',
-        '      <div class="guided-side-card">',
-        '        <div class="guided-stat">',
-        '          <div class="guided-stat-label">Profundidad</div>',
-        '          <div class="guided-stat-value">' + escapeHtml(depthPercent + '% del apartado') + '</div>',
-        '        </div>',
-        '        ' + renderGuidedMeter(depthPercent),
-        '      </div>',
-        '      <div class="guided-side-card">',
-        '        <div class="guided-stat">',
-        '          <div class="guided-stat-label">Dominio actual</div>',
-        '          <div class="guided-stat-value">' + escapeHtml(masteryPercent + '% de acierto') + '</div>',
-        '        </div>',
-        '        ' + renderGuidedMeter(masteryPercent, 'mastery'),
-        '        <div class="guided-lock">' + escapeHtml(mastery.correct + '/' + mastery.total + ' correctas · objetivo ' + mastery.requiredAccuracy + '%') + '</div>',
-        '      </div>',
-        '    </div>',
-        '  </div>',
-        renderGuidedRoadmap(session),
-        renderGuidedQuiz(chat, session),
-        '</section>'
-      ].join('');
-    }
-
-    function guidedStatusMark(status) {
-      if (status === 'done') return 'done';
-      if (status === 'in_progress') return 'current';
-      if (status === 'locked') return 'locked';
-      return 'planned';
-    }
-
-    function renderGuidedMeter(value, extraClass) {
-      const width = clampNumber(value, 0, 100);
-      const cssClass = extraClass ? 'guided-progress ' + extraClass : 'guided-progress';
-      return '<div class="' + cssClass + '"><span style="width:' + width + '%"></span></div>';
-    }
-
-    function guidedBannerStorageKey(chat) {
-      return 'guided-banner::' + (chat && chat.id ? chat.id : 'active');
-    }
-
-    function isGuidedBannerOpen(chat) {
-      try {
-        return sessionStorage.getItem(guidedBannerStorageKey(chat)) === '1';
-      } catch (_) {
-        return false;
-      }
-    }
-
-    function renderGuidedTopicCards(session) {
-      if (!Array.isArray(session.topics) || !session.topics.length) {
-        return '<div class="guided-topic-strip"><span class="guided-topic-pill planned">Sin índice</span></div>';
-      }
-      return '<div class="guided-topic-strip">' + session.topics.map((topic) => {
-        const status = topic.id === session.current.topicId ? 'current' : guidedStatusMark(topic.status);
-        const emoji = topic.emoji ? escapeHtml(topic.emoji) + ' ' : '';
-        return '<span class="guided-topic-pill ' + status + '">' + emoji + escapeHtml(topic.title) + '</span>';
-      }).join('') + '</div>';
-    }
-
-    function renderGuidedRoadmap(session) {
-      const resolved = getGuidedResolvedCurrent(session);
-      const activeTopic = resolved.topic || (Array.isArray(session.topics) ? session.topics[0] : null);
-      if (!activeTopic) {
-        return '<div class="guided-note">Sube material o pide un índice para empezar.</div>';
-      }
-      const currentBlock = resolved.block || (Array.isArray(activeTopic.blocks) ? activeTopic.blocks[0] : null);
-      if (!currentBlock) {
-        return '<div class="guided-note">Todavía no hay bloques definidos.</div>';
-      }
-      return '<div class="guided-outline">' + currentBlock.sections.map((section) => {
-        const key = guidedSectionKey(activeTopic.id, currentBlock.id, section.id);
-        const record = session.sectionStats && session.sectionStats[key] ? session.sectionStats[key] : null;
-        const status = record && record.mastered ? 'done' : (section.id === session.current.sectionId ? 'current' : guidedStatusMark(section.status));
-        return [
-          '<div class="guided-outline-line ' + status + '">',
-          '  <span class="guided-outline-mark"></span>',
-          '  <span class="guided-outline-name">' + escapeHtml(section.title) + '</span>',
-          '  <span class="guided-outline-state">' + escapeHtml(guidedStatusLabel(status === 'current' ? 'in_progress' : status)) + '</span>',
-          '</div>'
-        ].join('');
-      }).join('') + '</div>';
-    }
-
-    function renderGuidedQuizWaiting() {
-      return [
-        '<div class="guided-inline-waiting" role="status">',
-        '  <span class="guided-inline-waiting-dot" aria-hidden="true"></span>',
-        '  <div class="guided-inline-waiting-text">',
-        '    <strong>Mini test en camino</strong>',
-        '    El tutor deberia cerrar cada apartado con preguntas interactivas. Si no aparecen, pide "mini test" o regenera la respuesta.',
-        '  </div>',
-        '</div>'
-      ].join('');
-    }
-
-    function renderGuidedQuiz(message, chatLike, isLastAssistant) {
-      const chat = chatLike || getActiveChat();
-      if (!chat || !chat.guidedLearning || !message || message.role !== 'assistant' || message.pending) {
-        return '';
-      }
-      const session = ensureGuidedSession(chat);
-      const hasItems = session.quiz && Array.isArray(session.quiz.items) && session.quiz.items.length;
-      const quizMatchesMessage = hasItems && session.quiz.sourceMessageId === message.id;
-      if (!quizMatchesMessage) {
-        const teaching = session.current && session.current.sectionId;
-        if (isLastAssistant && teaching && !hasItems) {
-          return renderGuidedQuizWaiting();
-        }
-        return '';
-      }
-      const mastery = computeGuidedQuizStats(session, resolveGuidedSectionStatsKey(session, message.id));
-      const bestAccuracy = mastery.record ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0) : mastery.accuracy;
-      return [
-        '<div class="guided-inline-quiz">',
-        '  <div class="guided-inline-head">',
-        '    <div class="guided-inline-title">' + escapeHtml(session.quiz.title || 'Mini test') + '</div>',
-        '    <div class="guided-inline-score">' + escapeHtml((mastery.total ? mastery.correct + '/' + mastery.total + ' · ' + mastery.accuracy + '%' : 'Sin responder') + ' · objetivo ' + mastery.requiredAccuracy + '%') + '</div>',
-        '  </div>',
-        session.quiz.intro ? '<div class="guided-inline-note">' + escapeHtml(session.quiz.intro) + '</div>' : '',
-        '<div class="guided-inline-list">',
-        mastery.itemStates.map((state, index) => {
-          const correctIndex = state.correctOption
-            ? state.item.options.findIndex((option) => option.id === state.correctOption.id)
-            : -1;
-          const correctLabel = state.correctOption
-            ? String.fromCharCode(65 + Math.max(0, correctIndex)) + '. ' + state.correctOption.text
-            : '';
-          const statusText = !state.answered
-            ? ''
-            : (state.correctOption
-              ? (state.correct
-                ? 'Correcta'
-                : 'Incorrecta. Correcta: ' + correctLabel)
-              : 'Respuesta guardada');
-          const statusClass = !state.answered
-            ? ''
-            : (state.correct
-              ? 'correct'
-              : (state.correctOption ? 'wrong' : 'neutral'));
-          let itemClass = 'guided-inline-item';
-          if (state.answered) {
-            itemClass += ' answered';
-            if (state.correctOption) {
-              itemClass += state.correct ? ' correct' : ' wrong';
-            }
-          }
-          return [
-            '<div class="' + itemClass + '">',
-            '  <div class="guided-inline-prompt">' + escapeHtml(String(index + 1) + '. ' + state.item.prompt) + '</div>',
-            '  <div class="guided-inline-options">',
-            state.item.options.map((option, optionIndex) => {
-              let optionClass = 'guided-inline-option';
-              if (state.answered && option.id === state.selectedOptionId) {
-                optionClass += state.correctOption
-                  ? (state.correct ? ' correct active' : ' wrong active')
-                  : ' active';
-              } else if (state.answered && state.correctOption && option.id === state.correctOption.id) {
-                optionClass += ' correct';
-              }
-              const keyLabel = String.fromCharCode(65 + optionIndex);
-              const disabledAttr = state.answered ? ' disabled' : '';
-              return [
-                '<button class="' + optionClass + '" type="button"' + disabledAttr + ' data-guided-answer="' + escapeHtml(state.item.id) + '" data-guided-option="' + escapeHtml(option.id) + '">',
-                '  <span class="guided-inline-key">' + escapeHtml(keyLabel) + '</span>',
-                '  <span>' + escapeHtml(option.text) + '</span>',
-                '</button>'
-              ].join('');
-            }).join(''),
-            '  </div>',
-            state.answered
-              ? '  <div class="guided-inline-status ' + statusClass + '">' + escapeHtml(statusText) + '</div>'
-              : '',
-            state.answered && state.item.explanation
-              ? '  <div class="guided-inline-feedback">' + escapeHtml(state.item.explanation) + '</div>'
-              : '',
-            '</div>'
-          ].join('');
-        }).join(''),
-        '</div>',
-        '<div class="guided-inline-actions">',
-        '  <button class="guided-mini-btn" type="button" data-guided-action="reinforce">Otra explicación</button>',
-        '  <button class="guided-mini-btn" type="button" data-guided-action="reset-quiz">Repetir test</button>',
-        '  <button class="guided-mini-btn primary" type="button" data-guided-action="continue"' + ((!mastery.hasQuiz || !mastery.unlocked) ? ' disabled' : '') + '>Siguiente apartado</button>',
-        '</div>',
-        bestAccuracy
-          ? '<div class="guided-inline-foot">Mejor intento: ' + escapeHtml(String(bestAccuracy)) + '%</div>'
-          : '',
-        '</div>'
-      ].join('');
-    }
-
-    function renderGuidedDashboard(chat, options) {
-      if (!chat || !chat.guidedLearning) {
-        return '';
-      }
-      const settings = Object.assign({ emptyState: false }, options);
-      const session = ensureGuidedSession(chat);
-      const current = getGuidedResolvedCurrent(session);
-      const mastery = getGuidedCurrentMastery(chat);
-      const overallProgress = clampNumber(session.current.overallProgress || guidedAverageProgress(session.topics), 0, 100);
-      const depthPercent = clampNumber(session.current.depthPercent, 0, 100);
-      const masteryPercent = mastery.record
-        ? Math.max(mastery.accuracy, mastery.record.bestAccuracy || 0)
-        : mastery.accuracy;
-      const currentLabel = current.section
-        ? (current.topic ? current.topic.title + ' · ' : '') + current.section.title
-        : (session.syllabusTitle || 'Ruta guiada');
-      const openAttr = isGuidedBannerOpen(chat) ? ' open' : '';
-      return [
-        '<details class="guided-banner' + (settings.emptyState ? ' empty-state' : '') + '"' + openAttr + ' data-guided-banner="' + escapeHtml(chat.id) + '">',
-        '  <summary class="guided-banner-summary">',
-        '    <div class="guided-banner-line">',
-        '      <span class="guided-banner-current">' + escapeHtml(currentLabel) + '</span>',
-        '      <span class="guided-banner-meta">' + escapeHtml(overallProgress + '%') + '</span>',
-        '    </div>',
-        '    ' + renderGuidedMeter(overallProgress),
-        '    ' + renderGuidedTopicCards(session),
-        '  </summary>',
-        '  <div class="guided-banner-panel">',
-        '    <div class="guided-detail-row"><span>Ruta</span><strong>' + escapeHtml([
-          current.topic ? current.topic.title : 'Tema',
-          current.block ? current.block.title : 'Bloque',
-          current.section ? current.section.title : 'Apartado'
-        ].join(' · ')) + '</strong></div>',
-        '    <div class="guided-detail-row"><span>Profundidad</span><strong>' + escapeHtml(depthPercent + '%') + '</strong></div>',
-        '    <div class="guided-detail-row"><span>Dominio</span><strong>' + escapeHtml(masteryPercent + '%') + '</strong></div>',
-        mastery.hasQuiz
-          ? '<div class="guided-detail-row"><span>Bloqueo</span><strong>' + escapeHtml(mastery.unlocked ? 'Listo para seguir' : 'Objetivo ' + mastery.requiredAccuracy + '%') + '</strong></div>'
-          : '',
-        session.teacherNote
-          ? '<div class="guided-note">' + escapeHtml(session.teacherNote) + '</div>'
-          : '',
-        renderGuidedRoadmap(session),
-        (!current.section && session.topics.length)
-          ? '<div class="guided-banner-actions"><button class="guided-mini-btn" type="button" data-guided-action="confirm-roadmap">Empezar</button></div>'
-          : '',
-        '  </div>',
-        '</details>'
-      ].join('');
-    }
-
-    function syncGuidedBannerSlot(chat, options) {
+    function syncGuidedBannerSlot(chat) {
       if (!elements.guidedBannerSlot) {
         return;
       }
-      const nextHtml = chat && chat.guidedLearning
-        ? renderGuidedDashboard(chat, options)
-        : '';
+      const nextHtml = chat && chat.guidedLearning ? renderCourseHeader(chat) : '';
       if (elements.guidedBannerSlot.dataset.lastHtml === nextHtml) {
         return;
       }
       elements.guidedBannerSlot.innerHTML = nextHtml;
       elements.guidedBannerSlot.dataset.lastHtml = nextHtml;
-      if (nextHtml) {
-        bindThreadActions(elements.guidedBannerSlot);
-      }
     }
 
     function renderEmptyThread(options) {
       const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
-      const guidedActive = !!(chat && chat.guidedLearning);
-      const suggestions = guidedActive
-        ? [
-            ['Organiza mis apuntes en temas', 'Te voy a pasar mis apuntes. Antes de explicarme nada, organízalos en Tema > Bloque > Apartado y proponme un índice.'],
-            ['Quiero estudiar un tema desde cero', 'Quiero estudiar un tema desde cero. Pregúntame cuál es y proponme un índice en Tema > Bloque > Apartado.'],
-            ['Empieza por el primer apartado', 'Empieza por el primer apartado del índice y explícamelo con intuición, poco a poco.']
-          ]
-        : [
-            ['Explícame un tema desde cero', 'Explícame desde cero un tema que me cuesta. Pregúntame primero cuál es y qué sé ya.'],
-            ['Hazme un test con mis apuntes', 'Voy a pegarte mis apuntes. Hazme un test de 5 preguntas para ver qué domino y qué no.'],
-            ['Convierte un PDF en apuntes', 'Te voy a subir un PDF. Conviértelo en apuntes claros, con lo importante destacado.'],
-            ['Plan de estudio para un examen', 'Tengo un examen pronto. Ayúdame a hacer un plan de estudio realista, día a día.']
-          ];
-      const heroMarkup = [
+      const suggestions = [
+        ['Explícame un tema desde cero', 'Explícame desde cero un tema que me cuesta. Pregúntame primero cuál es y qué sé ya.'],
+        ['Hazme un test con mis apuntes', 'Voy a pegarte mis apuntes. Hazme un test de 5 preguntas para ver qué domino y qué no.'],
+        ['Convierte un PDF en apuntes', 'Te voy a subir un PDF. Conviértelo en apuntes claros, con lo importante destacado.'],
+        ['Plan de estudio para un examen', 'Tengo un examen pronto. Ayúdame a hacer un plan de estudio realista, día a día.']
+      ];
+      const heroMarkup = chat && chat.guidedLearning ? renderGuidedHero(chat) : [
         '<section class="hero">',
-        '  <h2>' + (guidedActive ? 'Construye tu ruta de estudio' : '¿Qué estudiamos hoy?') + '</h2>',
-        '  <p class="hero-sub">' + (guidedActive
-          ? 'Sube tus apuntes o dime el tema. Primero te lo ordeno en temas, bloques y apartados, y luego vamos uno a uno.'
-          : 'Pregunta lo que sea, pega tus apuntes o sube un PDF o una foto.') + '</p>',
+        '  <h2>¿Qué estudiamos hoy?</h2>',
+        '  <p class="hero-sub">Pregunta lo que sea, pega tus apuntes o sube un PDF o una foto.</p>',
         '  <div class="chips">',
         suggestions.map((item) => '    <button class="chip suggestion-chip" data-prompt="' + escapeHtml(item[1]) + '">' + escapeHtml(item[0]) + '</button>').join(''),
         '  </div>',
         '</section>'
       ].join('');
-      syncGuidedBannerSlot(chat, guidedActive ? { emptyState: true } : undefined);
+      syncGuidedBannerSlot(chat);
       elements.thread.innerHTML = heroMarkup;
       bindSuggestionChips();
       bindThreadActions();
@@ -7348,36 +4422,58 @@
       }
     }
 
-    function lastAssistantMessageIndex(chat) {
-      for (let i = chat.messages.length - 1; i >= 0; i--) {
-        if (chat.messages[i].role === 'assistant') return i;
-      }
-      return -1;
+    // What the reader sees: the app's hidden notes to the model are left out.
+    function threadMessages(chat) {
+      return (chat && chat.messages || []).filter((message) => !message.hidden);
     }
 
-    function renderMessageMarkup(message, isLastAssistant) {
+    function lastAssistantId(chat) {
+      for (let i = chat.messages.length - 1; i >= 0; i--) {
+        if (chat.messages[i].role === 'assistant') return chat.messages[i].id;
+      }
+      return '';
+    }
+
+    const drawnMessageIds = new Set();
+
+    // A message slides in the first time it is drawn, and only if it is new.
+    function messageAppearClass(message) {
+      const fresh = !drawnMessageIds.has(message.id) && Date.now() - (Date.parse(message.createdAt) || 0) < 8000;
+      drawnMessageIds.add(message.id);
+      return fresh ? ' appear' : '';
+    }
+
+    function renderMessageMarkup(message, isLastAssistant, chatLike) {
+      const chat = chatLike || getActiveChat();
+      if (message.role === 'user' && message.result && GUIDED_RESULT_KINDS.has(message.kind)) {
+        return renderGuidedResultMessage(message);
+      }
       const isUser = message.role === 'user';
-      const roleLabel = isUser ? 'T\u00fa' : 'inhouse';
-      const msgClass = isUser ? 'message user-msg' : 'message';
+      const roleLabel = isUser ? 'Tú' : 'inhouse';
+      const msgClass = (isUser ? 'message user-msg' : 'message') + messageAppearClass(message);
       const badgeMarkup = renderMessageBadge(message.role);
       const visibleContent = getVisibleContent(message);
       const hasVisible = typeof visibleContent === 'string' && visibleContent.trim().length > 0;
       const thinking = !isUser && typeof message.thinking === 'string' ? message.thinking : '';
       const thinkingMarkup = thinking ? renderReasoningMarkup(message, thinking, !hasVisible && message.pending) : '';
-      const stepsMarkup = !isUser && Array.isArray(message.toolSteps) && message.toolSteps.length ? renderToolStepsMarkup(message) : '';
+      const stepsMarkup = !isUser && visibleToolSteps(message).length ? renderToolStepsMarkup(message) : '';
       const body = message.pending && !hasVisible
         ? assistantTypingMarkup()
-        : renderMarkdown(visibleContent);
+        : renderMarkdownBlocks(visibleContent);
       const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
-      const guidedQuizMarkup = isUser ? '' : renderGuidedQuiz(message, getActiveChat(), !!isLastAssistant);
+      const cardsMarkup = isUser ? '' : renderGuidedCards(message, chat);
+      const quickMarkup = !isUser && isLastAssistant && !message.pending ? guidedQuickRepliesMarkup(chat) : '';
       const actionsMarkup = renderMsgActions(message, !!isLastAssistant);
       const attributionMarkup = renderMessageAttribution(message);
       return [
         '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
         '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
         '  <div class="message-body">',
-        '    <div class="message-meta">' + roleLabel + ' \u00b7 ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
-        '    <div class="bubble"><div class="bubble-content">' + thinkingMarkup + stepsMarkup + body + attachmentMarkup + guidedQuizMarkup + '</div></div>',
+        '    <div class="message-meta">' + roleLabel + ' · ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
+        '    <div class="bubble"><div class="bubble-content">',
+        '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>',
+        '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + quickMarkup,
+        '    </div></div>',
         attributionMarkup,
         actionsMarkup,
         '  </div>',
@@ -7391,126 +4487,73 @@
       }) || null;
     }
 
-    function patchThreadMessage(message, chat, isStreaming, options) {
-      const settings = Object.assign({ scrollToBottom: true }, options);
+    // Redraws one message. With keepText, an answer already on screen with that
+    // exact text keeps its drawn blocks (no flash; visuals keep their state).
+    function patchThreadMessage(message, chat, options) {
+      const settings = Object.assign({ keepText: null }, options);
       const resolvedChat = chat || getActiveChat();
-      if (!resolvedChat || !message) {
+      if (!resolvedChat || !message || resolvedChat.id !== appState.activeChatId) {
         return;
       }
-      if (resolvedChat.id !== appState.activeChatId) {
-        return;
-      }
-      const messageIndex = resolvedChat.messages.findIndex(function(item) { return item.id === message.id; });
       const currentEl = findMessageElement(message.id);
-      if (messageIndex === -1 || !currentEl) {
+      if (!currentEl || message.hidden) {
+        renderThread({ preserveScroll: true });
+        return;
+      }
+      const template = document.createElement('template');
+      template.innerHTML = renderMessageMarkup(message, message.id === lastAssistantId(resolvedChat), resolvedChat).trim();
+      const nextEl = template.content.firstElementChild;
+      const oldRoot = currentEl.querySelector('.md-root');
+      const newRoot = nextEl.querySelector('.md-root');
+      const keep = settings.keepText !== null && oldRoot && newRoot && settings.keepText === getVisibleContent(message);
+      if (keep) newRoot.innerHTML = '';
+      enhanceRichContent(nextEl, { msgId: message.id });
+      if (keep) newRoot.replaceWith(oldRoot);
+      oldRoot && oldRoot.querySelectorAll('.stream-caret').forEach((caret) => caret.remove());
+      currentEl.replaceWith(nextEl);
+      bindThreadActions(nextEl);
+      syncGuidedBannerSlot(resolvedChat);
+      followThread();
+    }
+
+    // Adds a message at the end of the thread without redrawing the rest.
+    function appendThreadMessage(message, chat) {
+      const resolvedChat = chat || getActiveChat();
+      if (!resolvedChat || resolvedChat.id !== appState.activeChatId || message.hidden) return;
+      if (!elements.thread.querySelector('[data-msg-id]')) {
         renderThread();
         return;
       }
       const template = document.createElement('template');
-      template.innerHTML = renderMessageMarkup(message, messageIndex === lastAssistantMessageIndex(resolvedChat)).trim();
-      const nextEl = template.content.firstElementChild;
-      if (!nextEl) {
-        renderThread();
-        return;
-      }
-      currentEl.className = nextEl.className;
-      currentEl.setAttribute('data-msg-id', message.id);
-      currentEl.innerHTML = nextEl.innerHTML;
-      syncGuidedBannerSlot(resolvedChat);
-      // The LaTeX preview is built once the answer is complete, not per chunk.
-      enhanceRichContent(currentEl, { renderMath: true, latexPreview: !isStreaming });
-      if (isStreaming) {
-        const bubbleContent = currentEl.querySelector('.bubble-content');
-        if (bubbleContent) {
-          bubbleContent.classList.add('stream-chunk');
-          window.setTimeout(function() {
-            bubbleContent.classList.remove('stream-chunk');
-          }, 220);
-        }
-      }
-      bindThreadActions(currentEl);
-      if (settings.scrollToBottom) {
-        requestAnimationFrame(scrollThreadToBottom);
-      }
-    }
-
-    function rerenderGuidedQuizMessage(chatLike) {
-      const chat = chatLike || getActiveChat();
-      if (!chat || !chat.guidedLearning) {
-        return;
-      }
-      const session = ensureGuidedSession(chat);
-      const messageId = session.quiz && typeof session.quiz.sourceMessageId === 'string'
-        ? session.quiz.sourceMessageId
-        : '';
-      if (!messageId) {
-        renderThread({ preserveScroll: true });
-        return;
-      }
-      const message = (chat.messages || []).find(function(item) {
-        return item && item.id === messageId;
-      }) || null;
-      if (!message || !findMessageElement(messageId)) {
-        renderThread({ preserveScroll: true });
-        return;
-      }
-      patchThreadMessage(message, chat, false, {
-        scrollToBottom: false
-      });
-    }
-
-    let pendingStreamRender = null;
-    let pendingStreamRenderTimer = 0;
-
-    function flushPendingStreamRender() {
-      if (pendingStreamRenderTimer) {
-        clearTimeout(pendingStreamRenderTimer);
-        pendingStreamRenderTimer = 0;
-      }
-      const task = pendingStreamRender;
-      pendingStreamRender = null;
-      if (!task) {
-        return;
-      }
-      patchThreadMessage(task.message, task.chat, task.isStreaming);
-    }
-
-    function scheduleStreamRender(message, chat, isStreaming, immediate) {
-      pendingStreamRender = {
-        message: message,
-        chat: chat,
-        isStreaming: !!isStreaming
-      };
-      if (immediate) {
-        flushPendingStreamRender();
-        return;
-      }
-      if (pendingStreamRenderTimer) {
-        return;
-      }
-      pendingStreamRenderTimer = window.setTimeout(flushPendingStreamRender, 90);
+      template.innerHTML = renderMessageMarkup(message, message.id === lastAssistantId(resolvedChat), resolvedChat).trim();
+      const el = template.content.firstElementChild;
+      enhanceRichContent(el, { msgId: message.id });
+      elements.thread.appendChild(el);
+      bindThreadActions(el);
+      followThread();
     }
 
     function renderThread(options) {
       const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
-      flushPendingStreamRender();
       renderWorkspaceBar();
-      if (!chat.messages.length) {
+      const visible = threadMessages(chat);
+      if (!visible.length) {
         renderEmptyThread(settings);
         return;
       }
-
-      const lastAssistantIdx = lastAssistantMessageIndex(chat);
+      const lastId = lastAssistantId(chat);
       syncGuidedBannerSlot(chat);
-      elements.thread.innerHTML = chat.messages.map(function(message, idx) {
-        return renderMessageMarkup(message, idx === lastAssistantIdx);
+      elements.thread.innerHTML = visible.map(function(message) {
+        return renderMessageMarkup(message, message.id === lastId, chat);
       }).join('');
 
       enhanceRichContent(elements.thread);
       bindThreadActions();
       if (!settings.preserveScroll) {
         requestAnimationFrame(scrollThreadToBottom);
+      } else {
+        followThread();
       }
     }
 
@@ -7539,8 +4582,13 @@
       return path ? label + ' · ' + path : label;
     }
 
+    // The course tools (plan, quiz, exam) show up as cards, not as steps.
+    function visibleToolSteps(message) {
+      return (Array.isArray(message.toolSteps) ? message.toolSteps : []).filter((step) => !GUIDED_TOOL_NAMES.has(step.name));
+    }
+
     function renderToolStepsMarkup(message) {
-      const steps = message.toolSteps;
+      const steps = visibleToolSteps(message);
       const running = steps.some((step) => step.status === 'running');
       const failed = steps.filter((step) => step.status === 'error').length;
       let openState = null;
@@ -7571,18 +4619,15 @@
 
     function bindThreadActions(root) {
       const scope = root || elements.thread;
-      scope.querySelectorAll('[data-steps-id]').forEach(function(el) {
+      // Only a tap on the summary is remembered: the automatic open while the
+      // model reasons (and its fold when the answer starts) is not a choice.
+      scope.querySelectorAll('[data-steps-id], [data-reasoning-id]').forEach(function(el) {
         if (el.dataset.boundToggle === '1') return;
         el.dataset.boundToggle = '1';
-        el.addEventListener('toggle', function() {
-          try { sessionStorage.setItem('steps::' + el.dataset.stepsId, el.open ? '1' : '0'); } catch (_) {}
-        });
-      });
-      scope.querySelectorAll('[data-reasoning-id]').forEach(function(el) {
-        if (el.dataset.boundToggle === '1') return;
-        el.dataset.boundToggle = '1';
-        el.addEventListener('toggle', function() {
-          try { sessionStorage.setItem('reasoning::' + el.dataset.reasoningId, el.open ? '1' : '0'); } catch (_) {}
+        const key = el.dataset.stepsId ? 'steps::' + el.dataset.stepsId : 'reasoning::' + el.dataset.reasoningId;
+        const summary = el.querySelector('summary');
+        if (summary) summary.addEventListener('click', function() {
+          try { sessionStorage.setItem(key, el.open ? '0' : '1'); } catch (_) {}
         });
       });
       scope.querySelectorAll('[data-edit-msg]').forEach(function(btn) {
@@ -7609,40 +4654,6 @@
         if (pill.dataset.boundClick === '1') return;
         pill.dataset.boundClick = '1';
         pill.addEventListener('click', function() { openAttachmentPreview(pill.dataset.previewMsg, pill.dataset.previewAtt); });
-      });
-      scope.querySelectorAll('[data-guided-answer]').forEach(function(btn) {
-        if (btn.dataset.boundClick === '1') return;
-        btn.dataset.boundClick = '1';
-        btn.addEventListener('click', function(event) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (btn.disabled) {
-            console.warn('[guided] click on disabled option ignored');
-            return;
-          }
-          const questionId = btn.dataset.guidedAnswer || '';
-          const optionId = btn.dataset.guidedOption || '';
-          console.log('[guided] option click', { questionId, optionId });
-          applyGuidedAnswerVisual(btn, questionId, optionId);
-          const recorded = answerGuidedQuizQuestion(questionId, optionId);
-          console.log('[guided] answer recorded?', recorded);
-        });
-      });
-      scope.querySelectorAll('[data-guided-action]').forEach(function(btn) {
-        if (btn.dataset.boundClick === '1') return;
-        btn.dataset.boundClick = '1';
-        btn.addEventListener('click', function() {
-          handleGuidedAction(btn.dataset.guidedAction);
-        });
-      });
-      scope.querySelectorAll('[data-guided-banner]').forEach(function(el) {
-        if (el.dataset.boundToggle === '1') return;
-        el.dataset.boundToggle = '1';
-        el.addEventListener('toggle', function() {
-          try {
-            sessionStorage.setItem('guided-banner::' + el.dataset.guidedBanner, el.open ? '1' : '0');
-          } catch (_) {}
-        });
       });
     }
 
@@ -8334,7 +5345,7 @@
       var msg = chat.messages[idx];
       if (msg.role !== 'assistant') return;
 
-      if (!ensureProviderReady(chat)) return;
+      if (!ensureProviderReady(chat) || !guidedModelReady(chat)) return;
 
       var currentContent = getVisibleContent(msg);
       if (!msg.alternatives) msg.alternatives = [];
@@ -8346,8 +5357,19 @@
           model: msg.model || ''
         });
       }
+      // The new version writes its own course cards: an unanswered quiz of the old one goes away.
+      if (chat.guidedLearning && msg.guidedCards && msg.guidedCards.length) {
+        var course = courseOf(chat);
+        msg.guidedCards.forEach(function(card) {
+          var quiz = card.quizId && course.quizzes[card.quizId];
+          if (quiz && !quiz.submitted) quiz.superseded = true;
+        });
+        msg.guidedCards = [];
+      }
       msg.pending = true;
       msg.content = '';
+      msg.thinking = '';
+      msg.toolSteps = [];
       msg.activeAlternative = msg.alternatives.length;
       msg.provider = activeProviderName(chat);
       msg.model = resolveRequestModelId(chat);
@@ -8356,24 +5378,20 @@
       appState.activeController = new AbortController();
       setComposerStatus('Regenerando con ' + activeProviderLabel(chat) + ' · ' + activeModelLabel(chat) + '...');
       updateSendUi();
-      renderThread();
+      patchThreadMessage(msg, chat);
+      var keepText = null;
       try {
-        var reply = await callModel(chat, appState.activeController.signal);
-        msg.pending = false;
-        msg.content = reply.text;
-        msg.parts = reply.parts;
-        msg.thinking = reply.thinking || '';
-        msg.toolSteps = reply.steps || [];
-        msg.piMessages = reply.piMessages || [];
+        keepText = await streamAssistantReply(chat, msg);
         msg.activeAlternative = msg.alternatives.length;
+        if (chat.guidedLearning) guidedAfterTurn(chat, msg, { nudged: true });
         touchChat(chat);
         setComposerStatus('');
       } catch (error) {
-        msg.pending = false;
         if (error.name === 'AbortError') {
           if (msg.alternatives.length) {
             var last = msg.alternatives.pop();
             msg.content = last.content;
+            msg.parts = [{ text: last.content }];
           }
           msg.activeAlternative = msg.alternatives.length;
           setComposerStatus('Regeneracion cancelada.');
@@ -8392,7 +5410,7 @@
         saveState();
         updateSendUi();
         renderHistory();
-        renderThread();
+        patchThreadMessage(msg, chat, { keepText: keepText });
       }
     }
 
@@ -9070,10 +6088,11 @@
       });
       if (elements.guidedBtn) {
         elements.guidedBtn.addEventListener('click', () => {
+          if (appState.busy) return;
           const chat = getActiveChat();
           chat.guidedLearning = !chat.guidedLearning;
           if (chat.guidedLearning) {
-            ensureGuidedSession(chat);
+            courseOf(chat);
           }
           appState.guidedLearning = chat.guidedLearning;
           updateGuidedLearningUi();
@@ -9083,7 +6102,7 @@
           showToast(
             'Guided Learning',
             chat.guidedLearning
-              ? 'Modo tutor activado. Sube tus apuntes y te propondré un índice.'
+              ? 'Dime qué quieres aprender (o sube tus apuntes): te preparo un plan por lecciones, mini tests y un examen final.'
               : 'Modo tutor desactivado. Vuelve al chat normal.'
           );
         });
@@ -9583,6 +6602,9 @@
     }
 
     const TOOL_LABELS = {
+      set_course_plan: 'Plan del curso',
+      quiz: 'Mini test',
+      final_exam: 'Examen final',
       run_js: 'Ejecutar JavaScript',
       write_file: 'Guardar archivo',
       read_file: 'Leer archivo',
@@ -9617,7 +6639,9 @@
     function buildAgentSystemPrompt(chat) {
       const files = chatWorkspace(chat).list();
       return [
-        getActiveSystemPrompt(chat),
+        chat && chat.guidedLearning ? buildGuidedPrompt(chat) : APP_CONFIG.SYSTEM_PROMPT,
+        '',
+        VISUALS_PROMPT,
         '',
         'Herramientas de este chat:',
         '- run_js ejecuta JavaScript en un sandbox sin red. Úsala para cálculos exactos, comprobar soluciones o generar datos, no para lo que puedes responder directamente.',
@@ -9691,8 +6715,7 @@
     // Respuesta guardada -> mensajes de pi. Si es la versión actual se reutiliza la
     // transcripción completa (herramientas y firmas de razonamiento incluidas).
     function piAssistantMessages(message, chat) {
-      const guided = !!(chat && chat.guidedLearning);
-      const cleanText = (text) => (guided ? parseGuidedAssistantPayload(text).visibleText : text);
+      const cleanText = stripLegacyGuidedState;
       const isLatestVersion = activeVersionIndex(message) === totalMessageVersions(message) - 1;
       // Solo se reutiliza si es de OpenRouter (las de Gemini directo de versiones viejas, no).
       const fromOpenRouter = Array.isArray(message.piMessages) && message.piMessages.length &&
@@ -9753,7 +6776,10 @@
       });
     }
 
-    async function callModel(chat, signal, onProgress) {
+    // options.message: the assistant message being written; in Guided Learning
+    // the course tools attach their cards (plan, quiz, exam) to it.
+    async function callModel(chat, signal, onProgress, options) {
+      const settings = options || {};
       const modelId = resolveRequestModelId(chat);
       const model = InhousePi.getModel(modelId);
       const { history, prompt } = await buildPiConversation(chat, model.input.includes('image'));
@@ -9772,13 +6798,17 @@
           }
         }
       });
+      const guidedTools = chat.guidedLearning && settings.message
+        ? InhousePi.createGuidedTools(createGuidedToolHandlers(chat, settings.message))
+        : [];
       let result;
       try {
         try {
-          result = await run(InhousePi.createWorkspaceTools(chatWorkspace(chat)));
+          result = await run(guidedTools.concat(InhousePi.createWorkspaceTools(chatWorkspace(chat))));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
           if (error.name !== 'AbortError' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {
+            if (guidedTools.length) throw new Error(GUIDED_NEEDS_TOOLS);
             result = await run([]);
           } else {
             throw error;
@@ -9795,7 +6825,7 @@
         completion_tokens: result.usage.output,
         cost: result.usage.cost
       });
-      if (!result.text.trim() && !result.thinking.trim() && !result.steps.length) {
+      if (!result.text.trim() && !result.thinking.trim() && !result.steps.length && !(settings.message && (settings.message.guidedCards || []).length)) {
         throw new Error('El modelo no ha devuelto respuesta. Prueba otra vez o cambia de modelo.');
       }
       if (typeof onProgress === 'function') {
@@ -10070,106 +7100,117 @@
       // Prevent double-firing from rapid Enter/click events
       if (_sendLock) return;
       _sendLock = true;
-
-      const prompt = elements.composer.value.trim();
-      const attachments = (appState.composerAttachments || []).slice();
-      if (!prompt && !attachments.length) {
+      try {
+        const prompt = elements.composer.value.trim();
+        const attachments = (appState.composerAttachments || []).slice();
+        if (!prompt && !attachments.length) {
+          return;
+        }
+        if (appState.attachmentBusy) {
+          setComposerStatus('Espera a que terminen de procesarse los adjuntos.');
+          return;
+        }
+        const chat = getActiveChat();
+        if (!ensureProviderReady(chat) || !guidedModelReady(chat)) {
+          return;
+        }
+        const parts = buildUserMessageParts(prompt, attachments);
+        const fallbackContent = prompt || attachments.map((item) => item.name).join(', ');
+        const userMessage = createMessage('user', fallbackContent, false, {
+          parts,
+          attachments
+        });
+        elements.composer.value = '';
+        resetComposerAttachments();
+        autoResizeComposer();
+        if (chat.guidedLearning) guidedBeforeUserTurn(chat, prompt);
+        // busy is set synchronously inside, so the lock can go right after.
+        runAssistantTurn(chat, userMessage);
+      } finally {
         _sendLock = false;
-        return;
       }
-      if (appState.attachmentBusy) {
-        setComposerStatus('Espera a que terminen de procesarse los adjuntos.');
-        _sendLock = false;
-        return;
-      }
+    }
 
-      const chat = getActiveChat();
-      if (!ensureProviderReady(chat)) {
-        _sendLock = false;
-        return;
+    // Guided Learning drives the course with tools: the model must accept them.
+    function guidedModelReady(chat) {
+      if (!chat || !chat.guidedLearning) return true;
+      const entry = catalogEntry(resolveRequestModelId(chat));
+      if (entry && !entry.tools) {
+        setComposerStatus(GUIDED_NEEDS_TOOLS);
+        showToast('Aprendizaje guiado', GUIDED_NEEDS_TOOLS);
+        return false;
       }
+      return true;
+    }
 
-      const parts = buildUserMessageParts(prompt, attachments);
-      const fallbackContent = prompt || attachments.map((item) => item.name).join(', ');
-      const userMessage = createMessage('user', fallbackContent, false, {
-        parts,
-        attachments
-      });
+    // Streams one reply into message (already in the thread as pending). The
+    // text is drawn by its StreamView; returns what ended up on screen so the
+    // final redraw can keep it.
+    async function streamAssistantReply(chat, message) {
+      let view = null;
+      const visibleChat = () => chat.id === appState.activeChatId;
+      const onProgress = (chunk) => {
+        if (!chunk || chunk.done) return;
+        if (typeof chunk.text === 'string') message.content = stripLegacyGuidedState(chunk.text);
+        if (typeof chunk.thinking === 'string' && chunk.thinking) message.thinking = chunk.thinking;
+        if (Array.isArray(chunk.steps) && chunk.steps.length) message.toolSteps = chunk.steps;
+        if (!visibleChat()) return;
+        view = streamViewFor(message);
+        if (view) view.push({ text: message.content });
+      };
+      try {
+        const reply = await callModel(chat, appState.activeController.signal, onProgress, { message });
+        const text = stripLegacyGuidedState(reply.text || '');
+        message.content = text;
+        message.parts = text ? [{ text }] : [];
+        message.thinking = reply.thinking || message.thinking || '';
+        message.toolSteps = reply.steps || [];
+        message.piMessages = reply.piMessages || [];
+        view = visibleChat() ? streamViewFor(message) : null;
+        if (view) await view.finish(text);
+        return view ? view.renderedText : null;
+      } finally {
+        message.pending = false;
+        dropStreamView(message);
+      }
+    }
+
+    // One answer to userMessage: typed text, a quiz result, a quick reply or a
+    // hidden note of the app (options.nudged) when the tutor skipped a step.
+    async function runAssistantTurn(chat, userMessage, options) {
+      const settings = options || {};
+      if (appState.busy || !ensureProviderReady(chat) || !guidedModelReady(chat)) return;
+      const previousLast = chat.messages.find((message) => message.id === lastAssistantId(chat)) || null;
       const assistantMessage = createMessage('assistant', '', true, {
         provider: activeProviderName(chat),
         model: resolveRequestModelId(chat)
       });
-
       chat.messages.push(userMessage, assistantMessage);
       touchChat(chat);
-      elements.composer.value = '';
-      resetComposerAttachments();
-      autoResizeComposer();
       appState.busy = true;
       appState.activeController = new AbortController();
       setComposerStatus('Consultando ' + activeProviderLabel(chat) + ' · ' + activeModelLabel(chat) + '...');
       updateSendUi();
       renderHistory();
-      renderThread();
+      if (settings.nudged) {
+        if (previousLast) patchThreadMessage(previousLast, chat, { keepText: getVisibleContent(previousLast) });
+        appendThreadMessage(assistantMessage, chat);
+      } else {
+        renderThread();
+      }
 
-      // Release the lock now that busy=true protects us
-      _sendLock = false;
-
+      let keepText = null;
+      let nudge = null;
       try {
-        const useProgressiveGemini = isProgressiveGeminiRender(chat);
-        const onProgress = (chunk) => {
-          if (!chunk) return;
-          const hasText = typeof chunk.text === 'string' && chunk.text.length > 0;
-          const hasThinking = typeof chunk.thinking === 'string' && chunk.thinking.length > 0;
-          if (hasText) {
-            const visibleText = cleanAssistantTextForUi(chat, assistantMessage, chunk.text);
-            if (useProgressiveGemini) {
-              queueMessageStream(assistantMessage, chat, visibleText, !!chunk.done);
-            } else {
-              assistantMessage.content = visibleText;
-            }
-            assistantMessage.parts = visibleText ? [{ text: visibleText }] : [];
-          }
-          if (hasThinking) assistantMessage.thinking = chunk.thinking;
-          if (Array.isArray(chunk.steps) && chunk.steps.length) assistantMessage.toolSteps = chunk.steps;
-          // Hasta que llega texto sigue el indicador de escritura bajo el razonamiento y los pasos.
-          if (hasText) assistantMessage.pending = false;
-          if (useProgressiveGemini) {
-            if (hasThinking && !hasText) {
-              scheduleStreamRender(assistantMessage, chat, !chunk.done, !!chunk.done);
-            }
-          } else {
-            scheduleStreamRender(assistantMessage, chat, !chunk.done, !!chunk.done);
-          }
-        };
-        const reply = await callModel(chat, appState.activeController.signal, onProgress);
-        const finalVisibleText = cleanAssistantTextForUi(
-          chat,
-          assistantMessage,
-          reply.text || assistantMessage.streamTargetContent || ''
-        );
-        if (useProgressiveGemini) {
-          queueMessageStream(assistantMessage, chat, finalVisibleText, true);
-          await waitForMessageStream(assistantMessage);
-        }
-        flushPendingStreamRender();
-        assistantMessage.pending = false;
-        assistantMessage.content = finalVisibleText;
-        assistantMessage.thinking = reply.thinking || assistantMessage.thinking || '';
-        assistantMessage.parts = finalVisibleText ? [{ text: finalVisibleText }] : [];
-        assistantMessage.toolSteps = reply.steps || [];
-        assistantMessage.piMessages = reply.piMessages || [];
-        clearMessageStreamState(assistantMessage);
+        keepText = await streamAssistantReply(chat, assistantMessage);
         touchChat(chat);
         setComposerStatus('');
+        if (chat.guidedLearning) nudge = guidedAfterTurn(chat, assistantMessage, { nudged: !!settings.nudged });
       } catch (error) {
-        flushPendingStreamRender();
-        clearMessageStreamState(assistantMessage);
         if (error.name === 'AbortError') {
-          chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id);
+          chat.messages = chat.messages.filter((message) => message.id !== assistantMessage.id && !(settings.nudged && message.id === userMessage.id));
           setComposerStatus('Solicitud cancelada.');
         } else {
-          assistantMessage.pending = false;
           assistantMessage.content = 'Error: ' + error.message;
           assistantMessage.parts = [{ text: assistantMessage.content }];
           assistantMessage.toolSteps = error.partial && error.partial.steps ? error.partial.steps : (assistantMessage.toolSteps || []);
@@ -10178,14 +7219,20 @@
           setComposerStatus('Hubo un error: ' + error.message);
         }
       } finally {
-        flushPendingStreamRender();
-        clearMessageStreamState(assistantMessage);
         appState.busy = false;
         appState.activeController = null;
         saveState();
         updateSendUi();
         renderHistory();
-        renderThread();
+        if (chat.messages.includes(assistantMessage)) {
+          patchThreadMessage(assistantMessage, chat, { keepText });
+        } else if (chat.id === appState.activeChatId) {
+          renderThread({ preserveScroll: true });
+        }
+        syncGuidedBannerSlot(chat);
+      }
+      if (nudge && chat.id === appState.activeChatId) {
+        runAssistantTurn(chat, nudge, { nudged: true });
       }
     }
 
@@ -10202,6 +7249,7 @@
 
     function boot() {
       configureEngine();
+      initThreadFollow();
       loadModelCatalogFromCache();
       loadState();
       loadGoogleTokenFromStorage();
