@@ -67,8 +67,13 @@ Mandatory guidance for every AI and developer working in this repository.
 - **Live sync:** devices of the same account open WebRTC data channels to each other, signalled
   through `peer-<deviceId>.json` files in the Drive folder; the answering device sends every change
   at once and a `saved` notice after each Drive save. When a direct connection is not possible,
-  it writes `live.json` in Drive and the others poll it every second (`liveShareStart`, `liveTick`,
-  `peerTick` in `index.html`).
+  each tab writes `live-<deviceId>.json` in Drive and the others poll it every second
+  (`liveShareStart`, `liveTick`, `peerTick` in `index.html`); legacy `live.json` is still read.
+  Use a distinct ID per tab. Durable history polling runs independently of live-file errors.
+  Discover all pages of matching folders/snapshots, merge legacy duplicates without deleting
+  them, and choose the smallest file ID as the canonical write target. Serialize history
+  reads/writes, retry failed saves, and use conditional writes when Drive exposes an ETag.
+  `tests/web/sync-recovery.cjs` covers reload, duplicate histories and transient failures.
 - Never edit `vendor/inhouse-services-updater/`, `android/app/src/main/assets/updates/` or
   `android/app/src/main/java/com/inhouse/services/updater/` by hand: they are written by the
   canonical repository's `tools/sync.py`, and `vendor/inhouse-services-updater/verify.py`

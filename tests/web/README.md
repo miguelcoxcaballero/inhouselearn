@@ -24,6 +24,7 @@ CHROMIUM=/usr/bin/chromium node tests/web/practice.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/sync-recovery.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/github.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/queue.cjs
@@ -34,7 +35,14 @@ feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by
 
 `live-sync.cjs` opens two devices on a fake Google Drive: they connect directly (WebRTC
 signalled through Drive), the second one stays within a few characters of the first one's answer, ends with the same chat and gets new chats
-within seconds (conversations.json polling).
+within seconds (conversations.json polling). Set `LIVE_SYNC_FALLBACK=1` to explicitly
+exercise the Drive fallback with WebRTC disabled; the default suite still requires WebRTC.
+
+`sync-recovery.cjs` exercises the normal login/reload path against a fake Drive with
+duplicate folders/files, reversed and paginated listings, a transient upload failure,
+a conditional-write conflict, malformed live data, and a failed live download. It also
+checks simultaneous messages between tabs, deletion-only snapshots, token renewal during
+login, and that sync preserves a running agent's chat object.
 
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
 40 small files) and checks the search, the manifest the model gets and the three library tools.

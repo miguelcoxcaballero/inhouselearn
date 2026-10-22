@@ -2063,6 +2063,7 @@
     let googleTokenClient = null;
     let googleTokenRefreshTimer = 0;
     let googleSessionPromise = null;
+    let googleBootstrapRefreshPromise = null;
 
     const appState = {
       chats: [],
@@ -2613,7 +2614,7 @@
     }
 
     function normalizeSnapshot(snapshot, options) {
-      if (!snapshot || !Array.isArray(snapshot.chats) || !snapshot.chats.length) {
+      if (!snapshot || !Array.isArray(snapshot.chats)) {
         return null;
       }
       const opts = Object.assign({ includeBinaries: true }, options || {});
@@ -2621,7 +2622,7 @@
       return {
         version: typeof snapshot.version === 'number' ? snapshot.version : 1,
         savedAt: typeof snapshot.savedAt === 'string' ? snapshot.savedAt : nowIso(),
-        activeChatId: typeof snapshot.activeChatId === 'string' ? snapshot.activeChatId : chats[0].id,
+        activeChatId: typeof snapshot.activeChatId === 'string' ? snapshot.activeChatId : (chats[0]?.id || ''),
         settings: normalizeSyncedSettings(snapshot.settings),
         deletedChats: normalizeDeletedChats(snapshot.deletedChats),
         chats
@@ -2744,16 +2745,18 @@
       });
       writeDeletedChats(deleted);
       const localHadContent = appState.chats.some((chat) => chatHasMeaningfulContent(chat));
-      const before = JSON.stringify(appState.chats.map((chat) => [chat.id, chatFreshness(chat), (chat.messages || []).length, chat.title, !!chat.pinned]));
+      const before = JSON.stringify(appState.chats);
       const byId = new Map();
       appState.chats.forEach((chat) => byId.set(chat.id, chat));
       remote.chats.forEach((remoteChat) => {
         if (!remoteChat || typeof remoteChat.id !== 'string') return;
         if (!chatHasMeaningfulContent(remoteChat)) return;
         const local = byId.get(remoteChat.id);
+        // Keep the object owned by the running agent; other chats can still arrive.
+        if (local && appState.busy && local.id === appState.activeChatId) return;
         const remoteTime = chatFreshness(remoteChat);
         if (!local || remoteTime > chatFreshness(local) ||
-            (remoteTime === chatFreshness(local) && (remoteChat.messages || []).length > (local.messages || []).length)) {
+            (remoteTime === chatFreshness(local) && ((remoteChat.messages || []).length > (local.messages || []).length || (local.messages || []).some(message => message.pending)))) {
           byId.set(remoteChat.id, remoteChat);
         }
       });
@@ -2773,28 +2776,36 @@
         appState.activeChatId = appState.chats.length ? appState.chats[0].id : '';
       }
       ensureActiveChat();
-      const after = JSON.stringify(appState.chats.map((chat) => [chat.id, chatFreshness(chat), (chat.messages || []).length, chat.title, !!chat.pinned]));
+      const after = JSON.stringify(appState.chats);
       saveState({ skipDrive: true });
       return before !== after;
     }
 
+    // Serialize history reads and writes: their version/ETag must describe the
+    // same snapshot. Live signalling uses independent files and stays responsive.
+    let driveHistoryTail = Promise.resolve();
+    function withDriveHistoryLock(work) {
+      const next = driveHistoryTail.then(work, work);
+      driveHistoryTail = next.catch(() => {});
+      return next;
+    }
+
     // Brings in what other devices saved, e.g. when the app comes back to the front.
     function pullDriveChanges(force) {
-      if (!hasDrivePersistenceReady() || appState.busy || appState.drivePullPromise) return Promise.resolve(false);
+      if (!hasDrivePersistenceReady() || appState.drivePullPromise) return Promise.resolve(false);
       if (!force && Date.now() - (appState.lastDrivePullAt || 0) < DRIVE_PULL_MIN_INTERVAL_MS) return Promise.resolve(false);
       appState.lastDrivePullAt = Date.now();
       const activeBefore = JSON.stringify(getActiveChat() || null);
-      appState.drivePullPromise = (async () => {
+      appState.drivePullPromise = withDriveHistoryLock(async () => {
         appState.driveRemoteSettings = null;
         const remote = await readDriveSnapshot();
         applyRemoteApiSettings(appState.driveRemoteSettings);
-        if (appState.busy || !mergeRemoteSnapshot(remote)) return false;
+        if (!mergeRemoteSnapshot(remote)) return false;
         renderHistory();
-        if (JSON.stringify(getActiveChat() || null) !== activeBefore) renderThread();
+        if (!appState.busy && JSON.stringify(getActiveChat() || null) !== activeBefore) renderThread();
         updateConfigUi();
-        scheduleDriveSync();
         return true;
-      })().catch((error) => {
+      }).catch((error) => {
         console.warn('No se pudo leer Drive:', error);
         return false;
       }).finally(() => {
@@ -2882,11 +2893,20 @@
       if (appState.driveSyncTimer) {
         window.clearTimeout(appState.driveSyncTimer);
       }
+      appState.driveFolderIds = [];
+      appState.driveHistoryVersion = '';
+      appState.driveSnapshotEtag = '';
+      appState.driveSyncError = '';
+      appState.driveRetryCount = 0;
+      appState.lastDrivePullAt = 0;
+      appState.liveSnapshotCheckAt = 0;
       appState.driveFolderId = '';
       appState.driveSnapshotFileId = '';
       appState.driveLiveFileId = '';
       appState.driveLiveLookupAt = 0;
       appState.liveSeenVersion = '';
+      appState.liveSeenVersions = {};
+      appState.liveLastSeq = new Map();
       if (appState.peerNet) appState.peerNet.peers.forEach((peer) => { try { peer.pc.close(); } catch (_) {} });
       appState.peerNet = null;
       appState.driveReady = false;
@@ -3355,9 +3375,10 @@
         },
         list: async (props) => {
           if (!hasDrivePersistenceReady()) return [];
-          const folderId = await findDriveFolderId();
-          if (!folderId) return [];
-          return listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and " + propsQuery(props), 1000);
+          await findDriveFolderId();
+          const folders = appState.driveFolderIds || [appState.driveFolderId].filter(Boolean);
+          const groups = await Promise.all(folders.map(folderId => listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and " + propsQuery(props), 1000)));
+          return driveUniqueFiles(groups.flat());
         },
         download: (id) => driveFetchText('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media', { method: 'GET' }, true, 'No se pudo descargar de Drive.'),
         remove: async (id) => {
@@ -5548,12 +5569,25 @@
         }
       }
 
-      const requestOptions = Object.assign({}, options);
+      const requestOptions = Object.assign({ cache: 'no-store' }, options);
       const headers = new Headers(requestOptions.headers || {});
       headers.set('Authorization', 'Bearer ' + appState.accessToken);
       requestOptions.headers = headers;
 
-      const response = await fetch(url, requestOptions);
+      // A stalled request must not hold the sync loop indefinitely.
+      const controller = new AbortController();
+      const callerSignal = requestOptions.signal;
+      const abort = () => controller.abort();
+      if (callerSignal?.aborted) abort();
+      else callerSignal?.addEventListener('abort', abort, { once: true });
+      requestOptions.signal = controller.signal;
+      const timeout = window.setTimeout(abort, 45000);
+      let response;
+      try { response = await fetch(url, requestOptions); }
+      finally {
+        window.clearTimeout(timeout);
+        callerSignal?.removeEventListener('abort', abort);
+      }
       if (response.status === 401 && allowRetry !== false) {
         const refreshed = await loginWithGoogle({
           interactive: false,
@@ -5594,7 +5628,7 @@
       const response = await driveFetch(url, options, allowRetry);
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(extractDriveErrorMessage(payload, fallbackMessage || 'Error de Drive', response.status));
+        throw Object.assign(new Error(extractDriveErrorMessage(payload, fallbackMessage || 'Error de Drive', response.status)), { status: response.status });
       }
       return payload;
     }
@@ -5607,109 +5641,91 @@
         try {
           payload = text ? JSON.parse(text) : null;
         } catch (error) {}
-        throw new Error(extractDriveErrorMessage(payload, fallbackMessage || 'Error de Drive', response.status));
+        throw Object.assign(new Error(extractDriveErrorMessage(payload, fallbackMessage || 'Error de Drive', response.status)), { status: response.status });
       }
       return text;
     }
 
     async function listDriveFiles(query, pageSize) {
-      const params = new URLSearchParams({
-        q: query,
-        spaces: 'drive',
-        pageSize: String(pageSize || 10),
-        fields: 'files(id,name,mimeType,modifiedTime,parents)'
-      });
-      const payload = await driveFetchJson(
-        'https://www.googleapis.com/drive/v3/files?' + params.toString(),
-        {
-          method: 'GET'
-        },
-        true,
-        'No se pudo listar Drive.'
-      );
-      return Array.isArray(payload && payload.files) ? payload.files : [];
+      const files = [];
+      let pageToken = '';
+      do {
+        const params = new URLSearchParams({ q: query, spaces: 'drive', pageSize: String(pageSize || 100),
+          fields: 'nextPageToken,files(id,name,mimeType,modifiedTime,parents)' });
+        if (pageToken) params.set('pageToken', pageToken);
+        const payload = await driveFetchJson('https://www.googleapis.com/drive/v3/files?' + params,
+          { method: 'GET' }, true, 'No se pudo listar Drive.');
+        files.push(...(payload?.files || []));
+        pageToken = payload?.nextPageToken || '';
+      } while (pageToken);
+      return files;
+    }
+
+    // Drive names are not unique. Old clients and simultaneous first logins can
+    // create several folders/snapshots. Discover every copy, use one stable write
+    // destination, and merge the others without deleting anyone's history.
+    function driveUniqueFiles(files) {
+      return [...new Map(files.filter(file => file?.id).map(file => [file.id, file])).values()]
+        .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    }
+
+    async function discoverDriveFolders() {
+      const [tagged, named] = await Promise.all([
+        listDriveFiles("mimeType='application/vnd.google-apps.folder' and trashed=false and appProperties has { key='" + DRIVE_FOLDER_TAG + "' and value='1' }"),
+        listDriveFiles("mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + escapeDriveQueryValue(DRIVE_FOLDER_NAME) + "'")
+      ]);
+      const folders = driveUniqueFiles(tagged.concat(named));
+      const next = folders[0]?.id || '';
+      if (appState.driveFolderId !== next) {
+        appState.driveSnapshotFileId = ''; appState.driveLiveFileId = '';
+        appState.driveLiveLookupAt = 0; appState.liveSeenVersion = '';
+        if (appState.peerNet) appState.peerNet.peers.forEach(peer => { try { peer.pc.close(); } catch (_) {} });
+        appState.peerNet = null;
+      }
+      appState.driveFolderId = next;
+      appState.driveFolderIds = folders.map(file => file.id);
+      return folders;
+    }
+
+    async function discoverDriveSnapshots(folderId) {
+      const parent = "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and ";
+      const [tagged, named] = await Promise.all([
+        listDriveFiles(parent + "appProperties has { key='" + DRIVE_SNAPSHOT_TAG + "' and value='1' }"),
+        listDriveFiles(parent + "name='" + escapeDriveQueryValue(DRIVE_SNAPSHOT_NAME) + "'")
+      ]);
+      return driveUniqueFiles(tagged.concat(named));
     }
 
     async function findDriveFolderId() {
-      if (appState.driveFolderId) {
-        return appState.driveFolderId;
-      }
-      const taggedFolders = await listDriveFiles(
-        "mimeType='application/vnd.google-apps.folder' and trashed=false and appProperties has { key='" + DRIVE_FOLDER_TAG + "' and value='1' }",
-        5
-      );
-      const taggedFolder = taggedFolders[0];
-      if (taggedFolder && taggedFolder.id) {
-        appState.driveFolderId = taggedFolder.id;
-        return appState.driveFolderId;
-      }
-
-      const namedFolders = await listDriveFiles(
-        "mimeType='application/vnd.google-apps.folder' and trashed=false and name='" + escapeDriveQueryValue(DRIVE_FOLDER_NAME) + "'",
-        5
-      );
-      const namedFolder = namedFolders[0];
-      if (namedFolder && namedFolder.id) {
-        appState.driveFolderId = namedFolder.id;
-        return appState.driveFolderId;
-      }
-      return '';
+      if (appState.driveFolderId) return appState.driveFolderId;
+      if (appState.driveFolderPromise) return appState.driveFolderPromise;
+      appState.driveFolderPromise = discoverDriveFolders().then(folders => folders[0]?.id || '')
+        .finally(() => { appState.driveFolderPromise = null; });
+      return appState.driveFolderPromise;
     }
 
     async function ensureDriveFolderId() {
-      const existingId = await findDriveFolderId();
-      if (existingId) {
-        return existingId;
-      }
-      const folder = await driveFetchJson(
-        'https://www.googleapis.com/drive/v3/files?fields=id,name',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: DRIVE_FOLDER_NAME,
-            mimeType: 'application/vnd.google-apps.folder',
-            appProperties: {
-              [DRIVE_FOLDER_TAG]: '1'
-            }
-          })
-        },
-        true,
-        'No se pudo crear la carpeta de Drive.'
-      );
-      appState.driveFolderId = folder.id || '';
-      return appState.driveFolderId;
+      if (appState.driveFolderCreatePromise) return appState.driveFolderCreatePromise;
+      appState.driveFolderCreatePromise = (async () => {
+        const existingId = await findDriveFolderId();
+        if (existingId) return existingId;
+        const folder = await driveFetchJson('https://www.googleapis.com/drive/v3/files?fields=id,name', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder', appProperties: { [DRIVE_FOLDER_TAG]: '1' } })
+        }, true, 'No se pudo crear la carpeta de Drive.');
+        appState.driveFolderId = folder.id || '';
+        appState.driveFolderIds = [appState.driveFolderId];
+        return appState.driveFolderId;
+      })().finally(() => { appState.driveFolderCreatePromise = null; });
+      return appState.driveFolderCreatePromise;
     }
 
     async function findDriveSnapshotFileId(folderId) {
-      if (appState.driveSnapshotFileId) {
-        return appState.driveSnapshotFileId;
-      }
-      if (!folderId) {
-        return '';
-      }
-      const taggedFiles = await listDriveFiles(
-        "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and appProperties has { key='" + DRIVE_SNAPSHOT_TAG + "' and value='1' }",
-        5
-      );
-      const taggedFile = taggedFiles[0];
-      if (taggedFile && taggedFile.id) {
-        appState.driveSnapshotFileId = taggedFile.id;
-        return appState.driveSnapshotFileId;
-      }
-
-      const namedFiles = await listDriveFiles(
-        "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and name='" + escapeDriveQueryValue(DRIVE_SNAPSHOT_NAME) + "'",
-        5
-      );
-      const namedFile = namedFiles[0];
-      if (namedFile && namedFile.id) {
-        appState.driveSnapshotFileId = namedFile.id;
-        return appState.driveSnapshotFileId;
-      }
-      return '';
+      if (appState.driveSnapshotFileId) return appState.driveSnapshotFileId;
+      if (!folderId) return '';
+      const files = await discoverDriveSnapshots(folderId);
+      appState.driveSnapshotFileId = files[0]?.id || '';
+      return appState.driveSnapshotFileId;
     }
 
     function buildDriveMultipartBody(metadata, content, mimeType) {
@@ -5733,55 +5749,60 @@
     }
 
     async function readDriveSnapshot() {
-      const folderId = await findDriveFolderId();
-      if (!folderId) {
-        return null;
+      const folders = await discoverDriveFolders();
+      const groups = await Promise.all(folders.map(folder => discoverDriveSnapshots(folder.id)));
+      const primary = groups[0]?.[0]?.id || '';
+      appState.driveSnapshotFileId = primary;
+      const files = driveUniqueFiles(groups.flat());
+      const version = JSON.stringify(files.map(file => [file.id, file.modifiedTime]));
+      if (version === appState.driveHistoryVersion) return null;
+      const combined = { version: 1, chats: [], deletedChats: {}, settings: null, activeChatId: '' };
+      const chats = new Map();
+      for (const file of files) {
+        const response = await driveFetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(file.id) + '?alt=media', { method: 'GET' });
+        if (!response.ok) throw Object.assign(new Error('No se pudo descargar el historial de Drive.'), { status: response.status });
+        const parsed = normalizeSnapshot(await response.json());
+        if (!parsed) throw new Error('El historial de Drive tiene un formato inválido; no se ha sobrescrito.');
+        if (file.id === primary) appState.driveSnapshotEtag = response.headers.get('etag') || '';
+        for (const chat of parsed.chats) {
+          const local = chats.get(chat.id);
+          if (!local || chatFreshness(chat) > chatFreshness(local) ||
+              (chatFreshness(chat) === chatFreshness(local) && chat.messages.length > local.messages.length)) chats.set(chat.id, chat);
+        }
+        for (const [id, at] of Object.entries(parsed.deletedChats)) {
+          if (!combined.deletedChats[id] || at > combined.deletedChats[id]) combined.deletedChats[id] = at;
+        }
+        if ((parsed.settings?.openRouter?.updatedAt || '') > (combined.settings?.openRouter?.updatedAt || '')) combined.settings = parsed.settings;
+        if (!combined.activeChatId || file.id === primary) combined.activeChatId = parsed.activeChatId;
       }
-      const fileId = await findDriveSnapshotFileId(folderId);
-      if (!fileId) {
-        return null;
-      }
-      const modifiedTime = await readDriveSnapshotVersion(fileId);
-      const raw = await driveFetchText(
-        'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media',
-        {
-          method: 'GET'
-        },
-        true,
-        'No se pudo descargar el historial de Drive.'
-      );
-      const parsed = JSON.parse(raw);
-      appState.driveKnownVersion = modifiedTime;
-      appState.driveRemoteSettings = normalizeSyncedSettings(parsed && parsed.settings);
-      return normalizeSnapshot(parsed);
-    }
-
-    async function readDriveSnapshotVersion(fileId) {
-      const meta = await driveFetchJson(
-        'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=modifiedTime',
-        { method: 'GET' },
-        true,
-        'No se pudo leer el historial de Drive.'
-      );
-      return (meta && meta.modifiedTime) || '';
+      combined.chats = [...chats.values()];
+      appState.driveRemoteSettings = combined.settings;
+      appState.driveKnownVersion = groups[0]?.[0]?.modifiedTime || '';
+      // Mark read only after every file downloaded successfully; failed reads retry.
+      appState.driveHistoryVersion = version;
+      return files.length ? combined : null;
     }
 
     // Read-merge-write: if another device saved since we last looked, take its
-    // chats in first, so this upload never overwrites them.
+    // chats in first. When Drive exposes an ETag, retry conflicting writes too.
     async function syncDriveNow() {
-      const folderId = await findDriveFolderId();
-      const fileId = folderId ? await findDriveSnapshotFileId(folderId) : '';
-      if (fileId && (await readDriveSnapshotVersion(fileId)) !== appState.driveKnownVersion) {
-        const activeBefore = JSON.stringify(getActiveChat() || null);
-        appState.driveRemoteSettings = null;
-        const remote = await readDriveSnapshot();
-        applyRemoteApiSettings(appState.driveRemoteSettings);
-        if (remote && mergeRemoteSnapshot(remote)) {
-          renderHistory();
-          if (!appState.busy && JSON.stringify(getActiveChat() || null) !== activeBefore) renderThread();
+      return withDriveHistoryLock(async () => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const activeBefore = JSON.stringify(getActiveChat() || null);
+          appState.driveRemoteSettings = null;
+          const remote = await readDriveSnapshot();
+          applyRemoteApiSettings(appState.driveRemoteSettings);
+          if (remote && mergeRemoteSnapshot(remote)) {
+            renderHistory();
+            if (!appState.busy && JSON.stringify(getActiveChat() || null) !== activeBefore) renderThread();
+          }
+          try { await persistDriveSnapshot(buildStateSnapshot()); return; }
+          catch (error) {
+            appState.driveHistoryVersion = '';
+            if (error.status !== 412 || attempt === 2) throw error;
+          }
         }
-      }
-      await persistDriveSnapshot(buildStateSnapshot());
+      });
     }
 
     async function persistDriveSnapshot(snapshot) {
@@ -5815,7 +5836,8 @@
         {
           method: existingFileId ? 'PATCH' : 'POST',
           headers: {
-            'Content-Type': multipart.contentType
+            'Content-Type': multipart.contentType,
+            ...(existingFileId && appState.driveSnapshotEtag ? { 'If-Match': appState.driveSnapshotEtag } : {})
           },
           body: multipart.body
         },
@@ -5825,6 +5847,10 @@
       appState.driveFolderId = folderId;
       appState.driveSnapshotFileId = response && response.id ? response.id : existingFileId;
       appState.driveKnownVersion = (response && response.modifiedTime) || '';
+      appState.driveHistoryVersion = '';
+      appState.driveSnapshotEtag = '';
+      appState.driveRetryCount = 0;
+      appState.driveSyncError = '';
       appState.driveReady = true;
       peerBroadcast({ t: 'saved' });
     }
@@ -5914,12 +5940,13 @@
 
     function scheduleDriveSync(options) {
       const settings = Object.assign({
-        immediate: false
+        immediate: false, retry: false
       }, options);
       if (!hasDrivePersistenceReady()) {
         return;
       }
       if (appState.driveSyncTimer) {
+        if (!settings.immediate) return; // continuous edits must not postpone the save forever
         window.clearTimeout(appState.driveSyncTimer);
       }
       appState.driveSyncTimer = window.setTimeout(() => {
@@ -5931,23 +5958,28 @@
         appState.driveSyncPromise = syncDriveNow()
           .catch((error) => {
             console.error('Drive sync error:', error);
-            showToast('Drive', 'No se pudo guardar el chat en Drive. Revisa que la API de Google Drive esté activada.');
+            appState.driveSyncError = error.message;
+            appState.driveRetryCount = (appState.driveRetryCount || 0) + 1;
+            appState.driveSyncQueued = true;
+            if (appState.driveRetryCount === 1) showToast('Drive', 'No se pudo sincronizar. Tus chats siguen guardados aquí; reintentaremos automáticamente.');
           })
           .finally(() => {
             appState.driveSyncPromise = null;
             if (appState.driveSyncQueued) {
               appState.driveSyncQueued = false;
-              scheduleDriveSync();
+              scheduleDriveSync({ retry: !!appState.driveRetryCount });
             }
+            updateAuthUi();
           });
-      }, settings.immediate ? 0 : DRIVE_SYNC_DEBOUNCE_MS);
+      }, settings.immediate ? 0 : settings.retry ? Math.min(30000, 1000 * 2 ** Math.min(appState.driveRetryCount, 5)) : DRIVE_SYNC_DEBOUNCE_MS);
+      updateAuthUi();
     }
 
 
 
     /* ─── DRIVE EN DIRECTO ───────────────────────────── */
     // Drive cannot push to a browser, so live sync is a small file and polling.
-    // The device that is answering writes live.json (its last user message and
+    // Each answering tab writes live-<id>.json (its last user message and
     // the answer so far) every LIVE_WRITE_MS; every other device signed in to
     // the same Drive reads it every LIVE_POLL_MS and draws the answer as it
     // grows. They also check conversations.json every LIVE_SNAPSHOT_MS, so new
@@ -5957,52 +5989,35 @@
     const LIVE_POLL_MS = 1000;
     const LIVE_PEER_SEND_MS = 60;
     const LIVE_SNAPSHOT_MS = 8000;
-    const LIVE_FIND_RETRY_MS = 4000;
     const LIVE_MAX_AGE_MS = 10 * 60 * 1000;
-    const LIVE_DEVICE_KEY = STORAGE_KEY + '::deviceId';
 
     function liveDeviceId() {
       if (appState.liveDeviceId) return appState.liveDeviceId;
-      let id = '';
-      try { id = localStorage.getItem(LIVE_DEVICE_KEY) || ''; } catch (_) {}
-      if (!id) {
-        id = uid('device');
-        try { localStorage.setItem(LIVE_DEVICE_KEY, id); } catch (_) {}
-      }
+      const id = uid('device');
       appState.liveDeviceId = id;
       return id;
     }
 
     async function findDriveLiveFileId(create) {
       if (appState.driveLiveFileId) return appState.driveLiveFileId;
-      if (!create && Date.now() - (appState.driveLiveLookupAt || 0) < LIVE_FIND_RETRY_MS) return '';
-      appState.driveLiveLookupAt = Date.now();
-      const folderId = create ? await ensureDriveFolderId() : await findDriveFolderId();
-      if (!folderId) return '';
-      const files = await listDriveFiles(
-        "'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and appProperties has { key='" + DRIVE_LIVE_TAG + "' and value='1' }",
-        5
-      );
-      if (files[0] && files[0].id) {
-        appState.driveLiveFileId = files[0].id;
-        return files[0].id;
-      }
       if (!create) return '';
-      const multipart = buildDriveMultipartBody({
-        name: DRIVE_LIVE_NAME,
-        mimeType: 'application/json',
-        description: 'inhouse learn: answer being written right now',
-        parents: [folderId],
-        appProperties: { [DRIVE_LIVE_TAG]: '1' }
-      }, '{}', 'application/json');
-      const created = await driveFetchJson(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-        { method: 'POST', headers: { 'Content-Type': multipart.contentType }, body: multipart.body },
-        true,
-        'No se pudo crear el archivo en directo de Drive.'
-      );
-      appState.driveLiveFileId = (created && created.id) || '';
-      return appState.driveLiveFileId;
+      if (appState.driveLiveCreatePromise) return appState.driveLiveCreatePromise;
+      appState.driveLiveCreatePromise = (async () => {
+        const folderId = await ensureDriveFolderId();
+        const name = 'live-' + liveDeviceId() + '.json';
+        const found = await listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and name='" + escapeDriveQueryValue(name) + "'");
+        let fileId = driveUniqueFiles(found)[0]?.id;
+        if (!fileId) {
+          const multipart = buildDriveMultipartBody({ name, mimeType: 'application/json', parents: [folderId], appProperties: { [DRIVE_LIVE_TAG]: '1' } }, '{}', 'application/json');
+          const created = await driveFetchJson('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+            method: 'POST', headers: { 'Content-Type': multipart.contentType }, body: multipart.body
+          }, true, 'No se pudo crear el archivo en directo de Drive.');
+          fileId = created?.id || '';
+        }
+        appState.driveLiveFileId = fileId;
+        return fileId;
+      })().finally(() => { appState.driveLiveCreatePromise = null; });
+      return appState.driveLiveCreatePromise;
     }
 
     function liveMessageCopy(message) {
@@ -6066,8 +6081,8 @@
         const payload = buildLivePayload(share, false);
         const key = JSON.stringify(payload.messages);
         if (key === share.last) return;
-        share.last = key;
         share.writing = writeLivePayload(payload)
+          .then(() => { share.last = key; })
           .catch((error) => console.warn('Drive en directo:', error))
           .finally(() => { share.writing = null; });
       };
@@ -6099,12 +6114,15 @@
       if (payload.device === liveDeviceId()) return;
       if (Date.now() - parseSnapshotMoment(payload.at) > LIVE_MAX_AGE_MS) return;
       // The same answer can arrive by the direct connection and by Drive: never go back.
-      const lastSeen = appState.liveLastSeq || {};
-      if (lastSeen.turn === payload.turn && (payload.seq || 0) <= lastSeen.seq) return;
-      appState.liveLastSeq = { turn: payload.turn, seq: payload.seq || 0 };
+      const turns = appState.liveLastSeq ||= new Map();
+      const key = payload.device + ':' + payload.turn;
+      if (turns.has(key) && (payload.seq || 0) <= turns.get(key)) return;
+      turns.set(key, payload.seq || 0);
+      if (turns.size > 200) turns.delete(turns.keys().next().value);
       if (readDeletedChats()[payload.chat.id]) return;
       if (appState.busy && appState.activeChatId === payload.chat.id) return;
       let chat = appState.chats.find((item) => item.id === payload.chat.id);
+      if (chat && parseSnapshotMoment(payload.at) < chatFreshness(chat)) return;
       if (!chat) {
         if (!payload.messages.length) return;
         chat = normalizeStoredChat(Object.assign({}, payload.chat, { messages: [] }));
@@ -6169,36 +6187,38 @@
     }
 
     async function liveTick() {
-      if (document.hidden || appState.liveTickBusy || !hasDrivePersistenceReady()) return;
+      if (document.hidden || appState.liveTickBusy) return;
+      if (!hasDrivePersistenceReady()) {
+        if (hasFreshGoogleAccessToken() && canAttemptSilentGoogleAuth() && Date.now() - (appState.driveBootstrapRetryAt || 0) > 10000) {
+          appState.driveBootstrapRetryAt = Date.now();
+          loginWithGoogle({ interactive: false, toast: false }).catch(() => {});
+        }
+        return;
+      }
       appState.liveTickBusy = true;
       try {
-        await peerTick().catch((error) => console.warn('Conexión directa:', error));
-        const fileId = await findDriveLiveFileId(false);
-        if (fileId) {
-          const meta = await driveFetchJson(
-            'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=modifiedTime',
-            { method: 'GET' }, true, 'No se pudo leer Drive en directo.'
-          );
-          const version = (meta && meta.modifiedTime) || '';
-          if (version && version !== appState.liveSeenVersion) {
-            appState.liveSeenVersion = version;
-            const raw = await driveFetchText(
-              'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?alt=media',
-              { method: 'GET' }, true, 'No se pudo leer Drive en directo.'
-            );
-            let payload = null;
-            try { payload = JSON.parse(raw); } catch (_) {}
-            applyLivePayload(payload);
-          }
-        }
-        if (Date.now() - (appState.liveSnapshotCheckAt || 0) >= LIVE_SNAPSHOT_MS && !appState.busy && !appState.driveSyncPromise && !appState.driveSyncTimer) {
+        // A missing/stale live file must never block durable chat recovery.
+        if (Date.now() - (appState.liveSnapshotCheckAt || 0) >= LIVE_SNAPSHOT_MS && !appState.driveSyncPromise && !appState.driveSyncTimer) {
           appState.liveSnapshotCheckAt = Date.now();
-          const snapshotId = await findDriveSnapshotFileId(await findDriveFolderId());
-          if (snapshotId && (await readDriveSnapshotVersion(snapshotId)) !== appState.driveKnownVersion) {
-            await pullDriveChanges(true);
+          await pullDriveChanges(true);
+        }
+        await peerTick().catch((error) => console.warn('Conexión directa:', error));
+        const folderId = await findDriveFolderId();
+        if (folderId) {
+          const files = await listDriveFiles("'" + escapeDriveQueryValue(folderId) + "' in parents and trashed=false and appProperties has { key='" + DRIVE_LIVE_TAG + "' and value='1' }");
+          const seen = appState.liveSeenVersions ||= {};
+          for (const file of files) {
+            if (file.id === appState.driveLiveFileId || seen[file.id] === file.modifiedTime || Date.now() - parseSnapshotMoment(file.modifiedTime) > LIVE_MAX_AGE_MS) continue;
+            try {
+              const raw = await driveFetchText('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(file.id) + '?alt=media', { method: 'GET' }, true, 'No se pudo leer Drive en directo.');
+              applyLivePayload(JSON.parse(raw));
+              seen[file.id] = file.modifiedTime;
+            } catch (error) { console.warn('Lectura en directo pendiente:', error); }
           }
+          for (const id of Object.keys(seen)) if (!files.some(file => file.id === id)) delete seen[id];
         }
       } catch (error) {
+        if (error.status === 404) { appState.driveLiveFileId = ''; appState.driveLiveLookupAt = 0; appState.liveSeenVersion = ''; }
         console.warn('Drive en directo:', error);
       } finally {
         appState.liveTickBusy = false;
@@ -6254,7 +6274,7 @@
       try { message = JSON.parse(event.data); } catch (_) { return; }
       if (!message) return;
       if (message.t === 'live') applyLivePayload(message.payload);
-      if (message.t === 'saved' && !appState.busy) {
+      if (message.t === 'saved') {
         window.clearTimeout(appState.peerSavedTimer);
         appState.peerSavedTimer = window.setTimeout(() => pullDriveChanges(true), 150);
       }
@@ -6299,6 +6319,7 @@
 
     async function writePeerFile() {
       const net = peerState();
+      const signalVersion = JSON.stringify(net.signals);
       const body = JSON.stringify({ v: 1, device: liveDeviceId(), at: nowIso(), signals: net.signals });
       if (!net.fileId) {
         const folderId = await ensureDriveFolderId();
@@ -6310,7 +6331,7 @@
           const created = await driveFetchJson('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': multipart.contentType }, body: multipart.body }, true, 'No se pudo crear la señal.');
           net.fileId = (created && created.id) || '';
           net.wroteAt = Date.now();
-          net.dirty = false;
+          net.dirty = JSON.stringify(net.signals) !== signalVersion;
           return;
         }
       }
@@ -6318,7 +6339,7 @@
         method: 'PATCH', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body
       }, true, 'No se pudo escribir la señal.');
       net.wroteAt = Date.now();
-      net.dirty = false;
+      net.dirty = JSON.stringify(net.signals) !== signalVersion;
     }
 
     async function peerOffer(id) {
@@ -7732,6 +7753,11 @@
           }
         }
       });
+      window.addEventListener('online', async function() {
+        await refreshGoogleSessionOnWake();
+        await pullDriveChanges(true);
+        if (appState.driveRetryCount) scheduleDriveSync({ immediate: true });
+      });
       window.addEventListener('focus', function() {
         refreshGoogleSessionOnWake().catch(function() {});
       });
@@ -7799,9 +7825,11 @@
         elements.profileEmail.textContent = String(appState.profile.email || '');
         elements.profileMenuName.textContent = String(appState.profile.name || appState.profile.email || '');
         setProfileRow(String(appState.profile.name || appState.profile.email || ''), String(appState.profile.email || ''));
-        elements.profileMenuEmail.textContent = String(appState.profile.email || '') + (driveConnected
-          ? ' · historial guardado en Drive'
-          : ' · historial en este navegador');
+        const syncStatus = !driveConnected ? 'Google Drive pendiente de conexión'
+          : appState.driveSyncError ? 'Error de sincronización; reintentando'
+          : (appState.driveSyncTimer || appState.driveSyncPromise || appState.driveSyncQueued) ? 'Sincronizando historial…'
+          : 'Google Drive conectado';
+        elements.profileMenuEmail.textContent = String(appState.profile.email || '') + ' · ' + syncStatus;
       } else {
         elements.profileAvatar.removeAttribute('src');
         if (elements.profileAvatarSidebar) elements.profileAvatarSidebar.removeAttribute('src');
@@ -8398,6 +8426,18 @@
         return false;
       }
       if (googleSessionPromise) {
+        // A 401 during the initial Drive read cannot await its own login.
+        // Refresh just the credentials, then let the original bootstrap resume.
+        if (settings.skipDriveBootstrap && !appState.driveReady) {
+          if (!googleBootstrapRefreshPromise) {
+            googleBootstrapRefreshPromise = (async () => {
+              const token = await requestGoogleAccessToken('none', { forceRefresh: true });
+              await syncGoogleSession(token, { skipDriveBootstrap: true, toast: false });
+              return hasDriveIdentitySession();
+            })().finally(() => { googleBootstrapRefreshPromise = null; });
+          }
+          return googleBootstrapRefreshPromise;
+        }
         return googleSessionPromise;
       }
       const promptMode = typeof settings.prompt === 'string'

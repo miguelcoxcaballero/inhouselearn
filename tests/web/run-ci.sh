@@ -11,7 +11,7 @@ for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html &
 export OUT="${RUNNER_TEMP:-/tmp}"
 status=0
 node --test tests/web/text-quality.mjs || { echo "::error::text-quality.mjs failed"; status=1; }
-for test in latex practice text-quality motion visuals library github queue live-sync; do
+for test in latex practice text-quality motion visuals library github queue live-sync sync-recovery; do
   echo "::group::$test"
   log="$OUT/web-$test.log"
   timeout 300 node "tests/web/$test.cjs" > "$log" 2>&1

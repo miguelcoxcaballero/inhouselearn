@@ -5,6 +5,7 @@ const { openApp, send, idle, SCRATCH } = require('./mock.cjs');
 const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label + (extra !== undefined ? ' — ' + JSON.stringify(extra) : ''));
 
 // In-memory Drive v3: files with appProperties, multipart and media uploads.
+const fallbackOnly = process.env.LIVE_SYNC_FALLBACK === '1';
 const files = new Map();
 let seq = 0;
 let requests = 0;
@@ -58,6 +59,7 @@ async function drive(route) {
 async function device(browser) {
   const app = await openApp(browser, { viewport: { width: 1100, height: 850 } });
   await app.page.route('https://www.googleapis.com/**', drive);
+  if (fallbackOnly) await app.page.evaluate(() => { window.RTCPeerConnection = undefined; });
   await app.page.evaluate(async () => {
     appState.profile = { email: 'test@example.com', name: 'Test' };
     appState.accessToken = 'token';
@@ -72,8 +74,9 @@ async function device(browser) {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined, args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] });
   const A = await device(browser);
   const B = await device(browser);
-  const direct = await Promise.all([A, B].map((d) => d.page.waitForFunction(() => peerOpenCount() > 0, null, { timeout: 30000 }).then(() => true, () => false)));
-  check('A and B connect directly (WebRTC, signalled through Drive)', direct.every(Boolean), direct);
+  const direct = fallbackOnly ? [] : await Promise.all([A, B].map((d) => d.page.waitForFunction(() => peerOpenCount() > 0, null, { timeout: 30000 }).then(() => true, () => false)));
+  if (!fallbackOnly) check('A and B connect directly (WebRTC, signalled through Drive)', direct.every(Boolean), direct);
+  else console.log('INFO WebRTC disabled explicitly: testing Drive fallback');
   const text = 'Primera parte de una respuesta larga que se escribe poco a poco. '.repeat(14) + 'FIN.';
   await A.page.evaluate((t) => window.__replies.push({ text: t, chunk: 6, delay: 70 }), text);
   await send(A.page, 'Explícame algo despacio');
@@ -94,7 +97,7 @@ async function device(browser) {
     if (k % 3 === 2) lengths.push(await B.page.evaluate(() => { const el = [...document.querySelectorAll('#thread .message')].pop(); return el ? el.innerText.length : 0; }));
   }
   lags.sort((x, y) => x - y);
-  check('B is at most a few characters behind A (instant)', lags[Math.floor(lags.length / 2)] <= 20, lags);
+  check(fallbackOnly ? 'B follows A within two Drive polling intervals' : 'B is at most a few characters behind A (instant)', lags[Math.floor(lags.length / 2)] <= (fallbackOnly ? 180 : 20), lags);
   const aBusy = await A.page.evaluate(() => appState.busy);
   const userShown = await B.page.evaluate(() => /Explícame algo despacio/.test(document.getElementById('thread').innerText));
   check('B shows the question and the answer growing while A is still answering', aBusy && userShown && lengths[0] > 0 && lengths[3] > lengths[0], { aBusy, userShown, lengths });
