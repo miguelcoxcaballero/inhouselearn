@@ -1,0 +1,25 @@
+{
+  "id": "shot-20261023-221745-a2gl",
+  "ref": "main",
+  "at": "2026-10-23T22:18:34.743Z",
+  "shots": [
+    {
+      "name": "Móvil oscuro - inicio",
+      "file": "1-movil-oscuro-inicio.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Móvil oscuro - menú + abierto",
+      "file": "2-movil-oscuro-menu-abierto.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Escritorio claro - conversación",
+      "file": "3-escritorio-claro-conversacion.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
