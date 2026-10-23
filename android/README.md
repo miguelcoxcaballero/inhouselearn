@@ -115,6 +115,14 @@ El token dura una hora; al caducar, la app pide volver a entrar con un toque.
 La primera instalación es manual: descarga la APK de la release y ábrela en el móvil
 (Android pedirá permitir instalar apps de esa fuente). Las siguientes llegan por el actualizador.
 
+**Aviso de publicación:** el workflow **APK published** (`.github/workflows/apk-published.yml`,
+cada 3 horas) lee `updates/A.json` y, cuando hay una versión nueva, abre el issue
+«APK X.Y.Z publicada» con enlace, hash y changelog; GitHub manda ese issue por correo. Solo lee:
+no publica ni toca los canales. `MIN_VERSION_CODE` en ese workflow es la versión desde la que avisa.
+
+Si el step **Build the minified release** falla, la causa sale como anotación en el run
+(`::error::`): `android.yml` guarda el log de Gradle y publica ahí las líneas `error:`/`FAILURE:`.
+
 ## Compilar en local
 
 Necesitas JDK 17 y el Android SDK (plataforma 35):

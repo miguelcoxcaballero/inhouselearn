@@ -108,7 +108,19 @@ jobs:
           fi
       - name: Build the minified release
         working-directory: android
-        run: ./gradlew --no-daemon assembleRelease
+        run: |
+          set -o pipefail
+          if ./gradlew --no-daemon --stacktrace assembleRelease 2>&1 | tee gradle-build.log; then
+            exit 0
+          fi
+          # Sin esto el run solo enseña avisos de deprecación de las actions y no
+          # hay forma de saber qué rompió el build: la causa sale como anotación.
+          grep -nE "^e: |error:|FAILURE: |Caused by:|> Task .* FAILED|Execution failed|What went wrong|Could not (resolve|find|compile)" gradle-build.log \
+            | head -n 25 | while IFS= read -r line; do echo "::error::${line}"; done
+          echo "::group::Últimas 60 líneas del build"
+          tail -n 60 gradle-build.log
+          echo "::endgroup::"
+          exit 1
       - name: Download the APK of this commit signed in youtube-calma
         if: env.PUBLISH == 'true'
         env:

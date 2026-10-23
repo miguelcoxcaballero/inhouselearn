@@ -1,0 +1,45 @@
+# Aviso de APK publicada (Inhouse Learn).
+#
+# Mirar y esperar no es un aviso: este workflow revisa cada pocas horas el canal A
+# (updates/A.json, lo que el updater de los móviles ofrece de verdad) y, cuando
+# aparece una versión nueva, abre el issue «APK <versión> publicada». GitHub manda
+# ese issue por correo, así que el aviso llega solo.
+#
+# Solo lee: no publica, no toca updates/A.json ni el canal B y no firma nada. La
+# publicación sigue siendo el run manual de android.yml con publish=true
+# (UPDATER.md, android/README.md).
+name: APK published
+
+on:
+  schedule:
+    # Cada 3 horas; GitHub puede retrasarlo unos minutos.
+    - cron: '23 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: apk-published
+  cancel-in-progress: false
+
+env:
+  # No avisar de versiones anteriores a esta: la 1.0.4 es la primera con modo
+  # noche AMOLED y los iconos del sistema siguiendo el tema. Súbelo si algún día
+  # quieres empezar de cero sin ruido.
+  MIN_VERSION_CODE: 5
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Open an issue when channel A has a new APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 .github/scripts/apk_published.py
