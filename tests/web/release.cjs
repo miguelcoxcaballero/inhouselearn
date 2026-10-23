@@ -19,6 +19,13 @@ const runs = [];
 const dispatches = [];
 let failBuild = false;
 const manifests = new Map();
+const SECRET = 'miguelcoxcaballero/secret-site';
+const SHOT_WORKFLOW = 'name: App screenshots\non: workflow_dispatch\n';
+let installed = '';
+let installedBlob = '';
+const commits = [];
+const privateImageReads = [];
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
 function gradle() {
   return 'android {\n  defaultConfig {\n    applicationId = "com.inhouse.learn"\n    versionCode = ' + versionCode + '\n    versionName = "1.0.' + (versionCode - 1) + '"\n  }\n}\n';
@@ -34,6 +41,20 @@ async function github(route) {
   let m;
   if (p === '/user') return json({ login: 'tester' });
   if (p === '/repos/' + LEARN + '/git/ref/heads/main') return json({ object: { sha: MAIN } });
+  // Other repositories for the screenshots: one public, one private.
+  if ((m = /^\/repos\/([^/]+\/[^/]+)$/.exec(p))) return json({ full_name: m[1], default_branch: 'main', private: m[1] === SECRET });
+  if (p === '/repos/' + LEARN + '/contents/.github/workflows/screenshots.yml') return json({ type: 'file', encoding: 'base64', content: Buffer.from(SHOT_WORKFLOW).toString('base64'), sha: 'w', size: 10 });
+  if (p === '/repos/' + SECRET + '/contents/.github/workflows/inhouse-screenshots.yml') return installed ? json({ type: 'file', encoding: 'base64', content: Buffer.from(installed).toString('base64'), sha: 'i', size: 10 }) : json({ message: 'Not Found' }, 404);
+  if (p === '/repos/' + SECRET + '/contents/shots/1-a.png' && url.searchParams.get('ref') === 'screenshots') {
+    privateImageReads.push(req.headers().accept);
+    return route.fulfill({ status: 200, contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: PNG });
+  }
+  if (p === '/repos/' + SECRET + '/git/ref/heads/main') return json({ object: { sha: 'c'.repeat(40) } });
+  if (p.startsWith('/repos/' + SECRET + '/git/commits/') && req.method() === 'GET') return json({ sha: 'c'.repeat(40), tree: { sha: 't'.repeat(40) } });
+  if (p === '/repos/' + SECRET + '/git/blobs' && req.method() === 'POST') { installedBlob = body.content; return json({ sha: 'd'.repeat(40) }); }
+  if (p === '/repos/' + SECRET + '/git/trees' && req.method() === 'POST') { commits.push(SECRET + ':' + body.tree.map((t) => t.path).join(',')); return json({ sha: 'e'.repeat(40) }); }
+  if (p === '/repos/' + SECRET + '/git/commits' && req.method() === 'POST') return json({ sha: 'f'.repeat(40) });
+  if (p === '/repos/' + SECRET + '/git/refs/heads/main' && req.method() === 'PATCH') { installed = installedBlob; return json({ object: { sha: body.sha } }); }
   if (p === '/repos/' + LEARN + '/contents/android/app/build.gradle.kts') return json({ type: 'file', encoding: 'base64', content: Buffer.from(gradle()).toString('base64'), sha: 'g', size: 10 });
   if ((m = /^\/repos\/[^/]+\/[^/]+\/contents\/(shot-[^/]+)\/manifest\.json$/.exec(p)) && url.searchParams.get('ref') === 'screenshots') {
     return manifests.has(m[1]) ? json({ type: 'file', encoding: 'base64', content: Buffer.from(JSON.stringify(manifests.get(m[1]))).toString('base64'), sha: 'm', size: 10 }) : json({ message: 'Not Found' }, 404);
@@ -66,7 +87,7 @@ async function github(route) {
       const isBuild = run.workflow === 'android.yml' && run.inputs.publish === 'false';
       run.conclusion = isBuild && failBuild ? 'failure' : 'success';
       if (run.workflow === 'sign-inhouse-learn.yml') releases.add(SIGN + '#learn-signed-1.0.' + (versionCode - 1) + '-' + MAIN.slice(0, 7));
-      if (run.workflow === 'screenshots.yml') {
+      if (run.workflow === 'screenshots.yml' || run.workflow === 'inhouse-screenshots.yml') {
         const shots = JSON.parse(run.inputs.shots);
         manifests.set(run.inputs.id, { id: run.inputs.id, ref: run.inputs.ref, shots: shots.map((shot, i) => i === shots.length - 1 && /roto/i.test(shot.name)
           ? { name: shot.name, file: null, device: shot.device || 'phone', theme: shot.theme || 'light', error: 'page.click: Timeout 8000ms exceeded.' }
@@ -170,7 +191,56 @@ const lastTool = (page) => page.evaluate(() => { const tools = window.__requests
   const askCard = await page.waitForSelector('.dock-approve', { timeout: 20000 }).then(() => page.evaluate(() => document.querySelector('.dock-approve-head b').textContent), () => '');
   await page.click('.dock-approve [data-dock="reject"]').catch(() => {});
   await idle(page, 30000);
-  check('in «Preguntar» it asks first', askCard === 'Hacer capturas de la app', askCard);
+  check('in «Preguntar» it asks first', askCard === 'Hacer capturas', askCard);
+
+  // 6. Any project: another public repository runs here with its setup and folder;
+  // a public URL too.
+  await page.evaluate(() => { getActiveChat().approvalMode = 'auto'; renderApprovalUi(); });
+  let mark = dispatches.length;
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Hechas.' }), { repo: 'someone/blog', ref: 'redesign', setup: 'npm ci && npm run build', serve: 'dist', shots: [{ name: 'Portada', path: 'about.html', device: 'desktop' }] });
+  await send(page, 'Captura de mi blog');
+  await idle(page, 120000);
+  let other = dispatches.slice(mark);
+  let otherInputs = other.length === 1 ? JSON.parse(other[0].split(':').slice(2).join(':')) : {};
+  const otherResult = await lastTool(page);
+  check('another public repository: runs here with repo, ref, setup and serve', other.length === 1 && /^inhouselearn:screenshots\.yml:/.test(other[0]) && otherInputs.repo === 'someone/blog' && otherInputs.ref === 'redesign' && otherInputs.setup === 'npm ci && npm run build' && otherInputs.serve === 'dist' && JSON.parse(otherInputs.shots)[0].path === 'about.html' && /capturas reales de someone\/blog@redesign/.test(otherResult), { other, otherResult: otherResult.slice(0, 200) });
+  mark = dispatches.length;
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Hechas.' }), { url: 'https://example.com/', shots: [{ name: 'Web' }] });
+  await send(page, 'Captura de example.com');
+  await idle(page, 120000);
+  other = dispatches.slice(mark);
+  otherInputs = other.length === 1 ? JSON.parse(other[0].split(':').slice(2).join(':')) : {};
+  check('a public URL: runs here with url and no repo', other.length === 1 && otherInputs.url === 'https://example.com/' && !otherInputs.repo, other);
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'No.' }), { url: 'http://localhost:5173/', shots: [{ name: 'Local' }] });
+  await send(page, 'Captura de mi localhost');
+  await idle(page, 60000);
+  check('…a localhost address is refused with the reason', /solo existe en tu ordenador/.test(await lastTool(page)));
+
+  // 7. A private repository: the workflow is installed there (a commit, which
+  // asks even in «Auto»), the shots run there, and the pictures stay there.
+  mark = dispatches.length;
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Hechas.' }), { repo: SECRET, shots: [{ name: 'Inicio' }] });
+  await send(page, 'Captura de mi web privada');
+  const installCard = await page.waitForSelector('.dock-approve', { timeout: 20000 }).then(() => page.evaluate(() => document.querySelector('.dock-approve').innerText), () => '');
+  await page.click('.dock-approve [data-dock="approve"]');
+  await idle(page, 120000);
+  other = dispatches.slice(mark);
+  const privateResult = await lastTool(page);
+  check('private repository: asks to install the workflow there, once', /Instalar las capturas en/.test(installCard) && /inhouse-screenshots\.yml/.test(installCard) && commits.slice(-1)[0] === SECRET + ':.github/workflows/inhouse-screenshots.yml' && installed === SHOT_WORKFLOW, { installCard: installCard.slice(0, 300), commits });
+  check('…and the shots run in the private repository, pictures on its own branch', other.length === 1 && /^secret-site:inhouse-screenshots\.yml:/.test(other[0]) && /raw\.githubusercontent\.com\/miguelcoxcaballero\/secret-site\/screenshots\//.test(privateResult), { other, privateResult: privateResult.slice(0, 300) });
+  mark = dispatches.length;
+  const commitsBefore = commits.length;
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Hechas.' }), { repo: SECRET, shots: [{ name: 'Otra' }] });
+  await send(page, 'Otra captura privada');
+  await idle(page, 120000);
+  check('…the second time nothing is installed and nothing asks in «Auto»', commits.length === commitsBefore && dispatches.length === mark + 1);
+  // A private picture loads with the user's token (raw.githubusercontent.com refuses it).
+  await page.route('https://raw.githubusercontent.com/**', (r) => r.fulfill({ status: 404, body: 'Not Found' }));
+  await page.evaluate(() => window.__replies.push({ text: '```visual\n{"type":"image","src":"https://raw.githubusercontent.com/miguelcoxcaballero/secret-site/screenshots/shots/1-a.png","alt":"Inicio"}\n```' }));
+  await send(page, 'Enséñamela');
+  await idle(page);
+  const shown = await page.waitForFunction(() => { const img = document.querySelector('#thread .message:last-child img.viz-photo-img'); return img && img.src.startsWith('blob:') && img.naturalWidth > 0 ? img.src : false; }, null, { timeout: 10000 }).then((h) => h.jsonValue(), () => '');
+  check('a private screenshot is shown in the chat, read with the token', !!shown && privateImageReads.length === 1 && /vnd\.github\.raw/.test(privateImageReads[0]), { shown, privateImageReads });
 
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();

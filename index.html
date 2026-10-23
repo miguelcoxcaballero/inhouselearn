@@ -1608,7 +1608,7 @@
   <link rel="stylesheet" href="guided.css?v=20261023-mastery">
   <link rel="stylesheet" href="model-picker.css?v=20261021">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
-  <link rel="stylesheet" href="visuals.css?v=20261024-shots">
+  <link rel="stylesheet" href="visuals.css?v=20261024-anyshot">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
@@ -1890,18 +1890,18 @@
   <script src="library.js?v=20261021-library"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
   <script src="vendor/pi-engine.js?v=20261023-mastery1"></script>
-  <script src="haptics.js?v=20261024-shots"></script>
+  <script src="haptics.js?v=20261024-anyshot"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
   <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
   <script src="stream.js?v=20261023-live"></script>
-  <script src="visuals.js?v=20261024-shots"></script>
+  <script src="visuals.js?v=20261024-anyshot"></script>
   <script src="scene.js?v=20261021-text-motion"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="learning.js?v=20261023-mastery"></script>
   <script src="guided.js?v=20261023-mastery"></script>
-  <script src="approval.js?v=20261024-shots"></script>
-  <script src="composer-dock.js?v=20261024-shots"></script>
+  <script src="approval.js?v=20261024-anyshot"></script>
+  <script src="composer-dock.js?v=20261024-anyshot"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -4157,6 +4157,24 @@
       try { return localStorage.getItem(GITHUB_LOGIN_KEY) || ''; } catch (_) { return ''; }
     }
 
+    // Pictures in a private repository (github_screenshot of a private project)
+    // do not load from raw.githubusercontent.com without credentials: visuals.js
+    // asks for them here, and they are read with the token, only from GitHub.
+    const githubImageCache = new Map();
+    window.inhousePrivateImage = (src) => {
+      const match = /^https:\/\/raw\.githubusercontent\.com\/([\w.-]+\/[\w.-]+)\/([^/]+)\/(.+)$/.exec(String(src || ''));
+      const token = githubToken();
+      if (!match || !token) return Promise.resolve('');
+      if (!githubImageCache.has(src)) {
+        githubImageCache.set(src, fetch('https://api.github.com/repos/' + match[1] + '/contents/' + match[3] + '?ref=' + encodeURIComponent(decodeURIComponent(match[2])), {
+          headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.raw' }
+        }).then((response) => response.ok ? response.blob() : Promise.reject(new Error(String(response.status))))
+          .then((blob) => URL.createObjectURL(blob))
+          .catch(() => { githubImageCache.delete(src); return ''; }));
+      }
+      return githubImageCache.get(src);
+    };
+
     function updateGithubUi() {
       const btn = document.getElementById('github-btn');
       if (!btn) return;
@@ -4245,7 +4263,7 @@
         '  - Si una herramienta falla, prueba otra vía (github_grep si falla github_search_code, rangos más pequeños si una lectura es grande) antes de decir que no puedes. Lee lo justo, decide pronto y escribe: no repases varias veces lo mismo.',
         '  - Al terminar da el enlace del commit o del PR.',
         '  - Esta misma app es el repositorio miguelcoxcaballero/inhouselearn: si el usuario te pide cambiar la app, trabaja ahí (lee primero su AGENTS.md). Lo de la web (index.html, *.js, *.css) llega a todos sus dispositivos en cuanto está en main. Si cambia la app de Android (android/), sube también versionCode y versionName en android/app/build.gradle.kts, súbelo a main, mira github_ci_status y, cuando el build esté en verde y el usuario quiera la APK, usa github_release_android con un changelog en inglés de 2–10 palabras: firma, publica en el canal A y lo comprueba (el usuario lo confirma siempre). Nunca el canal B.',
-        '  - Para enseñar cómo queda la app de verdad (después de un cambio de interfaz, o si el usuario quiere verlo), sube primero el cambio a una rama o a main y usa github_screenshot sobre esa rama: GitHub Actions abre esa versión en Chromium (móvil, tablet o escritorio; claro u oscuro), puede reproducir una conversación de ejemplo y pulsar botones antes de la foto, y devuelve las imágenes. Enséñalas en el chat con un bloque image por captura (o un gallery). Nunca hagas pasar una maqueta (preview) por una captura.',
+        '  - Para enseñar cómo queda de verdad cualquier proyecto web (esta app u otro repositorio, público o privado, o una dirección pública), después de un cambio de interfaz o si el usuario quiere verlo: sube primero el cambio a una rama y usa github_screenshot con repo y ref (o url). GitHub Actions abre esa página en Chromium (móvil, tablet o escritorio; claro u oscuro), pulsa o escribe lo que le pidas antes de la foto (en esta app también reproduce una conversación de ejemplo) y devuelve las imágenes. Si el proyecto se compila, pasa setup (p. ej. "npm ci && npm run build") y serve (p. ej. "dist"), o start para su propio servidor en el puerto 8765. Enséñalas en el chat con un bloque image por captura (o un gallery). Nunca hagas pasar una maqueta (preview) por una captura.',
         staged.length ? '  - Cambios preparados sin subir: ' + staged.map((entry) => entry.repo + '@' + entry.branch + ' (' + Object.keys(entry.files || {}).concat((entry.deletes || []).map((path) => path + ' borrar')).join(', ') + ')').join('; ') + '.' : ''
       ].filter(Boolean).join('\n');
     }

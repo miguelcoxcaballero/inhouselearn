@@ -1,53 +1,99 @@
 name: App screenshots
-# Real screenshots of the app at a given commit, for the chat: the model calls
-# github_screenshot (engine/src/github.js) after changing the app, and this
-# workflow opens that commit's page in Chromium (OpenRouter mocked like
-# tests/web), replays the conversation and steps it was given and takes each
-# picture (.github/scripts/screenshots.cjs). The PNGs and a manifest.json go to
-# the `screenshots` branch under <id>/, from where the chat shows them
-# (raw.githubusercontent.com). Only the newest 30 folders are kept.
+# Real screenshots for the chat, of any web project: the model calls
+# github_screenshot (engine/src/github.js) and this workflow opens the page in
+# Chromium, runs the steps it was given and takes each picture
+# (.github/scripts/screenshots.cjs, always taken from inhouselearn's main).
+#
+# What it photographs: a public URL (`url`), or a branch or commit of a
+# repository (`repo`, empty = the repository running this workflow), served
+# statically from its root (or `serve`), after an optional `setup` command
+# (e.g. "npm ci && npm run build") or with its own server (`start`, which must
+# listen on port 8765). Inhouse Learn itself is opened with OpenRouter mocked
+# like tests/web, so a conversation can be replayed through the real renderer.
+#
+# Public repositories and URLs run here, in inhouselearn. A private repository
+# runs this same file, copied into it as .github/workflows/inhouse-screenshots.yml
+# (the app installs it, with the user's approval), so its code and its pictures
+# never leave it. The PNGs and a manifest.json go to the `screenshots` branch
+# of the repository running the workflow, under <id>/ (newest 30 kept).
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: Commit or branch of this repository to photograph
+      repo:
+        description: Repository to photograph, owner/name (empty = this one)
         type: string
-        default: main
+        default: ''
+      ref:
+        description: Branch or commit to photograph (empty = default branch)
+        type: string
+        default: ''
+      url:
+        description: A public https URL to photograph instead of a repository
+        type: string
+        default: ''
+      setup:
+        description: Shell command run in the checkout first (e.g. npm ci && npm run build)
+        type: string
+        default: ''
+      serve:
+        description: Folder of the checkout to serve (default its root, e.g. dist)
+        type: string
+        default: ''
+      start:
+        description: Command that starts the project's own server on port 8765 (instead of serving files)
+        type: string
+        default: ''
       id:
         description: Folder for the pictures on the screenshots branch (letters, digits, . _ -)
         type: string
         required: true
       shots:
-        description: 'JSON list of {name, device: phone|tablet|desktop, theme: light|dark, messages, steps, selector, fullPage}'
+        description: 'JSON list of {name, path, device: phone|tablet|desktop, theme: light|dark, messages, steps, selector, fullPage}'
         type: string
         required: true
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: app-screenshots
   cancel-in-progress: false
 
 jobs:
+  # Runs the project's code (setup/start) with a read-only token that is not
+  # kept on disk; only the pictures leave this job, as an artifact.
   shoot:
     # Playwright 1.56 supports Ubuntu 24.04, not ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - name: Check the inputs
         env:
           ID: ${{ inputs.id }}
+          REPO: ${{ inputs.repo }}
           REF: ${{ inputs.ref }}
+          URL: ${{ inputs.url }}
+          SERVE: ${{ inputs.serve }}
         run: |
           [[ "$ID" =~ ^[A-Za-z0-9._-]{1,60}$ ]] || { echo "::error::id must be 1-60 letters, digits, . _ -"; exit 1; }
-          [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] || { echo "::error::ref must be a branch or commit of this repository"; exit 1; }
-      # The script and the mocks come from the default branch; the page from the ref.
-      - uses: actions/checkout@v5
+          [[ -z "$REPO" || "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || { echo "::error::repo must be owner/name"; exit 1; }
+          [[ -z "$REF" || "$REF" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] || { echo "::error::ref must be a branch or a commit"; exit 1; }
+          [[ -z "$URL" || "$URL" =~ ^https?://[^[:space:]]+$ ]] || { echo "::error::url must be an http(s) address"; exit 1; }
+          [[ -z "$SERVE" || ( "$SERVE" =~ ^[A-Za-z0-9._/-]{1,120}$ && "$SERVE" != *..* ) ]] || { echo "::error::serve must be a folder of the checkout"; exit 1; }
+      - name: Get the screenshot tool
+        uses: actions/checkout@v5
         with:
+          repository: miguelcoxcaballero/inhouselearn
+          ref: main
+          path: tool
           persist-credentials: false
-      - uses: actions/checkout@v5
+      - name: Get the project
+        if: inputs.url == ''
+        uses: actions/checkout@v5
         with:
+          repository: ${{ inputs.repo != '' && inputs.repo || github.repository }}
           ref: ${{ inputs.ref }}
           path: app
           persist-credentials: false
@@ -55,23 +101,65 @@ jobs:
         with:
           node-version: 22
       - name: Install Playwright and Chromium
+        working-directory: tool
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install --with-deps chromium
+      - name: Prepare the project
+        if: inputs.url == '' && inputs.setup != ''
+        working-directory: app
+        env:
+          SETUP: ${{ inputs.setup }}
+        run: bash -c "$SETUP"
       - name: Take the pictures
+        working-directory: tool
         env:
           ID: ${{ inputs.id }}
+          TARGET: ${{ inputs.url == '' && (inputs.repo != '' && inputs.repo || github.repository) || '' }}
           REF: ${{ inputs.ref }}
+          URL: ${{ inputs.url }}
+          SERVE: ${{ inputs.serve }}
+          START: ${{ inputs.start }}
           SHOTS: ${{ inputs.shots }}
         run: |
-          (cd app && python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &)
-          for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html && break; sleep 0.2; done
-          node .github/scripts/screenshots.cjs
+          if [ -z "$URL" ]; then
+            if [ -n "$START" ]; then
+              (cd ../app && nohup bash -c "$START" > ../server.log 2>&1 &)
+              for _ in $(seq 1 120); do curl -s -o /dev/null http://127.0.0.1:8765/ && break; sleep 1; done
+              curl -s -o /dev/null http://127.0.0.1:8765/ || { echo "::error::Nothing answers on port 8765 after 2 minutes"; tail -n 40 ../server.log; exit 1; }
+            else
+              [ -d "../app/$SERVE" ] || { echo "::error::The folder '$SERVE' does not exist (did setup build it?)"; exit 1; }
+              (cd "../app/$SERVE" && python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &)
+              for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/ && break; sleep 0.2; done
+            fi
+          fi
+          OUT="$GITHUB_WORKSPACE/out" node .github/scripts/screenshots.cjs
+      - name: Keep them in the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: out/
+          if-no-files-found: ignore
+
+  # Only this job can write, and it runs nothing from the project.
+  publish:
+    needs: shoot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: screenshots
+          path: out
       - name: Publish on the screenshots branch
         env:
           ID: ${{ inputs.id }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          [ -f "out/$ID/manifest.json" ] || { echo "::error::No manifest for $ID"; exit 1; }
           mkdir pub && cd pub
           git init -q
           git config user.name "github-actions[bot]"
@@ -85,10 +173,3 @@ jobs:
           git commit -qm "Screenshots $ID"
           git push -q origin screenshots
           echo "Published: https://github.com/${GITHUB_REPOSITORY}/tree/screenshots/$ID"
-      - name: Keep them in the run too
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots
-          path: out/
-          if-no-files-found: ignore

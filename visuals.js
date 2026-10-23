@@ -921,8 +921,12 @@ function vizPhoto(spec, state, meta) {
     (spec.note ? '<div class="viz-caption">' + vizBlock(spec.note) + '</div>' : '') + '</div>');
   // Una imagen que no carga deja de ser una imagen rota: el enlace, y a seguir.
   el.querySelectorAll('img.viz-photo-img').forEach((img) => {
-    img.addEventListener('error', () => {
+    img.addEventListener('error', async () => {
       const link = img.getAttribute('src') || '';
+      // Una foto de un repositorio privado (capturas reales de github_screenshot):
+      // la app la abre con el token de GitHub del usuario, si lo hay.
+      const own = typeof window.inhousePrivateImage === 'function' ? await window.inhousePrivateImage(link).catch(() => '') : '';
+      if (own) { img.src = own; return; }
       img.replaceWith(vizElement('<div class="viz-photo-missing">No se pudo cargar la imagen. <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">Abrirla aparte</a></div>'));
     }, { once: true });
   });

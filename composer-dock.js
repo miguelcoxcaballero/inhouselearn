@@ -423,7 +423,7 @@ const STEP_TEXT = {
   github_list_issues: ['Leyendo las issues de', 'Issues de'],
   github_comment: ['Comentando en', 'Comentado en'],
   github_release_android: ['Publicando la APK', 'APK publicada'],
-  github_screenshot: ['Haciendo capturas de la app', 'Capturas hechas'],
+  github_screenshot: ['Haciendo capturas reales', 'Capturas hechas'],
   run_js: ['Ejecutando código', 'Código ejecutado'],
   write_file: ['Guardando', 'Guardado'],
   read_file: ['Leyendo', 'Leído'],

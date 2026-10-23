@@ -98,11 +98,18 @@ Mandatory guidance for every AI and developer working in this repository.
   with that SHA, then this repository's publish, and verifies `updates/A.json`; it stops on any
   failure or if `main` moves, and never touches channel B. Its token needs Actions read/write
   on both repositories. Test: `tests/web/release.cjs`.
-  **Real screenshots:** `github_screenshot` runs `.github/workflows/screenshots.yml` on a branch or
-  commit of this repository: Chromium opens that version of the page (`.github/scripts/screenshots.cjs`,
-  OpenRouter mocked like `tests/web`), replays an optional conversation and steps, and the PNGs land on
-  the `screenshots` branch (`<id>/`, newest 30 kept); the model shows them with `image` blocks. In
-  «Auto» it does not ask (no code changes). A `preview` is a mockup, never presented as a screenshot.
+  **Real screenshots (any project):** `github_screenshot` photographs a branch or commit of any
+  repository the token reads, or any public URL: `.github/workflows/screenshots.yml` checks out the
+  project (optional `setup`, `serve` folder or its own `start` server on :8765), Chromium opens it
+  (`.github/scripts/screenshots.cjs`, always from this repo's `main`; Inhouse Learn itself with
+  OpenRouter mocked like `tests/web`, so a conversation can be replayed), runs the steps, and the PNGs
+  land on the `screenshots` branch (`<id>/`, newest 30 kept); the model shows them with `image` blocks.
+  Public projects and URLs run here. A **private** repository runs the same file copied into it as
+  `.github/workflows/inhouse-screenshots.yml` (installed once through the approval gate), so its code
+  and pictures stay private; the chat loads those images with the user's token
+  (`window.inhousePrivateImage`). The project's code runs in a read-only job; only the publish job
+  writes. In «Auto» the screenshot itself does not ask. A `preview` is a mockup, never presented as a
+  screenshot.
 - **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
   closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
   repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue

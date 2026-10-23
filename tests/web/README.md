@@ -70,7 +70,7 @@ login, and that sync preserves a running agent's chat object.
 `reasoning.cjs` checks that reasoning written inside an answer (`<think>`, or a lone `</think>`)
 goes to the thinking section, that a model repeating itself is cut (and the queue goes on), that
 «Muéstramelo en visual» is gone from normal chats and that confirmations show no dark notice.
-`release.cjs` also covers `github_screenshot` (no card in «Auto», a card in «Preguntar», real URLs).
+`release.cjs` also covers `github_screenshot` (no card in «Auto», a card in «Preguntar», real URLs, another public repository with setup/serve, and a private one: workflow installed there once, pictures kept there and loaded with the token).
 
 `queue.cjs` checks the message queue (Enter while busy, one per finished turn, Stop pauses)
 and steering (Ctrl+Enter enters the running turn after the current tool, same request chain).

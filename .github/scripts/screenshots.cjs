@@ -1,20 +1,29 @@
-// Real screenshots of the app for the chat (workflow "App screenshots",
-// engine/src/github.js → github_screenshot). Chromium opens the page of the
-// commit being photographed (served from ./app on 127.0.0.1:8765), with
-// OpenRouter mocked like tests/web, replays an optional conversation through
-// the real renderer, runs the optional steps and takes each picture.
+// Real screenshots for the chat (workflow "App screenshots",
+// engine/src/github.js → github_screenshot), of any web page: Chromium opens
+// URL (a public address) or the project served on 127.0.0.1:8765 (by the
+// workflow), runs the optional steps and takes each picture. Inhouse Learn
+// itself (TARGET miguelcoxcaballero/inhouselearn) opens with OpenRouter mocked
+// like tests/web, so a conversation can be replayed through the real renderer.
 //
 //   SHOTS='[{"name":"menu","device":"phone","theme":"dark","steps":[{"click":"#plus-btn"}]}]' \
-//   ID=shot-test node .github/scripts/screenshots.cjs
+//   ID=shot-test TARGET=owner/repo node .github/scripts/screenshots.cjs
 //
-// A shot: { name, device: phone|tablet|desktop, theme: light|dark,
-//   messages: [{ user, assistant }], steps: [{ click | fill: [sel, text] |
-//   press | wait | scroll | eval }], selector (photograph one element),
-//   fullPage }. Writes out/<ID>/<n>-<name>.png and out/<ID>/manifest.json.
+// A shot: { name, path (page to open, relative to the site, e.g. "about.html"
+//   or "#/settings"), device: phone|tablet|desktop, theme: light|dark,
+//   messages: [{ user, assistant }] (Inhouse Learn only), steps: [{ click |
+//   fill: [sel, text] | press | wait | scroll | eval }], selector (photograph
+//   one element), fullPage }. Writes $OUT/<ID>/<n>-<name>.png and manifest.json.
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
-const { openApp, idle } = require('../../tests/web/mock.cjs');
+
+const LEARN = 'miguelcoxcaballero/inhouselearn';
+const target = String(process.env.TARGET || '');
+const pageUrl = String(process.env.URL || '');
+const learn = !pageUrl && target.toLowerCase() === LEARN;
+const SITE = pageUrl || 'http://127.0.0.1:8765/';
+if (learn && !process.env.BASE_URL) process.env.BASE_URL = SITE + 'index.html';
+const { openApp, idle } = learn ? require('../../tests/web/mock.cjs') : {};
 
 const DEVICES = {
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
@@ -30,7 +39,7 @@ let shots = [];
 try { shots = JSON.parse(process.env.SHOTS || '[]'); } catch (error) { throw new Error('SHOTS is not valid JSON: ' + error.message); }
 if (!Array.isArray(shots) || !shots.length) throw new Error('SHOTS must be a non-empty list');
 shots = shots.slice(0, MAX_SHOTS);
-const outDir = path.join('out', id);
+const outDir = path.join(process.env.OUT || 'out', id);
 fs.mkdirSync(outDir, { recursive: true });
 
 const slug = (text) => String(text || 'captura').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -46,6 +55,19 @@ async function runStep(page, step) {
   else await page.waitForTimeout(250);
 }
 
+// Any other page: the device, the colour scheme, and the page fully loaded.
+async function openPage(browser, theme, device, where) {
+  const context = await browser.newContext(Object.assign({ colorScheme: theme }, DEVICES[device]));
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(String(e && e.message || e)));
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/i.test(m.text())) errors.push('console: ' + m.text()); });
+  await page.goto(new URL(String(where || ''), SITE).href, { waitUntil: 'load', timeout: 45000 });
+  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(800);
+  return { page, errors, context };
+}
+
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
   const manifest = [];
@@ -58,25 +80,31 @@ async function runStep(page, step) {
     const entry = { name: String(shot.name || name).slice(0, 80), file, device, theme };
     let app = null;
     try {
-      app = await openApp(browser, Object.assign({ colorScheme: theme }, DEVICES[device]));
-      const page = app.page;
-      // The app's own setting, so «Auto» and the stored choice agree.
-      await page.evaluate((value) => { try { localStorage.setItem('inhouselearn.theme', value); } catch (_) {} }, theme);
-      await page.reload({ waitUntil: 'load' });
-      await page.waitForFunction(() => typeof runAssistantTurn === 'function');
-      await page.waitForTimeout(600);
-      // A conversation drawn by the real renderer (the model's answers are mocked).
-      for (const turn of (Array.isArray(shot.messages) ? shot.messages : []).slice(0, 6)) {
-        if (!turn || !turn.user) continue;
-        await page.evaluate((text) => window.__replies.push({ text, chunk: 400, delay: 0 }), String(turn.assistant || 'Vale.'));
-        await page.fill('#composer', String(turn.user));
-        await page.click('#send-btn');
-        await idle(page, 20000);
+      if (learn) {
+        app = await openApp(browser, Object.assign({ colorScheme: theme }, DEVICES[device]));
+        const page = app.page;
+        // The app's own setting, so «Auto» and the stored choice agree.
+        await page.evaluate((value) => { try { localStorage.setItem('inhouselearn.theme', value); } catch (_) {} }, theme);
+        if (shot.path) await page.goto(new URL(String(shot.path), process.env.BASE_URL).href, { waitUntil: 'load' });
+        else await page.reload({ waitUntil: 'load' });
+        await page.waitForFunction(() => typeof runAssistantTurn === 'function');
+        await page.waitForTimeout(600);
+        // A conversation drawn by the real renderer (the model's answers are mocked).
+        for (const turn of (Array.isArray(shot.messages) ? shot.messages : []).slice(0, 6)) {
+          if (!turn || !turn.user) continue;
+          await page.evaluate((text) => window.__replies.push({ text, chunk: 400, delay: 0 }), String(turn.assistant || 'Vale.'));
+          await page.fill('#composer', String(turn.user));
+          await page.click('#send-btn');
+          await idle(page, 20000);
+        }
+      } else {
+        app = await openPage(browser, theme, device, shot.path);
       }
+      const page = app.page;
       for (const step of (Array.isArray(shot.steps) ? shot.steps : []).slice(0, 20)) await runStep(page, step || {});
       await page.waitForTimeout(400);
-      const target = shot.selector ? page.locator(String(shot.selector)).first() : null;
-      if (target) await target.screenshot({ path: path.join(outDir, file), timeout: STEP_TIMEOUT });
+      const element = shot.selector ? page.locator(String(shot.selector)).first() : null;
+      if (element) await element.screenshot({ path: path.join(outDir, file), timeout: STEP_TIMEOUT });
       else await page.screenshot({ path: path.join(outDir, file), fullPage: !!shot.fullPage });
       const errors = app.errors.filter((e) => !/initScript/.test(e));
       if (errors.length) entry.pageErrors = errors.slice(0, 3);
@@ -91,6 +119,6 @@ async function runStep(page, step) {
     manifest.push(entry);
   }
   await browser.close();
-  fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify({ id, ref: process.env.REF || '', at: new Date().toISOString(), shots: manifest }, null, 2));
+  fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify({ id, target: pageUrl || target, ref: process.env.REF || '', at: new Date().toISOString(), shots: manifest }, null, 2));
   if (!manifest.some((entry) => entry.file)) { console.log('::error::No screenshot could be taken'); process.exit(1); }
 })();

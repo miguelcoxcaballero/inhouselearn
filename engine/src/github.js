@@ -22,6 +22,8 @@ const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 // (secret EJEMPLO; GitHub cannot copy a secret, so Learn is signed there).
 const LEARN_REPO = 'miguelcoxcaballero/inhouselearn';
 const SIGN_REPO = 'miguelcoxcaballero/youtube-calma';
+// The screenshots workflow as installed in a private repository (same file).
+const PRIVATE_SHOT_WORKFLOW = 'inhouse-screenshots.yml';
 
 function textResult(text, details) {
   return { content: [{ type: 'text', text }], details: details || {} };
@@ -779,18 +781,24 @@ export function createGithubTools(ctx) {
     },
     {
       name: 'github_screenshot',
-      label: 'GitHub: capturas de la app',
-      description: 'Take REAL screenshots of THIS app (Inhouse Learn, ' + LEARN_REPO + ') as a branch or commit really looks: GitHub Actions opens that version of the page in Chromium (phone, tablet or desktop; light or dark theme), replays an optional conversation through the real renderer (your answers are shown exactly as written, Markdown, LaTeX and visual blocks included), runs optional steps (click, fill, press, wait, scroll, eval) and photographs the screen or one element. Use it after you change the app (push first, then photograph that branch) or whenever the user wants to see how something looks; then show every picture in the chat with an image block (or one gallery block). Takes about 1-2 minutes. Not for other repositories.',
+      label: 'GitHub: capturas reales',
+      description: 'Take REAL screenshots of any web project: a branch or commit of any GitHub repository the token can read (public or private), or any public URL. GitHub Actions opens the page in Chromium (phone, tablet or desktop; light or dark colour scheme), runs optional steps (click, fill, press, wait, scroll, eval) and photographs the screen or one element. A static site is served from the repository root (or `serve`); a project that needs building takes `setup` (e.g. "npm ci && npm run build") and `serve` (e.g. "dist"), or `start` for its own server on port 8765. For this app (' + LEARN_REPO + ', the default) it can also replay a conversation through the real renderer. Use it after you change a project (push first, then photograph that branch) or whenever the user wants to see how something looks; then show every picture in the chat with an image block (or one gallery block). Takes about 1-3 minutes. A private repository gets a small workflow file installed once (the user approves it) so its code and pictures stay private.',
       parameters: Type.Object({
-        ref: Type.Optional(Type.String({ description: 'Branch or commit of ' + LEARN_REPO + ' to photograph (default main). Push your changes there first.' })),
+        repo: Type.Optional(Type.String({ description: 'Repository "owner/name" to photograph (default ' + LEARN_REPO + ', this app).' })),
+        ref: Type.Optional(Type.String({ description: 'Branch or commit (default the repository\'s default branch). Push your changes there first.' })),
+        url: Type.Optional(Type.String({ description: 'A public https address to photograph instead of a repository (a deployed site, GitHub Pages…).' })),
+        setup: Type.Optional(Type.String({ description: 'Shell command run in the checkout before serving, e.g. "npm ci && npm run build".' })),
+        serve: Type.Optional(Type.String({ description: 'Folder of the checkout to serve, e.g. "dist" (default the root).' })),
+        start: Type.Optional(Type.String({ description: 'Command that starts the project\'s own server on port 8765, e.g. "npm ci && npx vite --port 8765 --host 127.0.0.1" (instead of serving files).' })),
         shots: Type.Array(Type.Object({
           name: Type.String({ description: 'Short name, e.g. "Menú +, oscuro".' }),
+          path: Type.Optional(Type.String({ description: 'Page to open, relative to the site, e.g. "about.html" or "#/settings" (default the home page).' })),
           device: Type.Optional(Type.String({ description: '"phone" (default), "tablet" or "desktop".' })),
-          theme: Type.Optional(Type.String({ description: '"light" (default) or "dark" (AMOLED).' })),
+          theme: Type.Optional(Type.String({ description: '"light" (default) or "dark" (prefers-color-scheme; in this app, its AMOLED theme).' })),
           messages: Type.Optional(Type.Array(Type.Object({
             user: Type.String(),
             assistant: Type.String({ description: 'The answer to draw, exactly as the model would write it.' })
-          }), { description: 'A conversation to show (up to 6 turns).' })),
+          }), { description: 'Only for this app: a conversation to show (up to 6 turns).' })),
           steps: Type.Optional(Type.Array(Type.Object({
             click: Type.Optional(Type.String({ description: 'CSS selector to click, e.g. "#plus-btn".' })),
             fill: Type.Optional(Type.Array(Type.String(), { description: '[selector, text]' })),
@@ -807,17 +815,54 @@ export function createGithubTools(ctx) {
       execute: async (id, params, signal, onUpdate) => {
         const shots = (params.shots || []).slice(0, 6);
         if (!shots.length) throw new Error('Pide al menos una captura.');
-        const ref = String(params.ref || 'main').trim();
-        if (!/^[A-Za-z0-9._/-]{1,120}$/.test(ref)) throw new Error('ref debe ser una rama o un commit de ' + LEARN_REPO + '.');
         const log = [];
         const step = (text) => {
           log.push(text);
           if (typeof onUpdate === 'function') onUpdate(textResult(log.join('\n'), { phase: text }));
         };
-        used(LEARN_REPO);
+        const url = String(params.url || '').trim();
+        if (url && !/^https?:\/\/[^\s]+$/.test(url)) throw new Error('url debe ser una dirección http(s) pública.');
+        if (url && /^https?:\/\/(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|\[::1\])/i.test(url)) throw new Error('Esa dirección solo existe en tu ordenador: GitHub Actions no puede abrirla. Usa el repositorio (repo + ref) o una dirección pública.');
+        const repo = url ? '' : used(repoOf(params.repo || LEARN_REPO));
+        const ref = String(params.ref || '').trim();
+        if (ref && !/^[A-Za-z0-9._/-]{1,120}$/.test(ref)) throw new Error('ref debe ser una rama o un commit.');
+        const serve = String(params.serve || '').trim().replace(/^\.?\/+|\/+$/g, '');
+        if (serve && (!/^[A-Za-z0-9._/-]{1,120}$/.test(serve) || serve.includes('..'))) throw new Error('serve debe ser una carpeta del repositorio, como "dist".');
+        const setup = String(params.setup || '').trim().slice(0, 1000);
+        const start = String(params.start || '').trim().slice(0, 1000);
+        // Public projects and URLs run in this app's repository; a private one
+        // runs in itself, so its code and its pictures never become public.
+        const info = repo ? await gh('GET', '/repos/' + repo) : null;
+        const own = !info || !info.private || repo.toLowerCase() === LEARN_REPO;
+        const runner = own ? LEARN_REPO : repo;
+        const workflow = own ? 'screenshots.yml' : PRIVATE_SHOT_WORKFLOW;
+        const where = url || repo + '@' + (ref || (info && info.default_branch) || 'main');
+        const label = (shot) => '· ' + shot.name + (shot.path ? ' — ' + shot.path : '') + ' (' + (shot.device || 'phone') + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + ')';
+        if (!own) {
+          const main = info.default_branch;
+          const wanted = await readRemote(LEARN_REPO, '.github/workflows/screenshots.yml', 'main');
+          if (!wanted) throw new Error('No encuentro el workflow de capturas en ' + LEARN_REPO + '.');
+          const current = await readRemote(repo, '.github/workflows/' + PRIVATE_SHOT_WORKFLOW, main);
+          if (!current || current.text !== wanted.text) {
+            step('Instalando el workflow de capturas en ' + repo + '…');
+            try {
+              await commitFiles({
+                repo, branch: main,
+                message: (current ? 'Update' : 'Add') + ' the Inhouse screenshots workflow\n\nReal screenshots for the Inhouse Learn chat, taken and kept inside this private repository (branch screenshots).',
+                files: [{ path: '.github/workflows/' + PRIVATE_SHOT_WORKFLOW, content: wanted.text }],
+                title: current ? 'Actualizar las capturas en ' + repo : 'Instalar las capturas en ' + repo,
+                extra: repo + ' es privado: para que su código y sus fotos no salgan de él, las capturas se hacen dentro (un workflow, una vez). Las fotos se guardan en su rama screenshots.\n' + shots.map(label).join('\n')
+              });
+            } catch (error) {
+              if (error.status === 403 || error.status === 404) throw new Error('No he podido instalar el workflow de capturas en ' + repo + ' (' + error.message + '). El token necesita en ese repositorio Contents y Workflows de lectura y escritura, y Actions de lectura y escritura.');
+              throw error;
+            }
+            await sleep(4000);
+          }
+        }
         await ask({
-          title: 'Hacer capturas de la app',
-          summary: LEARN_REPO + '@' + ref + '\n' + shots.map((shot) => '· ' + shot.name + ' (' + (shot.device || 'phone') + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + ')').join('\n') + '\nGitHub Actions abre esa versión de la app y guarda las fotos en la rama screenshots.',
+          title: 'Hacer capturas',
+          summary: where + (setup ? '\nAntes: ' + setup : '') + (start ? '\nServidor: ' + start : '') + (serve ? '\nCarpeta: ' + serve : '') + '\n' + shots.map(label).join('\n') + '\nGitHub Actions abre esa página en Chromium y guarda las fotos en la rama screenshots de ' + runner + '.',
           items: [],
           kind: 'screenshot',
           confirmText: 'Hacer capturas'
@@ -825,24 +870,37 @@ export function createGithubTools(ctx) {
         // Folders sort by date on the screenshots branch (old ones are pruned there).
         const now = new Date();
         const folder = 'shot-' + now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15) + '-' + Math.random().toString(36).slice(2, 6);
-        let run = await dispatch(LEARN_REPO, 'screenshots.yml', 'main', { ref, id: folder, shots: JSON.stringify(shots) }, null);
+        const inputs = { ref, id: folder, shots: JSON.stringify(shots) };
+        if (url) inputs.url = url;
+        if (repo && own && repo.toLowerCase() !== LEARN_REPO) inputs.repo = repo;
+        if (setup) inputs.setup = setup;
+        if (serve) inputs.serve = serve;
+        if (start) inputs.start = start;
+        let run = null;
+        // A workflow file that was just added takes a few seconds to be dispatchable.
+        for (let attempt = 0; !run; attempt++) {
+          try { run = await dispatch(runner, workflow, own ? 'main' : info.default_branch, inputs, null); } catch (error) {
+            if (own || attempt >= 5 || (error.status !== 404 && error.status !== 422)) throw error;
+            await sleep(5000);
+          }
+        }
         step('Haciendo las capturas: ' + run.html_url);
-        run = await waitRun(LEARN_REPO, run, 'el trabajo de capturas', step);
-        const manifestFile = await readRemote(LEARN_REPO, folder + '/manifest.json', 'screenshots');
+        run = await waitRun(runner, run, 'el trabajo de capturas', step);
+        const manifestFile = await readRemote(runner, folder + '/manifest.json', 'screenshots');
         let manifest = null;
         try { manifest = JSON.parse(manifestFile.text); } catch (_) {}
-        if (!manifest || !Array.isArray(manifest.shots)) throw new Error('Las capturas terminaron pero no aparece ' + folder + '/manifest.json en la rama screenshots: ' + run.html_url);
-        const base = 'https://raw.githubusercontent.com/' + LEARN_REPO + '/screenshots/' + folder + '/';
+        if (!manifest || !Array.isArray(manifest.shots)) throw new Error('Las capturas terminaron pero no aparece ' + folder + '/manifest.json en la rama screenshots de ' + runner + ': ' + run.html_url);
+        const base = 'https://raw.githubusercontent.com/' + runner + '/screenshots/' + folder + '/';
         const done = manifest.shots.filter((shot) => shot.file);
         const lines = manifest.shots.map((shot) => shot.file
           ? '· ' + shot.name + ' (' + shot.device + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + '): ' + base + encodeURIComponent(shot.file) + (shot.pageErrors ? ' — errores en la página: ' + shot.pageErrors.join(' | ') : '')
           : '· ' + shot.name + ': no se pudo hacer (' + shot.error + ')');
         return textResult([
-          done.length + ' de ' + manifest.shots.length + ' capturas reales de ' + LEARN_REPO + '@' + ref + ':',
+          done.length + ' de ' + manifest.shots.length + ' capturas reales de ' + where + ':',
           ...lines,
           '',
-          'Enséñalas en el chat ahora: un bloque visual image por captura ({"type":"image","src":"<url>","alt":"…","caption":"…"}) o un solo gallery. Son fotos de verdad de esa versión; di qué se ve y qué ha cambiado.'
-        ].join('\n'), { ref, folder, run: run.html_url, images: done.map((shot) => base + encodeURIComponent(shot.file)) });
+          'Enséñalas en el chat ahora: un bloque visual image por captura ({"type":"image","src":"<url>","alt":"…","caption":"…"}) o un solo gallery. Son fotos de verdad de esa versión; di qué se ve y qué ha cambiado.' + (own ? '' : ' (El repositorio es privado: la app las abre con el token del usuario.)')
+        ].join('\n'), { repo, url, ref, folder, run: run.html_url, images: done.map((shot) => base + encodeURIComponent(shot.file)) });
       }
     },
     {
