@@ -1,0 +1,32 @@
+.guided-waiting #thread { display: none !important; }
+.g-wait-practice[hidden] { display: none; }
+.g-wait-practice { width: min(880px,100%); margin: 0 auto; padding: 4px 0 24px; color: var(--text); }
+.gw-header > span { color: var(--orange); font-size: .85rem; font-weight: 650; }
+.gw-status { color: var(--text-secondary); font-size: .9rem; margin: 6px 0 20px; }
+.gw-ready .gw-status { color: var(--text); font-weight: 600; }
+.gw-progress { display: flex; gap: 7px; margin: 0 0 30px; }
+.gw-progress span { height: 5px; flex: 1; background: var(--border); border-radius: 4px; transition: background 180ms ease; }
+.gw-progress span.right { background: var(--orange); }
+.gw-progress span.done { background: var(--text-secondary); }
+.gw-level { font-size: .82rem; font-weight: 650; letter-spacing: .02em; }
+.gw-concept { color: var(--text-secondary); font-size: .86rem; margin: 8px 0 20px; }
+.gw-prompt { font-size: clamp(1.25rem,2.5vw,1.7rem); line-height: 1.45; margin: 18px 0 24px; }
+.gw-prompt p { margin: 0; }
+.gw-question .g-opt { font-size: 1.1rem; min-height: 56px; }
+.gw-question form > label { display: block; font-size: .95rem; margin-bottom: 8px; }
+.gw-number { display: flex; gap: 10px; }
+.gw-number input { min-width: 0; width: 100%; padding: 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 1.2rem; }
+.gw-number input:focus-visible, .gw-exit:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+.gw-feedback { display: flex; gap: 14px; margin: 24px 0 18px; line-height: 1.5; }
+.gw-feedback-mark { display: inline-grid; place-items: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--orange-soft); color: var(--text); }
+.gw-feedback-mark svg { width: 22px; height: 22px; }
+.gw-feedback p { margin: 6px 0 0; }
+.gw-next { min-height: 46px; }
+.g-wait-practice footer { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; border-top: 1px solid var(--border); padding-top: 18px; margin-top: 28px; }
+.g-wait-practice footer > span { color: var(--text-secondary); font-size: .8rem; }
+.gw-exit { color: var(--text); font: inherit; font-weight: 600; background: transparent; border: 0; border-bottom: 1px solid var(--border-strong); padding: 10px 0; min-height: 44px; cursor: pointer; }
+.gw-finish { padding: 20px 0; }
+.gw-finish h2 { font-size: 1.7rem; }
+.gw-finish p { line-height: 1.5; }
+.gw-number-error { font-size: .9rem; }
+@media (prefers-reduced-motion: reduce) { .gw-progress span { transition: none; } }

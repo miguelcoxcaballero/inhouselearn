@@ -89,6 +89,7 @@ function syncGuidedStage() {
   next.disabled = history || (!more && (appState.busy || !!quiz || course?.status !== 'learning'));
   const nextLabel = more ? 'Siguiente →' : appState.busy ? 'Preparando…' : quiz ? 'Resuelve el ejercicio' : course?.status === 'learning' ? (currentLesson(course)?.phase === 'apply' ? 'Comprobar →' : 'Lo entiendo →') : 'Última pantalla';
   if (next.textContent !== nextLabel) next.textContent = nextLabel;
+  if (typeof syncWaitingPractice === 'function') syncWaitingPractice(chat, on);
 }
 
 function compactGuidedReading(article) {

@@ -110,3 +110,23 @@ correctness vary by model and source materials. Numeric grading checks a result,
 student's derivation. Explanations and assumptions should still be discussed with the tutor.
 A real effectiveness evaluation would compare delayed retention and novel problem solving,
 not session duration or XP totals.
+
+### Practice during generation
+
+After a 650ms wait, guided screens can show a local round of up to six previously
+answered questions from completed checks. Skill tags order recall → application →
+transfer, rotating within each bucket between rounds. These tags are a difficulty
+heuristic; no new questions or answers are invented, and no pending exam is exposed.
+With no previous answered questions, normal preparation remains visible.
+
+The model continues in the background. Answer arrival changes only the status and
+return button, preserving the current numeric draft and focus. Returning is always
+available; skipping does not reopen that round. Rounds do not alter course phase,
+quiz answers, XP or spaced-retrieval evidence: immediate repetitions are practice,
+not independent evidence of retention. No extra model requests are made.
+
+Answer, three consecutive successes and round completion have distinct short tactile
+patterns and brief visual feedback. Existing Android haptic styles are composed in
+JavaScript; no APK update is needed. Browser vibration depends on platform support.
+The haptics switch cancels scheduled pulses, hidden tabs never vibrate, and reduced
+motion disables the visual pulse. Background streaming ticks do not interrupt practice.

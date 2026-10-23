@@ -112,3 +112,7 @@ It saves `guided-screen-{theme}-{width}.png` in `OUT` for review.
 `visual-controls.cjs` covers repeated slider updates on translucent scene layers,
 undefined geometry and recovery, plot autoscaling, fixed axes, and rapid walkthrough
 slider interaction. Diagram preflight also probes individual control extremes.
+
+`guided-wait.cjs` exercises local review during a real pending model turn, ordering,
+readiness without stealing focus, numeric answers, skipping, no extra requests or
+course changes, and exercise haptics.

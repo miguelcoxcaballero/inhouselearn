@@ -600,12 +600,12 @@ function guidedAnswer(chat, quizId, questionIndex, optionIndex) {
   // Mini tests lock each answer (instant feedback); the exam lets you change it until you hand it in.
   if (quiz.kind !== 'exam' && quiz.answers[questionIndex] !== undefined) return;
   quiz.answers[questionIndex] = optionIndex;
-  if (quiz.kind !== 'exam') haptic(optionIndex === quiz.questions[questionIndex].correct ? 'success' : 'error');
-  else haptic('select');
+  if (quiz.kind === 'exam') haptic('select');
   touchCourse(course);
   chat.updatedAt = nowIso();
   saveState();
   rerenderGuidedCard(chat, quizId);
+  if (quiz.kind !== 'exam') guidedAnswerFeedback(quiz, questionIndex);
 }
 
 function rerenderGuidedCard(chat, quizId) {
@@ -1161,8 +1161,8 @@ document.addEventListener('submit', event => {
     input.focus(); return;
   }
   quiz.answers[index] = value;
-  if (quiz.kind !== 'exam') haptic(GuidedLearning.correct(question, value) ? 'success' : 'error');
   touchCourse(course); chat.updatedAt = nowIso(); saveState(); rerenderGuidedCard(chat, id);
+  if (quiz.kind !== 'exam') guidedAnswerFeedback(quiz, Number(index));
 });
 
 function startGuidedReview(chat, extra) {

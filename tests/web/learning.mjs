@@ -64,3 +64,16 @@ test('existing courses migrate without invented XP or retrospective memory evide
   assert.equal(Learning.memoryLabel(course.units[0].lessons[2],at),'Sin comprobar');
   assert.ok(!course.units[0].lessons[0].memory);
 });
+
+test('waiting practice uses only answered completed quizzes, orders skills and preserves originals', () => {
+ const course=make();
+ course.quizzes.old={id:'old',submitted:true,lessonId:'L1',answers:{0:0,1:0,2:2},questions:[{...choice('Transfer','L1'),skill:'transfer'},{...choice('Recall','L1'),skill:'recall'},{type:'numeric',question:'Compute',answer:2,tolerance:0,lessonId:'L1',skill:'apply'}]};
+ course.quizzes.pending={submitted:false,lessonId:'L1',answers:{},questions:[choice('Secret answer','L1')]};
+ const before=JSON.stringify(course);
+ const selected=Learning.waitingQuestions(course);
+ assert.deepEqual(selected.map(q=>q.skill),['recall','apply','transfer']);
+ assert.deepEqual(selected.map(q=>q.question),['Recall','Compute','Transfer']);
+ selected[0].options.reverse();
+ assert.equal(JSON.stringify(course),before);
+ assert.deepEqual(Learning.waitingQuestions(make()),[]);
+});

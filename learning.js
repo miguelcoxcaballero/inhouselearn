@@ -87,6 +87,29 @@
     }
     return result;
   }
+  // Reuse only answered practice: never reveal a pending test or exam.
+  // Skill metadata orders the challenge; it is not a calibrated difficulty score.
+  function waitingQuestions(course, offset = 0) {
+    const ids = new Set(lessons(course).map(lesson => lesson.id));
+    const seen = new Set(), buckets = [[], [], []];
+    Object.values(course.quizzes || {}).filter(quiz => quiz.submitted && !quiz.superseded)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+      .forEach(quiz => (quiz.questions || []).forEach((question, index) => {
+        const lessonId = question.lessonId || quiz.lessonId;
+        if (!ids.has(lessonId) || quiz.answers?.[index] === undefined || !question.question || seen.has(question.question)) return;
+        const numeric = question.type === 'numeric';
+        if (numeric ? !finite(question.answer) || !finite(question.tolerance) || question.tolerance < 0
+          : !Array.isArray(question.options) || !Number.isInteger(question.correct) || !question.options[question.correct]) return;
+        seen.add(question.question);
+        const rank = question.skill === 'transfer' ? 2 : question.skill === 'apply' || numeric ? 1 : 0;
+        buckets[rank].push({ ...question, options: question.options?.slice(), lessonId, skill: ['recall','apply','transfer'][rank] });
+      }));
+    const result = [];
+    for (const bucket of buckets) {
+      for (let i = 0; i < Math.min(2, bucket.length); i++) result.push(bucket[(offset + i) % bucket.length]);
+    }
+    return result;
+  }
   function settle(course, quiz, at = Date.now()) {
     if (quiz.reward || !quiz.submitted) return quiz.reward || null;
     const progress = state(course);
@@ -129,7 +152,7 @@
       due: dueLessons(course, at).length, practiced: practiced.length, next,
       recalled: practiced.filter(lesson => lesson.memory?.stage >= 2).length };
   }
-  const api = { DAY, number, correct, state, dayKey, memoryLabel, recordEvidence, dueLessons, reviewQuestions, settle, summary };
+  const api = { DAY, number, correct, state, dayKey, memoryLabel, recordEvidence, dueLessons, reviewQuestions, waitingQuestions, settle, summary };
   root.GuidedLearning = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : globalThis);

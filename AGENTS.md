@@ -48,6 +48,12 @@ Mandatory guidance for every AI and developer working in this repository.
   counter, advances `lesson.phase` (understand/apply/check). Confusion returns to understand
   and supersedes an unsubmitted lesson check; final exams and recall rounds stay intact.
   Both composer text and quick actions must pass through `guidedBeforeUserTurn`.
+  `guided-wait.js/css` show optional local recall while a guided response is pending.
+  Reuse only completed, answered questions via `GuidedLearning.waitingQuestions`; never
+  change the active quiz/phase, send an extra model request, or award memory evidence/XP
+  for these immediate repeats. Keep drafts/focus when the response arrives and let the
+  learner return immediately. Haptic exercise patterns use the existing Android styles,
+  respect the device switch and cancel queued pulses on hiding/disabling. Test: guided-wait.cjs.
   `explain.js` adds causal scene walkthroughs and `check_diagram` preflight measurements.
   It checks layouts, not physics. Preserve sandbox restrictions. `gTitle` safely renders
   math in course/lesson titles, including saved doubled escapes. Test: `guided-screens.cjs`.
