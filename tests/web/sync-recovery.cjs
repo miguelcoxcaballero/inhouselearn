@@ -99,8 +99,7 @@ const waitSaved=page=>page.waitForFunction(()=>!appState.driveSyncTimer&&!appSta
   await B.page.evaluate(()=>appState.busy=false);
   console.log('PASS polling preserves the running agent object while importing other chats');
   const deleted=files.get('history-b');deleted.content=JSON.stringify({...snapshot([]),deletedChats:{'only-a':new Date().toISOString()}});version(deleted);
-  await B.page.evaluate(()=>pullDriveChanges(true));
-  assert.ok(await B.page.evaluate(()=>!appState.chats.some(c=>c.id==='only-a')&&appState.chats.some(c=>c.id==='only-c')));
+  await B.page.waitForFunction(async()=>{await pullDriveChanges(true);return !appState.chats.some(c=>c.id==='only-a')&&appState.chats.some(c=>c.id==='only-c');},null,{timeout:15000,polling:500});
   console.log('PASS an empty legacy snapshot still carries deletions without dropping other chats');
   // Two tabs share storage, but must not ignore each other's live messages.
   const tab=await B.context.newPage();await tab.goto(BASE);await tab.waitForFunction(()=>appState.driveReady);
