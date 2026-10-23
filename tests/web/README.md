@@ -97,3 +97,8 @@ Code/math spans and languages requested by the student are preserved.
 successive answers, animation cleanup, live reduced-motion preferences, mobile
 scene cadence and batching slider redraws to one per animation frame. Shared
 transitions live in `motion.js`; the course/practice state changes immediately.
+
+`learning.mjs` checks numeric parsing/tolerance, spaced intervals, assisted attempts,
+per-concept/day rewards and migration of existing courses. `guided-learning.cjs` runs the
+mixed numeric/choice tool flow in a browser, reloads a draft and a review, grades a numeric
+exam, replans without misattributing evidence, and checks light/dark layouts at 320–1440 px.

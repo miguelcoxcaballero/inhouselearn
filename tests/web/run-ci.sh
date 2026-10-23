@@ -10,8 +10,8 @@ trap 'kill $SERVER 2>/dev/null' EXIT
 for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html && break; sleep 0.2; done
 export OUT="${RUNNER_TEMP:-/tmp}"
 status=0
-node --test tests/web/text-quality.mjs || { echo "::error::text-quality.mjs failed"; status=1; }
-for test in latex practice text-quality motion theme photos visuals library github release reasoning queue live-sync sync-recovery live-stream; do
+node --test tests/web/text-quality.mjs tests/web/learning.mjs || { echo "::error::unit tests failed"; status=1; }
+for test in latex practice text-quality motion guided-learning theme photos visuals library github release reasoning queue live-sync sync-recovery live-stream; do
   echo "::group::$test"
   log="$OUT/web-$test.log"
   limit=300; [ "$test" = live-stream ] && limit=600

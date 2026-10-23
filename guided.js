@@ -32,19 +32,24 @@ const GUIDED_BASE_PROMPT = [
   'How this mode works',
   '- The app shows the course plan, the progress, the quizzes and the final exam as interactive cards. You drive them ONLY with these tools:',
   '  • set_course_plan: create or replace the plan (units → lessons, each lesson with 2–4 concrete, checkable objectives).',
-  '  • quiz: 3–4 multiple-choice questions that check the CURRENT lesson. The app grades them and sends you the result.',
+  '  • quiz: 3–4 conceptual or numeric questions that check the CURRENT lesson. The app grades them and sends you the result.',
   '  • final_exam: the final exam over the whole course, about 2 questions per lesson, each tagged with its lesson id. Only when the app says every lesson is done.',
-  '- Never write in your text progress bars, the list of lessons, scores, or multiple-choice questions with options: the cards already show them. Never ask the student to type quiz answers.',
+  '- Never write in your text progress bars, the list of lessons, scores, or multiple-choice questions with options: the cards already show them. Quiz answers go through the card controls, not the chat composer.',
   '- After calling quiz or final_exam, stop: at most one short sentence. The results arrive in the student\'s next message.',
   '- "Your task now" (below) comes from the app and changes after every step. Follow it exactly, even if earlier messages suggested something else.',
   '- Messages that start with "(Aviso de la app)" come from the app, not the student: do what they say without mentioning them.',
   '- Every lesson teaches with at least one interactive visual (see "Interactive visuals"): the first message of each lesson always includes one, and so does every re-explanation. Check the lesson only with the quiz tool, never with a visual of type check.',
   '',
   'How to teach (the student\'s preferences)',
-  '- Assume they know nothing of the topic yet. Build from intuition and origin: where each formula comes from, what it really measures, why it has that shape; derive it instead of dropping it. If something is pure convention, say so ("esto es convención, memorízalo").',
-  '- The student has ADHD: short chunks, bullets, bold anchors, no walls of text — but keep the depth; spread it across messages.',
+  '- Respect the selected level: beginners need a worked example; advanced students should predict or solve first. Explain the physical meaning and origin of formulas; distinguish conventions from deductions.',
+  '- Use short, structured chunks with a clear objective and one useful visual beside its explanation. Avoid decorative visuals and long lectures. Never assume a diagnosis or learning style.',
   '- One idea per message. End each teaching message with one short check question or an invitation to continue.',
-  '- Metaphors and small worked examples, not full exercises. Go progressively deeper, towards exam level.',
+  '- Use this cycle: PREDICT → see/explain a worked example → complete a missing step → solve independently → transfer to a changed situation. After each action give specific feedback about the error, not generic praise.',
+  '- Ask the student to explain why a method applies before calculating; gradually remove scaffolding. Include genuine calculations, not only recognition of a formula. Mix concepts already learned in later examples and the final exam.',
+  '- For quantitative subjects, use numeric questions in quiz/final_exam: type="numeric", answer (a finite number), tolerance (absolute, in the requested unit), unit, explanation and optional hint. Independently recompute the answer and check units, assumptions and rounding before calling the tool. Never use numeric grading for symbolic proofs or essays.',
+  '- For engineering/physics, connect a labelled diagram or controllable plot to equations; check dimensions, sign, order of magnitude, limiting cases and when a model stops applying. Ask the learner to predict a trend before moving a slider. Adapt this reasoning to the actual topic; do not turn history or language lessons into engineering.',
+  '- Each quiz should mix a misconception check, an application (numeric when appropriate) and a transfer question with changed conditions. Set skill to recall, apply or transfer. Supply a short hint that suggests a strategy without revealing the answer. Explanations should explain the tempting wrong method too.',
+  '- The app handles spaced reviews, XP and practice targets. Never invent points, streaks, progress or guarantees of mastery. Finishing a lesson is not proof of long-term retention.',
   '- Math in LaTeX: inline \\( … \\), display $$ … $$. Never put math in code blocks.'
 ].join('\n');
 
@@ -61,12 +66,14 @@ function normalizeCourse(raw) {
   course.units = Array.isArray(raw.units) ? raw.units.filter((unit) => unit && Array.isArray(unit.lessons)) : [];
   course.quizzes = raw.quizzes && typeof raw.quizzes === 'object' ? raw.quizzes : {};
   if (!['setup', 'ready', 'learning', 'exam', 'done'].includes(course.status)) course.status = 'setup';
+  GuidedLearning.state(course);
   return course;
 }
 
 function courseOf(chat) {
   if (!chat) return null;
   if (!chat.course || chat.course.v !== 2) chat.course = createEmptyCourse();
+  GuidedLearning.state(chat.course);
   return chat.course;
 }
 
@@ -132,7 +139,7 @@ function courseStateText(course) {
     const length = GUIDED_LENGTHS.find((item) => item.id === course.length) || GUIDED_LENGTHS[1];
     return 'No plan yet. The student ' + level.prompt + ' and wants a course of ' + length.prompt + '.';
   }
-  const lines = ['Course: ' + course.title + (course.goal ? ' — ' + course.goal : ''), 'Status: ' + course.status];
+  const lines = ['Learning level: ' + course.level, 'Course: ' + course.title + (course.goal ? ' — ' + course.goal : ''), 'Status: ' + course.status];
   course.units.forEach((unit, index) => {
     lines.push('Unit ' + (index + 1) + ': ' + unit.title);
     unit.lessons.forEach((lesson) => lines.push(lessonLine(lesson)));
@@ -143,19 +150,22 @@ function courseStateText(course) {
     (lesson.objectives || []).forEach((objective) => lines.push('  - ' + objective));
     lines.push('Messages already spent teaching it: ' + (lesson.turns || 0) + '. Quiz attempts: ' + (lesson.attempts || 0) + '.');
   }
+  const evidence = courseLessons(course).filter(item => item.memory).map(item => item.id + ': last check ' + item.memory.score + '%, ' + (item.memory.assisted ? 'with hints' : 'without hints') + ', spaced retrieval stage ' + item.memory.stage);
+  if (evidence.length) lines.push('Learning evidence (not a guarantee of mastery): ' + evidence.join('; '));
   return lines.join('\n');
 }
 
 function wrongAnswersText(quiz) {
   return (quiz.questions || []).map((question, index) => {
     const chosen = quiz.answers && quiz.answers[index];
-    if (chosen === question.correct) return '';
-    return '- «' + question.question + '»: chose «' + (question.options[chosen] || '—') + '», correct «' + question.options[question.correct] + '»';
+    if (GuidedLearning.correct(question, chosen)) return '';
+    return '- «' + question.question + '»: chose «' + (question.type === 'numeric' ? String(chosen ?? '—') + ' ' + question.unit : question.options[chosen] || '—') + '», correct «' + (question.type === 'numeric' ? question.answer + ' ' + question.unit : question.options[question.correct]) + '»';
   }).filter(Boolean).join('\n');
 }
 
 function courseTaskText(course, chat) {
   const event = course.lastEvent;
+  if (pendingQuiz(course, 'review')) return 'A short retrieval practice is on screen. Answer only clarification questions; do not reveal answers or create another quiz until it is finished.';
   if (course.status === 'setup') {
     if ((course.setupTurns || 0) >= 1) {
       return 'If the student has said what to learn, call set_course_plan NOW with a complete plan (base it on their notes or files if they attached any). Only if the topic is still unknown, ask for it in one short sentence. Do not teach yet.';
@@ -205,12 +215,12 @@ function courseTaskText(course, chat) {
         : '';
   const turns = lesson.turns || 0;
   if (turns === 0) {
-    return opening + 'Teach the first idea of ' + lesson.id + ' «' + lesson.title + '» and include one ```visual block (or a ```mermaid diagram) that lets the student see or play with it: a plot or formula with sliders for maths and physics, steps for a procedure, a timeline for history, compare for contrasts, flashcards for terms. One idea, short text around the visual, end with a short question.';
+    return opening + 'State a concrete objective, then ask for a prediction or show one small worked example of ' + lesson.id + ' «' + lesson.title + '» and include one ```visual block (or a ```mermaid diagram) that lets the student see or play with it: a plot or formula with sliders for maths and physics, steps for a procedure, a timeline for history, compare for contrasts, flashcards for terms. One idea, short text around the visual, end with a short question.';
   }
   if (turns >= 3) {
     return opening + 'You have spent ' + turns + ' messages on ' + lesson.id + ': wrap it up in two sentences and call quiz NOW with 3–4 questions about its objectives.';
   }
-  return opening + 'Teach ' + lesson.id + ' «' + lesson.title + '»: cover its objectives over one to three short messages, one idea per message. When the objectives are covered (or the student asks to be tested), call quiz with 3–4 questions about this lesson.';
+  return opening + 'Teach ' + lesson.id + ' «' + lesson.title + '»: now let the student complete a missing step, justify a method or solve a small changed problem. Do not repeat a lecture. Give feedback on their reasoning. Cover objectives in at most three short messages, then call quiz with 3–4 varied conceptual/numeric questions.';
 }
 
 // Goes last in the system prompt, after the visuals and the tools.
@@ -234,9 +244,16 @@ function validateQuestions(raw, options) {
       .map((option) => option.replace(/^\s*(?:[A-Ea-e]|\d)[).:]\s+/, ''));
     const correct = Number(item.correct);
     if (!String(item.question || '').trim()) return { error: 'Question ' + (i + 1) + ' has no text.' };
-    if (opts.length < 2 || opts.length > 5 || opts.some((option) => !option)) return { error: 'Question ' + (i + 1) + ' needs 2–5 non-empty options.' };
-    if (!Number.isInteger(correct) || correct < 0 || correct >= opts.length) return { error: 'Question ' + (i + 1) + ': "correct" must be the index (0–' + (opts.length - 1) + ') of the right option.' };
-    const question = { question: String(item.question).trim(), options: opts, correct, explanation: String(item.explanation || '').trim() };
+    if (item.type !== 'numeric' && (opts.length < 2 || opts.length > 5 || opts.some((option) => !option))) return { error: 'Question ' + (i + 1) + ' needs 2–5 non-empty options.' };
+    if (item.type !== 'numeric' && (!Number.isInteger(correct) || correct < 0 || correct >= opts.length)) return { error: 'Question ' + (i + 1) + ': "correct" must be the index (0–' + (opts.length - 1) + ') of the right option.' };
+    const question = { question: String(item.question).trim(), options: opts, correct, explanation: String(item.explanation || '').trim(),
+      hint: cleanText(item.hint, 500), skill: ['recall', 'apply', 'transfer'].includes(item.skill) ? item.skill : 'recall' };
+    if (item.type === 'numeric') {
+      if (typeof item.answer !== 'number' || !Number.isFinite(item.answer) || typeof item.tolerance !== 'number' || !Number.isFinite(item.tolerance) || item.tolerance < 0) {
+        return { error: 'Numeric question ' + (i + 1) + ' needs a finite answer and a non-negative absolute tolerance in the requested unit.' };
+      }
+      Object.assign(question, { type: 'numeric', answer: item.answer, tolerance: item.tolerance, unit: cleanText(item.unit, 40) });
+    }
     if (options && options.lessons) {
       const lessonId = String(item.lesson || '').trim().toUpperCase();
       question.lessonId = options.lessons.some((lesson) => lesson.id === lessonId) ? lessonId : '';
@@ -266,6 +283,7 @@ function shuffledCopy(list) {
 function balanceAnswerPositions(questions) {
   const bags = {};
   questions.forEach((question) => {
+    if (question.type === 'numeric') return;
     if (question.options.some((option) => PINNED_OPTION.test(option))) return;
     const n = question.options.length;
     if (!bags[n] || !bags[n].length) bags[n] = shuffledCopy(Array.from({ length: n }, (_, k) => k));
@@ -282,6 +300,7 @@ function balanceAnswerPositions(questions) {
 // Questions whose right answer gives itself away by being clearly longer.
 function longestAnswerGiveaways(questions) {
   return questions.filter((question) => {
+    if (question.type === 'numeric') return false;
     const lengths = question.options.map((option) => option.replace(/\\[a-z]+|[{}$\\]/gi, '').trim().length);
     const right = lengths[question.correct];
     const other = Math.max(...lengths.filter((_, k) => k !== question.correct));
@@ -321,13 +340,23 @@ function createGuidedToolHandlers(chat, message) {
       if (total > 20) return { isError: true, text: 'Too many lessons (' + total + '). Keep it to 20 or fewer.' };
       // Keep the progress of lessons that survive a re-plan (same title).
       const before = new Map(courseLessons(course).map((lesson) => [lesson.title.toLowerCase(), lesson]));
+      const remap = new Map();
       let n = 0;
       units.forEach((unit) => unit.lessons.forEach((lesson) => {
         n += 1;
         const old = before.get(lesson.title.toLowerCase());
-        Object.assign(lesson, { id: 'L' + n, status: 'pending', score: null, attempts: 0, turns: 0 },
+        if (old) remap.set(old.id, 'L' + n);
+        Object.assign(lesson, { id: 'L' + n, key: old?.key || uid('skill'), memory: old?.memory, status: 'pending', score: null, attempts: 0, turns: 0 },
           old && lessonIsFinished(old) ? { status: old.status, score: old.score, attempts: old.attempts } : {});
       }));
+      Object.values(course.quizzes).forEach(quiz => {
+        if (!quiz.submitted) quiz.superseded = true;
+        quiz.lessonId = remap.get(quiz.lessonId) || '';
+        quiz.questions.forEach(question => { if (question.lessonId) question.lessonId = remap.get(question.lessonId) || ''; });
+      });
+      chat.messages.forEach(item => { if (item.lessonId) item.lessonId = remap.get(item.lessonId) || ''; });
+      delete course.examScore;
+      course.lastEvent = null;
       course.title = cleanText(params.title, 90);
       course.goal = cleanText(params.goal, 240);
       course.units = units;
@@ -351,6 +380,7 @@ function createGuidedToolHandlers(chat, message) {
     quiz(params) {
       const course = courseOf(chat);
       const lesson = currentLesson(course);
+      if (pendingQuiz(course, 'review')) return { isError: true, text: 'Finish the on-screen retrieval practice first. Do not replace it with a new quiz.' };
       if (course.status !== 'learning' || !lesson) {
         return { isError: true, text: course.status === 'exam'
           ? 'Every lesson is finished: call final_exam instead.'
@@ -363,7 +393,7 @@ function createGuidedToolHandlers(chat, message) {
       balanceAnswerPositions(checked.questions);
       Object.values(course.quizzes).forEach((quiz) => { if (quiz.kind === 'check' && !quiz.submitted) quiz.superseded = true; });
       const id = uid('quiz');
-      course.quizzes[id] = { id, kind: 'check', lessonId: lesson.id, questions: checked.questions.slice(0, 6), answers: {}, submitted: false, score: null, createdAt: nowIso() };
+      course.quizzes[id] = { id, kind: 'check', focus: true, lessonId: lesson.id, questions: checked.questions.slice(0, 6), answers: {}, submitted: false, score: null, createdAt: nowIso() };
       touchCourse(course);
       addCard({ type: 'quiz', quizId: id });
       return { text: 'Quiz shown below your message (' + checked.questions.length + ' questions on ' + lesson.id + '). Stop now: at most one short sentence. The result will arrive in the student\'s next message.' };
@@ -408,6 +438,7 @@ function guidedAfterTurn(chat, message, options) {
   course.lastEvent = null;
   if (course.status === 'setup' && !cards.length) course.setupTurns = (course.setupTurns || 0) + 1;
   const lesson = currentLesson(course);
+  if (pendingQuiz(course, 'review')) return null;
   if (course.status === 'learning' && lesson && !cards.some((card) => card.type === 'quiz')) {
     lesson.turns = (lesson.turns || 0) + 1;
   }
@@ -476,18 +507,19 @@ function guidedSend(chat, text, extra) {
 
 function gradeQuiz(quiz) {
   let right = 0;
-  quiz.questions.forEach((question, index) => { if (quiz.answers[index] === question.correct) right += 1; });
+  quiz.questions.forEach((question, index) => { if (GuidedLearning.correct(question, quiz.answers[index])) right += 1; });
   return { right, total: quiz.questions.length, percent: Math.round((right / Math.max(1, quiz.questions.length)) * 100) };
 }
 
 function submitCheckQuiz(chat, quizId) {
   const course = courseOf(chat);
   const quiz = course.quizzes[quizId];
-  if (!quiz || quiz.submitted || appState.busy) return;
+  if (!quiz || quiz.submitted || quiz.superseded || appState.busy) return;
   if (Object.keys(quiz.answers).length < quiz.questions.length) return;
   const grade = gradeQuiz(quiz);
   quiz.submitted = true;
   quiz.score = grade.percent;
+  GuidedLearning.settle(course, quiz);
   const lesson = findLesson(course, quiz.lessonId);
   const passed = grade.percent >= GUIDED_PASS;
   if (lesson) {
@@ -512,7 +544,7 @@ function submitCheckQuiz(chat, quizId) {
 function submitExam(chat, quizId) {
   const course = courseOf(chat);
   const quiz = course.quizzes[quizId];
-  if (!quiz || quiz.submitted || appState.busy) return;
+  if (!quiz || quiz.submitted || quiz.superseded || appState.busy) return;
   if (Object.keys(quiz.answers).length < quiz.questions.length) return;
   const grade = gradeQuiz(quiz);
   quiz.submitted = true;
@@ -520,10 +552,11 @@ function submitExam(chat, quizId) {
   const byLesson = courseLessons(course).map((lesson) => {
     const items = quiz.questions.map((question, index) => ({ question, index })).filter((item) => item.question.lessonId === lesson.id);
     if (!items.length) return null;
-    const right = items.filter((item) => quiz.answers[item.index] === item.question.correct).length;
+    const right = items.filter((item) => GuidedLearning.correct(item.question, quiz.answers[item.index])).length;
     return { id: lesson.id, title: lesson.title, right, total: items.length, percent: Math.round((right / items.length) * 100) };
   }).filter(Boolean);
   quiz.byLesson = byLesson;
+  GuidedLearning.settle(course, quiz);
   course.status = 'done';
   course.examScore = grade.percent;
   course.lastEvent = { type: 'exam', score: grade.percent, byLesson, wrong: wrongAnswersText(quiz) };
@@ -536,11 +569,13 @@ function submitExam(chat, quizId) {
 function guidedAnswer(chat, quizId, questionIndex, optionIndex) {
   const course = courseOf(chat);
   const quiz = course.quizzes[quizId];
-  if (!quiz || quiz.submitted || quiz.superseded) return;
+  if (!quiz || quiz.submitted || quiz.superseded || appState.busy) return;
+  const question = quiz.questions[questionIndex];
+  if (!question || question.type === 'numeric' || !Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex >= question.options.length) return;
   // Mini tests lock each answer (instant feedback); the exam lets you change it until you hand it in.
-  if (quiz.kind === 'check' && quiz.answers[questionIndex] !== undefined) return;
+  if (quiz.kind !== 'exam' && quiz.answers[questionIndex] !== undefined) return;
   quiz.answers[questionIndex] = optionIndex;
-  if (quiz.kind === 'check') haptic(optionIndex === quiz.questions[questionIndex].correct ? 'success' : 'error');
+  if (quiz.kind !== 'exam') haptic(optionIndex === quiz.questions[questionIndex].correct ? 'success' : 'error');
   else haptic('select');
   touchCourse(course);
   chat.updatedAt = nowIso();
@@ -574,17 +609,31 @@ const GUIDED_QUICK = {
 };
 
 document.addEventListener('click', (event) => {
-  const target = event.target.closest('[data-g-answer],[data-g-submit],[data-g-start],[data-g-quick],[data-g-tweak],[data-g-toggle-map],[data-g-skip],[data-g-level],[data-g-length],[data-g-change-plan],[data-g-page]');
+  const target = event.target.closest('[data-g-answer],[data-g-submit],[data-g-start],[data-g-quick],[data-g-tweak],[data-g-toggle-map],[data-g-skip],[data-g-level],[data-g-length],[data-g-change-plan],[data-g-page],[data-g-hint],[data-g-review],[data-g-goal]');
   if (!target) return;
   const chat = getActiveChat();
   if (!chat) return;
   event.preventDefault();
-  if (target.dataset.gAnswer) {
+  if (target.hasAttribute('data-g-review')) {
+    startGuidedReview(chat, target.dataset.gReview === 'extra');
+  } else if (target.dataset.gHint) {
+    const [id, index] = target.dataset.gHint.split(':');
+    const quiz = courseOf(chat).quizzes[id];
+    if (appState.busy || !quiz || quiz.kind === 'exam' || quiz.submitted || quiz.superseded || quiz.answers[index] !== undefined || !quiz.questions[index]?.hint) return;
+    (quiz.hints ||= {})[index] = true;
+    touchCourse(chat.course); chat.updatedAt = nowIso(); saveState(); rerenderGuidedCard(chat, id);
+  } else if (target.dataset.gGoal) {
+    if (appState.busy) return;
+    if (![3, 6, 10].includes(Number(target.dataset.gGoal))) return;
+    GuidedLearning.state(courseOf(chat)).goal = Number(target.dataset.gGoal);
+    touchCourse(chat.course); chat.updatedAt = nowIso(); saveState(); renderThread({ preserveScroll: true }); syncGuidedBannerSlot(chat);
+  } else if (target.dataset.gAnswer) {
     const [quizId, q, o] = target.dataset.gAnswer.split(':');
     guidedAnswer(chat, quizId, Number(q), Number(o));
   } else if (target.dataset.gSubmit) {
     const quiz = courseOf(chat).quizzes[target.dataset.gSubmit];
-    if (quiz && quiz.kind === 'exam') submitExam(chat, quiz.id); else submitCheckQuiz(chat, target.dataset.gSubmit);
+    if (quiz && quiz.kind === 'review') submitGuidedReview(chat, quiz.id);
+    else if (quiz && quiz.kind === 'exam') submitExam(chat, quiz.id); else submitCheckQuiz(chat, target.dataset.gSubmit);
   } else if (target.hasAttribute('data-g-start')) {
     const course = courseOf(chat);
     if (course.status !== 'ready' || appState.busy) return;
@@ -710,7 +759,7 @@ function guidedChapterMarkup(message, chat) {
   const place = lessonUnit(course, lesson.id);
   return '<header class="g-chapter" data-lesson-start="' + escapeHtml(lesson.id) + '">' +
     (place ? '<span class="g-chapter-unit">Unidad ' + (place.index + 1) + ' · ' + escapeHtml(place.unit.title) + '</span>' : '') +
-    '<span class="g-chapter-title"><span class="g-chapter-num">' + escapeHtml(lesson.id.slice(1)) + '</span><span class="g-chapter-name">' + escapeHtml(lesson.title) + '</span></span></header>';
+    '<span class="g-chapter-title"><span class="g-chapter-num">' + escapeHtml(lesson.id.slice(1)) + '</span><span class="g-chapter-name">' + escapeHtml(lesson.title) + '</span></span>' + ((lesson.objectives || []).length ? '<p class="g-chapter-goal"><b>Tu objetivo</b> ' + escapeHtml(lesson.objectives[0]) + '</p>' : '') + '</header>';
 }
 
 function renderCourseHeader(chat) {
@@ -722,25 +771,20 @@ function renderCourseHeader(chat) {
   const open = sessionGet('course-map::' + chat.id) === '1';
   const segments = progress.lessons.map((item) => '<span class="g-seg ' + item.status + '" title="' + escapeHtml('Lección ' + item.id.slice(1) + ' · ' + item.title) + '"></span>').join('');
   const finished = course.status === 'done';
-  const bar = '<button type="button" class="g-bookbar" data-g-toggle-map aria-expanded="' + open + '" aria-label="Plan del curso: ' + progress.percent + ' % hecho">' +
+  const bar = '<button type="button" class="g-bookbar" data-g-toggle-map aria-expanded="' + open + '" aria-label="Ruta del curso: ' + progress.percent + ' % recorrida">' +
     '<span class="g-segs">' + segments + '</span>' +
     '<span class="g-bk-end' + (finished ? ' lit' : '') + '">' + G_ICON.trophy + '<b>' + progress.percent + ' %</b></span></button>';
-  const pager = course.status === 'learning' && lesson
-    ? '<nav class="g-pager" aria-label="Lecciones"><button type="button" class="g-page-btn" data-g-page="prev">' + G_ICON.prev + '<span>Anterior</span></button>' +
-      '<span class="g-pager-mid"><b>Lección ' + escapeHtml(lesson.id.slice(1)) + ' de ' + progress.lessons.length + '</b>' +
-      '<button type="button" class="g-pager-plan" data-g-toggle-map>' + (open ? 'Cerrar plan' : 'Ver plan') + '</button></span>' +
-      '<button type="button" class="g-page-btn" data-g-page="next"><span>Siguiente</span>' + G_ICON.next + '</button></nav>'
-    : '';
+  const pager = guidedMissionMarkup(course, chat, open);
   const map = !open ? '' : '<div class="g-map"><div class="g-map-head"><span>Índice</span><b>' + escapeHtml(course.title) + '</b></div>' +
     course.units.map((unit, index) =>
     '<div class="g-map-unit"><div class="g-map-unit-title">Unidad ' + (index + 1) + ' · ' + escapeHtml(unit.title) + '</div>' +
     unit.lessons.map((item) => '<div class="g-map-row ' + item.status + '"><span class="g-map-num">' + (item.status === 'done' ? G_ICON.check : escapeHtml(item.id.slice(1))) + '</span>' +
-      '<span class="g-map-name">' + escapeHtml(item.title) + (item.status === 'current' ? '<em>Ahora</em>' : item.status === 'skipped' ? '<em class="muted">Saltada</em>' : '') + '</span><span class="g-leader"></span>' +
+      '<span class="g-map-name">' + escapeHtml(item.title) + '<small class="g-memory-label">' + escapeHtml(GuidedLearning.memoryLabel(item)) + '</small>' + (item.status === 'current' ? '<em>Ahora</em>' : item.status === 'skipped' ? '<em class="muted">Saltada</em>' : '') + '</span><span class="g-leader"></span>' +
       (item.score != null ? '<span class="g-map-score">' + item.score + ' %</span>' : item.minutes ? '<span class="g-map-score">~' + item.minutes + ' min</span>' : '') +
       (item.status === 'current' && course.status === 'learning' ? '<button type="button" class="g-link" data-g-skip="' + item.id + '">Saltar</button>' : '') +
       '</div>').join('') + '</div>').join('') +
     '<div class="g-map-row exam ' + (finished ? 'done' : '') + '"><span class="g-map-num">' + G_ICON.trophy + '</span><span class="g-map-name">Examen final</span><span class="g-leader"></span>' +
-    (course.examScore != null ? '<span class="g-map-score">' + course.examScore + ' %</span>' : '<span class="g-map-score">' + (course.status === 'exam' ? 'Ahora' : 'Al final') + '</span>') + '</div></div>';
+    (course.examScore != null ? '<span class="g-map-score">' + course.examScore + ' %</span>' : '<span class="g-map-score">' + (course.status === 'exam' ? 'Ahora' : 'Al final') + '</span>') + '</div>' + guidedGoalMarkup(course) + '</div>';
   return '<div class="g-course' + (open ? ' open' : '') + '">' + bar + (pager || map ? '<div class="g-course-body">' + pager + map + '</div>' : '') + '</div>';
 }
 
@@ -749,7 +793,7 @@ function renderGuidedHero(chat) {
   const chips = (items, attr, current) => items.map((item) => '<button type="button" class="g-pill' + (item.id === current ? ' active' : '') + '" ' + attr + '="' + item.id + '">' +
     escapeHtml(item.label) + (item.note ? '<small>' + escapeHtml(item.note) + '</small>' : '') + '</button>').join('');
   const ideas = [
-    ['Derivadas desde cero', 'Quiero aprender derivadas desde cero.'],
+    ['Mecánica y fuerzas', 'Quiero aprender mecánica: diagramas de fuerzas, modelos y problemas de ingeniería.'],
     ['La Revolución Francesa', 'Quiero aprender la Revolución Francesa para un examen.'],
     ['Estadística básica', 'Quiero aprender estadística básica: media, varianza y probabilidad.'],
     ['Con mis apuntes', 'Te subo mis apuntes: hazme un curso a partir de ellos.']
@@ -757,10 +801,11 @@ function renderGuidedHero(chat) {
   return '<section class="hero g-hero">' +
     '<div class="g-hero-badge">' + G_ICON.cap + 'Aprendizaje guiado</div>' +
     '<h2>¿Qué quieres aprender?</h2>' +
-    '<p class="hero-sub">Dime el tema o sube tus apuntes. Te preparo un plan por lecciones, te explico cada una con un mini test y terminamos con un examen final.</p>' +
+    '<p class="hero-sub">Dime el tema o sube tus apuntes. Aprende con ejemplos visuales, resuelve por tu cuenta y vuelve a lo que necesitas recordar.</p>' +
     '<div class="g-setup"><div class="g-setup-row"><span class="g-setup-label">Nivel</span><div class="g-pills">' + chips(GUIDED_LEVELS, 'data-g-level', course.level) + '</div></div>' +
     '<div class="g-setup-row"><span class="g-setup-label">Duración</span><div class="g-pills">' + chips(GUIDED_LENGTHS, 'data-g-length', course.length) + '</div></div></div>' +
-    '<ol class="g-steps"><li><b>1</b><span>Plan a tu medida</span></li><li><b>2</b><span>Lecciones y mini tests</span></li><li><b>3</b><span>Examen final</span></li></ol>' +
+    guidedGoalMarkup(course) +
+    '<ol class="g-steps"><li><b>1</b><span>Ruta a tu medida</span></li><li><b>2</b><span>Ejemplos y retos</span></li><li><b>3</b><span>Examen final</span></li></ol>' +
     '<div class="chips g-ideas">' + ideas.map((item) => '<button class="chip suggestion-chip" data-prompt="' + escapeHtml(item[1]) + '"><span class="g-idea-name">' + escapeHtml(item[0]) + '</span><span class="g-leader"></span></button>').join('') + '</div>' +
     '</section>';
 }
@@ -783,7 +828,7 @@ function planLessonMarkup(lesson) {
   const node = '<span class="g-node ' + lesson.status + '">' +
     (lesson.status === 'done' ? G_ICON.check : lesson.status === 'skipped' ? G_ICON.skip : escapeHtml(lesson.id.slice(1))) + '</span>';
   const meta = lesson.score != null ? lesson.score + '%' : lesson.status === 'skipped' ? 'Saltada' : lesson.minutes ? '~' + lesson.minutes + ' min' : '';
-  const head = node + '<span class="g-route-name">' + escapeHtml(lesson.title) + (lesson.status === 'current' ? '<em>Ahora</em>' : '') + '</span><span class="g-leader"></span>' +
+  const head = node + '<span class="g-route-name">' + escapeHtml(lesson.title) + '<small class="g-memory-label">' + escapeHtml(GuidedLearning.memoryLabel(lesson)) + '</small>' + (lesson.status === 'current' ? '<em>Ahora</em>' : '') + '</span><span class="g-leader"></span>' +
     (meta ? '<span class="g-route-meta">' + escapeHtml(meta) + '</span>' : '');
   const objectives = lesson.objectives || [];
   if (!objectives.length) return '<div class="g-route-lesson ' + lesson.status + '"><div class="g-route-row">' + head + '</div></div>';
@@ -803,6 +848,7 @@ function renderPlanCard(chat) {
     '<span class="g-plan-top"><span class="g-plan-badge">' + G_ICON.cap + (ready ? 'Tu plan de estudio' : 'Plan del curso') + '</span><span class="g-plan-kicker">Índice</span></span>' +
     '<span class="g-plan-title">' + escapeHtml(course.title) + '</span>' +
     (course.goal ? '<span class="g-plan-goal">' + escapeHtml(course.goal) + '</span>' : '') +
+    '<div class="g-learning-loop"><span>01 · Entiende</span><span>02 · Resuelve</span><span>03 · Recuerda</span></div>' +
     (ready
       ? '<span class="g-plan-stats">' + stat(lessons.length, lessons.length === 1 ? ' lección' : ' lecciones') +
         (timed ? stat('~' + formatMinutes(minutes), '') : '') + '<span class="g-stat exam">' + G_ICON.trophy + 'Examen final</span></span>'
@@ -840,7 +886,9 @@ function questionMarkup(quiz, question, index, mode) {
   const chosen = quiz.answers[index];
   const answered = chosen !== undefined;
   const reveal = mode === 'check' ? answered : quiz.submitted;
-  const right = reveal && chosen === question.correct;
+  if (question.type === 'numeric') return numericQuestionMarkup(quiz, question, index, mode);
+  const support = guidedHintMarkup(quiz, question, index, mode);
+  const right = reveal && GuidedLearning.correct(question, chosen);
   if (mode === 'check' && answered) {
     const pick = (optionIndex) => LETTERS[optionIndex] + ' · ' + gOption(question, optionIndex);
     return '<li data-motion-key="question:' + index + '" class="g-q compact ' + (right ? 'right' : 'wrong') + '"><span class="g-q-mark">' + (right ? G_ICON.check : G_ICON.cross) + '</span>' +
@@ -864,24 +912,24 @@ function questionMarkup(quiz, question, index, mode) {
     ? '<div class="g-feedback ' + (right ? 'right' : 'wrong') + '"><strong>' + (right ? '¡Bien!' : 'Era la ' + LETTERS[question.correct] + '.') + '</strong> ' + gMath(question.explanation || '') + '</div>'
     : '';
   return '<li data-motion-key="question:' + index + '" class="g-q' + (reveal ? (right ? ' right' : ' wrong') : '') + '"><div class="g-q-num">' + (index + 1) + '</div><div class="g-q-main"><div class="g-q-text">' + gMath(question.question) + '</div>' +
-    '<div class="g-options">' + options + '</div>' + feedback + '</div></li>';
+    guidedSkillMarkup(question) + '<div class="g-options">' + options + '</div>' + support + feedback + '</div></li>';
 }
 
 function renderQuizCard(course, quiz) {
   const lesson = findLesson(course, quiz.lessonId);
   const answered = Object.keys(quiz.answers).length;
   const total = quiz.questions.length;
-  const right = quiz.questions.filter((question, index) => quiz.answers[index] === question.correct).length;
+  const right = quiz.questions.filter((question, index) => GuidedLearning.correct(question, quiz.answers[index])).length;
   const dots = quiz.questions.map((question, index) => {
     const value = quiz.answers[index];
-    return '<span class="g-qdot' + (value === undefined ? '' : value === question.correct ? ' right' : ' wrong') + '"></span>';
+    return '<span class="g-qdot' + (value === undefined ? '' : GuidedLearning.correct(question, value) ? ' right' : ' wrong') + '"></span>';
   }).join('');
   let foot;
   if (quiz.superseded && !quiz.submitted) {
     foot = '<span class="g-foot-note">Sustituido por un test nuevo.</span>';
   } else if (quiz.submitted) {
     const passed = quiz.score >= GUIDED_PASS;
-    foot = '<span class="g-result ' + (passed ? 'pass' : 'fail') + '">' + (passed ? G_ICON.check : G_ICON.cross) + right + '/' + total + ' · ' + quiz.score + '% · ' + (passed ? 'Aprobado' : 'Repasamos y otro intento') + '</span>';
+    foot = '<span class="g-result ' + (passed ? 'pass' : 'fail') + '">' + (passed ? G_ICON.check : G_ICON.cross) + right + '/' + total + ' · ' + quiz.score + '% · ' + (passed ? 'Comprobado' : 'Repasamos y otro intento') + '</span>' + guidedRewardMarkup(course, quiz);
   } else {
     foot = '<span class="g-foot-note">' + (answered < total ? answered + ' de ' + total + ' respondidas' : right + ' de ' + total + ' bien') + '</span>' +
       '<button type="button" class="g-primary" data-g-submit="' + quiz.id + '"' + (answered < total ? ' disabled' : '') + '>Continuar</button>';
@@ -889,9 +937,10 @@ function renderQuizCard(course, quiz) {
   const next = quiz.questions.findIndex((question, index) => quiz.answers[index] === undefined);
   const position = quiz.submitted || next === -1 ? right + ' de ' + total + ' bien' : 'Pregunta ' + (next + 1) + ' de ' + total;
   return '<section class="g-card g-quiz' + (quiz.submitted ? ' submitted' : '') + '" data-g-quiz="' + quiz.id + '">' +
-    '<header class="g-card-head row"><div><span class="g-eyebrow">Mini test' + (lesson ? ' · Lección ' + lesson.id.slice(1) + '<span class="g-eyebrow-extra"> · ' + escapeHtml(lesson.title) + '</span>' : '') + '</span>' +
-    '<span class="g-title">Ejercicios del capítulo</span></div><div class="g-qside"><span class="g-qpos">' + position + '</span><div class="g-qdots">' + dots + '</div></div></header>' +
-    '<ol class="g-questions">' + quiz.questions.map((question, index) => questionMarkup(quiz, question, index, 'check')).join('') + '</ol>' +
+    '<header class="g-card-head row"><div><span class="g-eyebrow">' + (quiz.kind === 'review' ? 'Repaso espaciado' : 'Mini test') + (lesson ? ' · Lección ' + lesson.id.slice(1) + '<span class="g-eyebrow-extra"> · ' + escapeHtml(lesson.title) + '</span>' : '') + '</span>' +
+    '<span class="g-title">' + (quiz.kind === 'review' ? 'Recuerda sin mirar' : 'Ponlo en práctica') + '</span></div><div class="g-qside"><span class="g-qpos">' + position + '</span><div class="g-qdots">' + dots + '</div></div></header>' +
+    (quiz.kind === 'review' ? '<p class="g-recall-note">Mezcla de conceptos y errores anteriores. Recupera la idea antes de mirar tus apuntes.</p>' : '') +
+    '<ol class="g-questions">' + quiz.questions.map((question, index) => !quiz.submitted && quiz.focus && next !== -1 && index > next ? '' : questionMarkup(quiz, question, index, 'check')).join('') + '</ol>' +
     '<div class="g-card-foot">' + foot + '</div></section>';
 }
 
@@ -912,8 +961,8 @@ function renderExamCard(course, quiz) {
   if (quiz.submitted) {
     const grade = gradeQuiz(quiz);
     const passed = grade.percent >= GUIDED_PASS;
-    const verdict = grade.percent >= 85 ? '¡Dominas el curso!' : passed ? 'Aprobado. Repasa lo marcado en rojo.' : 'Aún no: repasa las lecciones en rojo y repite el examen.';
-    const dots = quiz.questions.map((question, index) => '<span class="' + (quiz.answers[index] === question.correct ? 'right' : 'wrong') + '"></span>').join('');
+    const verdict = grade.percent >= 85 ? 'Buen resultado. Ahora espacia los repasos para recordarlo.' : passed ? 'Aprobado. Repasa lo marcado en rojo.' : 'Aún no: repasa las lecciones en rojo y repite el examen.';
+    const dots = quiz.questions.map((question, index) => '<span class="' + (GuidedLearning.correct(question, quiz.answers[index]) ? 'right' : 'wrong') + '"></span>').join('');
     const breakdown = quiz.byLesson && quiz.byLesson.length
       ? '<div class="g-breakdown">' + quiz.byLesson.map((item) => {
         const ok = item.percent >= GUIDED_PASS;
@@ -931,7 +980,7 @@ function renderExamCard(course, quiz) {
       '<div class="g-final"><span class="g-final-pct">' + grade.percent + '<small>%</small></span><div class="g-final-side">' +
       '<span class="g-pass-chip ' + (passed ? 'pass' : 'fail') + '">' + (passed ? G_ICON.check : G_ICON.cross) + (passed ? 'Aprobado' : 'Suspendido') + ' · ' + grade.right + '/' + grade.total + '</span>' +
       '<p>' + verdict + '</p><span class="g-final-dots">' + dots + '</span></div></div>' + breakdown +
-      '<details class="g-correction"><summary>Ver la corrección</summary>' + questions + '</details>' + fin + '</section>';
+      '<details class="g-correction"><summary>Ver la corrección</summary>' + questions + '</details>' + guidedRewardMarkup(course, quiz) + fin + '</section>';
   }
   const foot = quiz.superseded
     ? '<span class="g-foot-note">Sustituido por otro examen.</span>'
@@ -998,9 +1047,148 @@ function guidedQuickRepliesMarkup(chat) {
   if (!chat || !chat.guidedLearning || appState.busy) return '';
   const course = courseOf(chat);
   let keys = [];
+  if (pendingQuiz(course, 'review')) return '';
   if (course.status === 'learning' && !pendingQuiz(course, 'check')) keys = ['next', 'visual', 'example', 'confused', 'test'];
   else if (course.status === 'done') keys = ['review', 'retake'];
   if (!keys.length) return '';
   const labels = { next: 'Sigue', visual: 'Muéstramelo', example: 'Otro ejemplo', confused: 'No lo entiendo', test: 'Ponme a prueba', review: 'Repasar lo que fallé', retake: 'Repetir el examen' };
   return '<div class="g-quick">' + keys.map((key) => '<button type="button" class="g-quick-btn' + (key === 'test' || key === 'retake' ? ' accent' : '') + '" data-g-quick="' + key + '">' + labels[key] + '</button>').join('') + '</div>';
 }
+
+/* ─── Practice, recall and earned progress ──────────────────────────── */
+function guidedSkillMarkup(question) {
+  const names = { recall: 'Comprender', apply: 'Aplicar', transfer: 'Transferir' };
+  return '<span class="g-skill">' + (names[question.skill] || names.recall) + (question.type === 'numeric' ? ' · Respuesta numérica' : '') + '</span>';
+}
+
+function guidedHintMarkup(quiz, question, index, mode) {
+  if (mode === 'exam' || !question.hint || quiz.submitted || quiz.superseded || quiz.answers[index] !== undefined) return '';
+  return quiz.hints?.[index]
+    ? '<div class="g-hint" role="status"><b>Pista</b> ' + gMath(question.hint) + '<small>La ayuda cuenta como práctica; comprobaremos después que puedes hacerlo solo.</small></div>'
+    : '<button type="button" class="g-hint-btn" data-g-hint="' + quiz.id + ':' + index + '">' + G_ICON.bulb + 'Una pista</button>';
+}
+
+function numericQuestionMarkup(quiz, question, index, mode) {
+  const chosen = quiz.answers[index];
+  const reveal = mode === 'check' ? chosen !== undefined : quiz.submitted;
+  const right = GuidedLearning.correct(question, chosen);
+  const unit = escapeHtml(question.unit || '');
+  const feedback = '<div class="g-q-sum"><strong class="' + (right ? 'right' : 'wrong') + '">' + (right ? 'Correcto' : 'Revisa el planteamiento') + '</strong> · Tu respuesta: ' + escapeHtml(String(chosen ?? '—')) + ' ' + unit +
+    (!right ? '. Resultado: ' + escapeHtml(String(question.answer)) + ' ' + unit : '') + '. ' + gMath(question.explanation || '') + '</div>';
+  if (reveal) return '<li data-motion-key="question:' + index + '" class="g-q compact ' + (right ? 'right' : 'wrong') + '"><span class="g-q-mark">' + (right ? G_ICON.check : G_ICON.cross) + '</span><div class="g-q-main"><div class="g-q-text">' + (index + 1) + '. ' + gMath(question.question) + '</div>' + feedback + '</div></li>';
+  const key = quiz.id + '-' + index;
+  const locked = quiz.superseded || appState.busy;
+  return '<li data-motion-key="question:' + index + '" class="g-q"><div class="g-q-num">' + (index + 1) + '</div><div class="g-q-main"><div class="g-q-text">' + gMath(question.question) + '</div>' + guidedSkillMarkup(question) +
+    '<p class="g-solve-cue">Plantea el método y comprueba las unidades antes de responder.</p>' +
+    '<form class="g-numeric" data-g-numeric="' + quiz.id + ':' + index + '"><label for="g-value-' + key + '">Tu resultado' + (unit ? ' en ' + unit : '') + '</label>' +
+    '<div class="g-numeric-row"><input id="g-value-' + key + '" name="answer" type="text" inputmode="text" autocomplete="off" maxlength="80" aria-describedby="g-number-note-' + key + ' g-number-error-' + key + '" placeholder="Ej. 1,25 o 1.25e3" value="' + escapeHtml(String(quiz.drafts?.[index] ?? chosen ?? '')) + '"' + (locked ? ' disabled' : '') + '>' +
+    '<button type="submit" class="g-primary"' + (locked ? ' disabled' : '') + '>' + (mode === 'exam' ? 'Guardar respuesta' : 'Comprobar') + '</button></div>' +
+    '<small id="g-number-note-' + key + '">Solo el número' + (unit ? '; unidad: ' + unit : '') + '. Margen: ±' + escapeHtml(String(question.tolerance)) + (unit ? ' ' + unit : '') + '.</small>' +
+    '<span class="g-number-error" id="g-number-error-' + key + '" role="alert"></span>' +
+    (chosen !== undefined ? '<small>Respuesta guardada. Puedes cambiarla antes de entregar.</small>' : '') + '</form>' + guidedHintMarkup(quiz, question, index, mode) + '</div></li>';
+}
+
+document.addEventListener('input', event => {
+  const form = event.target.closest('[data-g-numeric]');
+  if (!form || event.target.name !== 'answer') return;
+  const [id, index] = form.dataset.gNumeric.split(':');
+  const chat = getActiveChat();
+  const quiz = chat?.course?.quizzes[id];
+  if (!quiz || quiz.submitted || quiz.superseded || appState.busy) return;
+  (quiz.drafts ||= {})[index] = event.target.value;
+  form.querySelector('.g-number-error').textContent = '';
+  event.target.removeAttribute('aria-invalid');
+  touchCourse(chat.course); chat.updatedAt = nowIso(); saveState();
+});
+
+document.addEventListener('submit', event => {
+  const form = event.target.closest('[data-g-numeric]');
+  if (!form) return;
+  event.preventDefault();
+  const [id, index] = form.dataset.gNumeric.split(':');
+  const chat = getActiveChat();
+  const course = courseOf(chat);
+  const quiz = course?.quizzes[id];
+  if (!quiz || quiz.submitted || quiz.superseded || appState.busy || (quiz.kind !== 'exam' && quiz.answers[index] !== undefined)) return;
+  const question = quiz.questions[index];
+  if (question?.type !== 'numeric') return;
+  const input = form.elements.answer;
+  const value = GuidedLearning.number(input.value);
+  if (value === null) {
+    input.setAttribute('aria-invalid', 'true');
+    form.querySelector('.g-number-error').textContent = 'Escribe un número, por ejemplo 1,25 o 1.25e3. La unidad ya está indicada.';
+    input.focus(); return;
+  }
+  quiz.answers[index] = value;
+  if (quiz.kind !== 'exam') haptic(GuidedLearning.correct(question, value) ? 'success' : 'error');
+  touchCourse(course); chat.updatedAt = nowIso(); saveState(); rerenderGuidedCard(chat, id);
+});
+
+function startGuidedReview(chat, extra) {
+  const course = courseOf(chat);
+  if (appState.busy || pendingQuiz(course, 'check') || pendingQuiz(course, 'exam')) return;
+  const pending = pendingQuiz(course, 'review');
+  if (pending) { document.querySelector('[data-g-quiz="' + pending.id + '"]')?.scrollIntoView({ block: 'center' }); return; }
+  const questions = GuidedLearning.reviewQuestions(course, Date.now(), extra);
+  if (!questions.length) return;
+  balanceAnswerPositions(questions);
+  const id = uid('review');
+  course.quizzes[id] = { id, kind: 'review', focus: true, lessonId: '', questions, answers: {}, submitted: false, createdAt: nowIso() };
+  const message = createMessage('assistant', '', false);
+  message.guidedCards = [{ type: 'quiz', quizId: id }];
+  message.kind = 'retrieval';
+  chat.messages.push(message);
+  touchCourse(course); chat.updatedAt = nowIso(); saveState();
+  renderThread(); syncGuidedBannerSlot(chat); scrollThreadToBottom();
+}
+
+function submitGuidedReview(chat, id) {
+  const course = courseOf(chat);
+  const quiz = course.quizzes[id];
+  if (appState.busy || !quiz || quiz.kind !== 'review' || quiz.submitted || quiz.superseded || quiz.questions.some((_, index) => quiz.answers[index] === undefined)) return;
+  quiz.submitted = true;
+  quiz.score = gradeQuiz(quiz).percent;
+  GuidedLearning.settle(course, quiz);
+  touchCourse(course); chat.updatedAt = nowIso(); saveState();
+  renderThread({ preserveScroll: true }); syncGuidedBannerSlot(chat);
+}
+
+function guidedGoalMarkup(course) {
+  const goal = GuidedLearning.state(course).goal;
+  return '<div class="g-goal-picker"><span>Objetivo diario en este curso</span><div class="g-pills">' + [3, 6, 10].map(value =>
+    '<button type="button" class="g-pill' + (goal === value ? ' active' : '') + '" data-g-goal="' + value + '" aria-pressed="' + (goal === value) + '"' + (appState.busy ? ' disabled' : '') + '>' + value + ' ejercicios</button>').join('') + '</div></div>';
+}
+
+function guidedRewardMarkup(course, quiz) {
+  if (!quiz.reward) return '';
+  const summary = GuidedLearning.summary(course);
+  const today = quiz.reward.day === GuidedLearning.dayKey();
+  return '<div class="g-earned" role="status"><b>+' + quiz.reward.xp + ' XP</b><span>' + (quiz.kind === 'review' ? 'Repaso guardado' : 'Práctica guardada') + ' · ' + (today ? Math.min(summary.today, summary.goal) + '/' + summary.goal + ' hoy' : escapeHtml(new Date(quiz.reward.at).toLocaleDateString('es-ES'))) + '</span>' +
+    '<small>' + (today && summary.today >= summary.goal ? 'Objetivo cumplido. Buen momento para una pausa; puedes seguir cuando quieras.' : 'Cada intento con feedback cuenta. Las pistas te ayudan a construir la base.') + '</small></div>';
+}
+
+function guidedDailyRing(summary) {
+  const percent = Math.min(1, summary.today / summary.goal);
+  return '<svg class="g-daily-ring" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="var(--border-strong)" stroke-width="3"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" pathLength="100" stroke-dasharray="' + Math.round(percent * 100) + ' 100" transform="rotate(-90 12 12)"/>' + (percent === 1 ? '<path d="m8 12 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2"/>' : '') + '</svg>';
+}
+
+function guidedMissionMarkup(course, chat, open) {
+  const summary = GuidedLearning.summary(course);
+  const lesson = currentLesson(course);
+  const quiz = pendingQuiz(course, 'check') || pendingQuiz(course, 'exam') || pendingQuiz(course, 'review');
+  const step = quiz ? 2 : lesson?.turns >= 2 ? 1 : 0;
+  const label = course.status === 'ready' ? 'Tu próxima misión' : course.status === 'done' ? 'Mantén lo que has aprendido' : course.status === 'exam' ? 'Conecta todo lo aprendido' : 'Lección ' + (lesson?.id.slice(1) || '') + ' · ' + (lesson?.title || 'En marcha');
+  const reviewDisabled = appState.busy || pendingQuiz(course, 'check') || pendingQuiz(course, 'exam');
+  const next = summary.next ? new Date(summary.next).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '';
+  return '<div class="g-mission"><div class="g-mission-top"><span class="g-mission-title">' + escapeHtml(label) + '</span><button type="button" class="g-pager-plan" data-g-toggle-map aria-expanded="' + open + '">' + (open ? 'Cerrar ruta' : 'Ver ruta') + '</button></div>' +
+    '<div class="g-mission-stats"><span class="g-xp" title="Progreso de práctica en este curso">' + G_ICON.bulb + '<b>' + summary.xp + ' XP</b><span> · Nivel ' + summary.level + '</span></span>' +
+    '<span class="g-daily" title="Ejercicios corregidos hoy en este curso; máximo 4 por concepto">' + guidedDailyRing(summary) + Math.min(summary.today, summary.goal) + '/' + summary.goal + ' hoy</span>' +
+    (summary.practiced ? '<button type="button" class="g-review-btn" data-g-review="' + (summary.due ? 'due' : 'extra') + '"' + (reviewDisabled ? ' disabled' : '') + ' title="' + (summary.due ? 'Recuperar conceptos pendientes de repaso' : 'Práctica extra. Próximo repaso: ' + next) + '">' + (summary.due ? 'Repasar · ' + summary.due : 'Practicar') + '</button>' : '') + '</div>' +
+    (course.status === 'learning' ? '<ol class="g-cycle" aria-label="Ciclo de la lección">' + ['Entender', 'Aplicar', 'Comprobar'].map((name, index) => '<li class="' + (index < step ? 'done' : index === step ? 'active' : '') + '"' + (index === step ? ' aria-current="step"' : '') + '><span>' + (index < step ? G_ICON.check : index + 1) + '</span>' + name + '</li>').join('') + '</ol>' : '') +
+    (course.status === 'done' && next && !summary.due ? '<p class="g-next-review">Próximo repaso: ' + escapeHtml(next) + '. Practicar hoy no retrasa esa cita.</p>' : '') + '</div>';
+}
+
+// Recompute day/due indicators when returning after a break, without a polling timer.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && typeof getActiveChat === 'function') syncGuidedBannerSlot(getActiveChat());
+});

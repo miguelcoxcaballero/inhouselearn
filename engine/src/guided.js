@@ -6,8 +6,14 @@ import { Type } from '@earendil-works/pi-ai';
 
 const question = (extra) => Type.Object(Object.assign({
   question: Type.String({ description: 'The question. Markdown and LaTeX (\\( … \\)) allowed. No answer options here.' }),
-  options: Type.Array(Type.String(), { minItems: 2, maxItems: 5, description: 'The answer options (2–5), plain text without letters or numbers in front. The app shuffles them, so order does not matter. Every wrong option must be as long, specific and plausible as the right one (a typical mistake or misconception); the right one must not stand out by length, detail or wording. Avoid "all/none of the above".' }),
-  correct: Type.Integer({ minimum: 0, maximum: 4, description: 'Index of the correct option in the list you wrote, starting at 0.' }),
+  options: Type.Optional(Type.Array(Type.String(), { minItems: 2, maxItems: 5, description: 'The answer options (2–5), plain text without letters or numbers in front. The app shuffles them, so order does not matter. Every wrong option must be as long, specific and plausible as the right one (a typical mistake or misconception); the right one must not stand out by length, detail or wording. Avoid "all/none of the above".' })),
+  correct: Type.Optional(Type.Integer({ minimum: 0, maximum: 4, description: 'Index of the correct option in the list you wrote, starting at 0.' })),
+  type: Type.Optional(Type.Union([Type.Literal('choice'), Type.Literal('numeric')], { description: 'Default choice. Use numeric for calculations: the learner enters a number, not an option.' })),
+  answer: Type.Optional(Type.Number({ description: 'Correct finite numeric value in the requested unit; recompute it before emitting. Numeric questions only.' })),
+  tolerance: Type.Optional(Type.Number({ minimum: 0, description: 'Absolute allowed error in that unit, reflecting the requested rounding. Required for numeric; 0 means exact.' })),
+  unit: Type.Optional(Type.String({ description: 'Required answer unit (e.g. N or m/s). State it in the prompt; empty for dimensionless quantities. The learner enters only a number.' })),
+  hint: Type.Optional(Type.String({ description: 'A strategy cue or missing first step; do not give the result. Available on request in practice, not exams.' })),
+  skill: Type.Optional(Type.Union([Type.Literal('recall'), Type.Literal('apply'), Type.Literal('transfer')], { description: 'The thinking this question checks; transfer changes the context or assumptions.' })),
   explanation: Type.String({ description: 'Why the correct option is right, in 1–3 short sentences, without mentioning letters or positions (options are reordered). Shown after answering.' })
 }, extra || {}));
 
@@ -41,7 +47,7 @@ export function createGuidedTools(handlers) {
     {
       name: 'quiz',
       label: 'Mini test',
-      description: 'Show a short multiple-choice quiz (3–4 questions) that checks the CURRENT lesson. The app grades it and sends you the result in the student\'s next message. After calling it, stop: at most one short sentence.',
+      description: 'Show a short mixed quiz (3–4 questions, choice or numeric) that checks the CURRENT lesson: understanding, independent application, and transfer. For numeric questions, omit options/correct and include answer, unit, and absolute tolerance. The app grades it and sends you the result in the student\'s next message. After calling it, stop: at most one short sentence.',
       parameters: Type.Object({
         questions: Type.Array(question(), { minItems: 2, maxItems: 6 })
       }),

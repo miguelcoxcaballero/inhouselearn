@@ -65,6 +65,21 @@ El botón del birrete convierte el chat en un curso. La lógica la lleva la app 
 
 Cada petición manda al modelo el estado del curso y una única tarea concreta («enseña L3», «llama a `final_exam` ahora»), así que no se pierde ni se olvida el examen. Si se salta un paso, la app se lo recuerda con un aviso oculto y lo vuelve a pedir. Todo (plan, notas, respuestas) se guarda con el chat y se sincroniza en Drive.
 
+La ruta distingue **entender → aplicar → comprobar**. Los mini tests nuevos muestran un reto
+cada vez, con opción múltiple o respuesta numérica (coma decimal, notación científica,
+unidad explícita y tolerancia). Las pistas ayudan a elegir una estrategia; el examen no
+las muestra y permite cambiar las respuestas antes de entregar.
+
+El botón **Repasar** recupera conceptos pendientes, alterna lecciones y prioriza errores;
+funciona localmente, conserva el punto del curso y no necesita llamar al modelo. Los repasos
+se espacian a 1, 3, 7, 14 y 30 días según los resultados; un error vuelve antes. Practicar
+antes de tiempo no aplaza el repaso pendiente. La ruta distingue comprensión inicial de
+recuerdo comprobado. La misión muestra XP, nivel y un objetivo diario de 3, 6 o 10 ejercicios
+por curso; hay límites por concepto para que repetir no infle el progreso. No hay vidas,
+penalizaciones por ausentarse ni recompensas por acumular tiempo.
+
+Fundamento, límites y pruebas: [diseño del aprendizaje guiado](docs/guided-learning.md).
+
 ## Vistas visuales e interactivas en el chat
 
 El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el aprendizaje guiado, «Muéstramelo» (debajo de la última respuesta) pide una vista; en el chat normal no hay botón: basta con pedírsela.

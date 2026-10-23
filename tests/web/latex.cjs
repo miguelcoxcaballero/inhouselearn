@@ -33,16 +33,22 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   ];
   await page.evaluate((qs) => window.__replies.push({ text: 'Test.', tools: [{ name: 'quiz', args: { questions: qs } }] }, { text: 'Suerte.' }), questions);
   await page.click('[data-g-quick="test"]'); await idle(page);
-  const quiz = await page.evaluate(() => {
-    const items = [...document.querySelectorAll('.g-q')];
-    return items.map((q) => ({
+  const quiz = [];
+  // Focused quizzes reveal one question at a time. Inspect each actual question
+  // before answering so all formulas and plain-number options remain covered.
+  for (let index = 0; index < questions.length; index++) {
+    quiz.push(await page.evaluate(() => {
+      const q = document.querySelector('.g-q:not(.compact)');
+      return {
       q: q.querySelector('.g-q-text').querySelectorAll('.katex').length,
       math: [...q.querySelectorAll('.g-opt-text')].map((o) => (o.querySelector('.katex') ? 'K' : o.textContent.trim())).sort().join(' ')
+      };
     }));
-  });
+    if (index === 0) await page.locator('.g-q').first().screenshot({ path: SCRATCH + '/latex-quiz.png' });
+    await page.locator('.g-q:not(.compact) [data-g-answer]').first().click();
+  }
   check('quiz: questions and formula options drawn by KaTeX, plain numbers stay text', quiz.length === 4 && quiz.every((q) => q.q >= 1) &&
     quiz[0].math === 'K K K K' && quiz[1].math.split(' ').every((m) => /^\d+$/.test(m)) && quiz[2].math === 'K K K K' && quiz[3].math === 'K K K K', quiz);
-  await page.locator('.g-q').first().screenshot({ path: SCRATCH + '/latex-quiz.png' });
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

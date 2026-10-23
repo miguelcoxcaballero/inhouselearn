@@ -5,6 +5,9 @@ const SCRATCH = process.env.OUT || require('os').tmpdir();
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:8765/index.html';
 
 function initScript() {
+  // Mock the app's provider only. Sandboxed visuals deliberately remove fetch;
+  // Playwright also injects init scripts there, sometimes after their shim.
+  if (window !== window.top) return;
   try {
     localStorage.setItem('inhouseGeminiStandaloneV1::openrouterSettings', JSON.stringify({ apiKey: 'sk-or-test', updatedAt: new Date().toISOString() }));
   } catch (_) {}

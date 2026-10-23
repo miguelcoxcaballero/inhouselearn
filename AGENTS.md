@@ -35,6 +35,13 @@ Mandatory guidance for every AI and developer working in this repository.
   model only teaches and calls `set_course_plan`, `quiz` and `final_exam`, defined in
   `engine/src/guided.js`; rebuild `vendor/pi-engine.js` after changing the engine). Keep the
   model's task in `courseTaskText()` explicit, and never let the model own course state.
+  `learning.js` owns deterministic numeric grading, per-concept/day XP limits and spaced
+  retrieval evidence; `guided.js` owns the interface and local review rounds. Keep `course.v=2`
+  backwards compatible; old quizzes remain valid and receive no invented historical XP.
+  Reviews preserve the current lesson and need no model request. A hint never counts as an
+  independent recall. Numeric questions require a finite answer and an absolute tolerance in
+  the requested unit; never evaluate learner input as code. `tests/web/learning.mjs` and
+  `guided-learning.cjs` cover this flow. Pedagogical rationale: `docs/guided-learning.md`.
   `scene.js` adds the animated `scene` (declarative) and `sandbox` (iframe with
   `sandbox="allow-scripts"` only and a CSP with `default-src 'none'`; never add
   `allow-same-origin`, never relax the CSP) types; schema in `docs/visual-schema.json`, tests
