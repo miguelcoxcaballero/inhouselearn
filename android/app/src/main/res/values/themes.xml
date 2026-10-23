@@ -4,7 +4,8 @@
         <item name="android:windowBackground">@color/app_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">@bool/light_status_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/light_status_bars</item>
     </style>
 
     <!-- The bulb on the web's background while the page loads. -->
@@ -19,6 +20,6 @@
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:backgroundDimEnabled">false</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">@bool/light_status_bars</item>
     </style>
 </resources>

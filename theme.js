@@ -31,6 +31,16 @@
     return systemDark() ? 'dark' : 'light';
   }
 
+  // La app Android (MainActivity) viste las barras del sistema con este mismo
+  // tema: se lo decimos por el puente InhouseLearnApp. En el navegador no existe
+  // y no pasa nada.
+  function tellShell(dark) {
+    try {
+      var shell = window.InhouseLearnApp;
+      if (shell && typeof shell.postMessage === 'function') shell.postMessage(JSON.stringify({ type: 'theme', dark: dark }));
+    } catch (error) {}
+  }
+
   function syncControls() {
     var buttons = document.querySelectorAll('[data-theme-pref]');
     for (var i = 0; i < buttons.length; i++) {
@@ -51,6 +61,7 @@
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', META[next]);
     syncControls();
+    tellShell(next === 'dark');
     if (!changed || !announce) return;
     root.classList.add('theme-switching');
     window.setTimeout(function () { root.classList.remove('theme-switching'); }, 320);
@@ -117,7 +128,12 @@
     syncControls();
   }
 
-  function boot() { mountControl(); syncControls(); }
+  function boot() {
+    mountControl();
+    syncControls();
+    // El puente de la app ya existe cuando la página arranca: repintar sus barras.
+    tellShell(resolve(pref) === 'dark');
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 

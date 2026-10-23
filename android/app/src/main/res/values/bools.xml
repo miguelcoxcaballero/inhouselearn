@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Iconos oscuros en las barras del sistema mientras el sistema esté en claro;
+         values-night/bools.xml lo pone en false (iconos claros sobre negro). -->
+    <bool name="light_status_bars">true</bool>
+</resources>

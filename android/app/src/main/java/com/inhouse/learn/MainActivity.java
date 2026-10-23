@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -81,6 +82,7 @@ public class MainActivity extends ComponentActivity {
     static final long SPLASH_MAX_MS = 2500;
 
     private WebView webView;
+    private FrameLayout root;
     private boolean pageReady;
     private boolean offlineRetry;
     private long createdAt;
@@ -149,7 +151,7 @@ public class MainActivity extends ComponentActivity {
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
 
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackgroundColor(background);
         webView = new WebView(this);
         webView.setBackgroundColor(background);
@@ -157,12 +159,11 @@ public class MainActivity extends ComponentActivity {
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
 
-        // Edge to edge: dark icons on the web's light background, and the page
-        // laid out between the system bars and above the keyboard, so the
-        // message box is never hidden while typing.
-        WindowInsetsControllerCompat systemBars = WindowCompat.getInsetsController(getWindow(), root);
-        systemBars.setAppearanceLightStatusBars(true);
-        systemBars.setAppearanceLightNavigationBars(true);
+        // Edge to edge: the bar icons and the colour behind the system bars follow
+        // the theme the page is showing (it tells us with a `theme` message; until
+        // then, Android's own night mode), and the page is laid out between the
+        // system bars and above the keyboard, so the message box is never hidden.
+        applyThemeColors(systemNight());
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
@@ -229,6 +230,26 @@ public class MainActivity extends ComponentActivity {
         webView.setDownloadListener((url, userAgent, disposition, mime, length) -> openExternal(Uri.parse(url)));
     }
 
+    // --- Tema (claro / noche AMOLED) -----------------------------------------
+    // The page owns the theme (theme.js: Auto / Claro / Oscuro). It tells the
+    // shell on every change, and the shell only dresses the window: bar icons and
+    // the colour behind the bars and the keyboard. Never the other way round.
+
+    /** True while Android itself is in night mode (what «Auto» follows). */
+    private boolean systemNight() {
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    private void applyThemeColors(boolean dark) {
+        int background = dark ? Color.BLACK : ContextCompat.getColor(this, R.color.app_background);
+        WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        bars.setAppearanceLightStatusBars(!dark);
+        bars.setAppearanceLightNavigationBars(!dark);
+        if (root != null) root.setBackgroundColor(background);
+        if (webView != null) webView.setBackgroundColor(background);
+    }
+
     private void onWebMessage(String data) {
         try {
             JSONObject message = new JSONObject(data);
@@ -254,6 +275,10 @@ public class MainActivity extends ComponentActivity {
                     break;
                 case "haptic":
                     haptic(message.optString("style"));
+                    break;
+                case "theme":
+                    // theme.js: la web dice si está en claro o en noche AMOLED.
+                    applyThemeColors(message.optBoolean("dark", systemNight()));
                     break;
                 default:
                     break;

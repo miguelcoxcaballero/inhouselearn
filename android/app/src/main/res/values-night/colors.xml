@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modo noche AMOLED: el negro puro de la web (--bg en theme.css), detrás de
+         las barras del sistema y en el fondo de la pantalla de inicio. -->
+    <color name="app_background">#000000</color>
+</resources>

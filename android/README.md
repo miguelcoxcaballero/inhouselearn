@@ -9,6 +9,11 @@ https://miguelcoxcaballero.github.io/inhouselearn/. Cada cambio en `index.html` 
 - WebView a pantalla completa, de borde a borde, con la web colocada entre las barras del
   sistema y por encima del teclado (el cuadro de mensaje nunca queda tapado).
 - Pantalla de inicio con la bombilla hasta que la web ha pintado (máximo 2,5 s).
+- Modo noche de verdad (desde 1.0.4): el tema lo elige la web (Auto / Claro / Oscuro
+  AMOLED) y la app solo lo viste: iconos claros en las barras y negro puro de fondo
+  cuando la página está en oscuro, y al revés en claro. Mientras no hay página mandan
+  los recursos: `values-night/colors.xml` (`app_background` = `#000`) y
+  `values*/bools.xml` (`light_status_bars`).
 - Puente `window.InhouseLearnApp` solo para el origen `https://miguelcoxcaballero.github.io`
   y el marco principal (`WebMessageListener`, nunca `addJavascriptInterface`). Mensajes:
   - `signIn`: abre el inicio de sesión de Google en una Chrome Custom Tab (Google no
@@ -16,6 +21,9 @@ https://miguelcoxcaballero.github.io/inhouselearn/. Cada cambio en `index.html` 
   - `save`: descargas (ZIP de archivos, exportaciones) con el diálogo «Guardar como» de Android.
   - `open`: enlaces externos en una Custom Tab o en su app.
   - `updates`: abre los ajustes del actualizador (menú de perfil → «Actualizaciones»).
+   - `theme`: `{dark: true|false}`, el tema que está enseñando la web (`theme.js`). La app
+     pinta con eso los iconos de las barras del sistema y el color de detrás (negro puro
+     en noche AMOLED). Quien decide el tema es siempre la web, nunca la app.
 - Botón Atrás: primero cierra lo que tenga abierto la web (diálogos, menús, barra lateral).
 - Sin conexión: usa la copia en caché y, si no hay, una pantalla «Sin conexión» con «Reintentar».
 - Selector de archivos para adjuntos (varios a la vez).
