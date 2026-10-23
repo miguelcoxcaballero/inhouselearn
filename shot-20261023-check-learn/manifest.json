@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261023-check-learn",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "",
+  "at": "2026-10-23T22:30:18.375Z",
+  "shots": [
+    {
+      "name": "Inhouse Learn, menú oscuro",
+      "file": "1-inhouse-learn-menu-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
