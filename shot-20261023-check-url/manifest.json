@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261023-check-url",
+  "target": "https://example.com/",
+  "ref": "",
+  "at": "2026-10-23T22:31:39.695Z",
+  "shots": [
+    {
+      "name": "Una web pública",
+      "file": "1-una-web-publica.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
