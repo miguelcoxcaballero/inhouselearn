@@ -1,0 +1,364 @@
+/* Modo noche de inhouse learn (theme.js) */
+/* ─── Se carga la última: manda sobre index.html y el resto de hojas. ───
+   El modo claro es exactamente el de siempre. Todo cuelga de
+   html[data-theme="dark"], salvo el control del menú «+», que se ve igual
+   en los dos temas. El orden: control, tokens, botones «tinta», tintes
+   negros escritos a mano, superficies fijas, estados verde/rojo/ámbar, el
+   naranja de marca como texto, gráficas y escenas, y barras de scroll. */
+
+/* 1. Control «Modo noche» del menú «+» (theme.js) */
+.plus-theme { margin-top: 4px; padding: 8px 8px 6px; border-top: 1px solid var(--border); }
+.plus-theme-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.plus-theme-icon {
+  width: 30px; height: 30px; padding: 6px; flex-shrink: 0; box-sizing: border-box;
+  border-radius: 8px; background: var(--surface-hover); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center; color: var(--text-secondary);
+}
+.plus-theme-icon svg { width: 18px; height: 18px; display: block; }
+.plus-theme-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; font-size: 0.9rem; font-weight: 600; }
+.plus-theme-title small { font-size: 0.72rem; font-weight: 400; color: var(--muted); }
+
+.plus-theme-options {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px;
+  border-radius: 12px; background: rgba(0,0,0,0.045);
+}
+.plus-theme-option {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 34px; padding: 0 6px;
+  border: 0; border-radius: 9px; background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.plus-theme-option:hover { color: var(--text); }
+.plus-theme-option[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.plus-theme-option:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+@media (max-width: 380px) { .plus-theme-option { font-size: 0.72rem; } }
+
+/* 2. Tokens del tema oscuro: los mismos nombres que :root en index.html.
+      Negro puro (AMOLED): el fondo es #000 y las superficies son solo un
+      pelín más claras, para que el panel de píxeles apagados no gaste. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #0d0d0c;
+  --surface-hover: #171715;
+  --border: rgba(255,255,255,0.1);
+  --border-strong: rgba(255,255,255,0.17);
+  --text: #ece9e2;
+  --text-secondary: #bab5aa;
+  --muted: #8d887c;
+  --ink-3: #a09a8d;
+  --orange-soft: rgba(224,122,60,0.14);
+  --orange-border: rgba(224,122,60,0.3);
+  --orange-glow: rgba(224,122,60,0.22);
+  --green: #34d399;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.45);
+  --shadow: 0 2px 12px rgba(0,0,0,0.5);
+  --shadow-lg: 0 10px 34px rgba(0,0,0,0.62);
+  /* «Tinta»: el negro de los botones sólidos, invertido */
+  --ink-solid: #e9e5dc;
+  --on-ink-solid: #16140f;
+}
+html[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+
+/* 3. Botones «tinta» (fondo = color del texto): en oscuro se invierten,
+      porque si no quedaría texto blanco sobre blanco. */
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .send-btn,
+html[data-theme="dark"] .send-btn[disabled],
+html[data-theme="dark"] .send-btn.busy,
+html[data-theme="dark"] .chats-btn[aria-expanded="true"],
+html[data-theme="dark"] .plus-btn[aria-expanded="true"],
+html[data-theme="dark"] .plus-item.github-btn.active > svg,
+html[data-theme="dark"] .confirm-btn.primary,
+html[data-theme="dark"] .g-start,
+html[data-theme="dark"] .g-primary,
+html[data-theme="dark"] .g-pill.active,
+html[data-theme="dark"] .g-quick-btn[data-g-quick="next"],
+html[data-theme="dark"] .g-quick-btn[data-g-quick="review"],
+html[data-theme="dark"] .dock-btn.primary {
+  background: var(--ink-solid);
+  border-color: var(--ink-solid);
+  color: var(--on-ink-solid);
+}
+html[data-theme="dark"] .g-pill.active small { color: rgba(22,20,15,0.72); }
+html[data-theme="dark"] .btn-primary:hover,
+html[data-theme="dark"] .send-btn:hover:not([disabled]),
+html[data-theme="dark"] .g-primary:hover:not(:disabled),
+html[data-theme="dark"] .g-start:hover,
+html[data-theme="dark"] .g-quick-btn[data-g-quick="next"]:hover,
+html[data-theme="dark"] .g-quick-btn[data-g-quick="review"]:hover,
+html[data-theme="dark"] .dock-btn.primary:hover {
+  background: #d3cec2; border-color: #d3cec2; color: var(--on-ink-solid);
+}
+/* Las ranuras que usaban --text como relleno (interruptores, pasos) */
+html[data-theme="dark"] .plus-item.github-btn.active .plus-switch { background: var(--ink-solid); }
+
+/* 4. Los tintes negros escritos a mano (hover, campos hundidos, pastillas)
+      desaparecen sobre fondo oscuro: pasan a ser tintes blancos. */
+html[data-theme="dark"] .hamburger:hover,
+html[data-theme="dark"] .model-trigger:hover,
+html[data-theme="dark"] .model-trigger[aria-expanded="true"],
+html[data-theme="dark"] .model-search input,
+html[data-theme="dark"] .company-chip:hover,
+html[data-theme="dark"] .model-card:hover,
+html[data-theme="dark"] .thinking-pill:hover:not(.active),
+html[data-theme="dark"] .btn-secondary,
+html[data-theme="dark"] .btn-icon:hover,
+html[data-theme="dark"] .profile-menu-actions .btn:hover,
+html[data-theme="dark"] .chat-row:hover,
+html[data-theme="dark"] .chat-pin:hover,
+html[data-theme="dark"] .chat-rename-input,
+html[data-theme="dark"] .message-badge,
+html[data-theme="dark"] .message-badge.assistant,
+html[data-theme="dark"] .bubble .tool-step pre.tool-step-output,
+html[data-theme="dark"] .bubble :not(pre) > code,
+html[data-theme="dark"] .latex-bar-btn:hover,
+html[data-theme="dark"] .latex-preview .ltx-theorem,
+html[data-theme="dark"] .latex-preview .ltx-proof,
+html[data-theme="dark"] .latex-preview .ltx-pre,
+html[data-theme="dark"] .bubble th,
+html[data-theme="dark"] .attachment-pill,
+html[data-theme="dark"] .composer-attachment button:hover,
+html[data-theme="dark"] .attach-btn:hover,
+html[data-theme="dark"] .guided-btn:hover,
+html[data-theme="dark"] .plus-btn:hover,
+html[data-theme="dark"] .plus-item:hover,
+html[data-theme="dark"] .plus-item:focus-visible,
+html[data-theme="dark"] .plus-item.github-btn.active,
+html[data-theme="dark"] .plus-approval-options,
+html[data-theme="dark"] .plus-theme-options,
+html[data-theme="dark"] .sidebar-close:hover,
+html[data-theme="dark"] .sidebar-account .profile-btn:hover,
+html[data-theme="dark"] .msg-action-btn:hover,
+html[data-theme="dark"] .msg-nav-btn:hover,
+html[data-theme="dark"] .confirm-btn:hover,
+html[data-theme="dark"] .dock-icon-btn:hover,
+html[data-theme="dark"] .usage-key-form input,
+html[data-theme="dark"] .api-input,
+html[data-theme="dark"] .filter-toggle,
+html[data-theme="dark"] .filter-chip,
+html[data-theme="dark"] .filter-sort-option:hover,
+html[data-theme="dark"] .g-pill:hover,
+html[data-theme="dark"] .g-map-name em.muted,
+html[data-theme="dark"] .g-q-num,
+html[data-theme="dark"] .g-route-objs,
+html[data-theme="dark"] .viz-step-num,
+html[data-theme="dark"] .viz-check-key,
+html[data-theme="dark"] .viz-fallback,
+html[data-theme="dark"] .px-pool,
+html[data-theme="dark"] .px-pos {
+  background: rgba(255,255,255,0.06);
+}
+
+/* 4b. Lo que en claro era un hundido más marcado (0.06–0.08) */
+html[data-theme="dark"] .model-search input:focus,
+html[data-theme="dark"] .company-chip.active,
+html[data-theme="dark"] .thinking-pill.active,
+html[data-theme="dark"] .btn-secondary:hover,
+html[data-theme="dark"] .chat-delete:hover,
+html[data-theme="dark"] .chat-rename-input:focus,
+html[data-theme="dark"] .attachment-pill:hover,
+html[data-theme="dark"] .attachment-pill[data-has-preview]:hover,
+html[data-theme="dark"] .usage-key-form input:focus,
+html[data-theme="dark"] .api-input:focus,
+html[data-theme="dark"] .filter-toggle:hover,
+html[data-theme="dark"] .filter-toggle.open,
+html[data-theme="dark"] .filter-chip:hover,
+html[data-theme="dark"] .filter-sort-option.active,
+html[data-theme="dark"] .plus-theme-option[aria-checked="true"] {
+  background: rgba(255,255,255,0.11);
+}
+
+/* 4c. Pistas e hilos de interruptores (0.1–0.16) y bordes al pasar por encima */
+html[data-theme="dark"] .plus-switch,
+html[data-theme="dark"] .scene-switch,
+html[data-theme="dark"] .haptics-track,
+html[data-theme="dark"] .g-seg,
+html[data-theme="dark"] .g-qdot,
+html[data-theme="dark"] .g-exam-progress,
+html[data-theme="dark"] .g-break-bar,
+html[data-theme="dark"] .viz-dots > i { background-color: rgba(255,255,255,0.16); }
+html[data-theme="dark"] .g-dot { border-color: rgba(255,255,255,0.24); }
+html[data-theme="dark"] .g-dot.current { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 9px var(--orange); }
+html[data-theme="dark"] .g-bookbar:hover .g-seg:not(.done):not(.current) { background-color: rgba(255,255,255,0.26); }
+html[data-theme="dark"] .g-seg.current { background-image: linear-gradient(90deg, var(--orange) 0 50%, rgba(255,255,255,0.16) 50%); }
+html[data-theme="dark"] .chats-btn:hover,
+html[data-theme="dark"] .g-quick-btn:hover,
+html[data-theme="dark"] .g-page-btn:hover,
+html[data-theme="dark"] .g-secondary:hover,
+html[data-theme="dark"] .viz-btn.ghost:hover { border-color: rgba(255,255,255,0.28); }
+html[data-theme="dark"] .g-leader { border-bottom-color: rgba(255,255,255,0.3); }
+
+/* 5. Superficies con color fijo (AMOLED: lo mínimo por encima del negro) */
+html[data-theme="dark"] .message.user-msg .bubble { background: #1c1c1a; }
+html[data-theme="dark"] .bubble pre,
+html[data-theme="dark"] .preview-body pre {
+  background: #000000; color: #e7e3d9; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+html[data-theme="dark"] .auth-gate { background: rgba(0,0,0,0.86); }
+html[data-theme="dark"] .auth-gate-card { background: #0e0e0d; }
+html[data-theme="dark"] .composer-shell.drag-active::after { background: rgba(0,0,0,0.88); }
+html[data-theme="dark"] .sidebar-overlay { background: rgba(0,0,0,0.55); }
+html[data-theme="dark"] .sidebar.open { box-shadow: 0 0 60px rgba(0,0,0,0.55); }
+html[data-theme="dark"] .g-plan-hero { background: none; }
+html[data-theme="dark"] .g-stat { background: var(--surface); }
+html[data-theme="dark"] .viz-mini { background: rgba(10,10,9,0.92); }
+html[data-theme="dark"] .viz-wait {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(224,122,60,0.12), rgba(255,255,255,0.02));
+  background-size: 200% 100%;
+}
+html[data-theme="dark"] .iq-range::-webkit-slider-thumb {
+  background: var(--ink-solid); border-color: var(--on-ink-solid);
+}
+html[data-theme="dark"] .iq-range::-moz-range-thumb { background: var(--ink-solid); border-color: var(--on-ink-solid); }
+html[data-theme="dark"] .model-price-out { border-bottom-color: rgba(255,255,255,0.2); }
+html[data-theme="dark"] .model-gauge-num { color: var(--text-secondary); }
+
+/* 6. Estados: fondo pastel + texto oscuro se lee mal en oscuro, así que
+      pasan a un tinte del mismo color con texto claro. */
+html[data-theme="dark"] .g-opt.correct,
+html[data-theme="dark"] .viz-check-opt.correct,
+html[data-theme="dark"] .px-row.right .px-text,
+html[data-theme="dark"] .px-chip.right,
+html[data-theme="dark"] .px-blank.right,
+html[data-theme="dark"] .viz-step-result,
+html[data-theme="dark"] .scene-chip,
+html[data-theme="dark"] .solved .px-done,
+html[data-theme="dark"] .g-result-chip.pass,
+html[data-theme="dark"] .g-pass-chip.pass,
+html[data-theme="dark"] .g-q.right .g-q-num {
+  background: rgba(34,197,94,0.15);
+  border-color: rgba(34,197,94,0.4);
+  color: #96e7b2;
+}
+
+html[data-theme="dark"] .g-opt.wrong,
+html[data-theme="dark"] .viz-check-opt.wrong,
+html[data-theme="dark"] .px-row.wrong .px-text,
+html[data-theme="dark"] .px-chip.wrong,
+html[data-theme="dark"] .px-item.wrong,
+html[data-theme="dark"] .px-chip.wrong-flash,
+html[data-theme="dark"] .px-blank.wrong,
+html[data-theme="dark"] .g-q.wrong .g-q-num,
+html[data-theme="dark"] .g-break-name em {
+  background: rgba(239,68,68,0.15);
+  border-color: rgba(239,68,68,0.42);
+  color: #f8a9a4;
+}
+html[data-theme="dark"] .g-stat.exam,
+html[data-theme="dark"] .g-node.exam,
+html[data-theme="dark"] .g-exam-icon,
+html[data-theme="dark"] .viz-btn.warn,
+html[data-theme="dark"] .g-result-chip.fail {
+  background: rgba(245,158,11,0.16);
+  border-color: rgba(245,158,11,0.36);
+  color: #f3c76f;
+}
+
+/* 6b. Y los textos de estado, aclarados para que se lean sobre el tinte */
+html[data-theme="dark"] .g-map-row.done .g-map-num,
+html[data-theme="dark"] .g-node.done,
+html[data-theme="dark"] .g-feedback.right strong,
+html[data-theme="dark"] .g-result.pass,
+html[data-theme="dark"] .g-q-sum b.right,
+html[data-theme="dark"] .g-q-sum strong.right,
+html[data-theme="dark"] .g-break-pct,
+html[data-theme="dark"] .confirm-detail .cd-add,
+html[data-theme="dark"] .dock-card .add,
+html[data-theme="dark"] .live-mark,
+html[data-theme="dark"] .px-tf-btn.truth,
+html[data-theme="dark"] .model-price-in,
+html[data-theme="dark"] .model-price.free { color: #7ee2a8; }
+html[data-theme="dark"] .g-feedback.wrong strong,
+html[data-theme="dark"] .g-q-sum b.wrong,
+html[data-theme="dark"] .g-q-sum strong.wrong,
+html[data-theme="dark"] .g-break-row.fail .g-break-name,
+html[data-theme="dark"] .g-break-row.fail .g-break-num,
+html[data-theme="dark"] .g-break-row.fail .g-break-pct,
+html[data-theme="dark"] .confirm-detail .cd-del,
+html[data-theme="dark"] .dock-card .del,
+html[data-theme="dark"] .dock-approve.danger .dock-approve-msg,
+html[data-theme="dark"] .live-done.error .live-mark,
+html[data-theme="dark"] .live-done-note,
+html[data-theme="dark"] .tool-step-error,
+html[data-theme="dark"] .usage-note.error,
+html[data-theme="dark"] .model-popover-status.error,
+html[data-theme="dark"] .auth-gate-status.error,
+html[data-theme="dark"] .viz-error,
+html[data-theme="dark"] .voice-menu-error,
+html[data-theme="dark"] .model-price-out,
+html[data-theme="dark"] .px-tf-btn.chosen:not(.truth),
+html[data-theme="dark"] .dictation-btn.is-recording { color: #f4a19b; }
+html[data-theme="dark"] .g-result.fail,
+html[data-theme="dark"] .g-bk-end.lit,
+html[data-theme="dark"] .g-map-row.exam .g-map-num,
+html[data-theme="dark"] .g-route-exam.current .g-route-unit-text b { color: #e8c372; }
+
+/* 7. El naranja de marca como texto (#A84F1A y compañía) es casi negro
+      sobre fondo oscuro: se cambia por un naranja claro equivalente. */
+html[data-theme="dark"] .g-bk-end b,
+html[data-theme="dark"] .g-map-name em,
+html[data-theme="dark"] .g-link,
+html[data-theme="dark"] .g-pager-plan,
+html[data-theme="dark"] .g-eyebrow,
+html[data-theme="dark"] .g-plan-badge,
+html[data-theme="dark"] .g-route-name em,
+html[data-theme="dark"] .g-node.skipped,
+html[data-theme="dark"] .g-correction > summary,
+html[data-theme="dark"] .g-quick-btn[data-ask-visual],
+html[data-theme="dark"] .g-quick-btn[data-g-quick="visual"],
+html[data-theme="dark"] .guided-btn.active,
+html[data-theme="dark"] .model-trigger-chip,
+html[data-theme="dark"] .workspace-library,
+html[data-theme="dark"] .library-ref,
+html[data-theme="dark"] .dock-link,
+html[data-theme="dark"] .dock-btn.steer,
+html[data-theme="dark"] .dock-queue-state,
+html[data-theme="dark"] .dock-queue-head.paused,
+html[data-theme="dark"] .dock-stage-head svg,
+html[data-theme="dark"] .remote-live,
+html[data-theme="dark"] .filter-clear,
+html[data-theme="dark"] .filter-toggle.has-filters,
+html[data-theme="dark"] .filter-chip.active,
+html[data-theme="dark"] .model-card-badge.pick { color: #eda978; }
+html[data-theme="dark"] .filter-chip.active .filter-chip-count { color: rgba(237,169,120,0.8); }
+
+/* 8. Gráficas, escenas y tarjetas con color propio */
+html[data-theme="dark"] .viz-grid { stroke: rgba(255,255,255,0.09); }
+html[data-theme="dark"] .viz-axis { stroke: rgba(255,255,255,0.5); }
+html[data-theme="dark"] .viz-frame { stroke: rgba(255,255,255,0.12); }
+html[data-theme="dark"] .viz-cross { stroke: rgba(255,255,255,0.4); }
+html[data-theme="dark"] .viz-point,
+html[data-theme="dark"] .viz-dot,
+html[data-theme="dark"] .viz-slice,
+html[data-theme="dark"] .viz-hover circle { stroke: var(--surface); }
+html[data-theme="dark"] .viz-point-label { stroke: var(--bg); }
+html[data-theme="dark"] .viz-card-face { background: linear-gradient(160deg, #16150f, var(--surface)); }
+html[data-theme="dark"] .viz-card-face.back { background: linear-gradient(160deg, #0d1116, var(--surface)); }
+html[data-theme="dark"] .viz-col,
+html[data-theme="dark"] .viz-idea,
+html[data-theme="dark"] .px-bucket,
+html[data-theme="dark"] .px-item.matched { background: color-mix(in srgb, var(--c) 16%, var(--surface)); }
+html[data-theme="dark"] .scene-label { fill: #ece9e2; stroke: rgba(0,0,0,0.85); }
+html[data-theme="dark"] .scene-handle:focus-visible { stroke: #ece9e2; }
+html[data-theme="dark"] .scene-btn[data-scene="play"] { color: #fff; }
+
+/* 9. Barras de desplazamiento y transición al cambiar de tema */
+html[data-theme="dark"] .chat-list::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .thread-wrap::-webkit-scrollbar-thumb,
+html[data-theme="dark"] .model-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); }
+html.theme-switching body,
+html.theme-switching .topbar,
+html.theme-switching .composer-area,
+html.theme-switching .sidebar,
+html.theme-switching .bubble,
+html.theme-switching .g-card,
+html.theme-switching .viz,
+html.theme-switching .plus-menu,
+html.theme-switching .topbar-popover,
+html.theme-switching .message.user-msg .bubble {
+  transition: background-color 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theme-switching * { transition: none !important; }
+}

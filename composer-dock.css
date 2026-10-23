@@ -30,6 +30,37 @@
 .dock-btn.primary { background: var(--text); border-color: var(--text); color: #fff; }
 .dock-btn.primary:hover { background: #333; }
 .dock-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* «Subir en un commit» con la subida en marcha: el propio botón es la pantalla
+   de carga (spinner, texto y una barra que avanza hasta que el commit llega). */
+.dock-btn.busy {
+  position: relative; overflow: hidden; opacity: 1; cursor: progress;
+  padding-right: 18px; border-color: transparent;
+}
+.dock-btn.busy .dock-btn-label { font-variant-numeric: tabular-nums; }
+.dock-spinner {
+  width: 13px; height: 13px; flex: 0 0 auto; border-radius: 50%;
+  border: 2px solid rgba(127,127,127,0.35); border-top-color: currentColor;
+  animation: dock-spin 0.7s linear infinite;
+}
+@keyframes dock-spin { to { transform: rotate(360deg); } }
+.dock-progress {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0 3px 3px 0;
+  background: var(--orange); transform-origin: left center; transform: scaleX(0.05);
+  animation: dock-progress 9s cubic-bezier(0.16, 0.72, 0.28, 1) forwards;
+}
+@keyframes dock-progress {
+  0% { transform: scaleX(0.05); }
+  40% { transform: scaleX(0.55); }
+  75% { transform: scaleX(0.82); }
+  100% { transform: scaleX(0.94); }
+}
+.dock-stage-busy { border-color: rgba(224,122,60,0.55); box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow); }
+.dock-stage-done { border-color: rgba(22,163,74,0.5); }
+.dock-stage-done .dock-stage-head svg { color: #15803d; }
+@media (prefers-reduced-motion: reduce) {
+  .dock-spinner, .dock-progress { animation: none; }
+  .dock-progress { transform: scaleX(0.6); }
+}
 .dock-btn.steer { height: 28px; padding: 0 10px; border-color: rgba(224,122,60,0.45); color: #A84F1A; background: var(--orange-soft); }
 .dock-btn.steer:hover { background: rgba(224,122,60,0.2); }
 .dock-icon-btn {

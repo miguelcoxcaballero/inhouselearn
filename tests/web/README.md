@@ -22,6 +22,7 @@ node --test tests/web/text-quality.mjs
 CHROMIUM=/usr/bin/chromium node tests/web/text-quality.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/practice.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/theme.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/sync-recovery.cjs

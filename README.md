@@ -46,7 +46,7 @@ En el menú **+**, «Aprobación de cambios» decide cuánto le preguntas al mod
 - **Auto**: los archivos del chat se guardan sin preguntar; cada subida a GitHub se pregunta una vez, con todos sus archivos.
 - **Acceso total**: no pregunta nada, tampoco en GitHub (el + lleva un punto rojo).
 
-Las aprobaciones salen en una tarjeta encima del cuadro de texto, no a pantalla completa. Las lecturas nunca preguntan, y en GitHub el modelo prepara todos los cambios y los sube juntos en un solo commit; lo que deje preparado aparece encima del cuadro con «Subir en un commit» y «Descartar». Detalles en `docs/approval.md`.
+Las aprobaciones salen en una tarjeta encima del cuadro de texto, no a pantalla completa. Las lecturas nunca preguntan, y en GitHub el modelo prepara todos los cambios y los sube juntos en un solo commit; lo que deje preparado aparece encima del cuadro con «Subir en un commit» y «Descartar». Al pulsar «Subir en un commit» el propio botón se convierte en la pantalla de carga: spinner, «Subiendo N archivos…» y una barra que avanza; si el commit entra, el botón se queda un instante en «Subido» con su tilde y la tarjeta desaparece, y si algo falla vuelve a estar listo para reintentar con el error en un aviso. Detalles en `docs/approval.md`.
 
 ## Mientras el modelo trabaja
 
@@ -89,6 +89,10 @@ Puede haber varias vistas por mensaje, intercaladas con el texto (hasta 8; desde
 ## Vibración
 
 En la app Android el chat vibra como ChatGPT: un toque suave al pulsar, uno más firme al enviar, una textura muy ligera mientras se escribe la respuesta, un pulso al terminar y un doble golpe en errores o respuestas falladas. Usa la vibración del propio sistema (respeta el ajuste del teléfono). En el navegador del móvil usa `navigator.vibrate`. Se apaga en el menú de perfil → «Vibración».
+
+## Modo noche
+
+El menú «+» trae «Modo noche» en tres posiciones: **Auto** (por defecto: sigue al móvil o al ordenador, y cambia solo si el sistema cambia de tema mientras lees), **Claro** y **Oscuro**, que es **AMOLED**: negro puro `#000` de fondo y superficies apenas más claras, para gastar menos en pantallas OLED. Se recuerda en este navegador y no toca los chats. El tema se elige antes de pintar la primera vez, así que al abrir en oscuro no hay destello claro, y todo se dibuja en el tema que toca: el chat, los cursos, los mini tests, los ejercicios y las gráficas, incluidos los diagramas de mermaid, que se vuelven a dibujar si cambias de tema con la app abierta. El CSS solo mira `data-theme` en `<html>` (`theme.css`), y el control lo monta `theme.js` dentro del menú «+».
 
 ## Respuestas fluidas
 

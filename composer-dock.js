@@ -42,6 +42,7 @@ function dockIcon(name) {
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
     upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/>',
+    check: '<path d="M4 12.5 9.5 18 20 6.5"/>',
     branch: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 4-6 3-11 5.5"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
     play: '<path d="M7 5l11 7-11 7z"/>'
@@ -321,6 +322,13 @@ function githubStageStore(chat) {
   };
 }
 
+// «repo@branch» → { state: 'up' | 'done', count, repo, branch }: mientras el
+// botón sube, la misma tarjeta enseña el progreso; al terminar, un instante de
+// «Subido» con su tilde antes de desaparecer.
+const pushBusy = new Map();
+
+function stageKey(repo, branch) { return repo + '@' + branch; }
+
 function renderStageSlot() {
   const slot = document.getElementById('dock-stage');
   if (!slot) return;
@@ -329,33 +337,66 @@ function renderStageSlot() {
   const entries = chat && !appState.busy && typeof githubToken === 'function' && githubToken()
     ? githubStageStore(chat).list().filter((entry) => Object.keys(entry.files || {}).length || (entry.deletes || []).length)
     : [];
-  if (!entries.length) { slot.innerHTML = ''; return; }
-  slot.innerHTML = entries.map((entry) => {
+  const cards = entries.map((entry) => {
+    const busy = pushBusy.get(stageKey(entry.repo, entry.branch));
     const paths = Object.keys(entry.files || {}).concat((entry.deletes || []).map((path) => path + ' (borrar)'));
-    return '<div class="dock-card dock-stage">' +
-      '<div class="dock-stage-head">' + dockIcon('branch') + '<span><b>' + paths.length + (paths.length === 1 ? ' cambio preparado' : ' cambios preparados') + '</b> · ' + escapeHtml(entry.repo) + ' · rama ' + escapeHtml(entry.branch) + ' · sin subir</span></div>' +
-      '<div class="dock-stage-files">' + paths.slice(0, 8).map((path) => '<code>' + escapeHtml(path) + '</code>').join('') + (paths.length > 8 ? '<span>+' + (paths.length - 8) + ' más</span>' : '') + '</div>' +
-      '<div class="dock-approve-actions"><button type="button" class="dock-btn" data-dock="discard" data-repo="' + escapeHtml(entry.repo) + '" data-branch="' + escapeHtml(entry.branch) + '">Descartar</button>' +
-      '<button type="button" class="dock-btn primary" data-dock="push" data-repo="' + escapeHtml(entry.repo) + '" data-branch="' + escapeHtml(entry.branch) + '">' + dockIcon('upload') + 'Subir en un commit</button></div></div>';
-  }).join('');
+    const repo = escapeHtml(entry.repo);
+    const branch = escapeHtml(entry.branch);
+    const head = '<div class="dock-stage-head">' + dockIcon('branch') + '<span><b>' + paths.length +
+      (paths.length === 1 ? ' cambio preparado' : ' cambios preparados') + '</b> · ' + repo + ' · rama ' + branch + ' · ' +
+      (busy ? 'subiendo…' : 'sin subir') + '</span></div>';
+    const files = '<div class="dock-stage-files">' + paths.slice(0, 8).map((path) => '<code>' + escapeHtml(path) + '</code>').join('') +
+      (paths.length > 8 ? '<span>+' + (paths.length - 8) + ' más</span>' : '') + '</div>';
+    const actions = busy
+      ? '<div class="dock-approve-actions"><button type="button" class="dock-btn primary busy" disabled aria-busy="true">' +
+          '<span class="dock-spinner" aria-hidden="true"></span>' +
+          '<span class="dock-btn-label">Subiendo ' + paths.length + (paths.length === 1 ? ' archivo' : ' archivos') + '…</span>' +
+          '<span class="dock-progress" aria-hidden="true"></span></button></div>'
+      : '<div class="dock-approve-actions"><button type="button" class="dock-btn" data-dock="discard" data-repo="' + repo + '" data-branch="' + branch + '">Descartar</button>' +
+        '<button type="button" class="dock-btn primary" data-dock="push" data-repo="' + repo + '" data-branch="' + branch + '">' +
+        dockIcon('upload') + 'Subir en un commit</button></div>';
+    return '<div class="dock-card dock-stage' + (busy ? ' dock-stage-busy' : '') + '">' + head + files + actions + '</div>';
+  });
+  pushBusy.forEach((item) => {
+    if (item.state !== 'done') return;
+    if (entries.some((entry) => stageKey(entry.repo, entry.branch) === item.key)) return;
+    cards.push('<div class="dock-card dock-stage dock-stage-done">' +
+      '<div class="dock-stage-head">' + dockIcon('check') + '<span><b>Subido</b> · ' + escapeHtml(item.repo) + ' · rama ' + escapeHtml(item.branch) +
+      ' · ' + item.count + (item.count === 1 ? ' archivo' : ' archivos') + '</span></div></div>');
+  });
+  slot.innerHTML = cards.join('');
 }
 
 async function stagePush(repo, branch) {
   const chat = getActiveChat();
-  if (!chat || appState.busy || !githubToken()) return;
-  // Pressing «Subir» is the approval: the card already lists every file.
-  const ctx = Object.assign(githubContext(chat), { confirm: () => Promise.resolve(true) });
-  setComposerStatus('Subiendo a GitHub…');
+  const key = stageKey(repo, branch);
+  if (!chat || appState.busy || !githubToken() || pushBusy.has(key)) return;
+  const entry = githubStageStore(chat).get(repo, branch) || {};
+  const count = Object.keys(entry.files || {}).length + (entry.deletes || []).length;
+  // The button in the card is the whole loading screen: spinner, «Subiendo…»
+  // and a bar that creeps until the commit lands (or the error comes back).
+  pushBusy.set(key, { state: 'up', key, count, repo, branch });
+  renderStageSlot();
+  setComposerStatus('Subiendo ' + count + (count === 1 ? ' archivo' : ' archivos') + ' a GitHub…');
+  let ok = false;
   try {
+    // Pressing «Subir» is the approval: the card already lists every file.
+    const ctx = Object.assign(githubContext(chat), { confirm: () => Promise.resolve(true) });
     const result = await InhousePi.githubPushStaged(ctx, repo, branch, '');
     const link = ((result.content || [])[0] || {}).text || '';
+    ok = true;
+    pushBusy.set(key, { state: 'done', key, count, repo, branch });
+    renderStageSlot();
     showToast('GitHub', (link.split('\n')[0] || 'Subido') + '.');
-    setComposerStatus('');
   } catch (error) {
-    setComposerStatus('');
+    pushBusy.delete(key);
+    renderStageSlot();
     showToast('GitHub', error.message);
+  } finally {
+    setComposerStatus('');
+    // The tick stays long enough to be seen, then the card goes away.
+    window.setTimeout(() => { pushBusy.delete(key); renderComposerDock(); }, ok ? 1300 : 0);
   }
-  renderComposerDock();
 }
 
 async function stageDiscard(repo, branch) {

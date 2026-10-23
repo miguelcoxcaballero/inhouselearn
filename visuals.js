@@ -914,6 +914,38 @@ const VIZ_RENDERERS = {
 
 /* ─── mermaid ────────────────────────────────────────────────────────── */
 
+// El diagrama se dibuja en el tema que toca —theme.js pone data-theme en
+// <html>— y se vuelve a dibujar si el tema cambia con la app abierta.
+const vizMermaidHosts = new WeakMap();
+
+function mermaidThemeVariables() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return dark
+    ? { primaryColor: '#111110', primaryBorderColor: '#E07A3C', primaryTextColor: '#ece9e2', lineColor: '#8d887c', secondaryColor: '#151a1f', tertiaryColor: '#0d0d0c', fontSize: '14px' }
+    : { primaryColor: '#fff4ec', primaryBorderColor: '#E07A3C', primaryTextColor: '#1a1a1a', lineColor: '#a8a29e', secondaryColor: '#eef4ff', tertiaryColor: '#f5f5f0', fontSize: '14px' };
+}
+
+function mermaidConfig() {
+  return { startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: 'inherit', themeVariables: mermaidThemeVariables() };
+}
+
+function redrawMermaid() {
+  if (!window.mermaid) return;
+  vizMermaidCache.clear();
+  window.mermaid.initialize(mermaidConfig());
+  document.querySelectorAll('.viz-mermaid').forEach((box) => {
+    const src = vizMermaidHosts.get(box);
+    const body = box.querySelector('.viz-mermaid-body');
+    if (!src || !body) return;
+    window.mermaid.render('mmd' + vizHash(src) + (++vizSeq), src).then((out) => {
+      vizMermaidCache.set(src, out.svg);
+      body.innerHTML = out.svg;
+    }).catch(() => {});
+  });
+}
+
+document.addEventListener('themechange', redrawMermaid);
+
 function loadMermaid() {
   if (window.mermaid) return Promise.resolve(window.mermaid);
   if (vizMermaidPromise) return vizMermaidPromise;
@@ -921,10 +953,7 @@ function loadMermaid() {
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js';
     script.onload = () => {
-      window.mermaid.initialize({
-        startOnLoad: false, securityLevel: 'strict', theme: 'base', fontFamily: 'inherit',
-        themeVariables: { primaryColor: '#fff4ec', primaryBorderColor: '#E07A3C', primaryTextColor: '#1a1a1a', lineColor: '#a8a29e', secondaryColor: '#eef4ff', tertiaryColor: '#f5f5f0', fontSize: '14px' }
-      });
+      window.mermaid.initialize(mermaidConfig());
       resolve(window.mermaid);
     };
     script.onerror = () => { vizMermaidPromise = null; reject(new Error('No se pudo cargar mermaid')); };
