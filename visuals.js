@@ -16,8 +16,8 @@
    time (renderMarkdown, escapeHtml). */
 
 const VISUALS_PROMPT = [
-  '## Interactive visuals (use them a lot)',
-  'This chat turns a ```visual block (JSON) into an interactive card and a ```mermaid block into a diagram. Whenever an answer explains something that can be seen, played with or practised (a function or formula, data or a trend, a process or cycle, a comparison, dates, a procedure, terms to memorise), put ONE visual block where it helps and keep explaining in text around it. Most teaching answers in maths, science, economics, history, languages and exam prep should have one. Skip it only for small talk, one-line answers, or when the student asks for text only.',
+  '## Interactive visuals (when they help)',
+  'This chat turns a ```visual block (JSON) into an interactive card and a ```mermaid block into a diagram. Whenever an answer explains something that can be seen, played with or practised (a function or formula, data or a trend, a process or cycle, a comparison, dates, a procedure, terms to memorise), put ONE visual block where it helps, with only the text needed around it: the visual replaces explanation, it does not add to it. Skip it for small talk, short or factual answers, or when the student asks for text only.',
   'Pick the type: a quantity that varies → plot (graph with sliders) or formula (sliders with live results); data, proportions, trends → chart; a procedure or worked solution → steps; dates and periods → timeline; A vs B → compare; terms, formulas or vocabulary to memorise → flashcards; overview of key points → cards; a quick self-check → check; processes, cycles, hierarchies, concept maps → mermaid.',
   'Formats (JSON with double quotes; LaTeX inside strings such as \\(x^2\\) is fine):',
   '- plot (graph of functions, with sliders): {"type":"plot","title":"…","x":[-6.3,6.3],"y":[-3,3],"functions":[{"expr":"a*sin(b*x)","label":"\\\\(a\\\\sin(bx)\\\\)"}],"params":{"a":{"min":0,"max":3,"value":1,"step":0.1,"label":"amplitud"}},"points":[{"x":0,"y":0,"label":"origen"}],"readouts":[{"label":"Periodo","expr":"2*pi/b","unit":"s"}]}. "y", "params", "points" and "readouts" are optional.',

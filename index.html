@@ -1890,7 +1890,7 @@
   <script src="dictation.js?v=20261021-voice1"></script>
   <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
   <script src="stream.js?v=20261023-live"></script>
-  <script src="visuals.js?v=20261021-latex"></script>
+  <script src="visuals.js?v=20261023-short"></script>
   <script src="scene.js?v=20261021-text-motion"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="guided.js?v=20261021-latex"></script>
@@ -1904,7 +1904,7 @@
       // Sin modelo fijo: por defecto, el más usado esta semana en OpenRouter.
       DEFAULT_MODEL: '',
       DEFAULT_THINKING_LEVEL: '',
-      SYSTEM_PROMPT: 'You are the inhouse assistant. Be thorough, practical, and clear. Use structure (headings, lists, code blocks) when it helps comprehension, but never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$. Answer completely and at the level of detail the user needs — do not artificially shorten your responses.',
+      SYSTEM_PROMPT: 'You are the inhouse assistant. Be direct and clear: answer the question first, in as few words as it really needs, then stop. A simple question gets a short answer (a few sentences); add detail, examples or background only when they are needed to answer well. No preamble, no restating the question, no closing summary, no list of follow-up offers. Use headings and lists only when the answer is long enough to need them. If the user asks you to go deeper, expand or explain in detail, then do so fully. Never put mathematical formulas inside fenced code blocks unless the user explicitly asks for raw LaTeX source. When writing mathematics, use LaTeX delimiters: inline math with \\(...\\) and display equations with $$...$$.',
       MAX_OUTPUT_TOKENS: 32768,
       TEMPERATURE: 1.0,
       TOP_P: 0.95
