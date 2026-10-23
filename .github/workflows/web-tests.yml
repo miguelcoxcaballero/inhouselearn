@@ -30,3 +30,12 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run tests/web
         run: bash tests/web/run-ci.sh
+        # Las capturas que hacen las pruebas son fotos reales de la app (Chromium,
+        # tema claro y AMOLED): se quedan en el run para poder verlas y descargarlas.
+        - name: Keep the screenshots
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: screenshots
+            path: ${{ runner.temp }}/**/*.png
+            if-no-files-found: ignore

@@ -33,6 +33,7 @@ const VISUALS_PROMPT = [
   '- image (a real photo, illustration or figure inside the chat, also to show how something is going): {"type":"image","src":"https://…","alt":"what is seen","caption":"…","credit":"Wikimedia Commons"} — src only https:// or data:image/… . If you draw it yourself: {"type":"image","svg":"<svg viewBox=\\"0 0 100 60\\">…</svg>","alt":"…"}',
   '- gallery (2–6 related pictures): {"type":"gallery","title":"…","images":[{"src":"https://…","alt":"…","caption":"…"}]}',
   '- preview (a LIVE preview of a UI change: the HTML and CSS you propose, drawn in an iframe without scripts; it is not a screenshot of their app, it is what should be built): {"type":"preview","title":"…","device":"phone|desktop","height":360,"html":"<div class=\\"card\\">…</div>","css":".card{…}","note":"what changes"}',
+  '- shot (a REAL screenshot of the app as it looks right now: it photographs the running page — real DOM, real styles, real theme — it is not a drawing or a mockup; use it after you change the interface so the student sees what actually happened): {"type":"shot","title":"…","target":"#app-container|.chat|.composer-area|.plus-menu","theme":"dark|light","note":"what to look at"}. The target must be on screen at that moment; the theme you ask for is used only for the picture and then the student gets theirs back.',
   'Images and progress: if the student asks to see something (a photo, a map, how a change of the interface would look) or the topic calls for it, put the image or the preview right after the paragraph that explains it and keep writing: they appear in the chat as soon as each block closes, so the student sees the progress without waiting for the end. For interface changes use preview with the real HTML and CSS (it really renders, with its styles); for anything else use image with a URL that actually exists: never invent image links.',
   'Practice types (the student DOES something; use one when they should practise what you just explained, instead of always asking a question in text):',
   '- match (connect pairs): {"type":"match","title":"…","pairs":[{"left":"término","right":"definición"}]} (3–8 pairs, written side by side; the app shuffles them)',
@@ -358,7 +359,7 @@ function vizCompile(source, names, extra) {
 const VIZ_KIND_LABEL = {
   plot: 'Gráfica interactiva', formula: 'Fórmula interactiva', chart: 'Gráfico', flashcards: 'Tarjetas de memoria',
   steps: 'Paso a paso', timeline: 'Línea de tiempo', compare: 'Comparativa', check: 'Comprueba', cards: 'Ideas clave', mermaid: 'Diagrama',
-  image: 'Imagen', photo: 'Imagen', figure: 'Figura', gallery: 'Galería', preview: 'Vista previa'
+  image: 'Imagen', photo: 'Imagen', figure: 'Figura', gallery: 'Galería', preview: 'Vista previa', shot: 'Captura de la app'
 };
 
 const VIZ_ICON = {
@@ -374,7 +375,8 @@ const VIZ_ICON = {
   mermaid: '<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v4h11v4"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-5 3 3 3-4 5 6"/>',
   gallery: '<rect x="3" y="5" width="12" height="12" rx="2"/><path d="M9 21h9a3 3 0 0 0 3-3V9"/>',
-  preview: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'
+  preview: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  shot: '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/>'
 };
 
 function vizHead(kind, title, extra) {
@@ -953,6 +955,74 @@ function vizPreview(spec, state, meta) {
     '</div>' + (spec.note ? '<div class="viz-caption">' + vizBlock(spec.note) + '</div>' : '') + '</div>');
 }
 
+/* ─── Captura de la app de verdad ────────────────────────────────────────
+   «shot» no dibuja nada: fotografía el DOM real que hay en pantalla en ese
+   momento —estilos, tipografía y tema incluidos— y deja el PNG en el chat,
+   como si fuera un pantallazo. Usa html-to-image (CDN, la primera vez): clona
+   el nodo a un SVG y de ahí a canvas y PNG. Nunca miente: si el navegador no
+   deja (por ejemplo, una imagen de fuera que mancha el canvas), lo dice. */
+
+let vizShotLib = null;
+
+function loadShotLib() {
+  if (window.htmlToImage) return Promise.resolve(window.htmlToImage);
+  if (vizShotLib) return vizShotLib;
+  vizShotLib = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js';
+    script.onload = () => (window.htmlToImage
+      ? resolve(window.htmlToImage)
+      : reject(new Error('html-to-image no expuso window.htmlToImage')));
+    script.onerror = () => { vizShotLib = null; reject(new Error('no se pudo cargar html-to-image')); };
+    document.head.appendChild(script);
+  });
+  return vizShotLib;
+}
+
+function vizShot(spec, state, meta) {
+  const target = String(spec.target || '#app-container').slice(0, 120);
+  const node = document.querySelector(target);
+  if (!node) return vizFallback(spec, 'No hay nada con «' + target + '» en pantalla que fotografiar.', meta && meta.source);
+  const alt = String(spec.alt || spec.title || 'Captura de la app').slice(0, 200);
+  const el = vizElement('<div class="viz viz-shot">' + vizHead('shot', spec.title) +
+    '<div class="viz-shot-body"><div class="viz-shot-wait"><span class="viz-wait-icon"></span>Fotografiando ' + escapeHtml(target) + '…</div></div>' +
+    (spec.note ? '<div class="viz-caption">' + vizBlock(spec.note) + '</div>' : '') + '</div>');
+  const body = el.querySelector('.viz-shot-body');
+  // El tema se cambia solo para la foto y se devuelve como estaba: la
+  // preferencia del alumno no se toca.
+  const theme = String(spec.theme || '');
+  const previous = document.documentElement.getAttribute('data-theme');
+  if ((theme === 'dark' || theme === 'light') && previous && previous !== theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+  const restore = () => { if (previous) document.documentElement.setAttribute('data-theme', previous); };
+  loadShotLib()
+    .then((lib) => new Promise((resolve) => setTimeout(() => resolve(lib), 140)))
+    .then((lib) => lib.toPng(node, {
+      cacheBust: true,
+      pixelRatio: Math.min(2, window.devicePixelRatio || 1),
+      backgroundColor: theme === 'dark' ? '#000000' : '#f5f5f0',
+      // La propia tarjeta de la captura no sale en la foto, y las imágenes de
+      // fuera no se clonan (mancharían el canvas y no habría PNG).
+      filter: (child) => {
+        if (child.classList && child.classList.contains('viz-shot')) return false;
+        return !(child.tagName === 'IMG' && /^https?:/i.test(child.getAttribute('src') || ''));
+      }
+    }))
+    .then((png) => {
+      restore();
+      const name = String(spec.title || 'captura').replace(/[^\w\-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'captura';
+      body.innerHTML = '<img class="viz-shot-img" src="' + png + '" alt="' + escapeHtml(alt) + '">' +
+        '<a class="viz-shot-download" download="' + escapeHtml(name) + '.png" href="' + png + '">Descargar la captura</a>';
+    })
+    .catch((error) => {
+      restore();
+      body.innerHTML = '<div class="viz-shot-missing">No pude hacer la captura en este navegador (' +
+        escapeHtml(String((error && error.message) || error).slice(0, 140)) + ').</div>';
+    });
+  return el;
+}
+
 // Same order every time the same card is drawn, different from how it was written.
 function vizSeeded(seedText) {
   let seed = parseInt(vizHash(seedText), 36) || 1;
@@ -1010,7 +1080,8 @@ const VIZ_RENDERERS = {
   chart: vizChart, bar: (s, st) => vizChart(Object.assign({ kind: 'bar' }, s), st), pie: (s, st) => vizChart(Object.assign({ kind: 'pie' }, s), st),
   line: (s, st) => vizChart(Object.assign({ kind: 'line' }, s), st),
   flashcards: vizFlashcards, steps: vizSteps, timeline: vizTimeline, compare: vizCompare, cards: vizCards, ideas: vizCards, check: vizCheck, quiz: vizCheck,
-  image: vizPhoto, photo: vizPhoto, figure: vizPhoto, gallery: vizPhoto, preview: vizPreview, mockup: vizPreview, ui: vizPreview
+  image: vizPhoto, photo: vizPhoto, figure: vizPhoto, gallery: vizPhoto, preview: vizPreview, mockup: vizPreview, ui: vizPreview,
+  shot: vizShot, screenshot: vizShot, capture: vizShot
 };
 
 /* ─── mermaid ────────────────────────────────────────────────────────── */
@@ -1093,7 +1164,7 @@ function enhanceVisuals(root, options) {
     // ```visual is the format; ```viz, ```interactive, ```chart, ```plot… or a
     // ```json with a known "type" are accepted too.
     const typed = Object.prototype.hasOwnProperty.call(VIZ_RENDERERS, lang) ? lang : '';
-    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox|image|photo|figure|gallery|preview|mockup|ui)"/.test(source))) return;
+    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox|image|photo|figure|gallery|preview|mockup|ui|shot|screenshot|capture)"/.test(source))) return;
     const spec = parseVisualSpec(source, typed);
     const render = spec && VIZ_RENDERERS[String(spec.type).toLowerCase()];
     if (!render) {
