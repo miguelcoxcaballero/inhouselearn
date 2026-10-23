@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261023-check-par",
+  "target": "mdn/beginner-html-site-styled",
+  "ref": "",
+  "at": "2026-10-23T22:31:42.651Z",
+  "shots": [
+    {
+      "name": "En paralelo",
+      "file": "1-en-paralelo.png",
+      "device": "tablet",
+      "theme": "light"
+    }
+  ]
+}
