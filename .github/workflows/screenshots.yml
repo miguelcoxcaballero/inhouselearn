@@ -55,9 +55,8 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: app-screenshots
-  cancel-in-progress: false
+# No concurrency group: GitHub would cancel a waiting run when a third one
+# arrives. Runs go in parallel and the publish step retries its push.
 
 jobs:
   # Runs the project's code (setup/start) with a read-only token that is not
@@ -160,16 +159,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           [ -f "out/$ID/manifest.json" ] || { echo "::error::No manifest for $ID"; exit 1; }
-          mkdir pub && cd pub
-          git init -q
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git fetch -q --depth 1 origin screenshots; then git checkout -q -B screenshots FETCH_HEAD; else git checkout -q --orphan screenshots; fi
-          # Keep the newest folders only (ids start with a timestamp, so they sort by date).
-          ls -1d */ 2>/dev/null | sed 's#/$##' | sort | head -n -29 | while read -r old; do git rm -rq "$old"; done
-          cp -r "../out/$ID" .
-          git add -A
-          git commit -qm "Screenshots $ID"
-          git push -q origin screenshots
-          echo "Published: https://github.com/${GITHUB_REPOSITORY}/tree/screenshots/$ID"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Another run may publish at the same time: start again from the new head.
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf pub && mkdir pub && cd pub
+            git init -q
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            if git fetch -q --depth 1 origin screenshots; then git checkout -q -B screenshots FETCH_HEAD; else git checkout -q --orphan screenshots; fi
+            # Keep the newest folders only (ids start with a timestamp, so they sort by date).
+            ls -1d */ 2>/dev/null | sed 's#/$##' | sort | head -n -29 | while read -r old; do git rm -rq "$old"; done
+            rm -rf "$ID" && cp -r "../out/$ID" .
+            git add -A
+            git commit -qm "Screenshots $ID"
+            if git push -q origin screenshots; then
+              echo "Published: https://github.com/${GITHUB_REPOSITORY}/tree/screenshots/$ID"
+              exit 0
+            fi
+            cd .. && sleep $((attempt * 3))
+          done
+          echo "::error::Could not publish on the screenshots branch"
+          exit 1
