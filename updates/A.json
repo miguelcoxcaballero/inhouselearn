@@ -2,15 +2,24 @@
   "schemaVersion": 1,
   "channel": "A",
   "latest": {
-    "version": "1.0.4",
-    "versionCode": 5,
-    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.4/inhouse-learn-1.0.4.apk",
-    "apkSha256": "e46f080da6d042b4a18b211417d56db7fe9f0521da7eff976772d83b77c294fe",
-    "apkSizeBytes": 198180,
-    "changelog": "AMOLED night mode and theme-aware system bars.",
-    "releasedAt": "2026-10-23T19:08:07+00:00"
+    "version": "1.0.5",
+    "versionCode": 6,
+    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.5/inhouse-learn-1.0.5.apk",
+    "apkSha256": "a3288aaad94651745ff2f3de27201f7df705ceb66d2faa2cf3053c01892a73c8",
+    "apkSizeBytes": 202276,
+    "changelog": "Night mode follows the phone; status bar fixed.",
+    "releasedAt": "2026-10-23T20:33:03+00:00"
   },
   "releases": [
+    {
+      "version": "1.0.5",
+      "versionCode": 6,
+      "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.5/inhouse-learn-1.0.5.apk",
+      "apkSha256": "a3288aaad94651745ff2f3de27201f7df705ceb66d2faa2cf3053c01892a73c8",
+      "apkSizeBytes": 202276,
+      "changelog": "Night mode follows the phone; status bar fixed.",
+      "releasedAt": "2026-10-23T20:33:03+00:00"
+    },
     {
       "version": "1.0.4",
       "versionCode": 5,
