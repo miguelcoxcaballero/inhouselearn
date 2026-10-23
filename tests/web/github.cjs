@@ -195,7 +195,7 @@ const toolOutputs = (page, n) => page.evaluate((k) => window.__requests.slice(-1
 
   // Prompt: tools and workflow.
   const prompt = await page.evaluate(() => { const r = window.__requests[0]; return { sys: (r.messages.find((m) => m.role === 'system') || {}).content || '', tools: (r.tools || []).map((t) => t.function.name).filter((n) => /^github_/.test(n)) }; });
-  check('model gets the GitHub tools and the prepare → push workflow', prompt.tools.length === 13 && /Prepara TODOS los cambios/.test(prompt.sys) && /github_grep/.test(prompt.sys) && /AGENTS\.md/.test(prompt.sys), prompt.tools);
+  check('model gets the GitHub tools and the prepare → push workflow', prompt.tools.length === 14 && prompt.tools.includes('github_release_android') && /Prepara TODOS los cambios/.test(prompt.sys) && /github_grep/.test(prompt.sys) && /AGENTS\.md/.test(prompt.sys), prompt.tools);
 
   // A chat without the switch gets no GitHub tools.
   await page.click('#hamburger-btn'); await page.click('#new-chat-btn');

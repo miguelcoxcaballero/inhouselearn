@@ -29,6 +29,7 @@ CHROMIUM=/usr/bin/chromium node tests/web/sync-recovery.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-stream.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/github.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/release.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/queue.cjs
 ```
 
@@ -55,6 +56,11 @@ login, and that sync preserves a running agent's chat object.
 
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
 40 small files) and checks the search, the manifest the model gets and the three library tools.
+
+`release.cjs` checks that the app can publish its own APK (`github_release_android`) against
+a fake GitHub: it asks even in «Acceso total», then builds, signs the exact SHA in youtube-calma
+and publishes on channel A in that order and checks `updates/A.json`; a versionCode that does not
+go up, a «No» or a failing build stop before any signature.
 
 `queue.cjs` checks the message queue (Enter while busy, one per finished turn, Stop pauses)
 and steering (Ctrl+Enter enters the running turn after the current tool, same request chain).

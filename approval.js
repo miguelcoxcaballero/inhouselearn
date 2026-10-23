@@ -161,7 +161,9 @@ function setApprovalMode(mode) {
 // aprueba el usuario en el diálogo.
 async function approveChange(chat, request) {
   const options = request || {};
-  if (approvalModeOf(chat) === 'full') {
+  // Some actions (publishing an APK) reach other people's phones and cannot be
+  // undone: they ask even in «Acceso total».
+  if (approvalModeOf(chat) === 'full' && !options.always) {
     showToast('Acceso total', (options.title || 'Cambio') + ': aprobado automáticamente.');
     return true;
   }

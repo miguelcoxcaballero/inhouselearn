@@ -425,6 +425,7 @@ const STEP_TEXT = {
   github_ci_status: ['Mirando la CI de', 'CI revisada de'],
   github_list_issues: ['Leyendo las issues de', 'Issues de'],
   github_comment: ['Comentando en', 'Comentado en'],
+  github_release_android: ['Publicando la APK', 'APK publicada'],
   run_js: ['Ejecutando código', 'Código ejecutado'],
   write_file: ['Guardando', 'Guardado'],
   read_file: ['Leyendo', 'Leído'],
@@ -488,6 +489,10 @@ function describeToolStep(step) {
     case 'github_discard':
       target = repoShort;
       repoShort && args.path && where.push(args.path);
+      break;
+    case 'github_release_android':
+      // What the release is doing right now (build, signature, publication…).
+      target = running && step.progress ? String(step.progress).replace(/: https?:\/\/\S+$/, '').slice(0, 80) : '';
       break;
     case 'search_library':
       target = args.query ? '«' + String(args.query).slice(0, 60) + '»' : '';

@@ -305,6 +305,15 @@ export async function runAgent(options) {
     } else if (event.type === 'tool_execution_start') {
       steps.push({ id: event.toolCallId, name: event.toolName, args: event.args || {}, status: 'running', output: '' });
       emit();
+    } else if (event.type === 'tool_execution_update') {
+      // Long tools (the APK release) say what they are doing meanwhile.
+      const step = steps.find((item) => item.id === event.toolCallId);
+      if (step && step.status === 'running') {
+        const output = resultText(event.partialResult);
+        step.output = output.length > MAX_STEP_OUTPUT ? output.slice(-MAX_STEP_OUTPUT) : output;
+        step.progress = output.split('\n').filter(Boolean).pop() || '';
+        emit();
+      }
     } else if (event.type === 'tool_execution_end') {
       const step = steps.find((item) => item.id === event.toolCallId);
       if (step) {

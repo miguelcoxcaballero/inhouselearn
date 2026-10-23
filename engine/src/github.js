@@ -18,6 +18,10 @@ const TEXT_FILE = /\.(html?|css|scss|less|m?js|cjs|jsx|tsx?|json|md|markdown|txt
 const TEXT_NAME = /(^|\/)(Dockerfile|Makefile|LICENSE|README|CODEOWNERS|\.gitignore|\.gitattributes|\.editorconfig|\.npmrc|\.nvmrc)$/;
 const MAX_LIST = 400;
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+// This app's own repository, and the one that holds its permanent signing key
+// (secret EJEMPLO; GitHub cannot copy a secret, so Learn is signed there).
+const LEARN_REPO = 'miguelcoxcaballero/inhouselearn';
+const SIGN_REPO = 'miguelcoxcaballero/youtube-calma';
 
 function textResult(text, details) {
   return { content: [{ type: 'text', text }], details: details || {} };
@@ -125,7 +129,7 @@ export function createGithubTools(ctx) {
     if (!response.ok) {
       const message = (data && data.message) || text.slice(0, 200) || 'error';
       const hint = response.status === 401 ? ' (el token no es válido o caducó)'
-        : response.status === 403 ? ' (el token no tiene permiso para esto: hace falta Contents y Pull requests de lectura y escritura en ese repositorio, y Actions de lectura para ver la CI)'
+        : response.status === 403 ? ' (el token no tiene permiso para esto: hace falta Contents y Pull requests de lectura y escritura en ese repositorio, Actions de lectura para ver la CI y Actions de lectura y escritura para lanzar workflows, como la publicación de la APK)'
           : response.status === 404 ? ' (no existe, o el token no tiene acceso a ese repositorio)' : '';
       const error = new Error('GitHub ' + response.status + ': ' + message + hint);
       error.status = response.status;
@@ -345,6 +349,61 @@ export function createGithubTools(ctx) {
   }
 
   const repoParam = Type.String({ description: 'Repository as "owner/name".' });
+
+  const sleep = (ms) => new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    if (ctx.signal) ctx.signal.addEventListener('abort', () => { clearTimeout(timer); reject(Object.assign(new Error('Detenido.'), { name: 'AbortError' })); }, { once: true });
+  });
+
+  // The newest run of a workflow for a commit (any event).
+  async function latestRun(repo, workflow, sha) {
+    const data = await gh('GET', '/repos/' + repo + '/actions/workflows/' + workflow + '/runs?per_page=5&head_sha=' + sha);
+    return (data.workflow_runs || [])[0] || null;
+  }
+
+  // Starts a workflow_dispatch run and finds it (GitHub does not return its id).
+  async function dispatch(repo, workflow, ref, inputs, headSha) {
+    const since = Date.now() - 5000;
+    await gh('POST', '/repos/' + repo + '/actions/workflows/' + workflow + '/dispatches', { ref, inputs });
+    for (let i = 0; i < 30; i++) {
+      await sleep(3000);
+      const data = await gh('GET', '/repos/' + repo + '/actions/workflows/' + workflow + '/runs?per_page=5&event=workflow_dispatch');
+      const run = (data.workflow_runs || []).find((item) => Date.parse(item.created_at) >= since && (!headSha || item.head_sha === headSha));
+      if (run) return run;
+    }
+    throw new Error('Se lanzó ' + workflow + ' en ' + repo + ' pero no aparece su ejecución: https://github.com/' + repo + '/actions');
+  }
+
+  // Waits for a run to end, telling what it is doing; a failure stops
+  // everything with the failing steps and their error annotations.
+  async function waitRun(repo, run, what, step) {
+    const started = Date.now();
+    let current = run;
+    let shown = '';
+    while (current.status !== 'completed') {
+      if (Date.now() - started > 40 * 60 * 1000) throw new Error('Lleva más de 40 minutos ' + what + ': ' + current.html_url);
+      await sleep(10000);
+      current = await gh('GET', '/repos/' + repo + '/actions/runs/' + current.id);
+      const jobs = await gh('GET', '/repos/' + repo + '/actions/runs/' + current.id + '/jobs').catch(() => ({ jobs: [] }));
+      const active = (jobs.jobs || []).find((job) => job.status === 'in_progress');
+      const activeStep = active && (active.steps || []).find((item) => item.status === 'in_progress');
+      const now = active ? what[0].toUpperCase() + what.slice(1) + ': ' + active.name + (activeStep ? ' · ' + activeStep.name : '') : '';
+      if (now && now !== shown) { shown = now; step(now); }
+    }
+    if (current.conclusion !== 'success') {
+      const jobs = await gh('GET', '/repos/' + repo + '/actions/runs/' + current.id + '/jobs').catch(() => ({ jobs: [] }));
+      const notes = [];
+      for (const job of jobs.jobs || []) {
+        if (job.conclusion === 'success' || job.conclusion === 'skipped') continue;
+        notes.push(job.name + ': ' + job.conclusion + (job.steps || []).filter((item) => item.conclusion === 'failure').map((item) => ' · falla «' + item.name + '»').join(''));
+        const annotations = await gh('GET', '/repos/' + repo + '/check-runs/' + job.id + '/annotations').catch(() => []);
+        (annotations || []).filter((note) => note.annotation_level === 'failure').slice(0, 12).forEach((note) => notes.push('  ' + String(note.message || '').split('\n').slice(0, 3).join(' ')));
+      }
+      throw new Error('Ha fallado ' + what + ' (' + current.conclusion + '): ' + current.html_url + (notes.length ? '\n' + notes.join('\n') : '') + '\nNo se ha hecho nada después de este paso.');
+    }
+    step('Terminado bien: ' + what + '.');
+    return current;
+  }
 
   return [
     {
@@ -636,6 +695,86 @@ export function createGithubTools(ctx) {
           }
         }
         return textResult(clip(lines.join('\n'), MAX_READ_CHARS));
+      }
+    },
+    {
+      name: 'github_release_android',
+      label: 'GitHub: publicar la APK de Inhouse Learn',
+      description: 'Publish a new Android APK of THIS app (Inhouse Learn, ' + LEARN_REPO + ') on update channel A, so installed apps offer it in their updater. It runs the whole release on GitHub: checks that main raises versionCode above channel A and that its "Android app" build is green (starting one if there is none), has the permanent key sign that exact commit in ' + SIGN_REPO + ' ("Sign Inhouse Learn"), runs the "Android app" publish (verify, emulator, release android-v<version>, updates/A.json) and checks the result. Before calling it, push to main the change with versionCode and versionName raised in android/app/build.gradle.kts. Web-only changes need no APK: they are live as soon as they reach main. The user always confirms. Never channel B. Takes about 10 minutes.',
+      parameters: Type.Object({
+        changelog: Type.String({ description: 'Tiny English changelog shown by the updater: 2-10 words, at most 120 characters, e.g. "AMOLED night mode and theme-aware system bars."' })
+      }),
+      executionMode: 'sequential',
+      execute: async (id, params, signal, onUpdate) => {
+        const changelog = String(params.changelog || '').trim();
+        const words = changelog.split(/\s+/).filter(Boolean).length;
+        if (!changelog || changelog.length > 120 || words < 2 || words > 10) throw new Error('El changelog debe tener 2–10 palabras y como mucho 120 caracteres, en inglés.');
+        const log = [];
+        const step = (text) => {
+          log.push(text);
+          if (typeof onUpdate === 'function') onUpdate(textResult(log.join('\n'), { phase: text }));
+        };
+        used(LEARN_REPO);
+        // 1. What main holds, and the channel it has to beat.
+        const sha = await branchSha(LEARN_REPO, 'main');
+        if (!sha) throw new Error('No se encontró la rama main de ' + LEARN_REPO + '.');
+        const gradle = ((await readRemote(LEARN_REPO, 'android/app/build.gradle.kts', sha)) || {}).text || '';
+        const code = Number((gradle.match(/versionCode\s*=\s*(\d+)/) || [])[1]);
+        const version = (gradle.match(/versionName\s*=\s*"([^"]+)"/) || [])[1];
+        if (!code || !version) throw new Error('No se pudo leer versionCode/versionName de android/app/build.gradle.kts en main.');
+        let published = 0;
+        try { published = Number(JSON.parse(((await readRemote(LEARN_REPO, 'updates/A.json', sha)) || {}).text).latest.versionCode) || 0; } catch (_) {}
+        if (code <= published) throw new Error('main tiene versionCode ' + code + ' (' + version + ') y el canal A ya tiene ' + published + '. Sube versionCode y versionName en android/app/build.gradle.kts (nunca se reutiliza ni se baja), súbelo a main y vuelve a llamar a esta herramienta.');
+        const tag = 'android-v' + version;
+        const existing = await gh('GET', '/repos/' + LEARN_REPO + '/releases/tags/' + encodeURIComponent(tag)).catch((error) => { if (error.status === 404) return null; throw error; });
+        if (existing) throw new Error('La release ' + tag + ' ya existe y una release publicada no se reemplaza: sube la versión.');
+        step('main ' + sha.slice(0, 7) + ' · versión ' + version + ' (versionCode ' + code + '; el canal A tiene ' + published + ')');
+        // 2. The user decides, whatever the approval mode of the chat.
+        await ask({
+          title: 'Publicar la APK ' + version + ' en el canal A',
+          summary: LEARN_REPO + '@main ' + sha.slice(0, 7) + ' · versionCode ' + code + '\n«' + changelog + '»\nSe firma con la clave permanente y las apps instaladas la verán en su actualizador. No se puede deshacer.',
+          items: [],
+          kind: 'release',
+          always: true,
+          mainBranch: true,
+          confirmText: 'Publicar'
+        });
+        // 3. A green build of this exact commit.
+        let build = await latestRun(LEARN_REPO, 'android.yml', sha);
+        if (!build || (build.status === 'completed' && build.conclusion !== 'success')) {
+          if (build) step('El último build de este commit falló: lo repito.');
+          build = await dispatch(LEARN_REPO, 'android.yml', 'main', { publish: 'false' }, sha);
+        }
+        step('Build de Android: ' + build.html_url);
+        await waitRun(LEARN_REPO, build, 'el build de Android', step);
+        // 4. The permanent key signs that commit in the repository that holds it.
+        let sign = await dispatch(SIGN_REPO, 'sign-inhouse-learn.yml', 'main', { ref: sha }, null);
+        step('Firmando en ' + SIGN_REPO + ': ' + sign.html_url);
+        sign = await waitRun(SIGN_REPO, sign, 'la firma', step);
+        const staged = 'learn-signed-' + version + '-' + sha.slice(0, 7);
+        await gh('GET', '/repos/' + SIGN_REPO + '/releases/tags/' + encodeURIComponent(staged)).catch(() => {
+          throw new Error('La firma terminó pero no aparece la prerelease ' + staged + ' en ' + SIGN_REPO + '. No se ha publicado nada.');
+        });
+        if (await branchSha(LEARN_REPO, 'main') !== sha) throw new Error('main ha cambiado mientras se firmaba: la firma solo vale para ' + sha.slice(0, 7) + '. No se ha publicado nada; vuelve a llamar a esta herramienta para firmar el commit nuevo.');
+        // 5. Publish on channel A.
+        let publish = await dispatch(LEARN_REPO, 'android.yml', 'main', { publish: 'true', changelog }, sha);
+        step('Publicando en el canal A: ' + publish.html_url);
+        publish = await waitRun(LEARN_REPO, publish, 'la publicación', step);
+        // 6. Check what the installed apps will read.
+        let latest = null;
+        try { latest = JSON.parse(((await readRemote(LEARN_REPO, 'updates/A.json', 'main')) || {}).text).latest; } catch (_) {}
+        if (!latest || Number(latest.versionCode) !== code) throw new Error('La publicación terminó pero updates/A.json no tiene versionCode ' + code + '. Revisa ' + publish.html_url);
+        const release = await gh('GET', '/repos/' + LEARN_REPO + '/releases/tags/' + encodeURIComponent(tag));
+        return textResult([
+          'APK ' + version + ' (versionCode ' + code + ') publicada en el canal A.',
+          'Release: ' + release.html_url,
+          'APK: ' + latest.apkUrl,
+          'SHA-256: ' + latest.apkSha256,
+          'Commit: ' + sha,
+          'Firma: ' + sign.html_url,
+          'Publicación: ' + publish.html_url,
+          'Las apps instaladas la ofrecerán en su actualizador (o en Ajustes → Actualizaciones).'
+        ].join('\n'), { version, versionCode: code, sha, release: release.html_url });
       }
     },
     {

@@ -80,7 +80,13 @@ Mandatory guidance for every AI and developer working in this repository.
   goes through the approval gate of `approval.js`: with the chat in «Preguntar» or «Auto» the
   user sees the files and the +/− lines in `confirmDialog` and decides; only in «Acceso total»
   (the user's explicit, per-chat choice) a write is approved without asking, and then it is
-  announced with a toast. Never add a write that skips that gate.
+  announced with a toast. Never add a write that skips that gate. The app can also ship its
+  own APK: `github_release_android` checks that `main` raises `versionCode` above
+  `updates/A.json`, **always asks** (even in «Acceso total», via `always: true`), waits for a
+  green "Android app" build of that exact commit, runs youtube-calma's **Sign Inhouse Learn**
+  with that SHA, then this repository's publish, and verifies `updates/A.json`; it stops on any
+  failure or if `main` moves, and never touches channel B. Its token needs Actions read/write
+  on both repositories. Test: `tests/web/release.cjs`.
 - **Live sync:** every tab with a chat open sees the other tabs' turns as they are written (the
   question at once, the answer character by character). Tabs of the same account open WebRTC
   data channels to each other, signalled through `peer-<deviceId>.json` in the Drive folder (a

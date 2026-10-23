@@ -1884,7 +1884,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="library.js?v=20261021-library"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261022-steer"></script>
+  <script src="vendor/pi-engine.js?v=20261023-release"></script>
   <script src="haptics.js"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -1894,8 +1894,8 @@
   <script src="scene.js?v=20261021-text-motion"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="guided.js?v=20261021-latex"></script>
-  <script src="approval.js?v=20261022-dock"></script>
-  <script src="composer-dock.js?v=20261022-dock"></script>
+  <script src="approval.js?v=20261023-release"></script>
+  <script src="composer-dock.js?v=20261023-release"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -4169,7 +4169,7 @@
     async function connectGithub() {
       const token = await confirmDialog({
         title: 'Conectar GitHub',
-        message: 'Pega un token de GitHub (github.com → Settings → Developer settings → Fine-grained tokens). Dale acceso solo a los repositorios que quieras, con Contents y Pull requests en lectura y escritura (e Issues si quieres que comente).\nSe guarda solo en este navegador. Cada cambio que el modelo quiera hacer te lo enseño antes y lo apruebas tú.',
+        message: 'Pega un token de GitHub (github.com → Settings → Developer settings → Fine-grained tokens). Dale acceso solo a los repositorios que quieras, con Contents y Pull requests en lectura y escritura (e Issues si quieres que comente). Para que la app publique su propia APK, dale además Actions en lectura y escritura en inhouselearn y en youtube-calma.\nSe guarda solo en este navegador. Cada cambio que el modelo quiera hacer te lo enseño antes y lo apruebas tú.',
         input: { placeholder: 'github_pat_…', type: 'password' },
         confirmText: 'Conectar'
       });
@@ -4240,6 +4240,7 @@
         '  5. Si el repositorio tiene GitHub Actions, mira github_ci_status después de subir y arregla lo que falle.',
         '  - Si una herramienta falla, prueba otra vía (github_grep si falla github_search_code, rangos más pequeños si una lectura es grande) antes de decir que no puedes. Lee lo justo, decide pronto y escribe: no repases varias veces lo mismo.',
         '  - Al terminar da el enlace del commit o del PR.',
+        '  - Esta misma app es el repositorio miguelcoxcaballero/inhouselearn: si el usuario te pide cambiar la app, trabaja ahí (lee primero su AGENTS.md). Lo de la web (index.html, *.js, *.css) llega a todos sus dispositivos en cuanto está en main. Si cambia la app de Android (android/), sube también versionCode y versionName en android/app/build.gradle.kts, súbelo a main, mira github_ci_status y, cuando el build esté en verde y el usuario quiera la APK, usa github_release_android con un changelog en inglés de 2–10 palabras: firma, publica en el canal A y lo comprueba (el usuario lo confirma siempre). Nunca el canal B.',
         staged.length ? '  - Cambios preparados sin subir: ' + staged.map((entry) => entry.repo + '@' + entry.branch + ' (' + Object.keys(entry.files || {}).concat((entry.deletes || []).map((path) => path + ' borrar')).join(', ') + ')').join('; ') + '.' : ''
       ].filter(Boolean).join('\n');
     }

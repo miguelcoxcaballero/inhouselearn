@@ -112,6 +112,16 @@ El token dura una hora; al caducar, la app pide volver a entrar con un toque.
    `vendor/inhouse-services-updater/catalog.py`.
    Si `main` cambió entre los pasos 2 y 3, repite el paso 2 con el SHA nuevo.
 
+**Desde la propia app:** en un chat con GitHub activado (+ → GitHub), el modelo puede hacer
+los pasos 1–3 él solo con la herramienta `github_release_android` (`engine/src/github.js`):
+comprueba que el `versionCode` de `main` supera el de `updates/A.json` y que la release no
+existe, **te pide confirmación siempre** (también en «Acceso total»), espera un build verde de
+ese commit (lo lanza si no hay), lanza *Sign Inhouse Learn* con ese SHA exacto, comprueba la
+prerelease y que `main` no se ha movido, lanza la publicación y verifica `updates/A.json`. Si
+algo falla se para con el enlace y el error. Nunca toca el canal B. El token de GitHub de la
+app necesita **Actions: lectura y escritura** en este repositorio **y** en `youtube-calma`
+(además de Contents y Pull requests en escritura aquí). Prueba: `tests/web/release.cjs`.
+
 La primera instalación es manual: descarga la APK de la release y ábrela en el móvil
 (Android pedirá permitir instalar apps de esa fuente). Las siguientes llegan por el actualizador.
 
