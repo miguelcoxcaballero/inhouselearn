@@ -80,6 +80,19 @@ penalizaciones por ausentarse ni recompensas por acumular tiempo.
 
 Fundamento, límites y pruebas: [diseño del aprendizaje guiado](docs/guided-learning.md).
 
+El curso se presenta como **pantallas** amplias, con navegación lateral, texto grande y una
+acción por pantalla. Las barras superior e inferior se mantienen; el icono de conversación
+recupera el historial completo. «Ver explicación» despliega los textos largos. «Lo entiendo»
+pasa a la práctica y «Comprobar» solicita el test: acumular mensajes nunca fuerza un examen.
+«No lo entiendo», escrito o desde el botón **?**, vuelve a la comprensión.
+
+Los visuales `explain` permiten observar, cambiar una condición y comparar con el inicio
+en el mismo dibujo. Incluyen siluetas, flechas, partes resaltadas y controles; la exploración
+libre retira las conclusiones del ejemplo para no mostrar resultados que ya no corresponden.
+El tutor dispone de `check_diagram` para revisar etiquetas, tamaños y solapamientos en móvil
+y escritorio, corregir y volver a comprobar. Es una revisión de geometría, no de exactitud física.
+Ejemplo completo: [explicación visual de sustentación](docs/explain-example.json).
+
 ## Vistas visuales e interactivas en el chat
 
 El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el aprendizaje guiado, «Muéstramelo» (debajo de la última respuesta) pide una vista; en el chat normal no hay botón: basta con pedírsela.

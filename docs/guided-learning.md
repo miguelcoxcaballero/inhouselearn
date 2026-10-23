@@ -63,6 +63,42 @@ machine; `engine/src/guided.js` exposes the compatible extended quiz schema.
 
 ## Validation and limits
 
+### Visual screens and learner-controlled readiness
+
+The focused workspace uses the actual message elements, not duplicated transcripts or
+simulations. Previous/next screens are local and do not request a model response. Only the
+explicit readiness button at the end does: understand → apply → check. Arrow keys/swipes
+cannot trigger that transition. The transcript toggle restores the full conversation.
+The composer and header retain their own grid rows; content can scroll without covering them.
+Long prose is optional behind “Ver explicación”; teaching prompts request 35–50 words around
+one visual and at most 30 words per walkthrough step. No material is deleted.
+
+`lesson.phase` replaces message counts as the phase indicator and quiz gate. Explicit confusion
+from composer text or a quick action returns to understanding, requests a simpler different
+representation and supersedes an unsubmitted lesson quiz. Failed checks also return to
+understanding. The tutor cannot create another quiz until the learner explicitly requests one.
+This is readiness as reported by the learner, not a claim that pressing a button proves mastery.
+
+`explain` reuses one `SceneView` with cumulative control presets, highlighted object identities,
+before/after comparison and an optional takeaway. Changing a control enters free exploration:
+preset conclusions are hidden until the learner restores a preset. Shape assets are silhouettes,
+not validated aerodynamic geometry. State transitions are illustrative, not integrations of time.
+Existing scenes remain valid; explain scenes keep labels at least a 14px font at phone
+widths. Walkthrough state survives DOM redraws in this tab; like existing visuals it resets on reload.
+
+`check_diagram` renders isolated, noninteractive previews at 360px and 960px and measures labels
+in the real browser. It reports text collisions, bounds, small text and invalid expressions in
+each authored state. It accepts declarative scenes/walkthroughs or sanitized inline SVG; it runs
+no author JavaScript and removes external SVG image/reference elements before mounting. Previews
+are removed and their animation/resize observers released. The tutor is instructed to check,
+revise and recheck (2–3 passes, at most three tool calls per turn). This does not verify physical
+truth, every possible slider combination, arrow/body intersections or model compliance. Diagram
+quality still depends on the model's reasoning and sources; no automatic check guarantees correctness.
+
+`guided-screens.cjs` covers the actual tool loop, a deliberately overlapping diagram and its
+correction, before/after and free exploration, lesson-title LaTeX, repeated confusion, readiness,
+screen navigation, transcript access, text disclosure, responsive layout and reduced motion.
+
 `node --test tests/web/learning.mjs` tests scoring, migration, intervals, repeated submissions,
 day rollover, hint handling and mixed review selection. `tests/web/guided-learning.cjs`
 exercises actual browser interactions and mocked model tool calls, reload, review, exam,

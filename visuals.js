@@ -20,6 +20,8 @@ const VISUALS_PROMPT = [
   'This chat turns a ```visual block (JSON) into an interactive card and a ```mermaid block into a diagram. Whenever an answer explains something that can be seen, played with or practised (a function or formula, data or a trend, a process or cycle, a comparison, dates, a procedure, terms to memorise), put ONE visual block where it helps, with only the text needed around it: the visual replaces explanation, it does not add to it. Skip it for small talk, short or factual answers, or when the student asks for text only.',
   'Pick the type: a quantity that varies → plot (graph with sliders) or formula (sliders with live results); data, proportions, trends → chart; a procedure or worked solution → steps; dates and periods → timeline; A vs B → compare; terms, formulas or vocabulary to memorise → flashcards; overview of key points → cards; a quick self-check → check; processes, cycles, hierarchies, concept maps → mermaid.',
   'Formats (JSON with double quotes; LaTeX inside strings such as \\(x^2\\) is fine):',
+  '- explain (preferred for teaching WHY something happens): a large illustrated scene with 2–5 linked states, highlighted parts and a before/after button. Format: {"type":"explain","title":"…","question":"Predict what changes","scene":{...a scene specification...},"steps":[{"title":"Initially","body":"What to look at","set":{"controlId":1},"focus":["layerId"]},{"title":"Change one cause","body":"Explain the visible effect","set":{"controlId":3},"focus":["layerId"],"notice":"The precise change to notice","equation":"LaTeX formula, optional"}],"takeaway":"One causal principle","assumption":"Model assumptions, not to scale if applicable"}. Step sets are cumulative, focus names layer ids. Keep the same camera. Put equations beside the diagram, not inside SVG text. Changing a control switches to free exploration so preset conclusions are not falsely shown for arbitrary values.',
+  '  For explain, use a scene camera with width/height ratio near 5:3, at most 6 SHORT directly placed labels (ideally under 18 characters), generous empty margins and 1–3 meaningful controls. Use body silhouettes plus arrows, callouts and paths to represent the actual objects; not a grid of text boxes. Never draw a generic line graph as a substitute for the mechanism. Use check_diagram when available, fix warnings and recheck the corrected spec before publishing.',
   '- plot (graph of functions, with sliders): {"type":"plot","title":"…","x":[-6.3,6.3],"y":[-3,3],"functions":[{"expr":"a*sin(b*x)","label":"\\\\(a\\\\sin(bx)\\\\)"}],"params":{"a":{"min":0,"max":3,"value":1,"step":0.1,"label":"amplitud"}},"points":[{"x":0,"y":0,"label":"origen"}],"readouts":[{"label":"Periodo","expr":"2*pi/b","unit":"s"}]}. "y", "params", "points" and "readouts" are optional.',
   '- formula (a formula to play with, sliders and live results, no graph): {"type":"formula","title":"…","formula":"V = I\\\\,R","params":{"I":{"min":0,"max":5,"value":2,"label":"corriente (A)"},"R":{"min":1,"max":100,"value":10,"label":"resistencia (Ω)"}},"readouts":[{"label":"Tensión","expr":"I*R","unit":"V"}]}',
   '  expr: plain math with x and the param names; + - * / ^, parentheses, sin cos tan asin acos atan sqrt abs exp ln log (base 10) floor ceil min max, pi, e. Not LaTeX.',
@@ -50,6 +52,7 @@ const VISUALS_PROMPT = [
   '   "layers":[{"kind":"path","id":"c","d":"M0,2.5 L12,2.5","stroke":"none"},{"kind":"flow","along":"c","count":60,"speed":"q/w(x)","spread":"0.9*w(x)","radius":4},{"kind":"label","at":[6,4.5],"text":"v = {q/0.5:1} m/s"}],',
   '   "readouts":[{"label":"Velocidad","expr":"q/0.5","unit":"m/s"}],"triggers":[{"when":"q>1.8","label":"caudal máximo"}]}',
   '  layer kinds: grid{step}, path{id,d (M L H V Q C Z, world coords),stroke,fill,strokeWidth,dash}, line/arrow{from,to,label}, circle{at,r,fill,label}, rect{x,y,w,h,fill}, polygon{points}, label{at,text with {expr} or {expr:digits},size,anchor}, plot{fn of x and t}, flow{along,count,speed and spread of x,y,s}, vectorField{fx,fy of x,y,t,step,scale}, heatmap{fn of x,y,min,max,colors}, spring{from,to,coils}, pendulum{id,pivot,length,gravity,angle (deg),damping} (gives id_angle, id_x, id_y), handle{id,at,label,axis} (draggable: id_x, id_y), points{id,editable,max,connect} (tap to add/remove: id_n, id_mx, id_my), draw{id} (free drawing: id_len). Any layer: "visible": expression. state: {name:{init, rate}} is integrated over time (rate = d name/dt). triggers fire once when "when" becomes true; the app tells you what the student did.',
+  '  body layer: {"kind":"body","id":"plane","shape":"aircraft|airfoil|satellite|block","at":[5,3],"width":5,"angle":"alpha"}. Professional built-in silhouettes, optional fill/stroke; width in world units, angle in degrees counterclockwise, aircraft/airfoil nose points left. Illustrative shapes only: model the physics separately. Scene responsive:true keeps labels readable on phones (automatic in explain). Keep arrows outside the silhouette and labels away from each other.',
   '- sandbox (only when a scene cannot express it: custom algorithms, games, step-by-step algorithm animations): {"type":"sandbox","title":"…","alt":"…","height":380,"html":"<canvas id=c></canvas><script>…</script>","emit":["sorted"]}. Plain HTML/JS, no libraries, no network, under 64 KB; use requestAnimationFrame; call inhouse.emit("sorted", {steps: 12}) to tell the app something happened.',
   'Text fields accept markdown and LaTeX \\( … \\). Prefer sliders with sensible ranges, real numbers and short labels. You may use up to 4 visuals in one answer, each right after the paragraph it illustrates; at most 2 of them animated. One animation, one idea; never decorate, never repeat in the visual what the text already says, and visuals never replace the quiz tool for grading.'
 ].join('\n');
@@ -67,6 +70,7 @@ function visualVarietyText(chat) {
     }
   });
   if (!used.length) return '';
+  if (chat?.guidedLearning) return 'Prefer visual continuity over novelty: reuse the same well-labelled objects and camera when developing a concept. If the student is confused, choose a simpler representation or concrete example, not cosmetic changes. Use explain for causal steps; a graph alone is insufficient for a physical mechanism.';
   const recent = used.slice(-6);
   const counts = {};
   recent.forEach((type) => { counts[type] = (counts[type] || 0) + 1; });
@@ -1097,7 +1101,7 @@ function enhanceVisuals(root, options) {
     // ```visual is the format; ```viz, ```interactive, ```chart, ```plot… or a
     // ```json with a known "type" are accepted too.
     const typed = Object.prototype.hasOwnProperty.call(VIZ_RENDERERS, lang) ? lang : '';
-    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox|image|photo|figure|gallery|preview|mockup|ui)"/.test(source))) return;
+    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(explain|plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox|image|photo|figure|gallery|preview|mockup|ui)"/.test(source))) return;
     const spec = parseVisualSpec(source, typed);
     const render = spec && VIZ_RENDERERS[String(spec.type).toLowerCase()];
     if (!render) {
@@ -1115,7 +1119,7 @@ function enhanceVisuals(root, options) {
     const index = order.indexOf(hash);
     const key = msgId + ':' + hash;
     if (!vizState.has(key)) vizState.set(key, {});
-    const animated = /^(scene|animation|simulation|sandbox)$/i.test(spec.type);
+    const animated = /^(explain|scene|animation|simulation|sandbox)$/i.test(spec.type);
     const animatedIndex = order.slice(0, index + 1).filter((item) => vizAnimatedHashes.has(item)).length + (animated && !vizAnimatedHashes.has(hash) ? 1 : 0);
     if (animated) vizAnimatedHashes.add(hash);
     const mount = () => {

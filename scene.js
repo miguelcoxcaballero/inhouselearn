@@ -28,7 +28,14 @@
    runAssistantTurn at call time). Schema: docs/visual-schema.json. */
 
 const SCENE_LIMITS = { perMessage: 8, animatedPerMessage: 4, running: 4, layers: 80, particles: 400, arrows: 300, sandboxBytes: 65536, events: 20 };
-const SCENE_KINDS = new Set(['grid', 'path', 'line', 'arrow', 'circle', 'rect', 'polygon', 'label', 'image', 'plot', 'flow', 'vectorField', 'heatmap', 'spring', 'pendulum', 'handle', 'points', 'draw']);
+const SCENE_KINDS = new Set(['grid', 'path', 'line', 'arrow', 'circle', 'rect', 'polygon', 'label', 'image', 'body', 'plot', 'flow', 'vectorField', 'heatmap', 'spring', 'pendulum', 'handle', 'points', 'draw']);
+// Canonical silhouettes; coordinates describe a drawing, not a physical model.
+const SCENE_BODIES = {
+  airfoil: 'M-50 0 C-50 -17 -17 -21 50 0 C13 3 -41 12 -50 0Z',
+  aircraft: 'M-50 2 Q-43 -6 -32 -7 L18 -7 L34 -29 L39 -29 L35 -6 L48 -1 L48 3 L24 7 L4 7 L17 25 L8 25 L-14 7 L-33 7 Q-45 6 -50 2Z',
+  satellite: 'M-14 -17H14V17H-14Z M-48 -12H-20V12H-48Z M20 -12H48V12H20Z M-20 0H-14 M14 0H20 M-5 -17V-27L9 -32',
+  block: 'M-40 -27H40V27H-40Z'
+};
 const SCENE_SVG = 'http://www.w3.org/2000/svg';
 const SCENE_ID = /^[A-Za-z_][A-Za-z_0-9]{0,30}$/;
 const SCENE_ICON = {
@@ -100,6 +107,7 @@ function validateScene(spec) {
       if (layer.id != null && !SCENE_ID.test(layer.id)) errors.push('layer ' + index + ': bad id');
       ['at', 'from', 'to', 'pivot'].forEach((key) => { if (layer[key] != null && !scenePointish(layer[key])) errors.push('layer ' + index + ': "' + key + '" must be [x, y]'); });
       if (layer.kind === 'path' && typeof layer.d !== 'string') errors.push('layer ' + index + ': path needs "d"');
+      if (layer.kind === 'body' && !Object.hasOwn(SCENE_BODIES, layer.shape)) errors.push('layer ' + index + ': body shape must be airfoil, aircraft, satellite or block');
       if (layer.kind === 'flow' && typeof layer.along !== 'string') errors.push('layer ' + index + ': flow needs "along" (a path id)');
       if (layer.kind === 'polygon' && !(Array.isArray(layer.points) && layer.points.every(scenePointish))) errors.push('layer ' + index + ': polygon needs "points"');
       if (layer.kind === 'image' && !/^data:image\/(png|jpeg|gif|webp|svg\+xml)[;,]/.test(String(layer.src || ''))) errors.push('layer ' + index + ': image only accepts data: URIs');
@@ -166,6 +174,10 @@ function sceneObserve(view) {
   }
   view.el.__vizView = view;
   sceneRuntime.observer.observe(view.el);
+  if (view.spec.responsive && view.svg && typeof ResizeObserver !== 'undefined') {
+    if (!sceneRuntime.resizeObserver) sceneRuntime.resizeObserver = new ResizeObserver(entries => entries.forEach(entry => entry.target.__vizView?.fitLabels?.()));
+    sceneRuntime.resizeObserver.observe(view.el);
+  }
 }
 
 function sceneSchedule() {
@@ -188,7 +200,7 @@ function sceneTick(now) {
   const gap = now - (sceneRuntime.last || now - 16);
   let active = false;
   sceneRuntime.views.forEach((view) => {
-    if (!view.el.isConnected) { sceneRuntime.views.delete(view); sceneRuntime.startedAt.delete(view); return; }
+    if (!view.el.isConnected) { sceneRuntime.views.delete(view); sceneRuntime.startedAt.delete(view); sceneRuntime.observer?.unobserve(view.el); sceneRuntime.resizeObserver?.unobserve(view.el); return; }
     if (view.playing && view.visible) active = true;
   });
   if (!active) { sceneRuntime.last = 0; return; }
@@ -660,6 +672,16 @@ class SceneView {
     if (time) time.textContent = 't = ' + vizFmt(this.state.t, 1) + ' s';
   }
 
+  fitLabels() {
+    const width = this.svg.getBoundingClientRect().width;
+    if (!width) return;
+    // SVG's viewBox otherwise shrinks a 14px label to ~5px on a phone.
+    this.svg.querySelectorAll('.scene-label').forEach(label => {
+      const intended = Number(label.getAttribute('font-size')) || 14;
+      label.style.fontSize = Math.max(intended, 14 * this.W / width) + 'px';
+    });
+  }
+
   summary() {
     const parts = this.controls.filter((control) => control.kind !== 'button').map((control) => {
       const value = this.state.values[control.id];
@@ -722,6 +744,18 @@ function sceneLayer(view, layer) {
         for (let y = Math.ceil(c.ymin / step) * step; y <= c.ymax && lines < 400; y += step, lines++) sceneEl('line', { y1: view.Y(y), y2: view.Y(y), x1: 0, x2: view.W, stroke: gridColor, 'stroke-width': Math.abs(y) < 1e-9 && layer.axes !== false ? 1.6 : 1 }, g);
       },
       update() {}
+    });
+  }
+  if (kind === 'body') {
+    const at = view.point(layer.at), width = view.fn(layer.width, 3), angle = view.fn(layer.angle, 0);
+    return make({
+      mount(g) {
+        this.node = sceneEl('g', { class: 'scene-body' }, g);
+        sceneEl('path', { d: SCENE_BODIES[layer.shape], fill: sceneColor(layer.fill, 'var(--surface)'), stroke: sceneColor(layer.stroke, 'var(--text)'), 'stroke-width': 1.8, 'vector-effect': 'non-scaling-stroke', 'stroke-linejoin': 'round' }, this.node);
+        if (layer.shape === 'aircraft') sceneEl('path', { d: 'M-36 -4L-29 -4L-24 0H-38Z', fill: 'var(--text)', opacity: .65 }, this.node);
+        if (layer.shape === 'satellite') sceneEl('path', { d: 'M-38 -12V12M-29 -12V12M29 -12V12M38 -12V12', fill: 'none', stroke: 'var(--text)', 'stroke-width': .7 }, this.node);
+      },
+      update(scope) { const p = at(scope); sceneSet(this.node, { transform: 'translate(' + view.X(p[0]) + ' ' + view.Y(p[1]) + ') rotate(' + (-angle(scope)) + ') scale(' + Math.abs(view.SX(width(scope))) / 100 + ')' }); }
     });
   }
   if (kind === 'path') {

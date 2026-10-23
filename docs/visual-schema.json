@@ -2,8 +2,11 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "https://miguelcoxcaballero.github.io/inhouselearn/docs/visual-schema.json",
  "title": "Inhouse Learn ```visual blocks",
- "description": "The model writes ```visual followed by one JSON object. The ten static types (plot, formula, chart, flashcards, steps, timeline, compare, check, cards) are described in VISUALS_PROMPT (visuals.js) and unchanged; this schema adds scene and sandbox. Runtime checks: validateScene/validateSandbox in scene.js. Exposed variables: button → <id>, <id>_count; handle → <id>_x, <id>_y; points → <id>_n, <id>_mx, <id>_my; draw → <id>_n, <id>_len; pendulum → <id>_angle (deg), <id>_omega, <id>_x, <id>_y.",
+ "description": "The model writes ```visual followed by one JSON object. The ten static types (plot, formula, chart, flashcards, steps, timeline, compare, check, cards) are described in VISUALS_PROMPT (visuals.js) and unchanged; this schema adds scene, causal explain walkthroughs and sandbox. Runtime checks: validateScene/validateSandbox in scene.js and validateExplain in explain.js. Exposed variables: button → <id>, <id>_count; handle → <id>_x, <id>_y; points → <id>_n, <id>_mx, <id>_my; draw → <id>_n, <id>_len; pendulum → <id>_angle (deg), <id>_omega, <id>_x, <id>_y.",
  "oneOf": [
+  {
+   "$ref": "#/$defs/explain"
+  },
   {
    "$ref": "#/$defs/scene"
   },
@@ -1115,6 +1118,45 @@
       "kind",
       "id"
      ]
+    },
+    {
+     "type": "object",
+     "properties": {
+      "kind": {
+       "const": "body"
+      },
+      "id": {
+       "$ref": "#/$defs/id"
+      },
+      "shape": {
+       "enum": [
+        "airfoil",
+        "aircraft",
+        "satellite",
+        "block"
+       ]
+      },
+      "at": {
+       "$ref": "#/$defs/point"
+      },
+      "width": {
+       "$ref": "#/$defs/num"
+      },
+      "angle": {
+       "$ref": "#/$defs/num"
+      },
+      "fill": {
+       "$ref": "#/$defs/color"
+      },
+      "stroke": {
+       "$ref": "#/$defs/color"
+      }
+     },
+     "required": [
+      "kind",
+      "shape",
+      "at"
+     ]
     }
    ]
   },
@@ -1294,6 +1336,10 @@
        "when"
       ]
      }
+    },
+    "responsive": {
+     "type": "boolean",
+     "description": "Keep SVG labels readable at phone widths."
     }
    }
   },
@@ -1551,6 +1597,259 @@
      }
     }
    ]
+  },
+  "explain": {
+   "type": "object",
+   "required": [
+    "type",
+    "title",
+    "scene",
+    "steps"
+   ],
+   "properties": {
+    "type": {
+     "const": "explain"
+    },
+    "title": {
+     "type": "string"
+    },
+    "question": {
+     "type": "string"
+    },
+    "scene": {
+     "allOf": [
+      {
+       "$ref": "#/$defs/sceneBody"
+      }
+     ]
+    },
+    "steps": {
+     "type": "array",
+     "minItems": 2,
+     "maxItems": 5,
+     "items": {
+      "type": "object",
+      "required": [
+       "title",
+       "body"
+      ],
+      "properties": {
+       "title": {
+        "type": "string"
+       },
+       "body": {
+        "type": "string"
+       },
+       "set": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "number"
+        }
+       },
+       "focus": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "notice": {
+        "type": "string"
+       },
+       "equation": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    "takeaway": {
+     "type": "string"
+    },
+    "assumption": {
+     "type": "string"
+    }
+   }
+  },
+  "sceneBody": {
+   "type": "object",
+   "required": [
+    "layers"
+   ],
+   "properties": {
+    "type": {
+     "const": "scene"
+    },
+    "title": {
+     "type": "string"
+    },
+    "alt": {
+     "type": "string",
+     "description": "One sentence for screen readers: what is drawn and what changes with the controls."
+    },
+    "caption": {
+     "type": "string"
+    },
+    "width": {
+     "type": "number",
+     "minimum": 160,
+     "maximum": 2000
+    },
+    "height": {
+     "type": "number",
+     "minimum": 100,
+     "maximum": 2000
+    },
+    "background": {
+     "$ref": "#/$defs/color"
+    },
+    "camera": {
+     "type": "object",
+     "required": [
+      "xmin",
+      "xmax",
+      "ymin",
+      "ymax"
+     ],
+     "properties": {
+      "xmin": {
+       "type": "number"
+      },
+      "xmax": {
+       "type": "number"
+      },
+      "ymin": {
+       "type": "number"
+      },
+      "ymax": {
+       "type": "number"
+      }
+     },
+     "description": "World coordinates, y up. Default 0..10 wide."
+    },
+    "loop": {
+     "enum": [
+      "animate",
+      "static"
+     ]
+    },
+    "controls": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/control"
+     },
+     "maxItems": 12
+    },
+    "functions": {
+     "type": "object",
+     "additionalProperties": {
+      "oneOf": [
+       {
+        "type": "string",
+        "description": "function of x"
+       },
+       {
+        "type": "object",
+        "properties": {
+         "args": {
+          "type": "array",
+          "items": {
+           "$ref": "#/$defs/id"
+          },
+          "maxItems": 4
+         },
+         "expr": {
+          "type": "string"
+         }
+        },
+        "required": [
+         "expr"
+        ]
+       }
+      ]
+     }
+    },
+    "vars": {
+     "type": "object",
+     "additionalProperties": {
+      "$ref": "#/$defs/num"
+     },
+     "description": "Evaluated every frame, in order."
+    },
+    "state": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "object",
+      "properties": {
+       "init": {
+        "$ref": "#/$defs/num"
+       },
+       "rate": {
+        "$ref": "#/$defs/num"
+       }
+      }
+     },
+     "description": "Integrated over time: name += rate·dt (semi-implicit Euler, 240 Hz substeps)."
+    },
+    "layers": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/layer"
+     },
+     "minItems": 1,
+     "maxItems": 80
+    },
+    "readouts": {
+     "type": "array",
+     "maxItems": 6,
+     "items": {
+      "type": "object",
+      "properties": {
+       "label": {
+        "type": "string"
+       },
+       "expr": {
+        "$ref": "#/$defs/num"
+       },
+       "unit": {
+        "type": "string"
+       },
+       "digits": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "expr"
+      ]
+     }
+    },
+    "triggers": {
+     "type": "array",
+     "maxItems": 10,
+     "items": {
+      "type": "object",
+      "properties": {
+       "when": {
+        "$ref": "#/$defs/num"
+       },
+       "label": {
+        "type": "string"
+       },
+       "emit": {
+        "type": "string"
+       },
+       "once": {
+        "type": "boolean"
+       }
+      },
+      "required": [
+       "when"
+      ]
+     }
+    },
+    "responsive": {
+     "type": "boolean",
+     "description": "Keep SVG labels readable at phone widths."
+    }
+   }
   }
  }
 }

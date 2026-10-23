@@ -1609,10 +1609,11 @@
     .library-name b { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .library-name small { color: var(--ink-3); font-size: 0.78rem; }
   </style>
-  <link rel="stylesheet" href="guided.css?v=20261023-mastery">
+  <link rel="stylesheet" href="guided.css?v=20261024-visual1">
+  <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="model-picker.css?v=20261021">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
-  <link rel="stylesheet" href="visuals.css?v=20261024-gdrive">
+  <link rel="stylesheet" href="visuals.css?v=20261024-visual1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
@@ -1901,17 +1902,19 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="library.js?v=20261021-library"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261023-mastery1"></script>
+  <script src="vendor/pi-engine.js?v=20261024-visual1"></script>
   <script src="haptics.js?v=20261024-gdrive"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
   <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
-  <script src="stream.js?v=20261023-live"></script>
-  <script src="visuals.js?v=20261024-gdrive"></script>
-  <script src="scene.js?v=20261021-text-motion"></script>
+  <script src="stream.js?v=20261024-visual1"></script>
+  <script src="visuals.js?v=20261024-visual1"></script>
+  <script src="scene.js?v=20261024-visual1"></script>
+  <script src="explain.js?v=20261024-visual1"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="learning.js?v=20261023-mastery"></script>
-  <script src="guided.js?v=20261023-mastery"></script>
+  <script src="guided.js?v=20261024-visual1"></script>
+  <script src="guided-stage.js?v=20261024-visual1"></script>
   <script src="approval.js?v=20261024-gdrive"></script>
   <script src="composer-dock.js?v=20261024-gdrive"></script>
   <script>
@@ -4076,6 +4079,7 @@
 
     function scrollThreadToBottom() {
       const wrap = document.querySelector('.thread-wrap');
+      if (typeof guidedStageActive === 'function' && guidedStageActive()) { scheduleGuidedStage(); return; }
       threadFollow.pinned = true;
       wrap.scrollTop = wrap.scrollHeight;
       syncThreadJump();
@@ -5339,12 +5343,13 @@
       } else {
         sub = 'Chat nuevo';
       }
-      elements.topTitleMain.textContent = main;
-      elements.topTitleSub.textContent = sub;
+      elements.topTitleMain.innerHTML = course ? gTitle(main) : escapeHtml(main);
+      elements.topTitleSub.innerHTML = course ? gTitle(sub) : escapeHtml(sub);
     }
 
     function syncGuidedBannerSlot(chat) {
       updateTopTitle(chat);
+      if (typeof scheduleGuidedStage === 'function') scheduleGuidedStage();
       if (!elements.guidedBannerSlot) {
         return;
       }
@@ -8513,6 +8518,7 @@
 
     const TOOL_LABELS = {
       set_course_plan: 'Plan del curso',
+      check_diagram: 'Revisar esquema',
       quiz: 'Mini test',
       final_exam: 'Examen final',
       run_js: 'Ejecutar JavaScript',

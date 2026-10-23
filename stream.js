@@ -161,6 +161,7 @@ function syncThreadJump() {
 function followThread() {
   const wrap = threadFollow.wrap;
   if (!wrap) return;
+  if (typeof guidedStageActive === 'function' && guidedStageActive()) return;
   if (threadFollow.pinned) wrap.scrollTop = wrap.scrollHeight;
   syncThreadJump();
 }

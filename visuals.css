@@ -1,4 +1,52 @@
 /* ─── Smooth streaming (stream.js) ───────────────────────────────────── */
+.viz.viz-explain { padding: 18px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.viz-explain .viz-title { font-size: clamp(1.6rem,3vw,2.25rem); margin: 8px 0 12px; }
+.ex-question { color: var(--text-secondary); font-size: 1.08rem; margin-bottom: 16px !important; }
+.ex-layout { display: grid; grid-template-columns: minmax(0,1fr); gap: 18px; }
+.ex-drawing { min-width: 0; }
+.ex-drawing .viz-scene { border: 0; border-radius: 0; padding: 0; background: transparent; box-shadow: none; margin: 0; }
+.ex-drawing .scene-stage { border: 0; border-radius: 0; background: var(--bg) !important; }
+.ex-drawing .scene-svg { overflow: visible; }
+.ex-drawing .scene-bar { margin: 6px 0; }
+.ex-drawing .scene-bar [data-scene="send"] { font-size: .78rem; min-height: 40px; }
+.ex-drawing .viz-controls { margin-top: 8px; }
+.ex-drawing .viz-slider { min-height: 46px; }
+.ex-drawing .viz-readouts { background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 0; }
+.ex-drawing .viz-readout b { font-size: 1.4rem; }
+.ex-drawing .ex-dim { opacity: .48; }
+.guided-stage .viz-explain > .viz-head, .ex-drawing .scene-bar:not(:has([data-scene="play"])) { display: none; }
+.ex-steps { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+.ex-steps button { display: flex; gap: 7px; align-items: center; border: 0; background: transparent; color: var(--text-secondary); font: inherit; font-size: .82rem; cursor: pointer; padding: 6px 0; min-height: 44px; }
+.ex-steps button > span { width: 27px; height: 27px; border-radius: 50%; border: 1px solid var(--border-strong); display: grid; place-items: center; flex-shrink: 0; }
+.ex-steps button[aria-pressed="true"] { color: var(--text); font-weight: 650; }
+.ex-steps button[aria-pressed="true"] > span { background: var(--text); color: var(--bg); border-color: var(--text); }
+.ex-kicker { font-size: .74rem; text-transform: uppercase; letter-spacing: .09em; color: var(--text-secondary); }
+.ex-description h3, .bubble .ex-description h3 { font-size: clamp(1.3rem,2.4vw,1.8rem); line-height: 1.2; margin: 6px 0 12px; }
+.ex-description p, .bubble .ex-description p { font-size: 1.06rem; line-height: 1.6; }
+.ex-equation { font-size: 1.15rem; padding: 16px 0; overflow-x: auto; }
+.ex-notice { margin-top: 14px !important; border-left: 3px solid var(--orange); padding-left: 13px; }
+.ex-notice b { display: block; font-size: .78rem; }
+.ex-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.ex-actions button { border: 0; border-bottom: 1px solid var(--border-strong); background: transparent; color: var(--text); font: inherit; font-size: .85rem; padding: 10px 0; min-height: 44px; cursor: pointer; }
+.ex-actions [data-ex-next] { margin-left: auto; font-weight: 650; }
+.ex-actions button:disabled { opacity: .4; cursor: default; }
+.ex-takeaway { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ex-takeaway summary { font-size: .95rem; font-weight: 600; cursor: pointer; padding: 8px 0; }
+.ex-assumption { margin-top: 14px !important; font-size: .78rem !important; color: var(--text-secondary); }
+.ex-steps button:focus-visible, .ex-actions button:focus-visible, .ex-takeaway summary:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+@media (min-width: 1100px) { .guided-stage .ex-layout { grid-template-columns: minmax(0,1.65fr) minmax(270px,1fr); gap: 32px; align-items: start; } }
+@media (max-width: 1099px) {
+  .ex-layout { gap: 12px; }
+  .ex-story { display: contents; }
+  .ex-steps { grid-row: 1; margin-bottom: 0; padding-bottom: 6px; gap: 6px 12px; }
+  .ex-steps button { font-size: .76rem; }
+  .ex-drawing { grid-row: 2; }
+  .ex-description { grid-row: 3; }
+  .ex-actions { grid-row: 4; margin-top: 0; }
+  .viz-explain .viz-title { font-size: 1.5rem; }
+}
+@media (prefers-reduced-motion: no-preference) { .viz-explain .scene-svg > g { transition: opacity 220ms ease; } }
+
 .md-root { min-width: 0; }
 .stream-caret {
   display: inline-block; width: 7px; height: 7px; margin-left: 4px; border-radius: 50%;

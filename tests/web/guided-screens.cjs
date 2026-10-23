@@ -1,0 +1,116 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const { chromium } = require('playwright');
+const { openApp, send, idle, SCRATCH } = require('./mock.cjs');
+const diagram = JSON.parse(fs.readFileSync(require('node:path').join(__dirname, '../../docs/explain-example.json'), 'utf8'));
+const visual = spec => '```visual\n' + JSON.stringify(spec) + '\n```';
+const title = 'Momento de cabeceo y equilibrio: de dónde sale \\\\(C_m(\\\\alpha)\\\\)';
+const plan = { title:'Mecánica de vuelo', goal:'Comprender fuerzas y momentos.', units:[{title:'Equilibrio \\(C_m=0\\)',lessons:[{title,objectives:['Interpretar \\(C_m(\\alpha)\\).']},{title:'Estabilidad',objectives:['Interpretar la pendiente.']}]}] };
+
+(async () => {
+ const browser = await chromium.launch({executablePath:process.env.CHROMIUM||undefined});
+ try {
+  const {page, errors} = await openApp(browser, {viewport:{width:1440,height:1000}});
+  const queue = async (...items) => page.evaluate(items => __replies.push(...items.map(item=>({chunk:2000,delay:1,...item}))),items);
+  await page.click('#plus-btn'); await page.click('#guided-btn');
+  await queue({text:'Tu ruta.',tools:[{name:'set_course_plan',args:plan}]},{text:'Empieza cuando quieras.'});
+  await send(page,'Quiero aprender estabilidad longitudinal.');await idle(page);
+  assert.equal(await page.locator('.g-route-name .katex').count(),1);
+  const bad = JSON.parse(JSON.stringify(diagram));
+  bad.scene.layers.push({kind:'label',at:[5.7,5.3],text:'Solapamiento'});
+  const checks = await page.evaluate(async ([bad, good])=>({bad:await checkLearningDiagram({spec:JSON.stringify(bad)}),good:await checkLearningDiagram({spec:JSON.stringify(good)})}),[bad,diagram]);
+  assert.match(checks.bad.text,/overlapping labels/);
+  assert.equal(checks.good.details.warnings.length,0,checks.good.text);
+  const initialViews = await page.evaluate(()=>sceneRuntime.views.size);
+  assert.equal(initialViews,0,'preflight releases its hidden scene views');
+  console.log('PASS browser preflight catches collisions at phone/desktop widths, corrected diagram is clean, previews leave no running views');
+  await queue({tools:[{name:'check_diagram',args:{spec:JSON.stringify(bad)}}]}, {tools:[{name:'check_diagram',args:{spec:JSON.stringify(diagram)}}]}, {text:'Mueve el ángulo y observa la flecha naranja.\n\n'+visual(diagram)});
+  await page.click('[data-g-start]');await idle(page);
+  assert.ok(await page.locator('.guided-stage').count());
+  assert.equal(await page.locator('#thread > [data-msg-id]:visible').count(),1);
+  assert.equal(await page.locator('.g-chapter-name .katex').count(),1);
+  assert.equal(await page.locator('.g-mission-title .katex').count(),1);
+  assert.equal(await page.locator('#top-title-sub .katex').count(),1);
+  const toolResults=await page.evaluate(()=>getActiveChat().messages.flatMap(m=>m.toolSteps||[]).filter(s=>s.name==='check_diagram').length);
+  assert.equal(toolResults,2);
+  console.log('PASS real tool loop checks and corrects diagrams; doubled-backslash LaTeX works in route, chapter, mission and top bar');
+  const lift = async()=>page.locator('.viz-explain [data-scene-readout="1"]').textContent();
+  assert.match(await lift(),/2[ .]?000/);
+  await page.click('[data-ex-step="1"]');assert.match(await lift(),/6[ .]?000/);
+  await page.click('[data-ex-before]');assert.match(await lift(),/2[ .]?000/);
+  await page.click('[data-ex-before]');assert.match(await lift(),/6[ .]?000/);
+  await page.evaluate(()=>{const slider=document.querySelector('.viz-explain input[type=range]');slider.value=8;slider.dispatchEvent(new Event('input',{bubbles:true}));});
+  assert.match(await lift(),/8[ .]?000/);
+  assert.match(await page.locator('.ex-description').textContent(),/Exploración libre/);
+  await page.click('[data-ex-next]');assert.match(await lift(),/6[ .]?000/);
+  await page.evaluate(()=>renderThread({preserveScroll:true}));
+  assert.match(await lift(),/6[ .]?000/,'redrawing preserves the walkthrough position');
+  console.log('PASS before/after changes the same diagram and readouts; free exploration never shows a stale preset conclusion; redraw preserves state');
+  for (const theme of ['light','dark']) for (const width of [320,390,1440]) {
+   await page.setViewportSize({width,height:900});
+   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;document.dispatchEvent(new Event('themechange'));document.querySelector('.thread-wrap').scrollTop=0;},theme);
+   await page.waitForTimeout(250);
+   const layout=await page.evaluate(()=>{
+    const rect=s=>document.querySelector(s).getBoundingClientRect();
+    const label=document.querySelector('.viz-explain .scene-label');
+    const m=label.getScreenCTM();
+    return {overflow:document.documentElement.scrollWidth>innerWidth,header:rect('.guided-banner-slot').bottom,stageTop:rect('.thread-wrap').top,stageBottom:rect('.thread-wrap').bottom,nav:rect('.g-screen-nav').top,navBottom:rect('.g-screen-nav').bottom,composer:rect('.composer-area').top,stageWidth:rect('#thread').width,chatWidth:rect('.chat').width,font:parseFloat(getComputedStyle(label).fontSize)*Math.hypot(m.c,m.d)};
+   });
+   assert.ok(!layout.overflow,JSON.stringify(layout));assert.ok(layout.header<=layout.stageTop+1);assert.ok(layout.stageBottom<=layout.nav+1);assert.ok(layout.navBottom<=layout.composer+1);
+   assert.ok(layout.font>=13.9,JSON.stringify(layout));assert.ok(layout.stageWidth>layout.chatWidth*.75,JSON.stringify({width,...layout}));
+   await page.screenshot({path:SCRATCH+'/guided-screen-'+theme+'-'+width+'.png'});
+  }
+  console.log('PASS full central workspace, readable diagram labels, 320–1440px, dark/light, fixed header/composer with no overlap');
+  await page.setViewportSize({width:1100,height:900});
+  for (const phrase of ['No lo entiendo','Sigo sin entenderlo','No me queda claro','Me he perdido']) {
+   const before=await page.evaluate(()=>__requests.length);
+   await queue({text:'Probemos un caso más sencillo.\n\n'+visual(diagram)});
+   await send(page,phrase);await idle(page);
+   const result=await page.evaluate(()=>({phase:currentLesson(getActiveChat().course).phase,help:currentLesson(getActiveChat().course).needsHelp,quiz:pendingQuiz(getActiveChat().course,'check'),requests:__requests.length,task:__requests.at(-1).messages[0].content}));
+   assert.equal(result.phase,'understand');assert.equal(result.help,true);assert.ok(!result.quiz);assert.equal(result.requests,before+1,'no message-count quiz nudge');assert.match(result.task,/DOES NOT UNDERSTAND/);
+  }
+  const declines=await page.evaluate(()=>{const chat=getActiveChat();return ['No quiero practicar todavía','No quiero comprobar lo aprendido'].map(text=>{guidedBeforeUserTurn(chat,text);return currentLesson(chat.course).phase;});});
+  assert.deepEqual(declines,['understand','understand']);
+  const rejected=await page.evaluate(()=>createGuidedToolHandlers(getActiveChat(),getActiveChat().messages.at(-1)).quiz({questions:[]}));
+  assert.match(rejected.text,/has not requested a check/);
+  await queue({text:'Ahora completa un paso del ejemplo.\n\n'+visual(diagram)});
+  await page.click('[data-screen="next"]');await idle(page);
+  assert.equal(await page.evaluate(()=>currentLesson(getActiveChat().course).phase),'apply');
+  const question={question:'¿Qué fuerza compensa el peso en vuelo horizontal equilibrado?',options:['Sustentación','Resistencia'],correct:0,explanation:'La resultante vertical es cero.'};
+  await queue({tools:[{name:'quiz',args:{questions:[question,{...question,question:'¿Qué resultante vertical queda cuando sustentación y peso se compensan?',options:['Cero','El doble del peso']}]}}]},{text:'Responde cuando estés listo.'});
+  await page.click('[data-screen="next"]');await idle(page);
+  const pending=await page.evaluate(()=>pendingQuiz(getActiveChat().course,'check')?.id);
+  assert.ok(pending,'Comprobar explicitly opens a check');
+  await queue({text:'Volvemos a mirar solo la fuerza.\n\n'+visual(diagram)});
+  await page.click('[data-screen="help"]');await idle(page);
+  assert.equal(await page.evaluate(()=>currentLesson(getActiveChat().course).phase),'understand');
+  assert.equal(await page.evaluate(id=>getActiveChat().course.quizzes[id].superseded,pending),true);
+  assert.equal(await page.evaluate(()=>!!pendingQuiz(getActiveChat().course,'check')),false);
+  console.log('PASS confusion never auto-advances; explicit readiness enables application and checking; help cancels an unanswered check');
+  const requests=await page.evaluate(()=>__requests.length);
+  const current=await page.evaluate(()=>guidedStage.current);
+  await page.click('[data-screen="prev"]');
+  assert.notEqual(await page.evaluate(()=>guidedStage.current),current);
+  await page.click('[data-screen="next"]');
+  assert.equal(await page.evaluate(()=>guidedStage.current),current);
+  assert.equal(await page.evaluate(()=>__requests.length),requests,'page navigation is local');
+  await page.click('[data-screen="history"]');
+  assert.ok(await page.locator('#thread > [data-msg-id]:visible').count()>1);
+  await page.click('[data-screen="history"]');
+  assert.equal(await page.locator('#thread > [data-msg-id]:visible').count(),1);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.click('[data-screen="prev"]');
+  assert.equal(await page.evaluate(()=>document.querySelector('#thread > [data-msg-id]:not([hidden])').getAnimations().length),0);
+  await page.reload(); await page.waitForFunction(()=>guidedStageActive());
+  assert.equal(await page.locator('#thread > [data-msg-id]:visible').count(),1);
+  console.log('PASS lateral screen navigation, complete transcript toggle, reload and reduced motion');
+  // Long explanations remain available without dominating the default screen.
+  await page.evaluate(spec=>{guidedStage.current=guidedStage.latest;const chat=getActiveChat();const m=createMessage('assistant',('Este detalle desarrolla el razonamiento y conserva toda la explicación. '.repeat(12))+'\n\nSegundo párrafo con más detalles.\n\n```visual\n'+JSON.stringify(spec)+'\n```',false);chat.messages.push(m);saveState();renderThread();},diagram);
+  await page.waitForSelector('.g-reading-toggle:visible');
+  assert.equal(await page.locator('.g-screen:not([hidden]) .g-reading-detail:visible').count(),0);
+  await page.click('.g-reading-toggle:visible');
+  assert.ok(await page.locator('.g-screen:not([hidden]) .g-reading-detail:visible').count()>0);
+  assert.deepEqual(errors,[]);
+  console.log('PASS brief default reading with opt-in full explanation; no browser errors');
+ } finally { await browser.close(); }
+})().catch(error=>{console.error(error);process.exitCode=1;});

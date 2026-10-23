@@ -42,6 +42,15 @@ Mandatory guidance for every AI and developer working in this repository.
   independent recall. Numeric questions require a finite answer and an absolute tolerance in
   the requested unit; never evaluate learner input as code. `tests/web/learning.mjs` and
   `guided-learning.cjs` cover this flow. Pedagogical rationale: `docs/guided-learning.md`.
+  `guided-stage.js/css` present the same message DOM as spacious learning screens, with
+  local previous/next navigation and an accessible transcript toggle; do not clone live
+  widgets or auto-scroll a focused screen to the bottom. The learner, never a message
+  counter, advances `lesson.phase` (understand/apply/check). Confusion returns to understand
+  and supersedes an unsubmitted lesson check; final exams and recall rounds stay intact.
+  Both composer text and quick actions must pass through `guidedBeforeUserTurn`.
+  `explain.js` adds causal scene walkthroughs and `check_diagram` preflight measurements.
+  It checks layouts, not physics. Preserve sandbox restrictions. `gTitle` safely renders
+  math in course/lesson titles, including saved doubled escapes. Test: `guided-screens.cjs`.
   `scene.js` adds the animated `scene` (declarative) and `sandbox` (iframe with
   `sandbox="allow-scripts"` only and a CSP with `default-src 'none'`; never add
   `allow-same-origin`, never relax the CSP) types; schema in `docs/visual-schema.json`, tests

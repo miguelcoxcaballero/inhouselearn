@@ -102,3 +102,9 @@ transitions live in `motion.js`; the course/practice state changes immediately.
 per-concept/day rewards and migration of existing courses. `guided-learning.cjs` runs the
 mixed numeric/choice tool flow in a browser, reloads a draft and a review, grades a numeric
 exam, replans without misattributing evidence, and checks light/dark layouts at 320–1440 px.
+# Guided screens
+
+`guided-screens.cjs` exercises learner-controlled phases (including repeated “No lo entiendo”),
+diagram preflight/correction through real tool calls, causal walkthroughs, before/after, large
+mobile labels, lesson-title LaTeX, local lateral navigation, transcript access and reduced motion.
+It saves `guided-screen-{theme}-{width}.png` in `OUT` for review.

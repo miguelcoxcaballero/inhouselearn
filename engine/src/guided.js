@@ -25,6 +25,14 @@ function result(outcome) {
 export function createGuidedTools(handlers) {
   return [
     {
+      name: 'check_diagram',
+      label: 'Revisar esquema',
+      description: 'Preflight a learning diagram in the real browser at phone and desktop widths. Accepts scene, explain or image with inline svg. Reports overlapping/clipped labels, tiny text and invalid scene expressions. It does not verify scientific correctness. Before publishing a new diagram, check it, fix issues and check the corrected version again (2–3 passes, maximum 3 calls per answer); then emit exactly the corrected specification as a visual block. No scripts or remote images run.',
+      parameters: Type.Object({ spec: Type.String({ description: 'JSON string containing the complete visual specification to check.' }) }),
+      executionMode: 'sequential',
+      execute: async (toolCallId, params) => result(await handlers.checkDiagram(params))
+    },
+    {
       name: 'set_course_plan',
       label: 'Plan del curso',
       description: 'Create or replace the course plan of this Guided Learning chat. The app shows it as a card with a "Start" button and tracks progress lesson by lesson. Group lessons in units (each with one emoji); each lesson teaches one concept, lists 2–4 concrete, checkable objectives and an estimate in minutes.',
