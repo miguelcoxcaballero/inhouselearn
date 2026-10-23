@@ -51,6 +51,21 @@ Mandatory guidance for every AI and developer working in this repository.
   Ctrl/Cmd+Enter: pi's `agent.steer`, the message enters the running turn after the current
   tool, and the answer is split there into two messages). It also draws the live tool activity
   in the thread (`renderLiveSteps`).
+- **Modo noche:** `theme.js` (en el `<head>`, antes del CSS) y `theme.css` (la
+  última hoja) dan el tema oscuro a toda la app. El estado vive en
+  `localStorage` (`inhouselearn.theme`): «auto» sigue a `prefers-color-scheme`,
+  también si el sistema cambia con la app abierta, y «light» / «dark» lo fijan.
+  El CSS solo mira `data-theme` en `<html>`; `theme.js` monta el control
+  (Auto · Claro · Oscuro) dentro del menú «+» desde JavaScript, como
+  `approval.js`, y emite `themechange` en `document`. El modo claro es el de
+  siempre: todo el oscuro cuelga de `html[data-theme="dark"]`, y lo que está
+  escrito a mano en las demás hojas (tintes negros, estados verde/rojo/ámbar,
+  el naranja de marca como texto y los botones «tinta» con
+  `background: var(--text)`) se corrige en `theme.css`, no repartiéndolo por
+  las otras hojas. Al añadir una vista, usa los tokens (`--bg`, `--surface`,
+  `--text`, `--border`…); si escribes un color fijo, añade su versión oscura
+  en `theme.css`. `visuals.js` dibuja mermaid en el tema activo y lo redibuja
+  al cambiarlo. Prueba: `tests/web/theme.cjs`.
 - **Chat library:** `library.js` keeps the files a user uploads to a chat (folders, PDFs page by
   page, photos and scanned pages read with OCR) in IndexedDB and in the user's Drive folder
   (`library-<id>.json`); the model reaches them only through the `search_library`,
