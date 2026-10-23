@@ -22,8 +22,29 @@ def adb(*args, check=True):
     return subprocess.run(['adb', *args], check=check, capture_output=True, text=True)
 
 
-def screen(name):
-    """Screenshot plus the visible text from uiautomator (WebView text included)."""
+def screen(name, retries=3):
+    """Screenshot plus the visible text from uiautomator (WebView text included).
+
+    A busy emulator sometimes puts another app's «isn't responding» dialog
+    (Pixel Launcher right after boot) over the screen: that is the system's,
+    not this app's, so answer «Wait» and look again."""
+    text = capture(name)
+    if retries and re.search(r"isn.t responding", text) and tap_if_present(OUT / f'{name}.xml', 'Wait'):
+        print(f'{name}: dismissed a system "isn\'t responding" dialog')
+        time.sleep(3)
+        return screen(name, retries - 1)
+    return text
+
+
+def tap_if_present(dump, label):
+    try:
+        tap(dump, label)
+        return True
+    except (SystemExit, OSError, ElementTree.ParseError):
+        return False
+
+
+def capture(name):
     adb('shell', 'screencap', '-p', f'/sdcard/{name}.png')
     adb('pull', f'/sdcard/{name}.png', str(OUT / f'{name}.png'))
     for _ in range(4):
