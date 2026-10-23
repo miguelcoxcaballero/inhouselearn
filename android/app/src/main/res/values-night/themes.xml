@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- A dark app theme in night mode, so the WebView reports
+         prefers-color-scheme: dark and «Auto» opens in AMOLED from the first frame. -->
+    <style name="Theme.InhouseLearn" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">@bool/light_status_bars</item>
+        <item name="android:windowLightNavigationBar">@bool/light_status_bars</item>
+    </style>
+
     <!-- The updater popup draws its own sheet over the app (UpdateActivity). -->
     <style name="Theme.InhouseLearn.Update" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>

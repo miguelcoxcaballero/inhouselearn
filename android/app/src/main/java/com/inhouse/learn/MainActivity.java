@@ -235,6 +235,24 @@ public class MainActivity extends ComponentActivity {
     // shell on every change, and the shell only dresses the window: bar icons and
     // the colour behind the bars and the keyboard. Never the other way round.
 
+    /**
+     * Tells the page whether Android is in night mode. The WebView reports the
+     * app's theme to prefers-color-scheme, and uiMode changes do not recreate
+     * this activity, so «Auto» (theme.js) learns it from here: when the page
+     * loads and whenever the phone switches. The page answers with `theme`.
+     */
+    private void tellPageNight() {
+        if (webView == null || !pageReady) return;
+        webView.evaluateJavascript("window.inhouseLearnSystemNight && window.inhouseLearnSystemNight("
+                + systemNight() + ")", null);
+    }
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration config) {
+        super.onConfigurationChanged(config);
+        tellPageNight();
+    }
+
     /** True while Android itself is in night mode (what «Auto» follows). */
     private boolean systemNight() {
         return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
@@ -242,7 +260,9 @@ public class MainActivity extends ComponentActivity {
     }
 
     private void applyThemeColors(boolean dark) {
-        int background = dark ? Color.BLACK : ContextCompat.getColor(this, R.color.app_background);
+        // Not R.color.app_background for light: in night mode that resource is
+        // black, which put dark icons on a black bar (only the battery showed).
+        int background = dark ? Color.BLACK : ContextCompat.getColor(this, R.color.app_background_light);
         WindowInsetsControllerCompat bars = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         bars.setAppearanceLightStatusBars(!dark);
         bars.setAppearanceLightNavigationBars(!dark);
@@ -467,6 +487,7 @@ public class MainActivity extends ComponentActivity {
         public void onPageFinished(WebView view, String url) {
             pageReady = true;
             deliverPendingAuth();
+            tellPageNight();
         }
 
         @Override

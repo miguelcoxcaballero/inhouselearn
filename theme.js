@@ -25,7 +25,21 @@
       return saved === 'light' || saved === 'dark' ? saved : 'auto';
     } catch (error) { return 'auto'; }
   }
-  function systemDark() { return !!(media && media.matches); }
+  // Inside the Android app the WebView follows the app's theme, not the phone's,
+  // so the shell says whether Android is in night mode (window.inhouseLearnSystemNight,
+  // APK 1.0.5+). The last answer is kept for the first paint of the next launch.
+  var SHELL_KEY = 'inhouselearn.systemNight';
+  var shellNight = null;
+  function systemDark() {
+    if (shellNight !== null) return shellNight;
+    if (/InhouseLearnApp\//.test(navigator.userAgent)) {
+      try {
+        var saved = localStorage.getItem(SHELL_KEY);
+        if (saved === '1' || saved === '0') return saved === '1';
+      } catch (error) {}
+    }
+    return !!(media && media.matches);
+  }
   function resolve(value) {
     if (value === 'dark' || value === 'light') return value;
     return systemDark() ? 'dark' : 'light';
@@ -35,6 +49,12 @@
   // tema: se lo decimos por el puente InhouseLearnApp. En el navegador no existe
   // y no pasa nada.
   function tellShell(dark) {
+    // APKs up to 1.0.4 painted «light» bars with their night background (black)
+    // when the phone was in night mode: dark icons on black, only the battery
+    // showing. Those shells never call inhouseLearnSystemNight; tell them only
+    // «dark» (black bars, light icons: always readable) and let them keep their
+    // own system colours otherwise.
+    if (!dark && shellNight === null) return;
     try {
       var shell = window.InhouseLearnApp;
       if (shell && typeof shell.postMessage === 'function') shell.postMessage(JSON.stringify({ type: 'theme', dark: dark }));
@@ -97,6 +117,15 @@
     var focus = document.querySelector('[data-theme-pref="' + next + '"]');
     if (focus) focus.focus();
   });
+
+  // The Android app (1.0.5+) calls this when the page loads and whenever the
+  // phone switches between light and night mode.
+  window.inhouseLearnSystemNight = function (dark) {
+    shellNight = !!dark;
+    try { localStorage.setItem(SHELL_KEY, shellNight ? '1' : '0'); } catch (error) {}
+    // paint() also tells the shell, even when nothing changed here.
+    paint(true);
+  };
 
   // En «Auto», el móvil puede entrar en modo oscuro mientras la app está abierta.
   if (media) {

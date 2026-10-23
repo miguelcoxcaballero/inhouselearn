@@ -99,6 +99,36 @@ async function pick(page, pref) {
     check(luminance(clear.bg) > 0.7, 'el fondo claro de siempre no cambia', clear.bg);
     check(lightCtx.errors.length === 0, 'sin errores de JavaScript en claro', lightCtx.errors.slice(0, 2).join(' | '));
     await lightCtx.context.close();
+
+    // 7. Inside the Android app the WebView reports the app's theme (light), not
+    // the phone's. An APK ≤ 1.0.4 is never told «light bars» (it painted them
+    // black with dark icons in night mode: only the battery showed); 1.0.5+
+    // tells the page Android's night mode and «Auto» follows it.
+    const app = await openApp(browser, { colorScheme: 'light', userAgent: 'Mozilla/5.0 (Linux; Android 15) Chrome/141 Mobile InhouseLearnApp/1.0.4' });
+    await app.page.addInitScript(() => { window.__shell = []; window.InhouseLearnApp = { postMessage: (m) => window.__shell.push(JSON.parse(m)) }; });
+    await app.page.reload({ waitUntil: 'load' });
+    await app.page.waitForTimeout(600);
+    const old = await app.page.evaluate(() => ({ sent: window.__shell.filter((m) => m.type === 'theme'), mode: document.documentElement.getAttribute('data-theme') }));
+    check(old.mode === 'light' && !old.sent.some((m) => m.dark === false), 'an old APK is never told to paint light bars', JSON.stringify(old));
+    const choose = (pref) => app.page.evaluate((p) => document.querySelector('#plus-theme [data-theme-pref="' + p + '"]').click(), pref);
+    await app.page.waitForSelector('#plus-theme', { state: 'attached' });
+    await choose('dark');
+    const darkSent = await app.page.evaluate(() => window.__shell.slice(-1)[0]);
+    check(darkSent && darkSent.dark === true, '«Oscuro» still darkens the old APK\'s bars', JSON.stringify(darkSent));
+    await choose('auto');
+    await app.page.evaluate(() => window.inhouseLearnSystemNight(true));
+    await app.page.waitForTimeout(500);
+    const night = await app.page.evaluate(() => ({ mode: document.documentElement.getAttribute('data-theme'), last: window.__shell.slice(-1)[0], bg: getComputedStyle(document.body).backgroundColor }));
+    check(night.mode === 'dark' && night.last.dark === true && night.bg === 'rgb(0, 0, 0)', 'APK 1.0.5: «Auto» follows Android in night mode', JSON.stringify(night));
+    const day = await app.page.evaluate(() => { window.inhouseLearnSystemNight(false); return { mode: document.documentElement.getAttribute('data-theme'), last: window.__shell.slice(-1)[0] }; });
+    check(day.mode === 'light' && day.last.dark === false, '…and back to light, telling the shell', JSON.stringify(day));
+    await app.page.evaluate(() => window.inhouseLearnSystemNight(true));
+    await app.page.reload({ waitUntil: 'load' });
+    await app.page.waitForTimeout(300);
+    const remembered = await app.page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    check(remembered === 'dark', 'the next launch opens dark before the shell speaks (no light flash)', String(remembered));
+    check(app.errors.length === 0, 'no JavaScript errors in the app', app.errors.slice(0, 2).join(' | '));
+    await app.context.close();
   } finally {
     await browser.close();
   }

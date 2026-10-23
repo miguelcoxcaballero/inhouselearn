@@ -67,7 +67,11 @@ Mandatory guidance for every AI and developer working in this repository.
   las otras hojas. Al añadir una vista, usa los tokens (`--bg`, `--surface`,
   `--text`, `--border`…); si escribes un color fijo, añade su versión oscura
   en `theme.css`. `visuals.js` dibuja mermaid en el tema activo y lo redibuja
-  al cambiarlo. Prueba: `tests/web/theme.cjs`.
+  al cambiarlo. Prueba: `tests/web/theme.cjs`. En la app Android el WebView da a
+  `prefers-color-scheme` el tema de la app, no el del móvil: desde la APK 1.0.5
+  `MainActivity` llama a `window.inhouseLearnSystemNight(dark)` al cargar y en cada
+  cambio de modo, y «Auto» usa eso (recordado para el primer frame). A una APK
+  ≤ 1.0.4 la web nunca le pide barras claras (pintaba iconos oscuros sobre negro).
 - **Chat library:** `library.js` keeps the files a user uploads to a chat (folders, PDFs page by
   page, photos and scanned pages read with OCR) in IndexedDB and in the user's Drive folder
   (`library-<id>.json`); the model reaches them only through the `search_library`,
