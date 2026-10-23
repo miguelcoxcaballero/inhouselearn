@@ -11,7 +11,7 @@ for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html &
 export OUT="${RUNNER_TEMP:-/tmp}"
 status=0
 node --test tests/web/text-quality.mjs || { echo "::error::text-quality.mjs failed"; status=1; }
-for test in latex practice text-quality motion theme visuals library github release queue live-sync sync-recovery live-stream; do
+for test in latex practice text-quality motion theme photos visuals library github release queue live-sync sync-recovery live-stream; do
   echo "::group::$test"
   log="$OUT/web-$test.log"
   limit=300; [ "$test" = live-stream ] && limit=600

@@ -69,6 +69,14 @@ Cada petición manda al modelo el estado del curso y una única tarea concreta (
 
 El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el chat normal, si una respuesta larga no trae ninguna vista, debajo aparece «Muéstramelo en visual».
 
+### Fotos y vistas previas mientras responde
+
+Además de las tarjetas, el modelo puede enseñar **imágenes** dentro de la respuesta y, sobre todo, **vistas previas de verdad** de un cambio de interfaz:
+
+- **`image`** (y `gallery`, de 2 a 6): una foto, un mapa, una ilustración o una figura, con pie y crédito. La imagen llega por URL `https`, por `data:image` o dibujada en SVG por el propio modelo: el SVG se limpia con DOMPurify y el `src` pasa una lista blanca, así que `javascript:` y los atributos pegados no entran. Si una imagen no carga, queda el enlace en vez de un hueco roto.
+- **`preview`**: el HTML y el CSS que propone el modelo, dibujados en un `iframe` con `sandbox=""` (sin scripts y sin poder tocar la página; ni siquiera puede leer el `contentDocument`). Sirve para lo que pedías: «cámbiame esta tarjeta» y verla antes de tocar nada, con `device: "phone"` o `"desktop"`, su altura y una nota de qué cambia. **No es una captura de la app**: es lo que habría que construir, renderizado de verdad con sus estilos.
+- Aparecen **a medida que contesta**: cada bloque se sustituye en cuanto se cierra, así que ponerlos detrás de cada párrafo deja ver el progreso sin esperar al final. La app le pide al modelo que los reparta así cuando pides ver algo o cuando el tema lo pide, y que nunca invente URLs de imágenes.
+
 ### Ejercicios en el chat
 
 Seis tipos más en los que el alumno hace algo (`practice.js`): **emparejar** (términos con definiciones), **ordenar** (pasos o fechas), **clasificar** (elementos en grupos), **completar huecos** (con desplegables), **estimar** (adivinar un número con un deslizador y ver el real) y **verdadero o falso**. El modelo los escribe con la respuesta en su sitio natural y la tarjeta los baraja (siempre igual para la misma tarjeta). En cada petición la app le dice al modelo qué tipos ha usado ya en ese chat para que vaya variando.

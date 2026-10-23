@@ -30,6 +30,10 @@ const VISUALS_PROMPT = [
   '- compare (2–3 columns side by side): {"type":"compare","title":"…","columns":[{"title":"…","points":["…"]}]}',
   '- check (one quick question with instant feedback): {"type":"check","question":"…","options":["…","…"],"correct":0,"explanation":"…"}',
   '- cards (key ideas at a glance): {"type":"cards","title":"…","items":[{"icon":"⚡","title":"…","body":"…"}]}',
+  '- image (a real photo, illustration or figure inside the chat, also to show how something is going): {"type":"image","src":"https://…","alt":"what is seen","caption":"…","credit":"Wikimedia Commons"} — src only https:// or data:image/… . If you draw it yourself: {"type":"image","svg":"<svg viewBox=\\"0 0 100 60\\">…</svg>","alt":"…"}',
+  '- gallery (2–6 related pictures): {"type":"gallery","title":"…","images":[{"src":"https://…","alt":"…","caption":"…"}]}',
+  '- preview (a LIVE preview of a UI change: the HTML and CSS you propose, drawn in an iframe without scripts; it is not a screenshot of their app, it is what should be built): {"type":"preview","title":"…","device":"phone|desktop","height":360,"html":"<div class=\\"card\\">…</div>","css":".card{…}","note":"what changes"}',
+  'Images and progress: if the student asks to see something (a photo, a map, how a change of the interface would look) or the topic calls for it, put the image or the preview right after the paragraph that explains it and keep writing: they appear in the chat as soon as each block closes, so the student sees the progress without waiting for the end. For interface changes use preview with the real HTML and CSS (it really renders, with its styles); for anything else use image with a URL that actually exists: never invent image links.',
   'Practice types (the student DOES something; use one when they should practise what you just explained, instead of always asking a question in text):',
   '- match (connect pairs): {"type":"match","title":"…","pairs":[{"left":"término","right":"definición"}]} (3–8 pairs, written side by side; the app shuffles them)',
   '- order (put steps or events in sequence): {"type":"order","title":"…","items":["first","second","third"],"explanation":"…"} (3–10 items written in the RIGHT order; the app shuffles them)',
@@ -353,7 +357,8 @@ function vizCompile(source, names, extra) {
 
 const VIZ_KIND_LABEL = {
   plot: 'Gráfica interactiva', formula: 'Fórmula interactiva', chart: 'Gráfico', flashcards: 'Tarjetas de memoria',
-  steps: 'Paso a paso', timeline: 'Línea de tiempo', compare: 'Comparativa', check: 'Comprueba', cards: 'Ideas clave', mermaid: 'Diagrama'
+  steps: 'Paso a paso', timeline: 'Línea de tiempo', compare: 'Comparativa', check: 'Comprueba', cards: 'Ideas clave', mermaid: 'Diagrama',
+  image: 'Imagen', photo: 'Imagen', figure: 'Figura', gallery: 'Galería', preview: 'Vista previa'
 };
 
 const VIZ_ICON = {
@@ -366,7 +371,10 @@ const VIZ_ICON = {
   compare: '<rect x="3" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="4" width="8" height="16" rx="1.5"/>',
   check: '<circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/>',
   cards: '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
-  mermaid: '<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v4h11v4"/>'
+  mermaid: '<rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="16" width="7" height="5" rx="1"/><path d="M6.5 8v4h11v4"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-5 3 3 3-4 5 6"/>',
+  gallery: '<rect x="3" y="5" width="12" height="12" rx="2"/><path d="M9 21h9a3 3 0 0 0 3-3V9"/>',
+  preview: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'
 };
 
 function vizHead(kind, title, extra) {
@@ -853,6 +861,98 @@ function vizCards(spec) {
     '<div class="viz-idea-title">' + vizInline(item.title || '') + '</div>' + (item.body ? '<div class="viz-idea-body">' + vizBlock(item.body) + '</div>' : '') + '</div>').join('') + '</div></div>');
 }
 
+/* ─── Imágenes y vistas previas ──────────────────────────────────────────
+   Dos formas de enseñar algo dentro del chat, también mientras la respuesta se
+   está escribiendo: cada bloque aparece en cuanto se cierra su ```visual, así
+   que repartirlos entre párrafos deja ver el progreso.
+
+   - image / photo / figure / gallery: una imagen de verdad, por URL https, por
+     data:image o dibujada en SVG por el modelo (el SVG se limpia con DOMPurify).
+     El src pasa una lista blanca: nada de javascript:, file: ni atributos.
+   - preview / mockup / ui: el HTML y el CSS que propone el modelo, dibujados en
+     un iframe con sandbox="" (sin scripts, sin tocar la página). Es una vista
+     previa viva de un cambio de interfaz, no una captura de la app. */
+
+const VIZ_IMG_SRC = /^(https?:\/\/[^\s"'<>]+|data:image\/(?:png|jpe?g|gif|webp|avif);base64,[A-Za-z0-9+/=]+)$/i;
+
+function vizSafeSrc(raw) {
+  const src = String(raw || '').trim();
+  if (!src || src.length > 8192) return '';
+  return VIZ_IMG_SRC.test(src) ? src : '';
+}
+
+function vizSafeSvg(raw) {
+  const source = String(raw || '').trim();
+  if (!source || source.length > 160000 || !/^<svg[\s>]/i.test(source)) return '';
+  if (!window.DOMPurify) return '';
+  try {
+    const clean = window.DOMPurify.sanitize(source, {
+      USE_PROFILES: { svg: true, svgFilters: true },
+      FORBID_TAGS: ['script', 'foreignObject', 'iframe', 'audio', 'video', 'style', 'link', 'meta'],
+      FORBID_ATTR: ['onload', 'onerror', 'onclick']
+    });
+    return /^<svg[\s>]/i.test(clean) ? clean : '';
+  } catch (error) { return ''; }
+}
+
+function vizPhotoFigure(item, many) {
+  const src = vizSafeSrc(item.src || item.url);
+  const svg = src ? '' : vizSafeSvg(item.svg);
+  if (!src && !svg) return '';
+  const alt = String(item.alt || item.caption || '').slice(0, 240);
+  const caption = item.caption ? '<div class="viz-photo-caption">' + vizBlock(item.caption) + '</div>' : '';
+  const credit = item.credit ? '<span class="viz-photo-credit">' + vizInline(item.credit) + '</span>' : '';
+  const media = svg
+    ? '<div class="viz-photo-canvas">' + svg + '</div>'
+    : '<img class="viz-photo-img" src="' + escapeHtml(src) + '" alt="' + escapeHtml(alt) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+  return '<figure class="viz-photo' + (many ? ' viz-photo-tile' : '') + '">' + media +
+    (caption || credit ? '<figcaption>' + caption + credit + '</figcaption>' : '') + '</figure>';
+}
+
+function vizPhoto(spec, state, meta) {
+  const list = Array.isArray(spec.images) ? spec.images : Array.isArray(spec.items) ? spec.items : [spec];
+  const items = list.slice(0, 6).filter((item) => item && typeof item === 'object');
+  const figures = items.map((item) => vizPhotoFigure(item, items.length > 1)).filter(Boolean);
+  if (!figures.length) return vizFallback(spec, 'No hay ninguna imagen que pueda mostrar: usa una URL https, un data:image o un svg.', meta && meta.source);
+  const kind = String(spec.type || 'image').toLowerCase();
+  const el = vizElement('<div class="viz viz-photo-card' + (figures.length > 1 ? ' viz-photo-multi' : '') + '">' +
+    vizHead(VIZ_KIND_LABEL[kind] ? kind : 'image', spec.title) +
+    '<div class="viz-photo-wrap">' + figures.join('') + '</div>' +
+    (spec.note ? '<div class="viz-caption">' + vizBlock(spec.note) + '</div>' : '') + '</div>');
+  // Una imagen que no carga deja de ser una imagen rota: el enlace, y a seguir.
+  el.querySelectorAll('img.viz-photo-img').forEach((img) => {
+    img.addEventListener('error', () => {
+      const link = img.getAttribute('src') || '';
+      img.replaceWith(vizElement('<div class="viz-photo-missing">No se pudo cargar la imagen. <a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">Abrirla aparte</a></div>'));
+    }, { once: true });
+  });
+  return el;
+}
+
+function vizPreview(spec, state, meta) {
+  const html = String(spec.html || spec.body || '').trim();
+  if (!html || html.length > 60000) return vizFallback(spec, 'La vista previa necesita un html (y opcionalmente css) de menos de 60 000 caracteres.', meta && meta.source);
+  const css = String(spec.css || '').slice(0, 40000);
+  const height = Math.min(720, Math.max(180, Number(spec.height) || 340));
+  const device = /^(phone|movil|móvil|mobile)$/i.test(String(spec.device || '')) ? 'phone'
+    : /^(tablet|tableta)$/i.test(String(spec.device || '')) ? 'tablet' : 'desktop';
+  // La vista previa arranca con el tema de la app (noche AMOLED incluida), y el
+  // CSS del modelo manda sobre esa base si quiere otra cosa.
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const base = dark
+    ? 'color-scheme:dark;color:#ece9e2;background:#000000;'
+    : 'color:#1a1a1a;background:#f5f5f0;';
+  const doc = '<!doctype html><html lang="es"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<style>html,body{margin:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;' +
+    'font-size:15px;line-height:1.5;padding:14px;box-sizing:border-box;' + base + '}' + css + '</style></head><body>' + html + '</body></html>';
+  return vizElement('<div class="viz viz-preview-card">' + vizHead('preview', spec.title) +
+    '<div class="viz-preview-frame viz-preview-' + device + '" style="height:' + height + 'px">' +
+    '<iframe class="viz-preview-live" sandbox="" referrerpolicy="no-referrer" title="' +
+    escapeHtml(String(spec.title || 'Vista previa')) + '" srcdoc="' + escapeHtml(doc) + '"></iframe>' +
+    '</div>' + (spec.note ? '<div class="viz-caption">' + vizBlock(spec.note) + '</div>' : '') + '</div>');
+}
+
 // Same order every time the same card is drawn, different from how it was written.
 function vizSeeded(seedText) {
   let seed = parseInt(vizHash(seedText), 36) || 1;
@@ -909,7 +1009,8 @@ const VIZ_RENDERERS = {
   plot: vizPlot, graph: vizPlot, function: vizPlot, formula: vizPlot, calculator: vizPlot,
   chart: vizChart, bar: (s, st) => vizChart(Object.assign({ kind: 'bar' }, s), st), pie: (s, st) => vizChart(Object.assign({ kind: 'pie' }, s), st),
   line: (s, st) => vizChart(Object.assign({ kind: 'line' }, s), st),
-  flashcards: vizFlashcards, steps: vizSteps, timeline: vizTimeline, compare: vizCompare, cards: vizCards, ideas: vizCards, check: vizCheck, quiz: vizCheck
+  flashcards: vizFlashcards, steps: vizSteps, timeline: vizTimeline, compare: vizCompare, cards: vizCards, ideas: vizCards, check: vizCheck, quiz: vizCheck,
+  image: vizPhoto, photo: vizPhoto, figure: vizPhoto, gallery: vizPhoto, preview: vizPreview, mockup: vizPreview, ui: vizPreview
 };
 
 /* ─── mermaid ────────────────────────────────────────────────────────── */
@@ -992,7 +1093,7 @@ function enhanceVisuals(root, options) {
     // ```visual is the format; ```viz, ```interactive, ```chart, ```plot… or a
     // ```json with a known "type" are accepted too.
     const typed = Object.prototype.hasOwnProperty.call(VIZ_RENDERERS, lang) ? lang : '';
-    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox)"/.test(source))) return;
+    if (!VIZ_FENCES.test(lang) && !typed && !(lang === 'json' && /"type"\s*:\s*"(plot|formula|chart|flashcards|steps|timeline|compare|check|cards|match|order|categorize|fill|estimate|truefalse|scene|sandbox|image|photo|figure|gallery|preview|mockup|ui)"/.test(source))) return;
     const spec = parseVisualSpec(source, typed);
     const render = spec && VIZ_RENDERERS[String(spec.type).toLowerCase()];
     if (!render) {

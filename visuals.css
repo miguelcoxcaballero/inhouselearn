@@ -290,6 +290,34 @@
 .sandbox-frame iframe { display: block; width: 100%; border: 0; }
 .sandbox-tag { font-size: 0.7rem; color: var(--muted); }
 .viz-fallback { padding: 12px 14px; font-size: 0.84rem; color: var(--text-secondary); background: rgba(0,0,0,0.02); box-shadow: none; }
+
+/* ─── Imágenes y vistas previas (image, gallery, preview) ────────────── */
+.viz-photo-wrap { display: grid; gap: 10px; margin-top: 8px; }
+.viz-photo-multi .viz-photo-wrap { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.viz-photo { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.viz-photo-img,
+.viz-photo-canvas {
+  width: 100%; display: block; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface-hover); overflow: hidden;
+}
+.viz-photo-img { max-height: 520px; min-height: 56px; object-fit: contain; }
+.viz-photo-canvas svg { width: 100%; height: auto; display: block; }
+.viz-photo figcaption { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 0.78rem; line-height: 1.45; color: var(--text-secondary); }
+.viz-photo-caption p { display: inline; margin: 0; }
+.viz-photo-credit { font-size: 0.72rem; color: var(--muted); }
+.viz-photo-missing {
+  display: grid; place-items: center; min-height: 84px; padding: 14px; text-align: center;
+  font-size: 0.82rem; line-height: 1.45; color: var(--muted);
+  border: 1px dashed var(--border-strong); border-radius: 12px;
+}
+.viz-photo-missing a { color: var(--orange); text-decoration: underline; text-underline-offset: 2px; }
+.viz-preview-frame {
+  margin-top: 8px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--border-strong); background: var(--surface);
+}
+.viz-preview-live { display: block; width: 100%; height: 100%; border: 0; background: var(--surface); }
+.viz-preview-phone { max-width: 360px; margin-left: auto; margin-right: auto; border-radius: 24px; }
+.viz-preview-tablet { max-width: 560px; margin-left: auto; margin-right: auto; }
 .viz-fallback details { margin-top: 6px; }
 .viz-fallback summary { cursor: pointer; font-size: 0.78rem; color: var(--muted); }
 .viz-fallback pre { margin-top: 6px; max-height: 220px; }

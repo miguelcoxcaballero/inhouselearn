@@ -23,15 +23,25 @@ CHROMIUM=/usr/bin/chromium node tests/web/text-quality.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/practice.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/theme.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/photos.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/sync-recovery.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-stream.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/github.cjs
-CHROMIUM=/usr/bin/chromium node tests/web/release.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/queue.cjs
 ```
+
+`theme.cjs` opens the app with the system in dark and in light: the theme is
+chosen before the first paint, dark is AMOLED (`rgb(0, 0, 0)`), the control in
+the + menu pins Claro/Oscuro, the choice survives a reload and «Auto» follows
+the system live.
+
+`photos.cjs` checks the pictures inside the chat: an `image` and a `preview`
+appear while the answer is still streaming, the preview is an iframe with
+`sandbox=""` that cannot reach the page, a `javascript:` source is rejected with
+a neutral note and an `svg` drawn by the model is rendered without its scripts.
 
 `latex.cjs` checks that widget LaTeX survives JSON damage (`\\frac` read as a form
 feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by KaTeX.
@@ -56,11 +66,6 @@ login, and that sync preserves a running agent's chat object.
 
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
 40 small files) and checks the search, the manifest the model gets and the three library tools.
-
-`release.cjs` checks that the app can publish its own APK (`github_release_android`) against
-a fake GitHub: it asks even in «Acceso total», then builds, signs the exact SHA in youtube-calma
-and publishes on channel A in that order and checks `updates/A.json`; a versionCode that does not
-go up, a «No» or a failing build stop before any signature.
 
 `queue.cjs` checks the message queue (Enter while busy, one per finished turn, Stop pauses)
 and steering (Ctrl+Enter enters the running turn after the current tool, same request chain).
