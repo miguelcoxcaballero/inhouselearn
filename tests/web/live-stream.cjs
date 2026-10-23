@@ -356,7 +356,9 @@ async function run(mode) {
 
   // 8. Idle cost: requests per second with nothing happening (once any reconnection is over).
   if (rtc) await Promise.all([A, B].map((d) => d.page.waitForFunction(() => peerOpenCount() > 0 && peersAllConnected(), null, { timeout: 30000 }).catch(() => {})));
-  await sleep(3000);
+  // The tail of the reconnection (reading the other side's peer file by id) can
+  // outlast the channel opening on a slow CI runner: let it end before measuring.
+  await sleep(8000);
   const idle0 = { A: drive.counts.get('A') || 0, B: drive.counts.get('B') || 0 };
   drive.kinds.clear();
   await sleep(20000);
