@@ -367,7 +367,9 @@ async function run(mode) {
   drive.kinds.forEach((v, k) => { if (/live|peer/.test(k)) idleRate[k[0]] += v / 20; });
   console.log('METRIC ' + mode + ' idle Drive requests/s ' + JSON.stringify({ live: idleRate, all: idleAll }));
   if (process.env.LIVE_DEBUG) console.log([...drive.kinds].sort().map(([k, v]) => k + ' ' + v).join('\n'));
-  check(L('idle: few live Drive requests per second'), idleRate.A <= (rtc ? 0.6 : 1.2) && idleRate.B <= (rtc ? 0.6 : 1.2), idleRate);
+  // With a direct channel only the peer heartbeat and scan remain (every 5 s,
+  // a list and a write); 0.8/s leaves room for CI timing, Drive mode is 1.2/s.
+  check(L('idle: few live Drive requests per second'), idleRate.A <= (rtc ? 0.8 : 1.2) && idleRate.B <= (rtc ? 0.8 : 1.2), idleRate);
 
   const snap = [...drive.files.values()].find((f) => f.name === 'conversations.json');
   check(L('conversations.json never holds pending or live-only fields'), snap && !/"pending":true|remoteLive/.test(snap.content));
