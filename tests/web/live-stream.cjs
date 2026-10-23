@@ -303,6 +303,7 @@ async function run(mode) {
   await A.page.evaluate(() => window.__replies.push({ text: 'Texto que sigue llegando mientras B mira otro chat y luego vuelve a este. '.repeat(5) + 'FIN.', chunk: 4, delay: 45 }));
   await send(A.page, 'Sigue');
   await A.page.waitForFunction(() => getActiveChat().messages.slice(-1)[0].content.length > 60);
+  await B.page.waitForFunction(() => { const m = getActiveChat().messages.slice(-1)[0]; return m.role === 'assistant' && m.pending && m.content.length > 20; }, null, { timeout: 15000 });
   await B.page.evaluate(() => newChat());
   await sleep(900);
   const switchedAt = Date.now();
@@ -353,8 +354,9 @@ async function run(mode) {
     check(L('…and the direct channel comes back by itself'), again, { seconds: (Date.now() - cutAt) / 1000 });
   }
 
-  // 8. Idle cost: requests per second with nothing happening.
-  await sleep(1500);
+  // 8. Idle cost: requests per second with nothing happening (once any reconnection is over).
+  if (rtc) await Promise.all([A, B].map((d) => d.page.waitForFunction(() => peerOpenCount() > 0 && peersAllConnected(), null, { timeout: 30000 }).catch(() => {})));
+  await sleep(3000);
   const idle0 = { A: drive.counts.get('A') || 0, B: drive.counts.get('B') || 0 };
   drive.kinds.clear();
   await sleep(20000);

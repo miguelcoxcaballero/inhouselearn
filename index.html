@@ -5997,19 +5997,21 @@
     // After each save of conversations.json the tab says so (`saved` over the
     // channel and in its live file), and the others read it at once: new chats,
     // renames and deletions arrive within a second or two. A full check every
-    // LIVE_SNAPSHOT_MS is only the safety net. Pending messages never reach
+    // LIVE_SNAPSHOT_MS is only the safety net (LIVE_SNAPSHOT_DIRECT_MS while
+    // every other tab is connected directly). Pending messages never reach
     // conversations.json.
     // Drive allows about three writes a second per account, sustained.
     const LIVE_WRITE_MS = 600;
     const LIVE_TICK_MS = 100;
     const LIVE_SLOW_TICK_MS = 1000;
-    const LIVE_HOT_POLL_MS = 400;
-    const LIVE_COLD_POLL_MS = 1500;
+    const LIVE_HOT_POLL_MS = 450;
+    const LIVE_COLD_POLL_MS = 1800;
     const LIVE_LONELY_WRITE_MS = 2000;
     const LIVE_HOT_FOR_MS = 15000;
     const LIVE_LIST_MS = 6000;
     const LIVE_PEER_SEND_MS = 50;
-    const LIVE_SNAPSHOT_MS = 30000;
+    const LIVE_SNAPSHOT_MS = 8000;
+    const LIVE_SNAPSHOT_DIRECT_MS = 30000;
     const LIVE_MAX_AGE_MS = 10 * 60 * 1000;
     const LIVE_PENDING_MAX_AGE_MS = 90 * 1000;
     const LIVE_FILE_EXPIRY_MS = 6 * 60 * 60 * 1000;
@@ -6287,6 +6289,8 @@
       if (created || added || payload.done || chat.title !== title) renderHistory();
       if (visible) syncGuidedBannerSlot(chat);
       if (payload.done) {
+        // However it arrived, that tab's live file has nothing new to wait for.
+        if (appState.liveFiles) appState.liveFiles.forEach((entry) => { if (entry.device === payload.device) { entry.pending = false; entry.hotUntil = 0; } });
         saveState({ skipDrive: true });
         if (visible) {
           const last = payload.messages[payload.messages.length - 1];
@@ -6382,6 +6386,8 @@
         // A device that is not online is read only when the listing shows a change.
         if (!hot && !online && entry.listed === entry.fetched) return;
         entry.busy = true;
+        // The next read is due counting from this one's start, not its end.
+        entry.nextAt = now + (hot ? LIVE_HOT_POLL_MS : LIVE_COLD_POLL_MS);
         const version = entry.listed;
         driveFetchText('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(entry.id) + '?alt=media', { method: 'GET' }, true, 'No se pudo leer Drive en directo.')
           .then((raw) => {
@@ -6405,7 +6411,8 @@
           })
           .finally(() => {
             entry.busy = false;
-            entry.nextAt = Math.max(entry.nextAt, Date.now() + (entry.hotUntil > Date.now() ? LIVE_HOT_POLL_MS : LIVE_COLD_POLL_MS));
+            // Just turned hot (a turn or someone typing): read again soon.
+            if (entry.hotUntil > Date.now()) entry.nextAt = Math.min(entry.nextAt, now + LIVE_HOT_POLL_MS);
           });
       });
     }
@@ -6459,7 +6466,8 @@
     async function liveSlowTick() {
       try {
         // A missing/stale live file must never block durable chat recovery.
-        if (Date.now() - (appState.liveSnapshotCheckAt || 0) >= LIVE_SNAPSHOT_MS && !appState.driveSyncPromise && !appState.driveSyncTimer) {
+        const every = peersAllConnected() ? LIVE_SNAPSHOT_DIRECT_MS : LIVE_SNAPSHOT_MS;
+        if (Date.now() - (appState.liveSnapshotCheckAt || 0) >= every && !appState.driveSyncPromise && !appState.driveSyncTimer) {
           appState.liveSnapshotCheckAt = Date.now();
           await pullDriveChanges(true).catch((error) => console.warn('Drive:', error));
         }
