@@ -1,0 +1,20 @@
+{
+  "id": "shot-20261023-check-repo",
+  "target": "mdn/beginner-html-site-styled",
+  "ref": "",
+  "at": "2026-10-23T22:29:26.834Z",
+  "shots": [
+    {
+      "name": "Otro repositorio, móvil",
+      "file": "1-otro-repositorio-movil.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Otro repositorio, escritorio oscuro",
+      "file": "2-otro-repositorio-escritorio-oscuro.png",
+      "device": "desktop",
+      "theme": "dark"
+    }
+  ]
+}
