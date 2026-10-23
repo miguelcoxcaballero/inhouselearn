@@ -2,15 +2,24 @@
   "schemaVersion": 1,
   "channel": "A",
   "latest": {
-    "version": "1.0.3",
-    "versionCode": 4,
-    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.3/inhouse-learn-1.0.3.apk",
-    "apkSha256": "2c67ab89acb8d286f3ca1b5b165f10d7167c04f91c9f80522de8324f78b3b98a",
+    "version": "1.0.4",
+    "versionCode": 5,
+    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.4/inhouse-learn-1.0.4.apk",
+    "apkSha256": "e46f080da6d042b4a18b211417d56db7fe9f0521da7eff976772d83b77c294fe",
     "apkSizeBytes": 198180,
-    "changelog": "Local dictation and multilingual natural voices.",
-    "releasedAt": "2026-10-21T15:55:16+00:00"
+    "changelog": "AMOLED night mode and theme-aware system bars.",
+    "releasedAt": "2026-10-23T19:08:07+00:00"
   },
   "releases": [
+    {
+      "version": "1.0.4",
+      "versionCode": 5,
+      "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.4/inhouse-learn-1.0.4.apk",
+      "apkSha256": "e46f080da6d042b4a18b211417d56db7fe9f0521da7eff976772d83b77c294fe",
+      "apkSizeBytes": 198180,
+      "changelog": "AMOLED night mode and theme-aware system bars.",
+      "releasedAt": "2026-10-23T19:08:07+00:00"
+    },
     {
       "version": "1.0.3",
       "versionCode": 4,
