@@ -117,3 +117,14 @@
   .composer-dock { max-height: 46dvh; overflow-y: auto; }
   .live-where { display: none; }
 }
+
+/* Respuesta que se está escribiendo en otro dispositivo */
+.message-meta:has(.remote-live) { opacity: 1; }
+.remote-live {
+  display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 1px 7px 1px 6px;
+  border-radius: 999px; background: var(--orange-soft); color: #A84F1A;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: 1px;
+  animation: dock-in 0.25s var(--ease);
+}
+.remote-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); animation: live-pulse 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .remote-live, .remote-live i { animation: none; } }

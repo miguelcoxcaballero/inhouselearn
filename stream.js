@@ -236,6 +236,16 @@ class StreamView {
     if (typeof update.text === 'string' && update.text !== this.target) {
       if (!update.text.startsWith(this.target)) this.shown = Math.min(this.shown, update.text.length);
       this.target = update.text;
+      // An answer from another device comes in bursts (Drive: every ~0.5 s):
+      // learn the rhythm so each burst is spread until the next one is due.
+      if (this.remote) {
+        const now = performance.now();
+        if (this.arrivedAt) {
+          const gap = Math.min(1500, now - this.arrivedAt);
+          this.gap = this.gap ? this.gap * 0.7 + gap * 0.3 : gap;
+        }
+        this.arrivedAt = now;
+      }
     }
     this.schedule();
   }
@@ -276,7 +286,13 @@ class StreamView {
     const length = this.target.length;
     if (this.shown < length) {
       const backlog = length - this.shown;
-      this.shown = Math.min(length, this.shown + Math.max(1, revealRate(backlog, this.done) * dt / 1000));
+      let step = Math.max(1, revealRate(backlog, this.done) * dt / 1000);
+      if (this.remote && !this.done && this.gap > 120) {
+        // Finish this burst a little after the next one is due, at an even pace.
+        const left = Math.max(dt, this.arrivedAt + this.gap * 1.25 - now);
+        step = backlog * Math.min(1, dt / left);
+      }
+      this.shown = Math.min(length, this.shown + step);
     }
     this.renderSide();
     const visibleLength = Math.floor(this.shown);
@@ -420,6 +436,14 @@ function streamViewFor(message) {
     view.target = existing.target;
     view.shown = existing.shown;
     view.done = existing.done;
+    view.remote = existing.remote;
+    view.gap = existing.gap;
+    view.arrivedAt = existing.arrivedAt;
+    // The new element was drawn with the text as it is now (it may have grown
+    // while this chat was not on screen): never type it again.
+    const current = typeof message.content === 'string' ? message.content : '';
+    if (current.length > view.target.length && current.startsWith(view.target)) view.target = current;
+    view.shown = Math.max(existing.shown, Math.min(view.target.length, current.length));
     view.finishWaiters = existing.finishWaiters;
     existing.finishWaiters = [];
     existing.stop();

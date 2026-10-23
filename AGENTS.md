@@ -64,16 +64,25 @@ Mandatory guidance for every AI and developer working in this repository.
   user sees the files and the +/− lines in `confirmDialog` and decides; only in «Acceso total»
   (the user's explicit, per-chat choice) a write is approved without asking, and then it is
   announced with a toast. Never add a write that skips that gate.
-- **Live sync:** devices of the same account open WebRTC data channels to each other, signalled
-  through `peer-<deviceId>.json` files in the Drive folder; the answering device sends every change
-  at once and a `saved` notice after each Drive save. When a direct connection is not possible,
-  each tab writes `live-<deviceId>.json` in Drive and the others poll it every second
-  (`liveShareStart`, `liveTick`, `peerTick` in `index.html`); legacy `live.json` is still read.
-  Use a distinct ID per tab. Durable history polling runs independently of live-file errors.
-  Discover all pages of matching folders/snapshots, merge legacy duplicates without deleting
-  them, and choose the smallest file ID as the canonical write target. Serialize history
-  reads/writes, retry failed saves, and use conditional writes when Drive exposes an ETag.
-  `tests/web/sync-recovery.cjs` covers reload, duplicate histories and transient failures.
+- **Live sync:** every tab with a chat open sees the other tabs' turns as they are written (the
+  question at once, the answer character by character). Tabs of the same account open WebRTC
+  data channels to each other, signalled through `peer-<deviceId>.json` in the Drive folder (a
+  heartbeat, the id of the tab's live file, offers/answers); the answering tab sends the turn
+  whole when anything but the text changes and otherwise only the new characters (`{t:'d'}`),
+  and a `saved` notice after each Drive save. Tabs without a direct channel read the answering
+  tab's `live-<deviceId>.json` **by file id** (never wait on Drive's lagging search index): fast
+  while a turn runs or someone is typing (`typing` notice), slowly otherwise; writes stay under
+  Drive's ~3 writes/s per account, and nothing is written when no other tab is online.
+  `stream.js` spreads each burst from another device until the next one is due (`remote`
+  views), and a chat another device is answering is never replaced by a snapshot mid-turn
+  (`chatHasLiveTurn`). Legacy `live.json` is still read. Use a distinct ID per tab (a reload
+  removes the previous tab's files). Durable history polling runs independently of live-file
+  errors. Discover all pages of matching folders/snapshots, merge legacy duplicates without
+  deleting them, and choose the smallest file ID as the canonical write target. Serialize
+  history reads/writes, retry failed saves, and use conditional writes when Drive exposes an
+  ETag. `tests/web/sync-recovery.cjs` covers reload, duplicate histories and transient
+  failures; `tests/web/live-stream.cjs` measures latency, stalls, reliability and request
+  cost over WebRTC and over Drive with real-world latency.
 - Never edit `vendor/inhouse-services-updater/`, `android/app/src/main/assets/updates/` or
   `android/app/src/main/java/com/inhouse/services/updater/` by hand: they are written by the
   canonical repository's `tools/sync.py`, and `vendor/inhouse-services-updater/verify.py`

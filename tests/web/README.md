@@ -25,6 +25,7 @@ CHROMIUM=/usr/bin/chromium node tests/web/motion.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/latex.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/live-sync.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/sync-recovery.cjs
+CHROMIUM=/usr/bin/chromium node tests/web/live-stream.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/library.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/github.cjs
 CHROMIUM=/usr/bin/chromium node tests/web/queue.cjs
@@ -37,6 +38,13 @@ feed, `\\$…\\$`, doubled backslashes) and that bare `x^2` options are drawn by
 signalled through Drive), the second one stays within a few characters of the first one's answer, ends with the same chat and gets new chats
 within seconds (conversations.json polling). Set `LIVE_SYNC_FALLBACK=1` to explicitly
 exercise the Drive fallback with WebRTC disabled; the default suite still requires WebRTC.
+
+`live-stream.cjs` measures the live chat between two devices with the same chat open, over
+WebRTC and over the Drive fallback, on a fake Drive with 120–350 ms per request and a search
+index 2 s behind: how far behind the other device draws the question and the answer, the
+longest stall of the text, bytes over the channel and Drive requests (answering and idle), plus
+the reverse direction, steering, stop, switching chats and reloading mid-answer and a dropped
+connection. It prints `METRIC` lines; `LIVE_MODES=rtc` or `drive` runs one mode.
 
 `sync-recovery.cjs` exercises the normal login/reload path against a fake Drive with
 duplicate folders/files, reversed and paginated listings, a transient upload failure,

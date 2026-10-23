@@ -17,6 +17,7 @@ async function drive(route) {
  const json=(data,status=200,headers={})=>route.fulfill({status,headers:{'content-type':'application/json',...headers},body:JSON.stringify(data)});
  if(url.pathname.includes('userinfo'))return json({email:'sync-test@example.com',name:'Sync test'});
  if(req.headers().authorization==='Bearer expired-test-token')return json({},401);
+ if(req.method()==='DELETE'){files.delete(decodeURIComponent((url.pathname.match(/\/files\/([^/]+)$/)||[])[1]||''));return route.fulfill({status:204,body:''});}
  const id=decodeURIComponent((url.pathname.match(/\/files\/([^/]+)$/)||[])[1]||'');
  if(req.method()==='GET'&&!id) {
   const q=url.searchParams.get('q')||'',props=[...q.matchAll(/key='([^']+)' and value='([^']*)'/g)].map(m=>[m[1],m[2]]);
