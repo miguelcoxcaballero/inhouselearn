@@ -30,10 +30,10 @@ const plan = { title:'Mecánica de vuelo', goal:'Comprender fuerzas y momentos.'
   assert.equal(await page.locator('#thread > [data-msg-id]:visible').count(),1);
   assert.equal(await page.locator('.g-chapter-name .katex').count(),1);
   assert.equal(await page.locator('.g-mission-title .katex').count(),1);
-  assert.equal(await page.locator('#top-title-sub .katex').count(),1);
+  assert.equal(await page.locator('#top-title-main').textContent(),plan.title);
   const toolResults=await page.evaluate(()=>getActiveChat().messages.flatMap(m=>m.toolSteps||[]).filter(s=>s.name==='check_diagram').length);
   assert.equal(toolResults,2);
-  console.log('PASS real tool loop checks and corrects diagrams; doubled-backslash LaTeX works in route, chapter, mission and top bar');
+  console.log('PASS real tool loop checks and corrects diagrams; doubled-backslash LaTeX works in route, chapter and mission; top bar shows the course title');
   const lift = async()=>page.locator('.viz-explain [data-scene-readout="1"]').textContent();
   assert.match(await lift(),/2[ .]?000/);
   await page.click('[data-ex-step="1"]');assert.match(await lift(),/6[ .]?000/);

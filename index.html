@@ -1401,7 +1401,6 @@
       max-width: 100%; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-weight: 500; font-size: 1.18rem;
       letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .top-title small { max-width: 100%; font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Cajón de chats */
     .layout, .layout.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
@@ -1663,7 +1662,6 @@
         </div>
         <div class="top-title" id="top-title">
           <b id="top-title-main">inhouse learn</b>
-          <small id="top-title-sub"></small>
         </div>
       </div>
       <div class="topbar-end">
@@ -2122,7 +2120,6 @@
       sendIcon: document.getElementById('send-icon'),
       sendLabel: document.getElementById('send-label'),
       topTitleMain: document.getElementById('top-title-main'),
-      topTitleSub: document.getElementById('top-title-sub'),
       newChatBtn: document.getElementById('new-chat-btn'),
       clearChatBtn: document.getElementById('clear-chat-btn'),
       modelMenuBtn: document.getElementById('model-menu-btn'),
@@ -5328,23 +5325,15 @@
     }
 
     function updateTopTitle(chat) {
-      if (!elements.topTitleMain || !elements.topTitleSub) return;
+      if (!elements.topTitleMain) return;
       let main = chat && chat.title ? chat.title : 'Nuevo chat';
-      let sub = '';
       const course = chat && chat.guidedLearning ? courseOf(chat) : null;
       if (course && course.units.length) {
         main = course.title || main;
-        sub = guidedTitleSub(course);
       } else if (course) {
         main = 'Aprendizaje guiado';
-        sub = 'Elige qué quieres aprender';
-      } else if (chat && threadMessages(chat).length) {
-        sub = 'Chat · ' + relativeWhen(chat.updatedAt || chat.createdAt);
-      } else {
-        sub = 'Chat nuevo';
       }
       elements.topTitleMain.innerHTML = course ? gTitle(main) : escapeHtml(main);
-      elements.topTitleSub.innerHTML = course ? gTitle(sub) : escapeHtml(sub);
     }
 
     function syncGuidedBannerSlot(chat) {
