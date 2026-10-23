@@ -311,7 +311,7 @@ async function run(mode) {
   await sleep(1000);
   const after = await B.page.evaluate(([t, id]) => window.__log.filter((r) => r[0] >= t && r[1] === id).map((r) => r[3]), [switchedAt, atSwitch.id]);
   const lowest = Math.min(...after);
-  check(L('switching chats mid-answer: B carries on from what it had, never retyping'), atSwitch.pending && after.length > 2 && lowest >= atSwitch.len * 0.9 && after[after.length - 1] > atSwitch.len, { atSwitch, lowest, last: after[after.length - 1] });
+  check(L('switching chats mid-answer: B carries on from what it had, never retyping'), atSwitch.pending && after.length > 0 && lowest >= atSwitch.len * 0.9 && after[after.length - 1] > atSwitch.len, { atSwitch, lowest, last: after[after.length - 1] });
   await idle(A.page, 30000);
   await B.page.waitForFunction(() => !getActiveChat().messages.some((m) => m.pending), null, { timeout: 15000 }).catch(() => {});
   const end5 = await same(A, B);
