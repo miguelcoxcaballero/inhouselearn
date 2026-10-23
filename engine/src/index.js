@@ -15,6 +15,7 @@ import { createLibraryTools } from './library.js';
 import { createGithubTools, githubWhoAmI, githubPushStaged } from './github.js';
 
 export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, githubPushStaged, normalizePath, runInSandbox };
+export { createDriveTools } from './gdrive.js';
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

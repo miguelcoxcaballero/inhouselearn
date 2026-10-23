@@ -172,7 +172,7 @@ async function approveChange(chat, request) {
     title: options.title || 'Confirmar',
     message: options.summary || options.message || '',
     items: options.items || [],
-    danger: !!options.mainBranch,
+    danger: !!(options.mainBranch || options.danger),
     confirmText: options.confirmText || 'Aprobar',
     cancelText: options.cancelText || 'No'
   };

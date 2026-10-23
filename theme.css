@@ -69,6 +69,7 @@ html[data-theme="dark"] .send-btn.busy,
 html[data-theme="dark"] .chats-btn[aria-expanded="true"],
 html[data-theme="dark"] .plus-btn[aria-expanded="true"],
 html[data-theme="dark"] .plus-item.github-btn.active > svg,
+html[data-theme="dark"] .plus-item.gdrive-btn.active > svg,
 html[data-theme="dark"] .confirm-btn.primary,
 html[data-theme="dark"] .g-start,
 html[data-theme="dark"] .g-primary,
@@ -91,7 +92,8 @@ html[data-theme="dark"] .dock-btn.primary:hover {
   background: #d3cec2; border-color: #d3cec2; color: var(--on-ink-solid);
 }
 /* Las ranuras que usaban --text como relleno (interruptores, pasos) */
-html[data-theme="dark"] .plus-item.github-btn.active .plus-switch { background: var(--ink-solid); }
+html[data-theme="dark"] .plus-item.github-btn.active .plus-switch,
+html[data-theme="dark"] .plus-item.gdrive-btn.active .plus-switch { background: var(--ink-solid); }
 
 /* 4. Los tintes negros escritos a mano (hover, campos hundidos, pastillas)
       desaparecen sobre fondo oscuro: pasan a ser tintes blancos. */
@@ -125,6 +127,7 @@ html[data-theme="dark"] .plus-btn:hover,
 html[data-theme="dark"] .plus-item:hover,
 html[data-theme="dark"] .plus-item:focus-visible,
 html[data-theme="dark"] .plus-item.github-btn.active,
+html[data-theme="dark"] .plus-item.gdrive-btn.active,
 html[data-theme="dark"] .plus-approval-options,
 html[data-theme="dark"] .plus-theme-options,
 html[data-theme="dark"] .sidebar-close:hover,

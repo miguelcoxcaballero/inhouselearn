@@ -433,7 +433,13 @@ const STEP_TEXT = {
   search_library: ['Buscando en tus archivos', 'Buscado en tus archivos'],
   read_library: ['Leyendo', 'Leído'],
   list_library: ['Mirando tu biblioteca', 'Biblioteca vista'],
-  view_library_image: ['Mirando la imagen', 'Imagen vista']
+  view_library_image: ['Mirando la imagen', 'Imagen vista'],
+  drive_search: ['Buscando en tu Drive', 'Buscado en tu Drive'],
+  drive_list: ['Mirando una carpeta de tu Drive', 'Carpeta de tu Drive'],
+  drive_read: ['Leyendo de tu Drive', 'Leído de tu Drive'],
+  drive_write_file: ['Guardando en tu Drive', 'Guardado en tu Drive'],
+  drive_edit_file: ['Editando en tu Drive', 'Editado en tu Drive'],
+  drive_organize: ['Organizando tu Drive', 'Drive organizado']
 };
 
 function baseName(path) {
@@ -492,6 +498,9 @@ function describeToolStep(step) {
     case 'github_release_android':
       // What the release is doing right now (build, signature, publication…).
       target = running && step.progress ? String(step.progress).replace(/: https?:\/\/\S+$/, '').slice(0, 80) : '';
+      break;
+    case 'drive_search':
+      target = args.query ? '«' + String(args.query).slice(0, 60) + '»' : '';
       break;
     case 'search_library':
       target = args.query ? '«' + String(args.query).slice(0, 60) + '»' : '';

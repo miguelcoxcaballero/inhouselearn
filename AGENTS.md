@@ -110,6 +110,15 @@ Mandatory guidance for every AI and developer working in this repository.
   (`window.inhousePrivateImage`). The project's code runs in a read-only job; only the publish job
   writes. In «Auto» the screenshot itself does not ask. A `preview` is a mockup, never presented as a
   screenshot.
+- **The user's Google Drive:** + menu → Google Drive (per browser, `localStorage` `::userDrive`;
+  on per chat, `chat.userDrive`). Connecting asks Google only for `drive.readonly` (added to
+  `googleOauthScopes()`, checked with tokeninfo; if Google does not grant it nothing is connected).
+  The model searches and reads with `drive_search`, `drive_list`, `drive_read` (`engine/src/gdrive.js`;
+  Docs/Sheets/Slides exported as text, PDFs by pages with pdf.js, images as pictures). Every change
+  (`drive_write_file`, `drive_edit_file`, `drive_organize`) is one call for one file and one action and
+  goes through `approveChange` with `always: true`: it asks EVERY time, also in «Acceso total»; the
+  first approved change asks Google for `drive` (write). Never add a Drive write that skips this.
+  Test: `tests/web/gdrive.cjs`.
 - **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
   closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
   repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue
