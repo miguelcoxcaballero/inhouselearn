@@ -1,0 +1,19 @@
+{
+  "id": "shot-20261023-check",
+  "ref": "main",
+  "at": "2026-10-23T21:42:44.587Z",
+  "shots": [
+    {
+      "name": "Menú + en oscuro",
+      "file": "1-menu-en-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Una respuesta",
+      "file": "2-una-respuesta.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
