@@ -476,6 +476,7 @@ class SceneView {
       '<div class="scene-stage" style="aspect-ratio:' + this.W + ' / ' + this.H + ';background:' + bg + '">' +
       '<svg class="scene-svg" viewBox="0 0 ' + this.W + ' ' + this.H + '" role="img" aria-label="' + escapeHtml(alt) + '" preserveAspectRatio="xMidYMid meet"></svg>' +
       '<div class="scene-note" aria-live="polite"></div></div>' +
+      '<p class="scene-warning" role="status" hidden></p>' +
       '<div class="scene-bar">' +
       (animated ? '<button type="button" class="scene-btn" data-scene="play" aria-label="Reproducir" aria-pressed="false">' + SCENE_ICON.play + '</button>' +
         '<button type="button" class="scene-btn" data-scene="reset" aria-label="Reiniciar">' + SCENE_ICON.reset + '</button>' +
@@ -655,11 +656,26 @@ class SceneView {
 
   draw() {
     const scope = this.scope;
+    let invalid = false;
+    this.renderErrors = [];
     this.layers.forEach((layer) => {
-      const shown = layer.visible ? !!layer.visible(scope) : true;
-      layer.g.style.display = shown ? '' : 'none';
-      if (shown) layer.update(scope);
+      try {
+        const visibility = layer.visible ? layer.visible(scope) : 1;
+        if (typeof visibility === 'number' && !Number.isFinite(visibility)) throw new RangeError('Non-finite visibility');
+        layer.g.style.display = visibility ? '' : 'none';
+        if (visibility) layer.update(scope);
+      } catch (error) {
+        // An undefined expression must not corrupt SVG coordinates or stop
+        // other layers. Retry this layer on the very next control update.
+        layer.g.style.display = 'none';
+        invalid = true;
+        this.renderErrors.push((layer.layer.id || layer.layer.kind) + ': ' + error.message);
+      }
     });
+    const warning = this.el.querySelector('.scene-warning');
+    const warningText = invalid ? 'No se puede representar parte del dibujo con este valor. Prueba otro valor del control.' : '';
+    warning.hidden = !invalid;
+    if (warning.textContent !== warningText) warning.textContent = warningText;
     (Array.isArray(this.spec.readouts) ? this.spec.readouts : []).slice(0, 6).forEach((item, index) => {
       const target = this.el.querySelector('[data-scene-readout="' + index + '"]');
       if (target) {
@@ -710,8 +726,14 @@ function sceneEl(tag, attrs, parent) {
 }
 
 function sceneSet(node, attrs) {
-  Object.keys(attrs).forEach((name) => {
-    const value = typeof attrs[name] === 'number' ? (isFinite(attrs[name]) ? Math.round(attrs[name] * 100) / 100 : -9999) : attrs[name];
+  const entries = Object.entries(attrs).map(([name, value]) => {
+    if ((typeof value === 'number' && !Number.isFinite(value)) ||
+        (/^(d|points|transform)$/.test(name) && /NaN|Infinity/.test(String(value)))) {
+      throw new RangeError('Non-finite SVG geometry');
+    }
+    return [name, typeof value === 'number' ? Math.round(value * 100) / 100 : value];
+  });
+  entries.forEach(([name, value]) => {
     if (node.getAttribute(name) !== String(value)) node.setAttribute(name, value);
   });
 }
@@ -731,8 +753,7 @@ function sceneLayer(view, layer) {
   const visible = layer.visible != null ? view.fn(layer.visible, 1) : null;
   const opacity = layer.opacity != null ? view.fn(layer.opacity, 1) : null;
   const base = { visible, layer };
-  const withOpacity = (update) => (scope) => { update(scope); };
-  const make = (obj) => Object.assign(base, obj, opacity ? { update: ((inner) => (scope) => { inner(scope); sceneSet(base.g, { opacity: opacity(scope) }); })(obj.update) } : {});
+  const make = (obj) => Object.assign(base, obj, opacity ? { update: ((inner) => (scope) => { inner.call(base, scope); sceneSet(base.g, { opacity: opacity(scope) }); })(obj.update) } : {});
 
   if (kind === 'grid') {
     return make({

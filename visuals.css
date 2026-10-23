@@ -499,3 +499,6 @@ button:focus-visible, summary:focus-visible, [role="switch"]:focus-visible + spa
     scroll-behavior: auto !important;
   }
 }
+
+.scene-warning { margin: 8px 0; color: var(--text-secondary); font-size: .85rem; }
+.scene-warning[hidden] { display: none; }

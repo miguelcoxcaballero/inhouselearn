@@ -87,7 +87,12 @@ function vizExplain(spec, state, context) {
     show(true, true);
     vizRecordEvent(context?.key || 'any:explain', spec.title, 'walkthrough', 'Viewed step ' + ((before ? 0 : state.step) + 1) + ': ' + spec.steps[before ? 0 : state.step].title + '. ' + view.summary());
   });
-  view.el.addEventListener('input', event => { if (event.target.matches('[data-scene-control]')) { state.exploring = true; before = false; show(false); } });
+  view.el.addEventListener('input', event => {
+    if (!event.target.matches('[data-scene-control]') || state.exploring) return;
+    state.exploring = true; before = false;
+    view.svg.getAnimations().forEach(animation => animation.cancel());
+    show(false);
+  });
   view.el.addEventListener('click', event => { if (event.target.closest('[data-scene="play"],[data-scene="reset"],[data-scene-button]')) { state.exploring = true; before = false; show(false); } });
   show(!state.exploring, false);
   return el;
@@ -127,13 +132,26 @@ async function checkLearningDiagram(params) {
         view = new SceneView(scene, { playing: false }, 'preflight:' + width + ':' + (++vizSeq));
         view.pause(); host.appendChild(view.el); view.fitLabels();
       }
-      const states = spec.type === 'explain' ? spec.steps : [null];
+      const defaults = view ? { ...view.state.values } : {};
+      const states = [];
+      let cumulative = { ...defaults };
+      if (spec.type === 'explain') spec.steps.forEach((step, index) => {
+        Object.assign(cumulative, step.set || {});
+        states.push({ label: 'step ' + (index + 1), values: { ...cumulative } });
+      });
+      else states.push({ label: 'initial', values: defaults });
+      // A clean initial frame is not enough: also exercise the controls.
+      for (const control of view?.controls || []) {
+        const min = Number(control.min) || 0, max = Number(control.max) > min ? Number(control.max) : min + 1;
+        const values = control.kind === 'slider' ? [min, (min + max) / 2, max] : control.kind === 'toggle' ? [0, 1] : [];
+        for (const value of values) states.push({ label: control.id + '=' + value, values: { ...defaults, [control.id]: value } });
+      }
       for (let index = 0; index < states.length; index++) {
-        if (view && states[index]) { Object.assign(view.state.values, states[index].set || {}); view.resetSim(); }
+        if (view) { Object.assign(view.state.values, states[index].values); view.resetSim(); }
         const svg = host.querySelector('svg.scene-svg') || host.querySelector('svg');
         const box = svg.getBoundingClientRect();
         const labels = Array.from(svg.querySelectorAll('text')).filter(label => label.textContent.trim() && getComputedStyle(label).display !== 'none' && !label.closest('[style*="display: none"]'));
-        const prefix = width + 'px' + (states[index] ? ', step ' + (index + 1) : '') + ': ';
+        const prefix = width + 'px, ' + states[index].label + ': ';
         const rects = labels.map(label => ({ text: label.textContent.slice(0, 50), rect: label.getBoundingClientRect(), label }));
         for (let i = 0; i < rects.length; i++) {
           const a = rects[i], r = a.rect;
@@ -147,7 +165,7 @@ async function checkLearningDiagram(params) {
             if (Math.min(r.right,b.right)-Math.max(r.left,b.left)>2 && Math.min(r.bottom,b.bottom)-Math.max(r.top,b.top)>2) findings.push(prefix + 'overlapping labels: ' + a.text + ' / ' + rects[j].text);
           }
         }
-        if (view?.errors.length) findings.push(...view.errors.map(error => prefix + error));
+        if (view) findings.push(...view.errors.concat(view.renderErrors || []).map(error => prefix + error));
       }
     } catch (error) { findings.push(width + 'px: ' + String(error.message).slice(0, 200)); }
     finally {

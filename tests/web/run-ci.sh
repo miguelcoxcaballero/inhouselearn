@@ -11,7 +11,7 @@ for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html &
 export OUT="${RUNNER_TEMP:-/tmp}"
 status=0
 node --test tests/web/text-quality.mjs tests/web/learning.mjs || { echo "::error::unit tests failed"; status=1; }
-for test in latex practice text-quality motion guided-learning guided-screens theme photos visuals library github release gdrive reasoning queue live-sync sync-recovery live-stream; do
+for test in latex practice text-quality motion guided-learning guided-screens theme photos visuals visual-controls library github release gdrive reasoning queue live-sync sync-recovery live-stream; do
   echo "::group::$test"
   log="$OUT/web-$test.log"
   limit=300; [ "$test" = live-stream ] && limit=600

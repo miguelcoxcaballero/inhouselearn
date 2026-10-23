@@ -505,7 +505,8 @@ function vizPlot(spec, state) {
     if (hi < 0 && -hi < (hi - lo) * 0.35) hi = 0;
     return [lo, hi];
   };
-  let yr = Array.isArray(spec.y) && spec.y.length === 2 && spec.y.every(isFinite) && spec.y[1] > spec.y[0] ? spec.y.map(Number) : (state.yr || autoY());
+  const fixedY = Array.isArray(spec.y) && spec.y.length === 2 && spec.y.every(isFinite) && spec.y[1] > spec.y[0];
+  let yr = fixedY ? spec.y.map(Number) : autoY();
   const px = (x) => L + (x - xr[0]) / (xr[1] - xr[0]) * (W - L - R);
   const py = (y) => T + (yr[1] - y) / (yr[1] - yr[0]) * (H - T - B);
   const clipId = 'vizclip' + (++vizSeq);
@@ -549,7 +550,7 @@ function vizPlot(spec, state) {
     '<defs><clipPath id="' + clipId + '"><rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '"/></clipPath></defs>' +
     '<g class="viz-axes"></g><g class="viz-curves" clip-path="url(#' + clipId + ')"></g><g class="viz-points"></g>' +
     '<g class="viz-hover"><line class="viz-cross" y1="' + T + '" y2="' + (H - B) + '"/></g></svg><div class="viz-tip"></div>' +
-    (spec.y ? '' : '<button type="button" class="viz-mini" data-viz-fit title="Ajustar la vista">Ajustar</button>') + '</div>';
+    (fixedY ? '' : '<button type="button" class="viz-mini" data-viz-fit title="Ajustar la vista">Ajustar</button>') + '</div>';
   const formula = spec.formula ? '<div class="viz-formula">$$' + escapeHtml(String(spec.formula)) + '$$</div>' : '';
   const el = vizElement('<div class="viz viz-plot' + (isFormula ? ' viz-formula-only' : '') + '">' + vizHead(isFormula ? 'formula' : 'plot', spec.title) + formula + figure + legend +
     vizSlidersMarkup(params, values) + (readouts.length ? '<div class="viz-readouts">' + readouts.map((item, index) =>
@@ -557,12 +558,21 @@ function vizPlot(spec, state) {
     (spec.caption ? '<div class="viz-caption">' + vizBlock(spec.caption) + '</div>' : '') +
     (errors.length ? '<div class="viz-error">No se pudo dibujar: ' + escapeHtml(errors.join(' · ')) + '</div>' : '') + '</div>');
 
+  const plotWarning = document.createElement('p');
+  plotWarning.className = 'scene-warning viz-plot-warning';
+  plotWarning.setAttribute('role', 'status'); plotWarning.hidden = true;
+  if (!isFormula) el.querySelector('.viz-figure').after(plotWarning);
   let previousAxes = '', previousPoints = '';
   const draw = () => {
     if (!isFormula) {
       const nextAxes = axes(), nextPoints = points();
       if (nextAxes !== previousAxes) el.querySelector('.viz-axes').innerHTML = previousAxes = nextAxes;
-      el.querySelector('.viz-curves').innerHTML = curves();
+      const group = el.querySelector('.viz-curves');
+      group.innerHTML = curves();
+      const empty = [...group.children].some(curve => !curve.getAttribute('d'));
+      plotWarning.hidden = !empty;
+      const warningText = empty ? 'No se puede representar alguna función con este valor. Prueba otro valor del control.' : '';
+      if (plotWarning.textContent !== warningText) plotWarning.textContent = warningText;
       if (nextPoints !== previousPoints) el.querySelector('.viz-points').innerHTML = previousPoints = nextPoints;
     }
     readouts.forEach((item, index) => {
@@ -571,7 +581,12 @@ function vizPlot(spec, state) {
     });
   };
   draw();
-  vizBindSliders(el, params, values, state, draw);
+  vizBindSliders(el, params, values, state, () => {
+    // Keep the curve visible as parameters change. Authored fixed axes still
+    // retain their scale; automatic axes follow the current function values.
+    if (!fixedY) { yr = autoY(); state.yr = yr; }
+    draw();
+  });
   const fit = el.querySelector('[data-viz-fit]');
   if (fit) fit.addEventListener('click', () => { yr = autoY(); state.yr = yr; draw(); });
   if (!isFormula && functions.length) {

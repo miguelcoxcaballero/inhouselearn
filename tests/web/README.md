@@ -108,3 +108,7 @@ exam, replans without misattributing evidence, and checks light/dark layouts at 
 diagram preflight/correction through real tool calls, causal walkthroughs, before/after, large
 mobile labels, lesson-title LaTeX, local lateral navigation, transcript access and reduced motion.
 It saves `guided-screen-{theme}-{width}.png` in `OUT` for review.
+
+`visual-controls.cjs` covers repeated slider updates on translucent scene layers,
+undefined geometry and recovery, plot autoscaling, fixed axes, and rapid walkthrough
+slider interaction. Diagram preflight also probes individual control extremes.

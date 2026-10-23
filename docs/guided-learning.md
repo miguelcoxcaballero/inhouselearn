@@ -88,8 +88,8 @@ widths. Walkthrough state survives DOM redraws in this tab; like existing visual
 
 `check_diagram` renders isolated, noninteractive previews at 360px and 960px and measures labels
 in the real browser. It reports text collisions, bounds, small text and invalid expressions in
-each authored state. It accepts declarative scenes/walkthroughs or sanitized inline SVG; it runs
-no author JavaScript and removes external SVG image/reference elements before mounting. Previews
+each authored state and at individual slider minimum/midpoint/maximum and toggle values.
+It accepts declarative scenes/walkthroughs or sanitized inline SVG; it runs no author JavaScript and removes external SVG image/reference elements before mounting. Previews
 are removed and their animation/resize observers released. The tutor is instructed to check,
 revise and recheck (2–3 passes, at most three tool calls per turn). This does not verify physical
 truth, every possible slider combination, arrow/body intersections or model compliance. Diagram
