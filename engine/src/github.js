@@ -778,6 +778,74 @@ export function createGithubTools(ctx) {
       }
     },
     {
+      name: 'github_screenshot',
+      label: 'GitHub: capturas de la app',
+      description: 'Take REAL screenshots of THIS app (Inhouse Learn, ' + LEARN_REPO + ') as a branch or commit really looks: GitHub Actions opens that version of the page in Chromium (phone, tablet or desktop; light or dark theme), replays an optional conversation through the real renderer (your answers are shown exactly as written, Markdown, LaTeX and visual blocks included), runs optional steps (click, fill, press, wait, scroll, eval) and photographs the screen or one element. Use it after you change the app (push first, then photograph that branch) or whenever the user wants to see how something looks; then show every picture in the chat with an image block (or one gallery block). Takes about 1-2 minutes. Not for other repositories.',
+      parameters: Type.Object({
+        ref: Type.Optional(Type.String({ description: 'Branch or commit of ' + LEARN_REPO + ' to photograph (default main). Push your changes there first.' })),
+        shots: Type.Array(Type.Object({
+          name: Type.String({ description: 'Short name, e.g. "Menú +, oscuro".' }),
+          device: Type.Optional(Type.String({ description: '"phone" (default), "tablet" or "desktop".' })),
+          theme: Type.Optional(Type.String({ description: '"light" (default) or "dark" (AMOLED).' })),
+          messages: Type.Optional(Type.Array(Type.Object({
+            user: Type.String(),
+            assistant: Type.String({ description: 'The answer to draw, exactly as the model would write it.' })
+          }), { description: 'A conversation to show (up to 6 turns).' })),
+          steps: Type.Optional(Type.Array(Type.Object({
+            click: Type.Optional(Type.String({ description: 'CSS selector to click, e.g. "#plus-btn".' })),
+            fill: Type.Optional(Type.Array(Type.String(), { description: '[selector, text]' })),
+            press: Type.Optional(Type.String({ description: 'Key, e.g. "Escape".' })),
+            scroll: Type.Optional(Type.String({ description: 'CSS selector to scroll into view.' })),
+            eval: Type.Optional(Type.String({ description: 'JavaScript run in the page.' })),
+            wait: Type.Optional(Type.Number({ description: 'Milliseconds to wait after the step (max 5000).' }))
+          }), { description: 'What to do before the picture (open a menu, type…), up to 20.' })),
+          selector: Type.Optional(Type.String({ description: 'Photograph only this element.' })),
+          fullPage: Type.Optional(Type.Boolean())
+        }), { description: '1 to 6 pictures.', minItems: 1, maxItems: 6 })
+      }),
+      executionMode: 'sequential',
+      execute: async (id, params, signal, onUpdate) => {
+        const shots = (params.shots || []).slice(0, 6);
+        if (!shots.length) throw new Error('Pide al menos una captura.');
+        const ref = String(params.ref || 'main').trim();
+        if (!/^[A-Za-z0-9._/-]{1,120}$/.test(ref)) throw new Error('ref debe ser una rama o un commit de ' + LEARN_REPO + '.');
+        const log = [];
+        const step = (text) => {
+          log.push(text);
+          if (typeof onUpdate === 'function') onUpdate(textResult(log.join('\n'), { phase: text }));
+        };
+        used(LEARN_REPO);
+        await ask({
+          title: 'Hacer capturas de la app',
+          summary: LEARN_REPO + '@' + ref + '\n' + shots.map((shot) => '· ' + shot.name + ' (' + (shot.device || 'phone') + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + ')').join('\n') + '\nGitHub Actions abre esa versión de la app y guarda las fotos en la rama screenshots.',
+          items: [],
+          kind: 'screenshot',
+          confirmText: 'Hacer capturas'
+        });
+        // Folders sort by date on the screenshots branch (old ones are pruned there).
+        const now = new Date();
+        const folder = 'shot-' + now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15) + '-' + Math.random().toString(36).slice(2, 6);
+        let run = await dispatch(LEARN_REPO, 'screenshots.yml', 'main', { ref, id: folder, shots: JSON.stringify(shots) }, null);
+        step('Haciendo las capturas: ' + run.html_url);
+        run = await waitRun(LEARN_REPO, run, 'el trabajo de capturas', step);
+        const manifestFile = await readRemote(LEARN_REPO, folder + '/manifest.json', 'screenshots');
+        let manifest = null;
+        try { manifest = JSON.parse(manifestFile.text); } catch (_) {}
+        if (!manifest || !Array.isArray(manifest.shots)) throw new Error('Las capturas terminaron pero no aparece ' + folder + '/manifest.json en la rama screenshots: ' + run.html_url);
+        const base = 'https://raw.githubusercontent.com/' + LEARN_REPO + '/screenshots/' + folder + '/';
+        const done = manifest.shots.filter((shot) => shot.file);
+        const lines = manifest.shots.map((shot) => shot.file
+          ? '· ' + shot.name + ' (' + shot.device + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + '): ' + base + encodeURIComponent(shot.file) + (shot.pageErrors ? ' — errores en la página: ' + shot.pageErrors.join(' | ') : '')
+          : '· ' + shot.name + ': no se pudo hacer (' + shot.error + ')');
+        return textResult([
+          done.length + ' de ' + manifest.shots.length + ' capturas reales de ' + LEARN_REPO + '@' + ref + ':',
+          ...lines,
+          '',
+          'Enséñalas en el chat ahora: un bloque visual image por captura ({"type":"image","src":"<url>","alt":"…","caption":"…"}) o un solo gallery. Son fotos de verdad de esa versión; di qué se ve y qué ha cambiado.'
+        ].join('\n'), { ref, folder, run: run.html_url, images: done.map((shot) => base + encodeURIComponent(shot.file)) });
+      }
+    },
+    {
       name: 'github_list_issues',
       label: 'GitHub: issues y PRs',
       description: 'List open issues and pull requests of a repository, or read one (with its comments) by number.',

@@ -93,7 +93,8 @@ const waitSaved=page=>page.waitForFunction(()=>!appState.driveSyncTimer&&!appSta
   // Other chats still update while the local agent owns its active chat object.
   await B.page.evaluate(()=>{window.__running=getActiveChat();appState.busy=true;});
   const f=files.get('history-a'),remote=JSON.parse(f.content);remote.chats.push(chat('while-busy'));f.content=JSON.stringify(remote);version(f);
-  await B.page.evaluate(()=>pullDriveChanges(true));
+  // A pull the app started on its own may be in flight (then this one is skipped): ask until it lands.
+  await B.page.waitForFunction(async()=>{await pullDriveChanges(true);return appState.chats.some(c=>c.id==='while-busy');},null,{timeout:15000,polling:500});
   assert.ok(await B.page.evaluate(()=>getActiveChat()===__running&&appState.chats.some(c=>c.id==='while-busy')));
   await B.page.evaluate(()=>appState.busy=false);
   console.log('PASS polling preserves the running agent object while importing other chats');

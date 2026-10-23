@@ -83,14 +83,23 @@ Mandatory guidance for every AI and developer working in this repository.
   browser's localStorage, never in Drive. Tools are on per chat (+ menu → GitHub) and every write
   goes through the approval gate of `approval.js`: with the chat in «Preguntar» or «Auto» the
   user sees the files and the +/− lines in `confirmDialog` and decides; only in «Acceso total»
-  (the user's explicit, per-chat choice) a write is approved without asking, and then it is
-  announced with a toast. Never add a write that skips that gate. The app can also ship its
+  (the user's explicit, per-chat choice) a write is approved without asking (the step stays in
+  the thread's live activity; no dark notice: the app shows no confirmation toasts, only errors). Never add a write that skips that gate. The app can also ship its
   own APK: `github_release_android` checks that `main` raises `versionCode` above
   `updates/A.json`, **always asks** (even in «Acceso total», via `always: true`), waits for a
   green "Android app" build of that exact commit, runs youtube-calma's **Sign Inhouse Learn**
   with that SHA, then this repository's publish, and verifies `updates/A.json`; it stops on any
   failure or if `main` moves, and never touches channel B. Its token needs Actions read/write
   on both repositories. Test: `tests/web/release.cjs`.
+  **Real screenshots:** `github_screenshot` runs `.github/workflows/screenshots.yml` on a branch or
+  commit of this repository: Chromium opens that version of the page (`.github/scripts/screenshots.cjs`,
+  OpenRouter mocked like `tests/web`), replays an optional conversation and steps, and the PNGs land on
+  the `screenshots` branch (`<id>/`, newest 30 kept); the model shows them with `image` blocks. In
+  «Auto» it does not ask (no code changes). A `preview` is a mockup, never presented as a screenshot.
+- **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
+  closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
+  repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue
+  goes on. «Muéstramelo» is only a Guided Learning quick reply. Test: `tests/web/reasoning.cjs`.
 - **Live sync:** every tab with a chat open sees the other tabs' turns as they are written (the
   question at once, the answer character by character). Tabs of the same account open WebRTC
   data channels to each other, signalled through `peer-<deviceId>.json` in the Drive folder (a

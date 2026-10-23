@@ -175,7 +175,6 @@ async function queueSteer(id) {
     messageQueue.items = [item].concat(messageQueue.items.filter((entry) => entry !== item));
     messageQueue.paused = false;
     renderComposerDock();
-    showToast('Cola', 'Va el primero: sale en cuanto termine la respuesta actual.');
     return;
   }
   item.steering = true;
@@ -387,7 +386,6 @@ async function stagePush(repo, branch) {
     ok = true;
     pushBusy.set(key, { state: 'done', key, count, repo, branch });
     renderStageSlot();
-    showToast('GitHub', (link.split('\n')[0] || 'Subido') + '.');
   } catch (error) {
     pushBusy.delete(key);
     renderStageSlot();
@@ -403,7 +401,6 @@ async function stageDiscard(repo, branch) {
   const chat = getActiveChat();
   if (!chat || appState.busy) return;
   githubStageStore(chat).remove(repo, branch);
-  showToast('GitHub', 'Cambios preparados descartados.');
   renderComposerDock();
 }
 
@@ -426,6 +423,7 @@ const STEP_TEXT = {
   github_list_issues: ['Leyendo las issues de', 'Issues de'],
   github_comment: ['Comentando en', 'Comentado en'],
   github_release_android: ['Publicando la APK', 'APK publicada'],
+  github_screenshot: ['Haciendo capturas de la app', 'Capturas hechas'],
   run_js: ['Ejecutando código', 'Código ejecutado'],
   write_file: ['Guardando', 'Guardado'],
   read_file: ['Leyendo', 'Leído'],
@@ -490,6 +488,7 @@ function describeToolStep(step) {
       target = repoShort;
       repoShort && args.path && where.push(args.path);
       break;
+    case 'github_screenshot':
     case 'github_release_android':
       // What the release is doing right now (build, signature, publication…).
       target = running && step.progress ? String(step.progress).replace(/: https?:\/\/\S+$/, '').slice(0, 80) : '';

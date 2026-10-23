@@ -150,23 +150,23 @@ function setApprovalMode(mode) {
   chat.approvalMode = next;
   saveState();
   renderApprovalUi();
-  showToast('Aprobación de cambios', approvalModeInfo(next).hint + '.');
   if (typeof haptic === 'function') haptic('select');
 }
 
 /* ─── La puerta de entrada ──────────────────────────────────────────── */
 
 // Un cambio de GitHub (commit, pull request, comentario) o del chat.
-// En «Acceso total» se aprueba solo y se avisa con un aviso; si no, lo
-// aprueba el usuario en el diálogo.
+// En «Acceso total» se aprueba solo (el paso queda en la actividad del hilo);
+// si no, lo aprueba el usuario en la tarjeta de encima del cuadro de texto.
 async function approveChange(chat, request) {
   const options = request || {};
+  const mode = approvalModeOf(chat);
   // Some actions (publishing an APK) reach other people's phones and cannot be
   // undone: they ask even in «Acceso total».
-  if (approvalModeOf(chat) === 'full' && !options.always) {
-    showToast('Acceso total', (options.title || 'Cambio') + ': aprobado automáticamente.');
-    return true;
-  }
+  if (mode === 'full' && !options.always) return true;
+  // Screenshots change no code (they only add pictures to the screenshots
+  // branch): in «Auto» they go ahead like the chat's own files.
+  if (mode === 'auto' && options.kind === 'screenshot') return true;
   // Above the composer, not over the whole screen: the user can keep writing.
   const card = {
     title: options.title || 'Confirmar',

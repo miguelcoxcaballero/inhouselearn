@@ -37,7 +37,7 @@ function haptic(style) {
 
 // A soft tick for every tappable thing that has no feedback of its own.
 const HAPTIC_TAPS = '.chip, .g-quick-btn, .g-tweak, .g-pill, .g-link, .model-card, .filter-chip, .msg-action-btn, .msg-nav-btn, .scene-btn, .viz-btn, .viz-card, .viz-mini, ' +
-  '.g-course-bar, #guided-btn, #new-chat-btn, #attach-btn, .chat-item, .g-secondary, .thread-jump, summary, .latex-bar-btn, .viz-more, [data-ask-visual]';
+  '.g-course-bar, #guided-btn, #new-chat-btn, #attach-btn, .chat-item, .g-secondary, .thread-jump, summary, .latex-bar-btn, .viz-more';
 document.addEventListener('click', (event) => {
   const target = event.target.closest(HAPTIC_TAPS);
   if (target && !target.disabled) haptic('select');

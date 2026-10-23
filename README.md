@@ -67,7 +67,7 @@ Cada petición manda al modelo el estado del curso y una única tarea concreta (
 
 ## Vistas visuales e interactivas en el chat
 
-El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el chat normal, si una respuesta larga no trae ninguna vista, debajo aparece «Muéstramelo en visual».
+El modelo puede responder con un bloque ```` ```visual ```` (JSON) y el chat lo dibuja como tarjeta interactiva (`visuals.js`): gráficas de funciones con deslizadores y lecturas en vivo, fórmulas para jugar con sus variables, gráficos de barras, líneas, tarta y dispersión, tarjetas de memoria (con «La sé» / «Repasar»), soluciones paso a paso, líneas de tiempo, comparativas, preguntas rápidas e ideas clave. Los bloques ```` ```mermaid ```` se dibujan como diagramas (mermaid se carga solo la primera vez). Las expresiones las calcula un intérprete propio, nunca `eval`. El LaTeX dentro del JSON se acepta tal como lo escriben los modelos (`\frac`, `\(x^2\)`, sin escapar). En el aprendizaje guiado, «Muéstramelo» (debajo de la última respuesta) pide una vista; en el chat normal no hay botón: basta con pedírsela.
 
 ### Fotos y vistas previas mientras responde
 

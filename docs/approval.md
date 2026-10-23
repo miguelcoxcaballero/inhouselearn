@@ -8,7 +8,7 @@ en Drive. Con «Acceso total», el **+** lleva un punto rojo.
 | --- | --- | --- |
 | **Preguntar** | Pide permiso | Pide permiso, una vez por subida |
 | **Auto** | Los aprueba | Pide permiso, una vez por subida |
-| **Acceso total** | Los aprueba | Los aprueba (con un aviso) |
+| **Acceso total** | Los aprueba | Los aprueba |
 
 Las lecturas nunca preguntan, y **preparar** cambios de GitHub tampoco: el modelo los prepara
 con `github_edit_file` / `github_write_files` y los sube todos juntos en un solo commit.
@@ -53,4 +53,4 @@ Lo que el modelo deja preparado sin subir aparece encima del cuadro con «Subir 
    cuadro y, si dices «No», no se guarda.
 3. Con GitHub activo, pide un cambio en varios archivos y un PR: no pregunta nada hasta el
    final, y entonces sale una sola tarjeta con todos los archivos.
-4. Elige «Acceso total»: el + lleva un punto rojo y las subidas se aprueban solas con un aviso.
+4. Elige «Acceso total»: el + lleva un punto rojo y las subidas se aprueban solas (el paso queda en la actividad del hilo).

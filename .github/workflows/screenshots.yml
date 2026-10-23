@@ -1,0 +1,94 @@
+name: App screenshots
+# Real screenshots of the app at a given commit, for the chat: the model calls
+# github_screenshot (engine/src/github.js) after changing the app, and this
+# workflow opens that commit's page in Chromium (OpenRouter mocked like
+# tests/web), replays the conversation and steps it was given and takes each
+# picture (.github/scripts/screenshots.cjs). The PNGs and a manifest.json go to
+# the `screenshots` branch under <id>/, from where the chat shows them
+# (raw.githubusercontent.com). Only the newest 30 folders are kept.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit or branch of this repository to photograph
+        type: string
+        default: main
+      id:
+        description: Folder for the pictures on the screenshots branch (letters, digits, . _ -)
+        type: string
+        required: true
+      shots:
+        description: 'JSON list of {name, device: phone|tablet|desktop, theme: light|dark, messages, steps, selector, fullPage}'
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-screenshots
+  cancel-in-progress: false
+
+jobs:
+  shoot:
+    # Playwright 1.56 supports Ubuntu 24.04, not ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check the inputs
+        env:
+          ID: ${{ inputs.id }}
+          REF: ${{ inputs.ref }}
+        run: |
+          [[ "$ID" =~ ^[A-Za-z0-9._-]{1,60}$ ]] || { echo "::error::id must be 1-60 letters, digits, . _ -"; exit 1; }
+          [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] || { echo "::error::ref must be a branch or commit of this repository"; exit 1; }
+      # The script and the mocks come from the default branch; the page from the ref.
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+          path: app
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Take the pictures
+        env:
+          ID: ${{ inputs.id }}
+          REF: ${{ inputs.ref }}
+          SHOTS: ${{ inputs.shots }}
+        run: |
+          (cd app && python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &)
+          for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html && break; sleep 0.2; done
+          node .github/scripts/screenshots.cjs
+      - name: Publish on the screenshots branch
+        env:
+          ID: ${{ inputs.id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir pub && cd pub
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin screenshots; then git checkout -q -B screenshots FETCH_HEAD; else git checkout -q --orphan screenshots; fi
+          # Keep the newest folders only (ids start with a timestamp, so they sort by date).
+          ls -1d */ 2>/dev/null | sed 's#/$##' | sort | head -n -29 | while read -r old; do git rm -rq "$old"; done
+          cp -r "../out/$ID" .
+          git add -A
+          git commit -qm "Screenshots $ID"
+          git push -q origin screenshots
+          echo "Published: https://github.com/${GITHUB_REPOSITORY}/tree/screenshots/$ID"
+      - name: Keep them in the run too
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: out/
+          if-no-files-found: ignore

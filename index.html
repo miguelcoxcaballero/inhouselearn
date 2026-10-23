@@ -1045,6 +1045,7 @@
     }
     .msg-action-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); }
     .msg-action-btn svg { width: 14px; height: 14px; }
+    .msg-action-btn.copied, .msg-action-btn.copied:hover { color: #15803d; }
     .msg-action-btn[data-repair-msg] { width: auto; max-width: 100%; padding: 6px 8px; font: inherit; font-size: 0.75rem; }
     .msg-nav {
       display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px;
@@ -1607,7 +1608,7 @@
   <link rel="stylesheet" href="guided.css?v=20261021-text-motion">
   <link rel="stylesheet" href="model-picker.css?v=20261021">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
-  <link rel="stylesheet" href="visuals.css?v=20261024-shot">
+  <link rel="stylesheet" href="visuals.css?v=20261024-shots">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
@@ -1888,18 +1889,18 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="library.js?v=20261021-library"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261023-release"></script>
-  <script src="haptics.js"></script>
+  <script src="vendor/pi-engine.js?v=20261024-shots"></script>
+  <script src="haptics.js?v=20261024-shots"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
   <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
   <script src="stream.js?v=20261023-live"></script>
-  <script src="visuals.js?v=20261024-shot"></script>
+  <script src="visuals.js?v=20261024-shots"></script>
   <script src="scene.js?v=20261021-text-motion"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="guided.js?v=20261021-latex"></script>
-  <script src="approval.js?v=20261023-release"></script>
-  <script src="composer-dock.js?v=20261023-release"></script>
+  <script src="approval.js?v=20261024-shots"></script>
+  <script src="composer-dock.js?v=20261024-shots"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -2688,7 +2689,6 @@
       refreshOpenRouterCredits();
       if (remote.apiKey && !hadKey) {
         closeModelMenu();
-        showToast('OpenRouter', 'API key recuperada de tu Google Drive.');
       }
       return true;
     }
@@ -4182,7 +4182,6 @@
         const user = await InhousePi.githubWhoAmI(token);
         localStorage.setItem(GITHUB_TOKEN_KEY, token);
         localStorage.setItem(GITHUB_LOGIN_KEY, user.login || '');
-        showToast('GitHub', 'Conectado como @' + user.login + '.');
         return true;
       } catch (error) {
         showToast('GitHub', error.message);
@@ -4245,6 +4244,7 @@
         '  - Si una herramienta falla, prueba otra vía (github_grep si falla github_search_code, rangos más pequeños si una lectura es grande) antes de decir que no puedes. Lee lo justo, decide pronto y escribe: no repases varias veces lo mismo.',
         '  - Al terminar da el enlace del commit o del PR.',
         '  - Esta misma app es el repositorio miguelcoxcaballero/inhouselearn: si el usuario te pide cambiar la app, trabaja ahí (lee primero su AGENTS.md). Lo de la web (index.html, *.js, *.css) llega a todos sus dispositivos en cuanto está en main. Si cambia la app de Android (android/), sube también versionCode y versionName en android/app/build.gradle.kts, súbelo a main, mira github_ci_status y, cuando el build esté en verde y el usuario quiera la APK, usa github_release_android con un changelog en inglés de 2–10 palabras: firma, publica en el canal A y lo comprueba (el usuario lo confirma siempre). Nunca el canal B.',
+        '  - Para enseñar cómo queda la app de verdad (después de un cambio de interfaz, o si el usuario quiere verlo), sube primero el cambio a una rama o a main y usa github_screenshot sobre esa rama: GitHub Actions abre esa versión en Chromium (móvil, tablet o escritorio; claro u oscuro), puede reproducir una conversación de ejemplo y pulsar botones antes de la foto, y devuelve las imágenes. Enséñalas en el chat con un bloque image por captura (o un gallery). Nunca hagas pasar una maqueta (preview) por una captura.',
         staged.length ? '  - Cambios preparados sin subir: ' + staged.map((entry) => entry.repo + '@' + entry.branch + ' (' + Object.keys(entry.files || {}).concat((entry.deletes || []).map((path) => path + ' borrar')).join(', ') + ')').join('; ') + '.' : ''
       ].filter(Boolean).join('\n');
     }
@@ -5262,7 +5262,7 @@
       const attachmentMarkup = (message.pending && !hasVisible) ? '' : renderMessageAttachments(message);
       const cardsMarkup = isUser ? '' : renderGuidedCards(message, chat);
       const quickMarkup = isUser || !isLastAssistant || message.pending ? ''
-        : chat && chat.guidedLearning ? guidedQuickRepliesMarkup(chat) : visualAskMarkup(message);
+        : chat && chat.guidedLearning ? guidedQuickRepliesMarkup(chat) : '';
       const actionsMarkup = renderMsgActions(message, !!isLastAssistant);
       const attributionMarkup = renderMessageAttribution(message);
       return [
@@ -5281,27 +5281,6 @@
         '</article>'
       ].join('');
     }
-
-    // Under the last answer of a normal chat that has no visual yet: one tap asks for one.
-    function visualAskMarkup(message) {
-      const text = getVisibleContent(message);
-      if (!text || text.length < 160 || /^Error: /.test(text) || /```[ \t]*(visual|widget|viz|interactive|mermaid)/i.test(text)) return '';
-      return '<div class="g-quick"><button type="button" class="g-quick-btn accent" data-ask-visual>' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>' +
-        'Muéstramelo en visual</button></div>';
-    }
-
-    function askForVisual() {
-      const chat = getActiveChat();
-      if (appState.busy || !chat) return;
-      const message = createMessage('user', 'Muéstramelo de forma visual e interactiva.', false);
-      message.kind = 'visual';
-      runAssistantTurn(chat, message);
-    }
-
-    document.addEventListener('click', (event) => {
-      if (event.target.closest('[data-ask-visual]')) askForVisual();
-    });
 
     function findMessageElement(messageId) {
       return Array.from(elements.thread.querySelectorAll('[data-msg-id]')).find(function(el) {
@@ -6810,7 +6789,6 @@
       saveState({
         skipDrive: true
       });
-      showToast('Sesión cerrada', 'El historial sigue en este navegador.');
     }
 
     function touchChat(chat) {
@@ -7141,10 +7119,16 @@
       var msg = chat.messages.find(function(m) { return m.id === msgId; });
       if (!msg) return;
       var text = getVisibleContent(msg);
+      // The button itself says it worked (green for a moment), no notice.
+      var done = function() {
+        var btn = document.querySelector('[data-copy-msg="' + msgId + '"]');
+        if (!btn) return;
+        btn.classList.add('copied');
+        btn.title = 'Copiado';
+        window.setTimeout(function() { btn.classList.remove('copied'); btn.title = 'Copiar'; }, 1400);
+      };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function() {
-          showToast('Copiado', 'Texto copiado al portapapeles.');
-        });
+        navigator.clipboard.writeText(text).then(done);
       } else {
         var ta = document.createElement('textarea');
         ta.value = text;
@@ -7152,7 +7136,7 @@
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        showToast('Copiado', 'Texto copiado al portapapeles.');
+        done();
       }
     }
 
@@ -8311,7 +8295,6 @@
       updateConfigUi();
       renderUsageDonut();
       if (!value) {
-        showToast('OpenRouter', 'API key borrada de este navegador.');
         return;
       }
       if (!/^sk-or-/.test(value)) {
@@ -8321,7 +8304,6 @@
       if (credits && credits.keyValid === false) {
         showToast('OpenRouter', 'OpenRouter ha rechazado la key. Revisa que esté copiada entera.');
       } else {
-        showToast('OpenRouter', 'API key guardada.');
         closeModelMenu();
         elements.composer.focus();
       }
@@ -8593,7 +8575,9 @@
       for (const message of messages) {
         if (message.role !== 'assistant') continue;
         for (const block of message.content) {
-          if (block.type === 'text') block.text = await repairTutorText(chat, block.text, signal);
+          // Reasoning written inside the answer (<think>…) is not part of it: the
+          // engine already moved it to the thinking section.
+          if (block.type === 'text') block.text = await repairTutorText(chat, InhousePi.splitReasoning(block.text).text, signal);
         }
       }
       return { messages, text: tutorMessagesText(messages) };
@@ -8778,7 +8762,6 @@
         scheduleDriveSync();
       }
       if (!options || options.toast !== false) {
-        showToast('Sesión iniciada', 'El historial se guarda en tu Google Drive.');
       }
       saveState();
     }
@@ -9022,13 +9005,49 @@
     // the final redraw can keep it. When the user steers (composer-dock.js),
     // the answer so far is closed as its own message, the user's message goes
     // under it and the rest of the run streams into a new turn.message.
+    // A model stuck in a loop writes the same few lines (or sentences) over and
+    // over. Returns where that repetition starts, to cut the answer there, or -1.
+    function runawayCut(text) {
+      if (!text || text.length < 1200) return -1;
+      const units = [];
+      let start = 0;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '\n' || (ch === '.' && /\s/.test(text[i + 1] || ''))) {
+          const unit = text.slice(start, i + 1).trim();
+          if (unit) units.push({ at: start, text: unit });
+          start = i + 1;
+        }
+      }
+      const rest = text.slice(start).trim();
+      if (rest) units.push({ at: start, text: rest });
+      if (units.length < 30) return -1;
+      const recent = new Set(units.slice(-30).map((unit) => unit.text));
+      if (recent.size > 4) return -1;
+      let k = units.length - 1;
+      while (k >= 0 && recent.has(units[k].text)) k--;
+      const from = units[k + 1].at;
+      return text.length - from >= 600 ? from : -1;
+    }
+
     async function streamAssistantReply(chat, turn) {
       let view = null;
+      let checkedAt = 0;
       const visibleChat = () => chat.id === appState.activeChatId;
       const onProgress = (chunk) => {
         const message = turn.message;
-        if (!chunk || chunk.done) return;
+        if (!chunk || chunk.done || turn.runaway) return;
         if (typeof chunk.text === 'string') message.content = stripLegacyGuidedState(chunk.text);
+        if (message.content.length - checkedAt >= 400) {
+          checkedAt = message.content.length;
+          const cut = runawayCut(message.content);
+          if (cut >= 0) {
+            // Stop the run: what came before the loop stays (see runAssistantTurn).
+            turn.runaway = true;
+            message.content = message.content.slice(0, cut).trimEnd();
+            if (appState.activeController) appState.activeController.abort();
+          }
+        }
         if (typeof chunk.thinking === 'string' && chunk.thinking) message.thinking = chunk.thinking;
         if (Array.isArray(chunk.steps)) message.toolSteps = chunk.steps;
         if (!visibleChat()) return;
@@ -9124,18 +9143,21 @@
         if (chat.guidedLearning) nudge = guidedAfterTurn(chat, turn.message, { nudged: !!settings.nudged });
       } catch (error) {
         if (error.name === 'AbortError') {
-          outcome = 'aborted';
+          // A loop cut by the app is not the user's Stop: the queue goes on.
+          outcome = turn.runaway ? 'done' : 'aborted';
           const partial = turn.message;
           // What was already written stays (marked as stopped); an empty answer goes.
           if (partial.content && partial.content.trim()) {
-            partial.content = partial.content.trimEnd() + '\n\n*(Detenido)*';
+            partial.content = partial.content.trimEnd() + (turn.runaway
+              ? '\n\n*(Respuesta cortada: el modelo se había quedado repitiendo lo mismo.)*'
+              : '\n\n*(Detenido)*');
             partial.parts = [{ text: partial.content }];
-            partial.toolSteps = (partial.toolSteps || []).map((step) => (step.status === 'running' ? Object.assign({}, step, { status: 'error', output: 'Detenido por el usuario.' }) : step));
+            partial.toolSteps = (partial.toolSteps || []).map((step) => (step.status === 'running' ? Object.assign({}, step, { status: 'error', output: turn.runaway ? 'Cortado: el modelo se repetía.' : 'Detenido por el usuario.' }) : step));
             partial.piMessages = [];
           } else {
             chat.messages = chat.messages.filter((message) => message.id !== partial.id && !(settings.nudged && message.id === userMessage.id));
           }
-          setComposerStatus('Solicitud cancelada.');
+          setComposerStatus(turn.runaway ? '' : 'Solicitud cancelada.');
         } else {
           outcome = 'error';
           haptic('error');

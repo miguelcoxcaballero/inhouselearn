@@ -67,6 +67,11 @@ login, and that sync preserves a running agent's chat object.
 `library.cjs` uploads a folder (a 3-page PDF, long notes, a photo read by a stubbed OCR and
 40 small files) and checks the search, the manifest the model gets and the three library tools.
 
+`reasoning.cjs` checks that reasoning written inside an answer (`<think>`, or a lone `</think>`)
+goes to the thinking section, that a model repeating itself is cut (and the queue goes on), that
+«Muéstramelo en visual» is gone from normal chats and that confirmations show no dark notice.
+`release.cjs` also covers `github_screenshot` (no card in «Auto», a card in «Preguntar», real URLs).
+
 `queue.cjs` checks the message queue (Enter while busy, one per finished turn, Stop pauses)
 and steering (Ctrl+Enter enters the running turn after the current tool, same request chain).
 

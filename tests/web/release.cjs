@@ -18,6 +18,7 @@ const releases = new Set(['android-v1.0.4']);
 const runs = [];
 const dispatches = [];
 let failBuild = false;
+const manifests = new Map();
 
 function gradle() {
   return 'android {\n  defaultConfig {\n    applicationId = "com.inhouse.learn"\n    versionCode = ' + versionCode + '\n    versionName = "1.0.' + (versionCode - 1) + '"\n  }\n}\n';
@@ -34,6 +35,9 @@ async function github(route) {
   if (p === '/user') return json({ login: 'tester' });
   if (p === '/repos/' + LEARN + '/git/ref/heads/main') return json({ object: { sha: MAIN } });
   if (p === '/repos/' + LEARN + '/contents/android/app/build.gradle.kts') return json({ type: 'file', encoding: 'base64', content: Buffer.from(gradle()).toString('base64'), sha: 'g', size: 10 });
+  if ((m = /^\/repos\/[^/]+\/[^/]+\/contents\/(shot-[^/]+)\/manifest\.json$/.exec(p)) && url.searchParams.get('ref') === 'screenshots') {
+    return manifests.has(m[1]) ? json({ type: 'file', encoding: 'base64', content: Buffer.from(JSON.stringify(manifests.get(m[1]))).toString('base64'), sha: 'm', size: 10 }) : json({ message: 'Not Found' }, 404);
+  }
   if (p === '/repos/' + LEARN + '/contents/updates/A.json') return json({ type: 'file', encoding: 'base64', content: Buffer.from(JSON.stringify(channel)).toString('base64'), sha: 'c', size: 10 });
   if ((m = /^\/repos\/([^/]+\/[^/]+)\/releases\/tags\/(.+)$/.exec(p))) {
     return releases.has(m[1] + '#' + m[2]) || (m[1] === LEARN && releases.has(m[2])) ? json({ tag_name: m[2], html_url: 'https://github.com/' + m[1] + '/releases/tag/' + m[2] }) : json({ message: 'Not Found' }, 404);
@@ -62,6 +66,12 @@ async function github(route) {
       const isBuild = run.workflow === 'android.yml' && run.inputs.publish === 'false';
       run.conclusion = isBuild && failBuild ? 'failure' : 'success';
       if (run.workflow === 'sign-inhouse-learn.yml') releases.add(SIGN + '#learn-signed-1.0.' + (versionCode - 1) + '-' + MAIN.slice(0, 7));
+      if (run.workflow === 'screenshots.yml') {
+        const shots = JSON.parse(run.inputs.shots);
+        manifests.set(run.inputs.id, { id: run.inputs.id, ref: run.inputs.ref, shots: shots.map((shot, i) => i === shots.length - 1 && /roto/i.test(shot.name)
+          ? { name: shot.name, file: null, device: shot.device || 'phone', theme: shot.theme || 'light', error: 'page.click: Timeout 8000ms exceeded.' }
+          : { name: shot.name, file: (i + 1) + '-' + i + '.png', device: shot.device || 'phone', theme: shot.theme || 'light' }) });
+      }
       if (run.workflow === 'android.yml' && run.inputs.publish === 'true') {
         const version = '1.0.' + (versionCode - 1);
         releases.add('android-v' + version);
@@ -141,6 +151,27 @@ const lastTool = (page) => page.evaluate(() => { const tools = window.__requests
   await idle(page, 120000);
   const failed = await lastTool(page);
   check('a failing build stops before signing and shows the error', /Ha fallado el build de Android/.test(failed) && /mergeReleaseResources FAILED/.test(failed) && !dispatches.slice(before).some((d) => /youtube-calma/.test(d)), { failed: failed.slice(0, 300), after: dispatches.slice(before) });
+  // 5. Real screenshots of a branch: in «Auto» they go ahead (no code changes),
+  // the workflow gets the exact ref and shots, and the model gets the picture URLs.
+  await page.evaluate(() => { getActiveChat().approvalMode = 'auto'; renderApprovalUi(); });
+  const beforeShots = dispatches.length;
+  const shots = [{ name: 'Menú +, oscuro', device: 'phone', theme: 'dark', steps: [{ click: '#plus-btn' }] }, { name: 'Roto', steps: [{ click: '#no-existe' }] }];
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Aquí están.' }), { ref: 'feature/menu', shots });
+  await send(page, 'Enséñame cómo queda el menú');
+  await idle(page, 120000);
+  const shotResult = await lastTool(page);
+  const sent = dispatches.slice(beforeShots);
+  const inputs = sent.length === 1 ? JSON.parse(sent[0].split(':').slice(2).join(':')) : {};
+  check('screenshots: in «Auto» no card; the workflow gets the ref and the shots', sent.length === 1 && /^inhouselearn:screenshots\.yml:/.test(sent[0]) && inputs.ref === 'feature/menu' && /^shot-\d{8}-\d{6}-/.test(inputs.id) && JSON.parse(inputs.shots)[0].theme === 'dark', sent);
+  check('…and the model gets real picture URLs and is told to show them; a failed shot says why', /1 de 2 capturas reales/.test(shotResult) && /https:\/\/raw\.githubusercontent\.com\/miguelcoxcaballero\/inhouselearn\/screenshots\/shot-[^/]+\/1-0\.png/.test(shotResult) && /no se pudo hacer \(page\.click/.test(shotResult) && /bloque visual image/.test(shotResult), shotResult.slice(0, 400));
+  await page.evaluate(() => { getActiveChat().approvalMode = 'ask'; renderApprovalUi(); });
+  await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Vale.' }), { shots: [{ name: 'Inicio' }] });
+  await send(page, 'Otra captura');
+  const askCard = await page.waitForSelector('.dock-approve', { timeout: 20000 }).then(() => page.evaluate(() => document.querySelector('.dock-approve-head b').textContent), () => '');
+  await page.click('.dock-approve [data-dock="reject"]').catch(() => {});
+  await idle(page, 30000);
+  check('in «Preguntar» it asks first', askCard === 'Hacer capturas de la app', askCard);
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

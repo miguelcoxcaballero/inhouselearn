@@ -202,6 +202,32 @@ const textOf = (message, type) => (message && Array.isArray(message.content) ? m
   .map((block) => (type === 'text' ? block.text : block.thinking))
   .join('');
 
+// Some models write their reasoning inside the answer, between <think> tags
+// (sometimes only the closing one, or still open while streaming). The page
+// drops unknown tags but keeps their text, so the reasoning showed up in the
+// middle of the chat: move it to the thinking section.
+const THINK_BLOCK = /<(think|thinking|reasoning)>([\s\S]*?)(?:<\/\1>|$)/gi;
+const THINK_CLOSE_ONLY = /^([\s\S]*?)<\/(think|thinking|reasoning)>/i;
+export function splitReasoning(raw) {
+  let text = String(raw || '');
+  const thoughts = [];
+  if (!/<(think|thinking|reasoning)>/i.test(text)) {
+    const closing = THINK_CLOSE_ONLY.exec(text);
+    if (closing) {
+      thoughts.push(closing[1].trim());
+      text = text.slice(closing[0].length);
+    }
+  }
+  text = text.replace(THINK_BLOCK, (match, tag, body) => { thoughts.push(body.trim()); return ''; });
+  return { text: thoughts.length ? text.replace(/^\s+/, '') : text, thinking: thoughts.filter(Boolean).join('\n\n') };
+}
+
+const answerOf = (message) => {
+  const split = splitReasoning(textOf(message, 'text'));
+  const thinking = [textOf(message, 'thinking'), split.thinking].filter((part) => part && part.trim()).join('\n\n');
+  return { text: split.text, thinking };
+};
+
 const resultText = (result) => (result && Array.isArray(result.content) ? result.content : [])
   .filter((block) => block.type === 'text')
   .map((block) => block.text)
@@ -283,8 +309,9 @@ export async function runAgent(options) {
       return;
     }
     if (event.type === 'message_update' && event.message.role === 'assistant') {
-      liveText = textOf(event.message, 'text');
-      liveThinking = textOf(event.message, 'thinking');
+      const answer = answerOf(event.message);
+      liveText = answer.text;
+      liveThinking = answer.thinking;
       emit();
     } else if (event.type === 'message_end' && event.message.role !== 'user') {
       const message = event.message;
@@ -292,8 +319,9 @@ export async function runAgent(options) {
       if (message.role === 'assistant') {
         liveText = '';
         liveThinking = '';
-        doneTexts.push(textOf(message, 'text'));
-        doneThinking.push(textOf(message, 'thinking'));
+        const answer = answerOf(message);
+        doneTexts.push(answer.text);
+        doneThinking.push(answer.thinking);
         if (message.usage) {
           usage.input += (message.usage.input || 0) + (message.usage.cacheRead || 0) + (message.usage.cacheWrite || 0);
           usage.output += message.usage.output || 0;
