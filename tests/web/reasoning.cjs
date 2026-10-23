@@ -51,6 +51,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   check('Guided Learning keeps its «Muéstramelo» quick reply', guided);
 
   // 4. No dark notices for confirmations: copy marks the button instead.
+  // As on CI and some WebViews: no clipboard permission, the fallback still copies.
+  await page.evaluate(() => { if (navigator.clipboard) navigator.clipboard.writeText = () => Promise.reject(new Error('denied')); });
   await page.hover('#thread .message:last-child');
   await page.click('#thread .message:last-child [data-copy-msg]').catch(() => page.evaluate(() => copyMessageContent(getActiveChat().messages.slice(-1)[0].id)));
   await page.waitForTimeout(200);

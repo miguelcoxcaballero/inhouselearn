@@ -7127,16 +7127,20 @@
         btn.title = 'Copiado';
         window.setTimeout(function() { btn.classList.remove('copied'); btn.title = 'Copiar'; }, 1400);
       };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done);
-      } else {
+      // Without clipboard permission (some WebViews) the old way still works.
+      var legacy = function() {
         var ta = document.createElement('textarea');
         ta.value = text;
         document.body.appendChild(ta);
         ta.select();
-        document.execCommand('copy');
+        try { document.execCommand('copy'); } catch (_) {}
         document.body.removeChild(ta);
         done();
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, legacy);
+      } else {
+        legacy();
       }
     }
 
