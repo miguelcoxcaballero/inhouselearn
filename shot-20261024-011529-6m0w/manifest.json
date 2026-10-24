@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261024-011529-6m0w",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-24T01:16:08.863Z",
+  "shots": [
+    {
+      "name": "diagnostico-main",
+      "file": "1-diagnostico-main.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
