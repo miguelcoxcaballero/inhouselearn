@@ -216,6 +216,7 @@ html[data-theme="dark"] .iq-range::-webkit-slider-thumb {
 html[data-theme="dark"] .iq-range::-moz-range-thumb { background: var(--ink-solid); border-color: var(--on-ink-solid); }
 html[data-theme="dark"] .model-price-out { border-bottom-color: rgba(255,255,255,0.2); }
 html[data-theme="dark"] .model-gauge-num { color: var(--text-secondary); }
+html[data-theme="dark"] .model-gauge { color: var(--text); }
 
 /* 6. Estados: fondo pastel + texto oscuro se lee mal en oscuro, así que
       pasan a un tinte del mismo color con texto claro. */

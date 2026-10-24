@@ -57,6 +57,30 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   check('after a reload the total is the same (costs are saved now)', after.total === before.total && after.total > 0.0015 && after.shown === '$' + after.total.toFixed(4), { before, after });
   check('…and the regenerated answer still shows its versions', nav === '2/2', nav);
 
+  // 5. Closing the tab in the middle of an answer: what it had cost stays.
+  await page.evaluate(() => window.__replies.push({ text: 'Una respuesta larga que se queda a medias porque el usuario cierra la pestaña. '.repeat(12), chunk: 4, delay: 40 }));
+  const beforeCut = (await total()).total;
+  await send(page, 'Escribe mucho');
+  await page.waitForFunction(() => { const m = getActiveChat().messages.slice(-1)[0]; return m.pending && (m.liveCost || 0) > 0.0002; }, null, { timeout: 20000 });
+  const live = await page.evaluate(() => getActiveChat().messages.slice(-1)[0].liveCost);
+  await page.reload();
+  await page.waitForFunction(() => typeof runAssistantTurn === 'function');
+  await page.waitForTimeout(1500);
+  const cut = await page.evaluate(() => { const m = getActiveChat().messages.slice(-1)[0]; return { pending: m.pending, cost: m.cost, total: Number(chatTotalCost(getActiveChat()).toFixed(6)) }; });
+  check('closing mid-answer keeps what it had cost (in the message and the total)', !cut.pending && cut.cost >= live * 0.9 && cut.total >= beforeCut + live * 0.9, { live, cut, beforeCut });
+
+  // 6. A copy from Drive saved by an older page (no costs) never wipes them.
+  const wiped = await page.evaluate(() => {
+    const chat = JSON.parse(JSON.stringify(getActiveChat()));
+    chat.messages.forEach((m) => { delete m.cost; (m.alternatives || []).forEach((a) => delete a.cost); });
+    chat.updatedAt = new Date(Date.now() + 60000).toISOString();
+    chat.messages.push({ id: 'msg_remote', role: 'user', content: 'Desde otro dispositivo', createdAt: new Date().toISOString() });
+    const before = Number(chatTotalCost(getActiveChat()).toFixed(6));
+    mergeRemoteSnapshot({ chats: [chat] });
+    return { before, after: Number(chatTotalCost(getActiveChat()).toFixed(6)), merged: getActiveChat().messages.some((m) => m.id === 'msg_remote') };
+  });
+  check('a Drive copy without costs (older page on another device) keeps every known cost', wiped.merged && wiped.after === wiped.before && wiped.before > 0, wiped);
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

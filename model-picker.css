@@ -38,7 +38,7 @@
   :root .composer-area .model-popover { width: auto; left: 8px; right: 8px; border-radius: 18px; max-height: calc(100dvh - var(--topbar-h) - 24px); }
   :root .model-popover-head { padding: 14px 16px 6px; border-bottom: 0; }
   :root .model-popover-title { font-size: 1rem; }
-  :root .model-popover-status, :root .model-list-heading small, :root .api-key-hint, :root .model-gauge { display: none; }
+  :root .model-popover-status, :root .model-list-heading small, :root .api-key-hint { display: none; }
   :root .model-search-row { padding: 4px 12px 8px; gap: 8px; }
   :root .model-search input, :root .filter-toggle { height: 40px; }
   :root .company-chips { padding: 0 12px 8px; }

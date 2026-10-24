@@ -1468,7 +1468,7 @@
     .filter-clear { border: none; background: none; padding: 0; font: inherit; font-size: 0.72rem; font-weight: 600; color: #c2410c; cursor: pointer; }
     .filter-clear.hidden { display: none; }
     /* Row: intelligence speedometer and price fraction */
-    .model-gauge { flex: 0 0 auto; width: 34px; display: flex; flex-direction: column; align-items: center; }
+    .model-gauge { flex: 0 0 auto; width: 34px; color: #1a1a1a; display: flex; flex-direction: column; align-items: center; }
     .model-gauge svg { width: 34px; height: 20px; display: block; overflow: visible; }
     .model-gauge-num { font-size: 0.56rem; font-weight: 700; line-height: 1; margin-top: 1px; color: #44403c; font-variant-numeric: tabular-nums; }
     .model-price {
@@ -1718,13 +1718,13 @@
   <link rel="stylesheet" href="guided.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-wait.css?v=20261024-wait1">
-  <link rel="stylesheet" href="model-picker.css?v=20261021">
+  <link rel="stylesheet" href="model-picker.css?v=20261024-iq">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-copy">
+  <link rel="stylesheet" href="theme.css?v=20261024-iq">
 </head>
 <body>
 
@@ -2400,7 +2400,7 @@
         g += '<line x1="' + a.toFixed(2) + '" y1="' + b.toFixed(2) + '" x2="' + c.toFixed(2) + '" y2="' + d.toFixed(2) + '" stroke="#a8a29e" stroke-width="0.8"/>';
       }
       const [nx, ny] = pt(f, r - 3);
-      g += '<line x1="20" y1="20" x2="' + nx.toFixed(2) + '" y2="' + ny.toFixed(2) + '" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="20" r="1.9" fill="#1a1a1a"/>';
+      g += '<line x1="20" y1="20" x2="' + nx.toFixed(2) + '" y2="' + ny.toFixed(2) + '" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="20" cy="20" r="1.9" fill="currentColor"/>';
       return '<svg viewBox="0 0 40 22" aria-hidden="true">' + g + '</svg>';
     }
 
@@ -2892,6 +2892,21 @@
     }
 
     // Returns true when this browser's chats changed.
+    // A device still running an older page saves chats without what each answer
+    // cost: a cost this browser knows is never lost to such a copy.
+    function keepKnownCosts(local, remote) {
+      const known = new Map((local.messages || []).map((message) => [message.id, message]));
+      (remote.messages || []).forEach((message) => {
+        const mine = known.get(message.id);
+        if (!mine) return;
+        if ((Number(mine.cost) || 0) > (Number(message.cost) || 0)) message.cost = mine.cost;
+        (message.alternatives || []).forEach((alt, index) => {
+          const old = (mine.alternatives || [])[index];
+          if (old && old.content === alt.content && (Number(old.cost) || 0) > (Number(alt.cost) || 0)) alt.cost = old.cost;
+        });
+      });
+    }
+
     function mergeRemoteSnapshot(remote) {
       if (!remote || !Array.isArray(remote.chats)) return false;
       const deleted = Object.assign({}, readDeletedChats());
@@ -2915,6 +2930,7 @@
         const remoteTime = chatFreshness(remoteChat);
         if (!local || remoteTime > chatFreshness(local) ||
             (remoteTime === chatFreshness(local) && ((remoteChat.messages || []).length > (local.messages || []).length || (local.messages || []).some(message => message.pending)))) {
+          if (local) keepKnownCosts(local, remoteChat);
           byId.set(remoteChat.id, remoteChat);
         }
       });
@@ -2973,7 +2989,15 @@
       return appState.drivePullPromise;
     }
 
+    // Closing or leaving in the middle of an answer: what it has cost so far is
+    // written down now (restoreState counts it if the page never comes back).
+    function saveRunningCost() {
+      if (appState.busy) { try { saveState({ skipDrive: true }); } catch (_) {} }
+    }
+    window.addEventListener('pagehide', saveRunningCost);
+
     document.addEventListener('visibilitychange', () => {
+      if (document.hidden) saveRunningCost();
       if (document.hidden) {
         // Leaving the app: save now instead of after the debounce.
         if (appState.driveSyncTimer) scheduleDriveSync({ immediate: true });
@@ -4160,6 +4184,13 @@
             : false
         });
         if (parsed) {
+          // An answer cut by closing the tab: it cost what its counter had reached.
+          parsed.chats.forEach((chat) => chat.messages.forEach((message) => {
+            if (!message.pending) return;
+            message.cost = Math.max(Number(message.cost) || 0, Number(message.liveCost) || 0);
+            delete message.liveCost;
+            message.pending = false;
+          }));
           appState.chats = parsed.chats;
           appState.activeChatId = parsed.activeChatId;
         }
