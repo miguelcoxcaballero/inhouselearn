@@ -144,7 +144,8 @@ Mandatory guidance for every AI and developer working in this repository.
   `$X.XXXX` in green (`message.cost`, each version keeps its own; tool rounds, repairs and steering
   split correctly). While it is written the price counts up live and animated (`liveCost`: finished
   requests plus the current one estimated from its characters and the output price), then settles
-  on the real figure. Test: `tests/web/extra-account.cjs`.
+  on the real figure. Right above the send button, small: the whole conversation's cost (every
+  answer and older version, live; `chatTotalCost`). Test: `tests/web/extra-account.cjs`.
 - **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
   cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with
   the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007

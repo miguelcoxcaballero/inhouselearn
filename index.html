@@ -1102,6 +1102,11 @@
     .msg-source-text { display: flex; flex-direction: column; min-width: 0; }
     .msg-source-text b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .msg-source-text small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .send-wrap { position: relative; display: inline-flex; flex: 0 0 auto; width: max-content; }
+    .chat-cost { position: absolute; bottom: calc(100% + 3px); left: -30px; width: 104px; text-align: center; font-size: 0.6rem; font-weight: 600; color: #15803d; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; transition: transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
+    .chat-cost.hidden { display: none; }
+    .chat-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
+    @media (prefers-reduced-motion: reduce) { .chat-cost, .chat-cost.ticking { transition: none; transform: none; text-shadow: none; } }
     .msg-cost-zeros { color: var(--muted); font-weight: 500; }
     .msg-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
     @media (prefers-reduced-motion: reduce) { .msg-cost, .msg-cost.ticking { transition: none; transform: none; text-shadow: none; } }
@@ -1640,7 +1645,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-cost2">
+  <link rel="stylesheet" href="theme.css?v=20261024-cost3">
 </head>
 <body>
 
@@ -1876,12 +1881,15 @@
                   </div>
                 </div>
               <span class="composer-spacer"></span>
+              <span class="send-wrap">
+              <span class="chat-cost hidden" id="chat-cost" title="Coste total de esta conversación"></span>
               <button class="send-btn" id="send-btn" aria-label="Enviar">
                 <span class="send-label" id="send-label">Enviar</span>
                 <svg id="send-icon" viewBox="0 0 24 24" width="16" height="16" fill="none">
                   <path d="M12 19V5M6 11l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
+              </span>
             </div>
             <div class="usage-popup hidden" id="usage-popup">
               <div class="usage-popup-title">Uso</div>
@@ -1942,8 +1950,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-cost2"></script>
-  <script src="composer-dock.js?v=20261024-cost2"></script>
+  <script src="approval.js?v=20261024-cost3"></script>
+  <script src="composer-dock.js?v=20261024-cost3"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -5537,14 +5545,45 @@
       return text.slice(0, -2) + '<span class="msg-cost-zeros">' + text.slice(-2) + '</span>';
     }
 
+    // What the whole conversation has cost: every answer and every older
+    // version of it, the one being written included (live).
+    function chatTotalCost(chat) {
+      let total = 0;
+      ((chat && chat.messages) || []).forEach((message) => {
+        if (message.role !== 'assistant') return;
+        total += typeof message.liveCost === 'number' && message.pending ? message.liveCost : (Number(message.cost) || 0);
+        (message.alternatives || []).forEach((version) => { total += Number(version.cost) || 0; });
+      });
+      return total;
+    }
+
+    function updateChatCost(fromTick) {
+      const el = document.getElementById('chat-cost');
+      if (!el) return;
+      const chat = typeof getActiveChat === 'function' ? getActiveChat() : null;
+      const known = !!chat && chat.messages.some((message) => message.role === 'assistant' && (typeof message.cost === 'number' || typeof message.liveCost === 'number' || (message.alternatives || []).some((v) => typeof v.cost === 'number')));
+      el.classList.toggle('hidden', !known);
+      if (!known) return;
+      // Centred on the send button (dictation.js puts its button next to it).
+      const send = document.getElementById('send-btn');
+      if (send && send.offsetWidth) el.style.width = (send.offsetWidth + 60) + 'px';
+      const key = 'chat:' + chat.id;
+      el.dataset.costFor = key;
+      el.dataset.cost = String(chatTotalCost(chat));
+      if (!costShown.has(key)) costShown.set(key, Number(el.dataset.cost));
+      if (!fromTick) kickCostCounters();
+    }
+
     function kickCostCounters() {
       if (!costFrame) costFrame = requestAnimationFrame(tickCostCounters);
     }
 
     function tickCostCounters() {
       costFrame = 0;
+      // Answers finish, versions change, chats switch: the total follows.
+      updateChatCost(true);
       let moving = false;
-      document.querySelectorAll('.msg-cost[data-cost-for]').forEach((el) => {
+      document.querySelectorAll('.msg-cost[data-cost-for], .chat-cost[data-cost-for]:not(.hidden)').forEach((el) => {
         const id = el.dataset.costFor;
         const target = Number(el.dataset.cost) || 0;
         const shown = costShown.has(id) ? costShown.get(id) : target;
@@ -5576,6 +5615,7 @@
       message.liveCost = next;
       const el = document.querySelector('.msg-cost[data-cost-for="' + CSS.escape(message.id) + '"]');
       if (el) { el.dataset.cost = String(next); kickCostCounters(); }
+      updateChatCost();
     }
 
     function renderMsgActions(message, isLast) {
@@ -5823,6 +5863,7 @@
 
       enhanceRichContent(elements.thread);
       bindThreadActions();
+      updateChatCost();
       if (!settings.preserveScroll) {
         requestAnimationFrame(scrollThreadToBottom);
       } else {

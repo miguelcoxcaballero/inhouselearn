@@ -88,6 +88,9 @@ async function google(route) {
   await settle();
   const settled = await page.evaluate(() => { const m = getActiveChat().messages.slice(-1)[0]; const cost = document.querySelector('#thread .message:last-child .msg-cost'); return { text: cost.textContent, real: m.cost, live: m.liveCost }; });
   check('when it ends the counter settles on the real cost', settled.text === '$' + settled.real.toFixed(4) && settled.live === undefined, settled);
+  // The conversation's total, small, right above the send button: every answer and old version.
+  const total = await page.evaluate(() => { const el = document.getElementById('chat-cost'); const send = document.getElementById('send-btn').getBoundingClientRect(); const box = el.getBoundingClientRect(); return { text: el.textContent, html: el.innerHTML, expected: chatTotalCost(getActiveChat()), above: box.bottom <= send.top + 1 && Math.abs((box.left + box.right) / 2 - (send.left + send.right) / 2) < 2, size: parseFloat(getComputedStyle(el).fontSize), box: [box.left, box.right, box.top, box.bottom], send: [send.left, send.right, send.top] }; });
+  check('right above the send button: the whole conversation\'s cost, small, last two decimals grey', total.text === '$' + total.expected.toFixed(4) && Math.abs(total.expected - 0.0035) < 1e-9 && /<span class="msg-cost-zeros">\d\d<\/span>$/.test(total.html) && total.above && total.size < 11, total);
 
   // 2. Another account for a question.
   await page.evaluate(() => {
