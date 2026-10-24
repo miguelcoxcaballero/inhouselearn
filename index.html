@@ -1228,6 +1228,21 @@
     }
     .usage-key-form input:focus { background: rgba(0,0,0,0.06); box-shadow: 0 0 0 2px var(--orange-soft); }
     .usage-link { border: none; background: none; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+    .usage-left { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .usage-left span { font-size: 0.8rem; color: var(--text-secondary); }
+    .usage-left b { font-size: 1.35rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    .usage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 12px; }
+    .usage-cell { display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; }
+    .usage-cell span { font-size: 0.7rem; color: var(--muted); }
+    .usage-cell b { font-size: 0.92rem; font-weight: 650; color: var(--text); font-variant-numeric: tabular-nums; }
+    .usage-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--border); gap: 2px; }
+    .usage-bar i { display: block; height: 100%; }
+    .usage-legend { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 0.76rem; }
+    .usage-legend li { display: flex; align-items: center; gap: 2px; color: var(--text-secondary); }
+    .usage-legend .usage-dot { flex: 0 0 7px; width: 7px; height: 7px; }
+    .usage-amount .msg-cost-zeros { color: var(--muted); }
+    .usage-legend li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .usage-legend li b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
     .usage-row-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; overflow: hidden; }
     .usage-row-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s var(--ease); }
 
@@ -1654,7 +1669,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-costs">
+  <link rel="stylesheet" href="theme.css?v=20261024-usage">
 </head>
 <body>
 
@@ -1963,8 +1978,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-costs"></script>
-  <script src="composer-dock.js?v=20261024-costs"></script>
+  <script src="approval.js?v=20261024-usage"></script>
+  <script src="composer-dock.js?v=20261024-usage"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -8131,14 +8146,14 @@
     }
 
     function createDefaultUsageData() {
-      return { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0, byModel: {} };
+      return { requests: 0, promptTokens: 0, completionTokens: 0, cost: 0, byModel: {}, byDay: {} };
     }
 
     function getUsageData() {
       try {
         const raw = JSON.parse(localStorage.getItem(USAGE_STORAGE_KEY) || 'null');
         if (raw && typeof raw === 'object') {
-          return Object.assign(createDefaultUsageData(), raw, { byModel: raw.byModel || {} });
+          return Object.assign(createDefaultUsageData(), raw, { byModel: raw.byModel || {}, byDay: raw.byDay || {} });
         }
       } catch (_) {}
       return createDefaultUsageData();
@@ -8174,6 +8189,9 @@
       entry.completionTokens += completion;
       entry.cost += cost;
       data.byModel[modelId] = entry;
+      // Per day too (local date), for «hoy / esta semana / este mes» without a key that tells.
+      const day = localDayKey(new Date());
+      data.byDay[day] = (Number(data.byDay[day]) || 0) + cost;
       saveUsageData(data);
       if (appState.openRouterCredits) {
         const credits = appState.openRouterCredits;
@@ -8367,78 +8385,63 @@
       return '<span class="usage-dot" style="background:' + color + '"></span>';
     }
 
+    function localDayKey(date) {
+      return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    // Spent in this browser since a day (byDay), when the key does not say it.
+    function localSpentSince(usage, from) {
+      const start = localDayKey(from);
+      return Object.keys(usage.byDay || {}).reduce((sum, day) => sum + (day >= start ? Number(usage.byDay[day]) || 0 : 0), 0);
+    }
+
+    // Simple on purpose: what is left, what was spent (today, this week, this
+    // month, in total) and one bar with each model's share of the spending.
     function renderUsagePopup() {
       var content = document.getElementById('usage-popup-content');
       if (!content) return;
       var hasKey = !!getApiSettings().apiKey;
       var credits = appState.openRouterCredits;
       var usage = getUsageData();
-      var keyState = !hasKey ? 'sin configurar' : (credits && credits.keyValid === false ? 'no válida' : 'guardada');
-      var html = [
-        usageRow('API key', keyState),
-        usageRow('Modelo', activeModelBadge())
-      ];
-      if (credits && credits.source === 'account') {
-        html.push(usageSection('Saldo en OpenRouter', [
-          usageRow('Te queda', formatBalance(Math.max(0, credits.total - credits.used))),
-          usageRow('Gastado', formatBalance(credits.used)),
-          usageRow('Recargado', formatBalance(credits.total))
-        ].join('')));
-      } else if (credits && credits.source === 'key') {
-        html.push(usageSection('Límite de esta key', [
-          usageRow('Te queda', formatBalance(credits.key.remaining)),
-          usageRow('Límite', formatBalance(credits.key.limit)
-            + ({ daily: ' cada día', weekly: ' cada semana', monthly: ' cada mes' }[credits.key.reset] || ''))
-        ].join('')));
-      }
-      if (credits && credits.key) {
-        var spent = [];
-        if (credits.key.daily !== null) spent.push(usageRow('Hoy', formatUsd(credits.key.daily)));
-        if (credits.key.weekly !== null) spent.push(usageRow('Esta semana', formatUsd(credits.key.weekly)));
-        if (credits.key.monthly !== null) spent.push(usageRow('Este mes', formatUsd(credits.key.monthly)));
-        spent.push(usageRow('Total', formatUsd(credits.key.usage)));
-        html.push(usageSection('Gastado con esta key', spent.join('')));
-      }
-      if (hasKey && credits && credits.source !== 'account') {
-        // The account balance needs a management key: offered behind a link.
-        var balanceOpen = !!credits.managementError;
-        html.push('<div class="usage-note"><button type="button" class="usage-link" id="usage-balance-toggle"'
-          + (balanceOpen ? ' hidden' : '') + '>Ver el saldo de la cuenta</button></div>'
-          + '<div id="usage-balance-form"' + (balanceOpen ? '' : ' hidden') + '>'
-          + '<div class="usage-note">OpenRouter solo lo da a una <a href="https://openrouter.ai/settings/management-keys" target="_blank" rel="noopener">key de gestión</a>. '
-          + 'Se usa solo para leer el saldo y se queda en este navegador.</div>'
-          + '<form class="usage-key-form" id="usage-management-form">'
-          + '<input type="password" id="usage-management-key" autocomplete="off" spellcheck="false" placeholder="Key de gestión (sk-or-…)" aria-label="Key de gestión de OpenRouter">'
-          + '<button class="btn btn-sm btn-primary" type="submit">Ver saldo</button></form>'
-          + (credits.managementError ? '<div class="usage-note error">' + escapeHtml(credits.managementError) + '</div>' : '')
-          + '</div>');
-      }
-      if (getApiSettings().managementKey) {
-        html.push('<div class="usage-note">Saldo leído con tu key de gestión. '
-          + '<button type="button" class="usage-link" id="usage-management-remove">Quitarla</button></div>');
-      }
-      var modelRows = Object.keys(usage.byModel).sort(function(a, b) {
-        return (usage.byModel[b].cost || 0) - (usage.byModel[a].cost || 0);
-      }).slice(0, 6).map(function(id, index) {
-        var item = usage.byModel[id];
-        return usageRow(usageDot(modelDonutColor(index)) + escapeHtml(modelLabelFor(id)), formatUsd(item.cost) + ' · ' + item.requests + ' msg');
-      }).join('');
-      html.push(usageSection('En este navegador', [
-        usageRow('Mensajes', formatNumber(usage.requests)),
-        usageRow('Tokens de entrada', formatCompactNumber(usage.promptTokens)),
-        usageRow('Tokens de salida', formatCompactNumber(usage.completionTokens)),
-        usageRow('Coste', formatUsd(usage.cost)),
-        modelRows
-      ].join('')));
       if (!hasKey) {
-        html.push('<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>');
+        content.innerHTML = '<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>';
+        return;
       }
-      content.innerHTML = html.join('');
+      var left = credits && credits.source === 'account' ? Math.max(0, credits.total - credits.used)
+        : credits && credits.key && credits.key.remaining !== null && credits.key.remaining !== undefined ? credits.key.remaining : null;
+      var now = new Date();
+      var weekStart = new Date(now); weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      var key = credits && credits.key;
+      var spent = [
+        ['Hoy', key && key.daily !== null && key.daily !== undefined ? key.daily : localSpentSince(usage, now)],
+        ['Esta semana', key && key.weekly !== null && key.weekly !== undefined ? key.weekly : localSpentSince(usage, weekStart)],
+        ['Este mes', key && key.monthly !== null && key.monthly !== undefined ? key.monthly : localSpentSince(usage, monthStart)],
+        ['Total', key && key.usage !== undefined ? key.usage : usage.cost]
+      ];
+      var ids = Object.keys(usage.byModel).filter(function(id) { return (usage.byModel[id].cost || 0) > 0; })
+        .sort(function(a, b) { return (usage.byModel[b].cost || 0) - (usage.byModel[a].cost || 0); });
+      var sum = ids.reduce(function(total, id) { return total + (usage.byModel[id].cost || 0); }, 0);
+      var top = ids.slice(0, 5);
+      var rest = ids.slice(5).reduce(function(total, id) { return total + (usage.byModel[id].cost || 0); }, 0);
+      var parts = top.map(function(id, index) { return { label: modelLabelFor(id), cost: usage.byModel[id].cost || 0, color: modelDonutColor(index) }; });
+      if (rest > 0) parts.push({ label: 'Otros', cost: rest, color: 'var(--border-strong)' });
+      var pct = function(value) { return sum ? Math.round(value / sum * 100) : 0; };
+      content.innerHTML =
+        '<div class="usage-left"><span>Te queda</span><b>' + (left === null ? '—' : escapeHtml(formatBalance(left))) + '</b></div>' +
+        (left === null ? '<div class="usage-note">OpenRouter solo da el saldo de la cuenta a una <button type="button" class="usage-link" id="usage-balance-toggle">key de gestión</button>.</div>' +
+          '<form class="usage-key-form" id="usage-management-form" hidden><input type="password" id="usage-management-key" autocomplete="off" spellcheck="false" placeholder="Key de gestión (sk-or-…)" aria-label="Key de gestión de OpenRouter"><button class="btn btn-sm btn-primary" type="submit">Ver</button></form>' +
+          (credits && credits.managementError ? '<div class="usage-note error">' + escapeHtml(credits.managementError) + '</div>' : '') : '') +
+        '<div class="usage-grid">' + spent.map(function(item) { return '<div class="usage-cell"><span>' + item[0] + '</span><b class="usage-amount">' + costCounterHtml(Number(item[1]) || 0) + '</b></div>'; }).join('') + '</div>' +
+        (parts.length ? '<div class="usage-bar" role="img" aria-label="Gasto por modelo">' + parts.map(function(part) { return '<i style="width:' + Math.max(2, pct(part.cost)) + '%;background:' + part.color + '" title="' + escapeHtml(part.label + ' · ' + pct(part.cost) + '%') + '"></i>'; }).join('') + '</div>' +
+          '<ul class="usage-legend">' + parts.map(function(part) { return '<li>' + usageDot(part.color) + '<span>' + escapeHtml(part.label) + '</span><b>' + pct(part.cost) + '%</b></li>'; }).join('') + '</ul>'
+          : '<div class="usage-note">Aún no hay gasto por modelo en este navegador.</div>') +
+        (getApiSettings().managementKey ? '<div class="usage-note"><button type="button" class="usage-link" id="usage-management-remove">Quitar la key de gestión</button></div>' : '');
       var balanceToggle = document.getElementById('usage-balance-toggle');
       if (balanceToggle) {
         balanceToggle.addEventListener('click', function() {
-          balanceToggle.hidden = true;
-          document.getElementById('usage-balance-form').hidden = false;
+          var form = document.getElementById('usage-management-form');
+          form.hidden = false;
           document.getElementById('usage-management-key').focus();
         });
       }
