@@ -299,18 +299,82 @@ function dockApprovalAnswer(value) {
 /* ─── Cambios de GitHub preparados ──────────────────────────────────── */
 
 // Per chat, in this browser: { 'repo@branch': entry } (engine/src/github.js).
+// Whole files can be staged (index.html alone is ~0.6 MB), so they live in
+// IndexedDB, not in localStorage (≈5 MB shared with the chats, which then
+// could not be saved either). The engine reads and writes synchronously: a
+// memory copy answers at once and every write goes to IndexedDB behind it.
+// Stages left in localStorage by older pages move to IndexedDB on start.
+function githubStagePrefix() { return STORAGE_KEY + '::githubStage::'; }
+const githubStageCache = new Map();
+let githubStageDbPromise = null;
+
+function githubStageDb() {
+  if (!githubStageDbPromise) {
+    githubStageDbPromise = new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error('IndexedDB no disponible'));
+      const request = indexedDB.open('inhouse-learn-github-stage', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('stages');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    githubStageDbPromise.catch(() => {});
+  }
+  return githubStageDbPromise;
+}
+
+function githubStagePersist(key, map) {
+  githubStageDb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction('stages', 'readwrite');
+    if (Object.keys(map).length) tx.objectStore('stages').put(map, key); else tx.objectStore('stages').delete(key);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  })).catch((error) => console.warn('Cambios de GitHub preparados: no se pudieron guardar.', error));
+}
+
+function githubStageDrop(chatId) {
+  const key = githubStagePrefix() + chatId;
+  githubStageCache.delete(key);
+  try { localStorage.removeItem(key); } catch (_) {}
+  githubStagePersist(key, {});
+}
+
+// Start-up: everything staged into memory, and old localStorage copies moved over.
+async function githubStageStart() {
+  try {
+    const db = await githubStageDb();
+    await new Promise((resolve) => {
+      const tx = db.transaction('stages', 'readonly');
+      const store = tx.objectStore('stages');
+      const keysReq = store.getAllKeys();
+      const valsReq = store.getAll();
+      tx.oncomplete = () => { keysReq.result.forEach((key, i) => { if (!githubStageCache.has(key)) githubStageCache.set(key, valsReq.result[i] || {}); }); resolve(); };
+      tx.onerror = () => resolve();
+    });
+  } catch (_) {}
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(githubStagePrefix())) continue;
+      let map = {};
+      try { map = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) {}
+      if (!githubStageCache.has(key)) { githubStageCache.set(key, map); githubStagePersist(key, map); }
+      localStorage.removeItem(key);
+    }
+  } catch (_) {}
+  if (typeof renderStageSlot === 'function') renderStageSlot();
+}
+document.addEventListener('DOMContentLoaded', () => { githubStageStart(); });
+
 function githubStageStore(chat) {
-  const key = STORAGE_KEY + '::githubStage::' + (chat && chat.id);
+  const key = githubStagePrefix() + (chat && chat.id);
   const read = () => {
+    if (githubStageCache.has(key)) return JSON.parse(JSON.stringify(githubStageCache.get(key)));
+    // Before start-up finished: an old copy may still be in localStorage.
     try { return JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) { return {}; }
   };
   const write = (map) => {
-    try {
-      if (Object.keys(map).length) localStorage.setItem(key, JSON.stringify(map));
-      else localStorage.removeItem(key);
-    } catch (error) {
-      showToast('GitHub', 'No caben más cambios preparados en este navegador: súbelos o descarta algunos.');
-    }
+    githubStageCache.set(key, map);
+    githubStagePersist(key, map);
   };
   const id = (repo, branch) => repo + '@' + branch;
   return {

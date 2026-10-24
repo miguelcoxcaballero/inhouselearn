@@ -2043,7 +2043,7 @@
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261024-copy"></script>
-  <script src="composer-dock.js?v=20261024-copy"></script>
+  <script src="composer-dock.js?v=20261024-stage"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -4538,18 +4538,15 @@
       elements.composerStatus.classList.toggle('hidden', !nextText);
     }
 
+    // The app never shows floating notices (the user asked for none): what used to
+    // be a toast goes to the console and to window.__inhouseNotices (tests read it).
+    // Errors that matter are shown where they happen (the thread, the composer
+    // status, the session banner, the approval card).
     function showToast(title, message) {
-      if (!elements.toastWrap) return;
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.innerHTML = '<strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(message) + '</span>';
-      elements.toastWrap.appendChild(toast);
-      window.setTimeout(() => {
-        toast.style.animation = 'fadeSlideUp 0.3s reverse both';
-        window.setTimeout(() => {
-          if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 300);
-      }, 4000);
+      const notice = { title: String(title || ''), message: String(message || ''), at: Date.now() };
+      (window.__inhouseNotices = window.__inhouseNotices || []).push(notice);
+      if (window.__inhouseNotices.length > 50) window.__inhouseNotices.shift();
+      console.info('[aviso] ' + notice.title + ': ' + notice.message);
     }
 
     function confirmDialog(options) {
@@ -8315,7 +8312,7 @@
 
       appState.chats = appState.chats.filter((chat) => chat.id !== targetId);
       if (window.InhouseLibrary && window.indexedDB) window.InhouseLibrary.removeChat(targetId).catch(() => {});
-      try { localStorage.removeItem(STORAGE_KEY + '::githubStage::' + targetId); } catch (_) {}
+      githubStageDrop(targetId);
       if (appState.activeChatId === targetId) {
         window.InhouseDictation?.cancel();
         window.InhouseReadAloud?.stop();

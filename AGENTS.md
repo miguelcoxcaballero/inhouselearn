@@ -77,7 +77,8 @@ Mandatory guidance for every AI and developer working in this repository.
   workspace tools and the GitHub `confirm` hook; every write still goes through it.
   `composer-dock.js` + `composer-dock.css` own what sits right above the composer: the approval
   card (`dockApprove`, never a fullscreen dialog for tool approvals), the GitHub changes prepared
-  but not uploaded (`githubStageStore`), the message queue (Enter while the model works queues;
+  but not uploaded (`githubStageStore`: IndexedDB with a memory copy, never localStorage, which
+  big files filled; test `tests/web/github-stage.cjs`), the message queue (Enter while the model works queues;
   each queued message goes out when the previous turn has fully ended) and steering («Ahora» or
   Ctrl/Cmd+Enter: pi's `agent.steer`, the message enters the running turn after the current
   tool, and the answer is split there into two messages). It also draws the live tool activity
@@ -138,7 +139,8 @@ Mandatory guidance for every AI and developer working in this repository.
   goes through the approval gate of `approval.js`: with the chat in «Preguntar» or «Auto» the
   user sees the files and the +/− lines in `confirmDialog` and decides; only in «Acceso total»
   (the user's explicit, per-chat choice) a write is approved without asking (the step stays in
-  the thread's live activity; no dark notice: the app shows no confirmation toasts, only errors). Never add a write that skips that gate. The app can also ship its
+  the thread's live activity). **The app shows no floating notices at all** (the user asked for none):
+  `showToast` only logs to the console and `window.__inhouseNotices`; errors show where they happen. Never add a write that skips that gate. The app can also ship its
   own APK: `github_release_android` checks that `main` raises `versionCode` above
   `updates/A.json`, **always asks** (even in «Acceso total», via `always: true`), waits for a
   green "Android app" build of that exact commit, runs youtube-calma's **Sign Inhouse Learn**

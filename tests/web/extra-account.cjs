@@ -141,7 +141,7 @@ async function google(route) {
   await page.click('#extra-google-btn');
   await page.waitForSelector('.extra-google-pill');
   await page.waitForTimeout(300);
-  const off = await page.evaluate(() => ({ pill: document.querySelector('.extra-google-pill').innerText, title: document.querySelector('.extra-google-pill').title, toast: Array.from(document.querySelectorAll('.toast')).map((t) => t.innerText).join(' '), prompt: extraGooglePromptText() }));
+  const off = await page.evaluate(() => ({ pill: document.querySelector('.extra-google-pill').innerText, title: document.querySelector('.extra-google-pill').title, toast: (window.__inhouseNotices || []).map((t) => t.message).join(' '), prompt: extraGooglePromptText() }));
   check('Gmail API off in Google Cloud: the pill says Gmail ✕ and why, and a notice explains it', /Gmail ✕/.test(off.pill) && /Drive ✓/.test(off.pill) && /no está activada en el proyecto de Google Cloud/.test(off.title) && /Google tarda unos minutos/.test(off.toast) && /no hace falta volver a vincular/.test(off.prompt), off);
   gmailDisabled = 2;
   await page.evaluate(() => window.__replies.push({ text: '', tools: [{ name: 'extra_gmail_search', args: { query: 'presupuesto' } }] }, { text: 'Encontrado.' }));
