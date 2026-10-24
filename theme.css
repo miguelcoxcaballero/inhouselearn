@@ -395,3 +395,17 @@ html[data-theme="dark"] .chat-menu button:hover,
 html[data-theme="dark"] .chat-menu button:focus-visible { background: rgba(255,255,255,0.06); }
 html[data-theme="dark"] .chat-menu button.danger,
 html[data-theme="dark"] .chat-menu button.danger svg { color: #ff8a7a; }
+
+/* ─── La barra superior: el nombre del chat, centrado ─────────────────────
+   El nombre del chat abierto (o el de la lección) va en el centro exacto de la
+   barra. Para eso las dos columnas de los lados miden lo mismo —«Chats» y la
+   marca a la izquierda, la descarga de la app a la derecha— y el ancho del
+   nombre lo limita .top-title, así que nunca tapa esos botones ni se desplaza
+   según cuál de ellos esté visible. Va en esta hoja, la última, para mandar
+   sobre las reglas de index.html sin subir la especificidad. */
+.topbar { grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); }
+.topbar .topbar-mid { justify-self: center; max-width: none; }
+.top-title { max-width: min(520px, 46vw); }
+@media (max-width: 768px) {
+  .top-title { max-width: calc(100vw - 200px); }
+}
