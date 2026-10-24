@@ -106,11 +106,22 @@ Mandatory guidance for every AI and developer working in this repository.
   network removed). The model's tools (`engine/src/documents.js`): `doc_view` (pages as images, vision
   models only) and `doc_edit` (`readDocument`/`saveDocument`/`listDocuments`). What it saves goes into
   the chat library as a `generated` document (same path → replaced, same ref), always with its
-  original (`originals` store, IndexedDB v2; it travels to Drive inside `library-<id>.json` up to
+  original (`originals` store, IndexedDB v2, images too; it travels to Drive inside `library-<id>.json` up to
   8 MB), and shows under the answer with «Ver» (every page) and «Descargar» (`step.documents`). In
   «Preguntar» saving asks first (`approveChange`). Uploaded PDF/Word/PowerPoint/Excel keep their
   original too, so they can be viewed and edited; `.pptx` is read slide by slide (notes included).
   Test: `tests/web/documents.cjs`.
+- **LaTeX:** `latex.js` (`InhouseTex`) runs TeX Live 2026 inside the browser with BusyTeX
+  (WebAssembly, AGPL, loaded at run time from `texlyre.github.io/texlyre-busytex/core/busytex/`, which
+  serves it with CORS): pdflatex, xelatex, lualatex, BibTeX/Biber, makeindex and reruns. Nothing is
+  uploaded anywhere; only the engine (~32 MB) and the TeX Live packages download, once, into the Cache
+  API (`inhouse-texlive-2026`). Levels are cumulative and a worker mounts only one: `recommended`
+  (201 MB) first, `extra` (342 MB) when a file is missing; babel's "Unknown option" retries with
+  `provide=*`. The worker is a Blob that `importScripts` `busytex_pipeline.js` (a cross-origin Worker
+  cannot be created) and stops after 5 idle minutes. The model writes the sources as chat files and calls
+  `latex_compile` (`engine/src/documents.js`): every chat text file plus the library's PDFs/images go to
+  the compiler, errors come back with their line, the PDF goes to the library like `doc_edit`'s output
+  (same approval). Test: `tests/web/latex.cjs` (downloads TeX Live, so not in `run-ci.sh`).
 - **GitHub connector:** `engine/src/github.js` gives the model `github_*` tools (list repos and
   files, read, search code, one-commit multi-file writes through the git data API, exact edits,
   pull requests, issues and comments) with the user's fine-grained token, kept only in that

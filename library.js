@@ -279,7 +279,7 @@
       }
       if (!doc.pages.length && opts.generated) doc.pages = [{ n: 1, text: '(sin texto)' }];
       if (!doc.pages.length) { skipped.push({ path, reason: 'sin contenido' }); continue; }
-      if (kind !== 'image' && kind !== 'text' && file.size <= MAX_ORIGINAL_BYTES) {
+      if (kind !== 'text' && file.size <= MAX_ORIGINAL_BYTES) {
         await put('originals', { id: doc.id, chatId, mimeType: file.type || '', data: await file.arrayBuffer() });
         doc.hasOriginal = true;
       }
