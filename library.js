@@ -17,7 +17,9 @@
    Depende de: pdfjsLib, mammoth, XLSX (cargados por index.html). */
 (function () {
   const DB_NAME = 'inhouse-learn-library';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
+  const MAX_ORIGINAL_BYTES = 30 * 1024 * 1024;
+  const MAX_DRIVE_ORIGINAL_BYTES = 8 * 1024 * 1024;
   const MAX_PDF_PAGES = 3000;
   const MAX_SCANNED_PAGES = 400;
   const MAX_IMAGE_SIDE = 1600;
@@ -46,6 +48,8 @@
         const db = request.result;
         if (!db.objectStoreNames.contains('docs')) db.createObjectStore('docs', { keyPath: 'id' }).createIndex('chatId', 'chatId');
         if (!db.objectStoreNames.contains('images')) db.createObjectStore('images', { keyPath: 'id' }).createIndex('chatId', 'chatId');
+        // The file itself (PDF, Word, PowerPoint, Excel), to see it and edit it later.
+        if (!db.objectStoreNames.contains('originals')) db.createObjectStore('originals', { keyPath: 'id' });
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -70,6 +74,20 @@
   const byChat = (store, chatId) => tx(store, 'readonly', (s) => s.index('chatId').getAll(chatId));
 
   /* ── Utilidades ──────────────────────────────────────────────────── */
+
+  function toBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let out = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(out);
+  }
+
+  function fromBase64(text) {
+    const raw = atob(text);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return bytes.buffer;
+  }
 
   function uid(prefix) {
     return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -102,6 +120,7 @@
     if (mime === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
     if (mime.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/.test(name)) return 'image';
     if (/\.(docx|odt)$/.test(name)) return 'doc';
+    if (/\.pptx$/.test(name)) return 'slides';
     if (/\.(xlsx|xls|ods)$/.test(name)) return 'sheet';
     if (mime.startsWith('text/') || mime.includes('json') || TEXT_EXT.test(name)) return 'text';
     return '';
@@ -246,6 +265,10 @@
           const id = uid('img');
           images.push({ id, chatId, docId: doc.id, page: 1, mimeType: 'image/jpeg', data: jpeg.data, width: jpeg.width, height: jpeg.height });
           doc.pages.push({ n: 1, text: '', image: id, ocr: 'pending' });
+        } else if (kind === 'slides') {
+          if (!window.InhouseDocs) throw new Error('No se pueden leer presentaciones.');
+          doc.pages = await window.InhouseDocs.pptxText(new Uint8Array(await file.arrayBuffer()));
+          doc.totalPages = doc.pages.length;
         } else {
           const text = kind === 'doc' ? await readDoc(file) : kind === 'sheet' ? await readSheet(file) : await file.text();
           doc.pages = splitSections(text);
@@ -254,7 +277,21 @@
         skipped.push({ path, reason: error && error.message ? error.message : 'no se pudo leer' });
         continue;
       }
+      if (!doc.pages.length && opts.generated) doc.pages = [{ n: 1, text: '(sin texto)' }];
       if (!doc.pages.length) { skipped.push({ path, reason: 'sin contenido' }); continue; }
+      if (kind !== 'image' && kind !== 'text' && file.size <= MAX_ORIGINAL_BYTES) {
+        await put('originals', { id: doc.id, chatId, mimeType: file.type || '', data: await file.arrayBuffer() });
+        doc.hasOriginal = true;
+      }
+      if (opts.generated) doc.generated = true;
+      // A document the model saves again under the same name replaces the old one and keeps its reference.
+      const previous = opts.generated ? (await byChat('docs', chatId)).find((other) => other.generated && other.path === path) : null;
+      if (previous) {
+        doc.ref = previous.ref;
+        doc.driveId = previous.driveId || '';
+        await removeLocal(previous);
+        ref--;
+      }
       for (const image of images) await put('images', image);
       await put('docs', doc);
       ref++;
@@ -274,7 +311,8 @@
       id: doc.id, ref: doc.ref, name: doc.name, path: doc.path, kind: doc.kind, size: doc.size,
       pages: doc.pages.length, totalPages: doc.totalPages || doc.pages.length,
       words: Math.round(chars / 6), images: doc.pages.filter((page) => page.image).length,
-      pendingOcr: doc.pages.filter((page) => page.ocr === 'pending').length, addedAt: doc.addedAt
+      pendingOcr: doc.pages.filter((page) => page.ocr === 'pending').length, addedAt: doc.addedAt,
+      hasOriginal: !!doc.hasOriginal, generated: !!doc.generated, mimeType: doc.mimeType || ''
     };
   }
 
@@ -474,7 +512,7 @@
     let last = from - 1;
     for (const page of doc.pages) {
       if (page.n < from || page.n > to) continue;
-      const label = doc.kind === 'pdf' ? 'Página ' + page.n : doc.kind === 'image' ? 'Imagen' : 'Sección ' + page.n;
+      const label = doc.kind === 'pdf' ? 'Página ' + page.n : doc.kind === 'image' ? 'Imagen' : doc.kind === 'slides' ? 'Diapositiva ' + page.n : 'Sección ' + page.n;
       const body = page.text && page.text.trim() ? page.text.trim() : (page.ocr === 'pending' ? '(imagen; el OCR aún la está leyendo)' : '(sin texto)');
       const piece = '[' + doc.ref + ' · ' + label + (page.image ? ' · imagen ' + doc.ref + ':p' + page.n : '') + ']\n' + body + '\n\n';
       if (out && out.length + piece.length > limit) break;
@@ -498,11 +536,31 @@
     return (await byChat('docs', chatId)).map(summary).sort((a, b) => (Number(a.ref.slice(1)) || 0) - (Number(b.ref.slice(1)) || 0));
   }
 
+  async function removeLocal(doc) {
+    for (const page of doc.pages) if (page.image) await del('images', page.image);
+    await del('originals', doc.id);
+    await del('docs', doc.id);
+  }
+
+  // The file as it was uploaded or saved: { doc, name, mimeType, bytes }. ref: "D3", a path or a file name.
+  async function original(chatId, ref) {
+    const wanted = String(ref || '').trim();
+    const parsed = parseRef(wanted);
+    const docs = await byChat('docs', chatId);
+    const lower = wanted.toLowerCase();
+    const doc = (parsed && docs.find((entry) => entry.ref.toLowerCase() === parsed.doc.toLowerCase())) ||
+      docs.find((entry) => entry.path.toLowerCase() === lower) || docs.find((entry) => entry.name.toLowerCase() === lower) ||
+      docs.find((entry) => entry.path.toLowerCase().endsWith('/' + lower));
+    if (!doc) return null;
+    const record = doc.hasOriginal ? await get('originals', doc.id) : null;
+    if (!record) return { doc: summary(doc), name: doc.name, missing: true };
+    return { doc: summary(doc), name: doc.name, path: doc.path, mimeType: record.mimeType || doc.mimeType || '', bytes: new Uint8Array(record.data) };
+  }
+
   async function remove(chatId, docId) {
     const doc = await get('docs', docId);
     if (!doc || doc.chatId !== chatId) return false;
-    for (const page of doc.pages) if (page.image) await del('images', page.image);
-    await del('docs', docId);
+    await removeLocal(doc);
     indexCache.delete(chatId);
     if (drive && doc.driveId) drive.remove(doc.driveId).catch(() => {});
     emit();
@@ -528,6 +586,7 @@
   function describe(doc) {
     const parts = [];
     if (doc.kind === 'pdf') parts.push('PDF de ' + doc.totalPages + (doc.totalPages === 1 ? ' página' : ' páginas'));
+    else if (doc.kind === 'slides') parts.push('presentación de ' + doc.pages + (doc.pages === 1 ? ' diapositiva' : ' diapositivas'));
     else if (doc.kind === 'image') parts.push('imagen');
     else parts.push(doc.pages + (doc.pages === 1 ? ' sección' : ' secciones'));
     if (doc.words) parts.push('~' + doc.words.toLocaleString('es-ES') + ' palabras');
@@ -544,7 +603,10 @@
     if (!doc) return;
     const images = [];
     for (const page of doc.pages) if (page.image) { const record = await get('images', page.image); if (record) images.push(record); }
-    const id = await drive.upload('library-' + doc.id + '.json', JSON.stringify({ v: 1, doc, images }), { [DRIVE_DOC_TAG]: '1', chatId: doc.chatId }, doc.driveId || '');
+    // The original travels too while it is small enough for one Drive file.
+    const record = doc.hasOriginal ? await get('originals', doc.id) : null;
+    const originalData = record && record.data.byteLength <= MAX_DRIVE_ORIGINAL_BYTES ? { mimeType: record.mimeType, data: toBase64(record.data) } : null;
+    const id = await drive.upload('library-' + doc.id + '.json', JSON.stringify({ v: 1, doc, images, original: originalData }), { [DRIVE_DOC_TAG]: '1', chatId: doc.chatId }, doc.driveId || '');
     if (id && id !== doc.driveId) {
       const fresh = await get('docs', docId);
       if (fresh) { fresh.driveId = id; await put('docs', fresh); }
@@ -572,6 +634,8 @@
         const payload = JSON.parse(await drive.download(file.id));
         if (!payload || !payload.doc || payload.doc.chatId !== chatId) continue;
         for (const record of payload.images || []) await put('images', record);
+        if (payload.original && payload.original.data) await put('originals', { id: payload.doc.id, chatId, mimeType: payload.original.mimeType || '', data: fromBase64(payload.original.data) });
+        else payload.doc.hasOriginal = false;
         payload.doc.driveId = file.id;
         await put('docs', payload.doc);
         added++;
@@ -584,7 +648,7 @@
   }
 
   window.InhouseLibrary = {
-    ingest, list, search, read, image, remove, removeChat, manifestText, describe, kindOf, pullFromDrive, uploadMissing, runOcrQueue,
+    ingest, list, search, read, image, original, remove, removeChat, manifestText, describe, kindOf, pullFromDrive, uploadMissing, runOcrQueue,
     configureDrive: (adapter) => { drive = adapter || null; },
     onChange: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
     status: () => Object.assign({}, status),

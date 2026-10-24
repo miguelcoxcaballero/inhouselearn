@@ -99,6 +99,18 @@ Mandatory guidance for every AI and developer working in this repository.
   (`library-<id>.json`); the model reaches them only through the `search_library`,
   `read_library`, `list_library` and `view_library_image` tools (`engine/src/library.js`).
   Big uploads never go into the message itself, only a short manifest.
+- **Documents:** `documents.js` (`InhouseDocs`) draws PDF (pdf.js), Word (docx-preview + html2canvas),
+  PowerPoint (its own canvas renderer: boxes, text, pictures, tables, backgrounds, layout/master
+  placeholders) and Excel (SheetJS) pages as images, and runs the model's code in a Worker with
+  pdf-lib, docx, PptxGenJS, JSZip and SheetJS (fetched from jsDelivr and inlined into the worker,
+  network removed). The model's tools (`engine/src/documents.js`): `doc_view` (pages as images, vision
+  models only) and `doc_edit` (`readDocument`/`saveDocument`/`listDocuments`). What it saves goes into
+  the chat library as a `generated` document (same path → replaced, same ref), always with its
+  original (`originals` store, IndexedDB v2; it travels to Drive inside `library-<id>.json` up to
+  8 MB), and shows under the answer with «Ver» (every page) and «Descargar» (`step.documents`). In
+  «Preguntar» saving asks first (`approveChange`). Uploaded PDF/Word/PowerPoint/Excel keep their
+  original too, so they can be viewed and edited; `.pptx` is read slide by slide (notes included).
+  Test: `tests/web/documents.cjs`.
 - **GitHub connector:** `engine/src/github.js` gives the model `github_*` tools (list repos and
   files, read, search code, one-commit multi-file writes through the git data API, exact edits,
   pull requests, issues and comments) with the user's fine-grained token, kept only in that

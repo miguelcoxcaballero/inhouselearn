@@ -951,7 +951,7 @@
     .confirm-detail li { display: flex; align-items: baseline; gap: 8px; padding: 7px 10px; font-size: 0.82rem; border-top: 1px solid var(--border); }
     .confirm-detail li:first-child { border-top: 0; }
     .confirm-detail code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.8rem; }
-    .confirm-detail .cd-status { flex-shrink: 0; color: var(--muted); font-size: 0.74rem; }
+    .confirm-detail .cd-status { flex-shrink: 0; color: var(--ink-3); font-size: 0.74rem; }
     .confirm-detail .cd-add { color: #15803d; flex-shrink: 0; }
     .confirm-detail .cd-del { color: #b91c1c; flex-shrink: 0; }
     .confirm-input { width: 100%; box-sizing: border-box; height: 42px; margin: -6px 0 18px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 10px; font: inherit; font-size: 0.9rem; background: var(--surface); color: var(--text); }
@@ -1100,6 +1100,21 @@
     }
     .msg-attribution-sep { opacity: 0.5; }
     .msg-cost { color: #15803d; font-variant-numeric: tabular-nums; font-weight: 600; margin-left: 2px; display: inline-block; transition: transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
+    .msg-docs { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .msg-doc { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); max-width: 520px; }
+    .msg-doc-icon { flex: none; width: 38px; height: 38px; border-radius: 9px; display: grid; place-items: center; font: 700 0.62rem/1 var(--font-sans, system-ui); letter-spacing: 0.04em; color: #fff; background: #6b7280; }
+    .msg-doc[data-kind="pdf"] .msg-doc-icon { background: #d93f2f; }
+    .msg-doc[data-kind="doc"] .msg-doc-icon { background: #2b63c6; }
+    .msg-doc[data-kind="slides"] .msg-doc-icon { background: #d0612b; }
+    .msg-doc[data-kind="sheet"] .msg-doc-icon { background: #1f8a4c; }
+    .msg-doc-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .msg-doc-text b { font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .msg-doc-text small { color: var(--ink-3); font-size: 0.74rem; }
+    .doc-pages { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0 24px; }
+    .doc-page { margin: 0; width: 100%; max-width: 900px; }
+    .doc-page img { display: block; width: 100%; height: auto; background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+    .doc-page figcaption { text-align: center; color: var(--ink-3); font-size: 0.74rem; margin-top: 6px; }
+    .doc-pages-status { color: var(--ink-3); font-size: 0.85rem; }
     .msg-sources { margin-top: 12px; font-size: 0.8rem; }
     .msg-sources summary { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); cursor: pointer; list-style: none; color: var(--text); font-weight: 600; user-select: none; }
     .msg-sources summary::-webkit-details-marker { display: none; }
@@ -2002,9 +2017,10 @@
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="library.js?v=20261021-library"></script>
+  <script src="library.js?v=20261024-docs"></script>
+  <script src="documents.js?v=20261024-docs"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261024-visual1"></script>
+  <script src="vendor/pi-engine.js?v=20261024-docs"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -3101,6 +3117,7 @@
       if (mime.startsWith('audio/')) return 'audio';
       if (mime.startsWith('video/')) return 'video';
       if (ext === 'docx' || ext === 'odt') return 'doc';
+      if (ext === 'pptx') return 'slides';
       if (ext === 'xlsx' || ext === 'xls' || ext === 'ods' || ext === 'csv' || ext === 'tsv') return 'sheet';
       if (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('javascript') || mime.includes('typescript') || mime.includes('yaml') || ext === 'md' || ext === 'log') return 'text';
       return 'binary';
@@ -3378,6 +3395,10 @@
       if (kind === 'doc') {
         return buildTextAttachment(file, mimeType, kind, await readDocxAsText(file));
       }
+      if (kind === 'slides' && window.InhouseDocs) {
+        const slides = await window.InhouseDocs.pptxText(new Uint8Array(await file.arrayBuffer()));
+        return buildTextAttachment(file, mimeType, kind, slides.map((slide) => 'Diapositiva ' + slide.n + ':\n' + slide.text).join('\n\n'));
+      }
       if (kind === 'sheet') {
         if (fileExtension(file.name) === 'csv' || fileExtension(file.name) === 'tsv') {
           return buildTextAttachment(file, mimeType, kind, await file.text());
@@ -3562,6 +3583,7 @@
         '<p class="library-intro">El modelo busca en estos archivos cuando le preguntas por ellos.' + (ocr ? ' Leyendo fotos y páginas escaneadas: quedan ' + ocr + '.' : '') + '</p>' +
         (docs.length ? '<ul class="library-list">' + docs.map((doc) => '<li class="library-row"><span class="library-ref">' + escapeHtml(doc.ref) + '</span>' +
           '<span class="library-name"><b>' + escapeHtml(doc.path) + '</b><small>' + escapeHtml(library.describe(doc)) + '</small></span>' +
+          (doc.hasOriginal && doc.kind !== 'text' ? '<button type="button" class="btn btn-outline btn-sm" data-doc-open="' + escapeHtml(doc.ref) + '">Ver</button><button type="button" class="btn btn-outline btn-sm" data-doc-download="' + escapeHtml(doc.ref) + '" aria-label="Descargar ' + escapeHtml(doc.path) + '">↓</button>' : '') +
           '<button type="button" class="btn btn-outline btn-sm" data-library-remove="' + escapeHtml(doc.id) + '">Quitar</button></li>').join('') + '</ul>'
           : '<p class="library-empty">Aún no hay archivos. Usa + → Subir carpeta o arrastra una carpeta aquí.</p>') +
         '</div>';
@@ -4751,6 +4773,122 @@
       const page = data.data || data;
       return { title: page.title || '', url: page.url || url, text: page.content || page.text || '' };
     }
+
+    /* ─── DOCUMENTOS (PDF, WORD, POWERPOINT, EXCEL) ─────────────────── */
+    // doc_view shows the model pages as images; doc_edit runs its code with
+    // pdf-lib, docx, PptxGenJS, JSZip and SheetJS (documents.js). What it saves
+    // goes into the chat's library (original kept, text searchable, synced to
+    // Drive) and appears under the answer to open and download.
+    function documentToolsFor(chat, signal, acceptsImages) {
+      const library = window.InhouseLibrary && window.indexedDB ? window.InhouseLibrary : null;
+      if (!library || !window.InhouseDocs) return [];
+      const open = async (name) => {
+        const file = await library.original(chat.id, name);
+        if (!file) return null;
+        if (file.missing) throw new Error('De «' + file.name + '» solo queda el texto (no se guardó el archivo original): léelo con read_library.');
+        return file;
+      };
+      const list = async () => (await library.list(chat.id)).filter((doc) => doc.hasOriginal).map((doc) => ({ ref: doc.ref, name: doc.path, kind: doc.kind, size: doc.size }));
+      return InhousePi.createDocumentTools({
+        acceptsImages,
+        list,
+        view: async (name, pages) => {
+          const file = await open(name);
+          if (!file) throw new Error('No existe «' + name + '» en este chat. list_library muestra los documentos.');
+          const result = await window.InhouseDocs.render(file, { pages, max: 6 });
+          if (!result.images.length) throw new Error('«' + file.name + '» tiene ' + result.total + ' ' + result.unit + (result.total === 1 ? '' : 's') + '; pide otras.');
+          return Object.assign({ name: file.path || file.name, ref: file.doc.ref }, result);
+        },
+        run: async (code, runSignal) => {
+          const outcome = await window.InhouseDocs.run(code, { list, open }, runSignal || signal);
+          const files = outcome.error ? [] : outcome.saved.filter((item) => item.bytes.length);
+          if (!files.length) return Object.assign(outcome, { saved: [] });
+          const names = files.map((item) => item.path + ' (' + formatBytes(item.bytes.length) + ')').join('\n');
+          if (approvalModeOf(chat) === 'ask') {
+            const ok = await approveChange(chat, { title: files.length === 1 ? 'Guardar documento' : 'Guardar ' + files.length + ' documentos', summary: names + '\nSe guardan en la biblioteca de este chat.' });
+            if (!ok) return Object.assign(outcome, { saved: [], declined: files.map((item) => item.path).join(', ') });
+          }
+          const saved = [];
+          for (const item of files) {
+            const file = new File([item.bytes], item.path.split('/').pop(), { type: item.mimeType });
+            const { added, skipped } = await library.ingest(chat.id, [{ file, path: item.path }], { generated: true });
+            if (added[0]) saved.push({ ref: added[0].ref, id: added[0].id, path: added[0].path, size: item.bytes.length, kind: added[0].kind });
+            else if (skipped[0]) outcome.error = (outcome.error ? outcome.error + '\n' : '') + item.path + ': ' + skipped[0].reason;
+          }
+          refreshLibraryCount();
+          return Object.assign(outcome, { saved });
+        }
+      });
+    }
+
+    function documentsPromptText() {
+      return '- Documentos: con doc_edit creas y editas PDF, Word (.docx), PowerPoint (.pptx) y Excel (.xlsx) (pdf-lib, docx, PptxGenJS, JSZip, SheetJS) y con doc_view miras sus páginas como imágenes, igual que las vería el usuario (también para «escanear» un documento subido: tablas, gráficos, letra a mano). Lo que guardas va a la biblioteca del chat y el usuario lo abre y lo descarga debajo de tu respuesta. Cuando te pidan un documento, hazlo de verdad con doc_edit (no lo pegues como texto), cuida el diseño, revísalo con doc_view y corrige lo que veas mal antes de decir que está listo. Para cambiar un documento del usuario, guarda una copia con otro nombre salvo que te pida reemplazarlo.';
+    }
+
+    const DOC_KIND_LABEL = { pdf: 'PDF', doc: 'Word', slides: 'PowerPoint', sheet: 'Excel', image: 'Imagen', text: 'Texto' };
+
+    function messageDocuments(message) {
+      const steps = Array.isArray(message.toolSteps) ? message.toolSteps : [];
+      const seen = new Map();
+      steps.forEach((step) => (step.documents || []).forEach((doc) => { if (doc && doc.ref) seen.set(doc.path || doc.ref, doc); }));
+      return Array.from(seen.values());
+    }
+
+    function renderMessageDocuments(message) {
+      if (!message || message.role !== 'assistant') return '';
+      const docs = messageDocuments(message);
+      if (!docs.length) return '';
+      return '<div class="msg-docs">' + docs.map((doc) => '<div class="msg-doc" data-kind="' + escapeHtml(doc.kind || '') + '">' +
+        '<span class="msg-doc-icon" aria-hidden="true">' + escapeHtml(({ pdf: 'PDF', doc: 'DOC', slides: 'PPT', sheet: 'XLS' })[doc.kind] || 'DOC') + '</span>' +
+        '<span class="msg-doc-text"><b>' + escapeHtml(doc.path.split('/').pop()) + '</b><small>' + escapeHtml((DOC_KIND_LABEL[doc.kind] || 'Documento') + ' · ' + formatBytes(doc.size || 0) + ' · ' + doc.ref) + '</small></span>' +
+        '<button type="button" class="btn btn-outline btn-sm" data-doc-open="' + escapeHtml(doc.ref) + '">Ver</button>' +
+        '<button type="button" class="btn btn-outline btn-sm" data-doc-download="' + escapeHtml(doc.ref) + '">Descargar</button></div>').join('') + '</div>';
+    }
+
+    async function documentFile(ref) {
+      const chat = getActiveChat();
+      const library = window.InhouseLibrary;
+      if (!chat || !library) return null;
+      let file = await library.original(chat.id, ref);
+      if (!file && hasDrivePersistenceReady()) {
+        await library.pullFromDrive(chat.id).catch(() => 0);
+        file = await library.original(chat.id, ref);
+      }
+      if (!file) { showToast('Documento', 'Ya no está en la biblioteca de este chat.'); return null; }
+      if (file.missing) { showToast('Documento', 'De «' + file.name + '» solo se guardó el texto.'); return null; }
+      return file;
+    }
+
+    async function downloadDocument(ref) {
+      const file = await documentFile(ref);
+      if (file) downloadBlob(new Blob([file.bytes], { type: file.mimeType || InhouseDocs.mimeFor(file.name) }), file.name);
+    }
+
+    // Every page as the model sees it, with «Descargar» on top.
+    async function openDocumentPreview(ref) {
+      const file = await documentFile(ref);
+      if (!file) return;
+      const overlay = document.getElementById('preview-overlay');
+      const body = document.getElementById('preview-body');
+      document.getElementById('preview-title').textContent = file.path || file.name;
+      body.innerHTML = '<div class="file-preview doc-preview"><div class="file-preview-actions"><button type="button" class="btn btn-outline btn-sm" data-doc-download="' + escapeHtml(file.doc.ref) + '">Descargar</button></div><div class="doc-pages"><p class="doc-pages-status">Preparando las páginas…</p></div></div>';
+      overlay.classList.remove('hidden');
+      const pages = body.querySelector('.doc-pages');
+      try {
+        const result = await InhouseDocs.render(file, { max: 40 });
+        pages.innerHTML = result.images.map((image) => '<figure class="doc-page"><img alt="' + escapeHtml(result.unit + ' ' + image.page) + '" src="data:' + image.mimeType + ';base64,' + image.data + '"><figcaption>' + escapeHtml(result.unit.charAt(0).toUpperCase() + result.unit.slice(1) + ' ' + image.page + ' de ' + result.total) + '</figcaption></figure>').join('') +
+          (result.total > result.images.length ? '<p class="doc-pages-status">Se muestran ' + result.images.length + ' de ' + result.total + '. Descárgalo para verlo entero.</p>' : '');
+      } catch (error) {
+        pages.innerHTML = '<p class="doc-pages-status">No se pudo dibujar: ' + escapeHtml(error.message) + '</p>';
+      }
+    }
+
+    document.addEventListener('click', (event) => {
+      const openButton = event.target.closest('[data-doc-open]');
+      if (openButton) { event.preventDefault(); openDocumentPreview(openButton.dataset.docOpen); return; }
+      const downloadButton = event.target.closest('[data-doc-download]');
+      if (downloadButton) { event.preventDefault(); downloadDocument(downloadButton.dataset.docDownload); }
+    });
 
     function webToolsFor(chat, signal, onCost) {
       return InhousePi.createWebTools({
@@ -6131,7 +6269,7 @@
           (message.pending && message.remoteLive ? '<span class="remote-live" title="Se está escribiendo en otro dispositivo"><i></i>En directo</span>' : '') + '</div>',
         '    <div class="bubble"><div class="bubble-content">' + (isUser ? '' : guidedChapterMarkup(message, chat)),
         '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>',
-        '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + (isUser ? '' : renderMessageSources(message)) + quickMarkup,
+        '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + (isUser ? '' : renderMessageDocuments(message) + renderMessageSources(message)) + quickMarkup,
         '    </div></div>',
         attributionMarkup,
         actionsMarkup,
@@ -9303,7 +9441,9 @@
       read_file: 'Leer archivo',
       edit_file: 'Editar archivo',
       list_files: 'Ver archivos',
-      delete_file: 'Borrar archivo'
+      delete_file: 'Borrar archivo',
+      doc_view: 'Ver documento',
+      doc_edit: 'Crear o editar documento'
     };
     // What a tool returned stays this long in later turns ("continúa" keeps what was read).
     const MAX_STORED_TOOL_RESULT = 16000;
@@ -9350,6 +9490,7 @@
         userDrivePromptText(chat),
         extraGooglePromptText(),
         webPromptText(),
+        documentsPromptText(),
         ultraPromptText(chat),
         approvalPromptText(chat),
         '',
@@ -9593,7 +9734,7 @@
         try {
           // The same tools, built again for each parallel agent (Ultra code).
           // onCost: what a tool spends besides the model (web searches), for the agent's own row.
-          const workTools = (onCost) => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal, onCost), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          const workTools = (onCost) => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal, onCost), documentToolsFor(chat, signal, model.input.includes('image')), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
           const agentTools = ultraCodeOn(chat) && !chat.guidedLearning
             ? InhousePi.createAgentTools({ runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job) })
             : [];
@@ -10333,7 +10474,7 @@
     });
 
     const NETWORK_ERROR = /network|failed to fetch|load failed|fetch failed|err_|connection|terminated|socket|aborted by the browser|no se pudo conectar/i;
-    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$)/;
+    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$)/;
 
     function cutByLeaving(error, hiddenBefore, message) {
       if (!NETWORK_ERROR.test(String(error && error.message || ''))) return false;

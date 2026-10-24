@@ -19,6 +19,7 @@ export { createDriveTools } from './gdrive.js';
 export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
 export { createAgentTools } from './agents.js';
+export { createDocumentTools } from './documents.js';
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -359,6 +360,8 @@ export async function runAgent(options) {
         // Web pages a tool found or read: the app lists them as the answer's sources.
         if (event.result && event.result.details && Array.isArray(event.result.details.sources)) step.sources = event.result.details.sources.slice(0, 12);
         if (event.result && event.result.details && Array.isArray(event.result.details.agents)) step.agents = event.result.details.agents;
+        // Documents a tool created or edited: the app shows them under the answer.
+        if (event.result && event.result.details && Array.isArray(event.result.details.documents) && event.result.details.documents.length) step.documents = event.result.details.documents.slice(0, 12);
       }
       emit();
     }
