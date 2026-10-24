@@ -75,6 +75,37 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const custom = await title();
   check('a name the user wrote is never touched (and costs nothing)', custom.title === 'Mi chat' && custom.requests === before, custom);
 
+  // The chat's name sits in the exact centre of the top bar: the two side
+  // columns (Chats + brand, and the app download button) have the same width, so
+  // the name is centred with or without that button, on a phone and on a desktop.
+  const geometry = async (width, height, withDownload) => {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(150);
+    return page.evaluate((show) => {
+      document.body.classList.toggle('has-app-download', show);
+      const link = document.getElementById('app-download');
+      if (link) link.classList.toggle('hidden', !show);
+      const bar = document.querySelector('.topbar').getBoundingClientRect();
+      const name = document.getElementById('top-title-main').getBoundingClientRect();
+      const start = document.querySelector('.topbar-start').getBoundingClientRect();
+      const end = show && link ? link.getBoundingClientRect() : null;
+      const round = (value) => Math.round(value * 10) / 10;
+      return {
+        offset: round((name.left + name.right) / 2 - (bar.left + bar.right) / 2),
+        leftGap: round(name.left - start.right),
+        rightGap: round((end ? end.left : bar.right) - name.right),
+        nameWidth: Math.round(name.width)
+      };
+    }, withDownload);
+  };
+  for (const [w, h] of [[360, 780], [414, 896], [768, 1024], [1100, 820]]) {
+    for (const withDownload of [false, true]) {
+      const g = await geometry(w, h, withDownload);
+      check('the name is centred in the top bar (' + w + 'px wide, ' + (withDownload ? 'with' : 'without') + ' the app download button)',
+        Math.abs(g.offset) <= 1.5 && g.leftGap > 0 && g.rightGap > 0, g);
+    }
+  }
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();
