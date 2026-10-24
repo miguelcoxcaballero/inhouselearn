@@ -1,0 +1,26 @@
+{
+  "id": "shot-20261024-133412-mvyc",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-24T13:35:11.468Z",
+  "shots": [
+    {
+      "name": "Movil · barra con eje central",
+      "file": "1-movil-barra-con-eje-central.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Movil · pantalla con eje central",
+      "file": "2-movil-pantalla-con-eje-central.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Escritorio · barra con eje central",
+      "file": "3-escritorio-barra-con-eje-central.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
