@@ -63,6 +63,26 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   check('the main model gets both results to integrate', /## Fuentes/.test(after.final) && /## Esquema/.test(after.final) && after.content === 'He juntado lo de los dos agentes.', after.final.slice(0, 300));
   check('the agents\' cost is part of the answer\'s cost (4 requests)', Math.abs(after.cost - 0.002) < 1e-9, after.cost);
 
+  // 2b. An agent that searches the web: its row includes what the search cost.
+  await page.evaluate(() => {
+    const inner = window.fetch;
+    window.fetch = async (input, init) => {
+      const body = init && typeof init.body === 'string' ? JSON.parse(init.body) : null;
+      if (body && body.plugins) return new Response(JSON.stringify({ choices: [{ message: { content: 'ok', annotations: [{ type: 'url_citation', url_citation: { url: 'https://example.com/a', title: 'A', content: 'x' } }] } }], usage: { cost: 0.007 } }), { status: 200, headers: { 'content-type': 'application/json' } });
+      return inner(input, init);
+    };
+    window.__replies.push(
+      { text: '', tools: [{ name: 'spawn_agents', args: { agents: [{ name: 'Buscador', task: 'Busca la fase luminosa.' }] } }] },
+      { text: '', tools: [{ name: 'web_search', args: { query: 'fase luminosa' } }] },
+      { text: 'Encontrado.' },
+      { text: 'Hecho con la búsqueda.' });
+  });
+  await send(page, 'Busca con un agente');
+  await idle(page, 40000);
+  await page.waitForTimeout(800);
+  const searched = await page.evaluate(() => { const card = document.querySelector('#thread .message:last-child .agents-card'); const row = card && card.querySelector('.agent-row .msg-cost'); const m = getActiveChat().messages.slice(-1)[0]; return { agent: row ? Number(row.dataset.cost) : 0, answer: m.cost }; });
+  check('an agent\'s row includes what its web searches cost (and so does the answer)', searched.agent >= 0.0075 && Math.abs(searched.answer - (0.0005 * 4 + 0.007)) < 1e-6, searched);
+
   // 3. Back to a normal level (here «Normal», the model has no levels) turns it off.
   await page.click('#model-menu-btn');
   await page.waitForSelector('[data-thinking-toggle]');

@@ -376,6 +376,7 @@ html[data-theme="dark"] .live-done.web .live-mark { color: #60a5fa; }
 
 /* Verdes escritos a mano: el coste de cada mensaje y el botón de copiar ya copiado */
 html[data-theme="dark"] .msg-cost,
+html[data-theme="dark"] .code-copy.copied,
 html[data-theme="dark"] .msg-action-btn.copied,
 html[data-theme="dark"] .msg-action-btn.copied:hover { color: var(--green); }
 

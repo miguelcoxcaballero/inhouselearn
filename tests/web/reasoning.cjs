@@ -64,6 +64,18 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const approved = await page.evaluate(async () => { const ok = await approveChange(getActiveChat(), { title: 'Subir a GitHub' }); return { ok, toasts: document.querySelectorAll('.toast').length }; });
   check('copy, changing the approval mode and «Acceso total» approvals show no dark notice', copied.toasts === 0 && copied.button && approved.ok && approved.toasts === 0, { copied, approved });
 
+  // 5. Code blocks have a «Copiar» button in their top right corner that copies the whole block.
+  await page.evaluate(() => window.__replies.push({ text: 'Así:\n\n```js\nconst a = 1;\nconsole.log(a + 1);\n```\n\nY listo.' }));
+  await send(page, 'Dame un ejemplo de código');
+  await idle(page);
+  await page.waitForSelector('#thread .message:last-child pre .code-copy');
+  const place = await page.evaluate(() => { const pre = document.querySelector('#thread .message:last-child pre'); const b = pre.querySelector('.code-copy').getBoundingClientRect(); const p = pre.getBoundingClientRect(); return { right: Math.round(p.right - b.right), top: Math.round(b.top - p.top) }; });
+  await page.evaluate(() => { document.execCommand = (cmd) => { window.__copied = document.activeElement && document.activeElement.value; return cmd === 'copy'; }; });
+  await page.click('#thread .message:last-child pre .code-copy');
+  await page.waitForTimeout(200);
+  const copiedCode = await page.evaluate(() => ({ text: window.__copied, label: document.querySelector('#thread .message:last-child pre .code-copy').innerText }));
+  check('code blocks: a «Copiar» button top right copies the whole block', place.right <= 10 && place.top <= 10 && copiedCode.text === 'const a = 1;\nconsole.log(a + 1);' && /Copiado/.test(copiedCode.label), { place, copiedCode });
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

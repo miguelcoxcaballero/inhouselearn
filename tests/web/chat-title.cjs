@@ -15,6 +15,9 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const norm = await page.evaluate(() => [normalizeChatTitle('"Física: TIRO parabólico, ejemplos"'), normalizeChatTitle('Dos palabras'), normalizeChatTitle('ÉPOCA DEL renacimiento')]);
   check('names are three words with only the first letter in capitals', norm[0] === 'Física tiro parabólico' && norm[1] === '' && norm[2] === 'Época del renacimiento', norm);
 
+  const provisional = await page.evaluate(() => [deriveTitle([{ role: 'user', content: '¿Me EXPLICAS el tiro parabólico con ejemplos?' }], {}), deriveTitle([{ role: 'user', content: 'Hola' }], {})]);
+  check('the first name, before the model answers, follows the same rules (three words, first capital)', provisional[0] === 'Tiro parabólico ejemplos' && provisional[1] === 'Hola', provisional);
+
   await page.evaluate(() => { window.__titleReply = { title: 'Movimiento parabólico física', changed: true }; window.__replies.push({ text: 'El tiro parabólico combina dos movimientos.' }); });
   await send(page, 'Explícame el tiro parabólico');
   await idle(page);

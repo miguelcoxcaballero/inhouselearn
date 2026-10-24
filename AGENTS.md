@@ -170,17 +170,21 @@ Mandatory guidance for every AI and developer working in this repository.
 - **Chat names:** after the first answer the chat's model names it (exactly three words, only the
   first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a
-  course title is never touched. The change is typed out (`startTitleAnimation`), also on other
+  course title is never touched. Before that, the provisional name from the first message follows the same
+  rules (at most three words, filler like «me», «el», «explícame» left out; `TITLE_FILLER`). The change is typed out (`startTitleAnimation`), also on other
   devices through live sync. Test: `tests/web/chat-title.cjs`.
 - **Ultra code:** an option of the reasoning dropdown in the model picker, for every model
   (`chat.ultraCode`; any other level, or «Normal» for models without levels, turns it off; it is in
   colours only once chosen). It uses the model's deepest level (`effectiveThinkingLevel`) and gives the model
   `spawn_agents` (`engine/src/agents.js`): up to 6 pi agents at once, each with a self-contained task,
   the same tools and approval gate but no `spawn_agents`, no history. A card in the thread shows each
-  agent, what it is doing and its live cost (`step.agents`); their cost goes into the answer's.
+  agent, what it is doing and its live cost, its web searches included (`step.agents`, `onCost` of
+  `webToolsFor`); their cost goes into the answer's.
   Turning it on plays a rainbow burst with sparks (`playUltraCodeBurst`). Test: `tests/web/ultra.cjs`.
 - **Logos in the dark theme:** single-colour company logos (`MONO_LOGOS`, drawn with `currentColor`,
   black inside an `<img>`) are inverted to white by `theme.css`. Add new ones there.
+- **Code blocks:** every `pre > code` in an answer gets a «Copiar» button in its top right corner
+  (`enhanceRichContent`, `copyTextToClipboard`) that copies the whole block. Test: `tests/web/reasoning.cjs`.
 - **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
   closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
   repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue

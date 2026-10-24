@@ -1152,6 +1152,10 @@
     .agent-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
     .agent-text b { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .agent-text small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    pre.code-block { position: relative; padding-top: 2.1em; }
+    .code-copy { position: absolute; top: 6px; right: 6px; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text-secondary); font: inherit; font-family: var(--font-sans, inherit); font-size: 0.72rem; font-weight: 600; cursor: pointer; opacity: 0.85; transition: opacity 0.15s var(--ease), color 0.15s var(--ease); }
+    .code-copy:hover { opacity: 1; color: var(--text); }
+    .code-copy.copied { color: #15803d; border-color: rgba(21, 128, 61, 0.4); }
     .msg-cost-zeros { color: var(--muted); font-weight: 500; }
     .msg-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
     @media (prefers-reduced-motion: reduce) { .msg-cost, .msg-cost.ticking { transition: none; transform: none; text-shadow: none; } }
@@ -1705,7 +1709,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-dropdown">
+  <link rel="stylesheet" href="theme.css?v=20261024-copy">
 </head>
 <body>
 
@@ -2014,8 +2018,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-dropdown"></script>
-  <script src="composer-dock.js?v=20261024-dropdown"></script>
+  <script src="approval.js?v=20261024-copy"></script>
+  <script src="composer-dock.js?v=20261024-copy"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -4069,6 +4073,9 @@
       return ensureActiveChat();
     }
 
+    // Words that say nothing about the topic, left out of the first name.
+    const TITLE_FILLER = new Set('a al como con cómo cual cuál de del el en es esto explica explicas explícame hola la las lo los me mi oye para pero podrías por puedes que qué quiero se sobre su te tu un una uno y ya'.split(' '));
+
     function deriveTitle(messages, chat) {
       if (chat && typeof chat.customTitle === 'string' && chat.customTitle.trim()) {
         return chat.customTitle;
@@ -4088,8 +4095,14 @@
         }
         return 'Nuevo chat';
       }
-      const flat = firstUser.content.replace(/\s+/g, ' ').trim();
-      return flat.length > 42 ? flat.slice(0, 42) + '...' : flat;
+      // Until the model names it, the same rules: at most three words, only the
+      // first letter in capitals.
+      const all = firstUser.content.replace(/[^\p{L}\p{N}-]+/gu, ' ').split(/\s+/).filter(Boolean);
+      const meaningful = all.filter((word) => !TITLE_FILLER.has(word.toLocaleLowerCase('es')));
+      const words = (meaningful.length ? meaningful : all).slice(0, 3);
+      if (!words.length) return 'Nuevo chat';
+      const text = words.join(' ').toLocaleLowerCase('es');
+      return text.charAt(0).toLocaleUpperCase('es') + text.slice(1);
     }
 
     function saveState(options) {
@@ -4708,7 +4721,11 @@
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error('La búsqueda en internet ha fallado (' + response.status + '): ' + ((data.error && data.error.message) || 'error') + '.');
-      if (data.usage) recordModelUsage(model, { prompt_tokens: data.usage.prompt_tokens, completion_tokens: data.usage.completion_tokens, cost: data.usage.cost });
+      if (data.usage) {
+        recordModelUsage(model, { prompt_tokens: data.usage.prompt_tokens, completion_tokens: data.usage.completion_tokens, cost: data.usage.cost });
+        // Ultra code: the agent that searched counts it in its own row too.
+        if (options && typeof options.onCost === 'function') options.onCost(Number(data.usage.cost) || 0);
+      }
       const message = (data.choices && data.choices[0] && data.choices[0].message) || {};
       const seen = new Set();
       const results = [];
@@ -4735,9 +4752,9 @@
       return { title: page.title || '', url: page.url || url, text: page.content || page.text || '' };
     }
 
-    function webToolsFor(chat, signal) {
+    function webToolsFor(chat, signal, onCost) {
       return InhousePi.createWebTools({
-        search: (query, options) => webSearchRequest(chat, query, Object.assign({ signal }, options)),
+        search: (query, options) => webSearchRequest(chat, query, Object.assign({ signal, onCost }, options)),
         fetchPage: (url) => webPageRequest(url, signal)
       });
     }
@@ -5628,6 +5645,34 @@
       }
     });
 
+    // Copies text, also where the clipboard API is refused (some WebViews).
+    function copyTextToClipboard(text) {
+      const legacy = () => new Promise((resolve, reject) => {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand && document.execCommand('copy');
+        area.remove();
+        ok ? resolve() : reject(new Error('copy'));
+      });
+      return navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text).catch(legacy) : legacy();
+    }
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-code-copy]');
+      if (!button) return;
+      const code = button.closest('pre') && button.closest('pre').querySelector('code');
+      copyTextToClipboard(code ? code.textContent.replace(/\n$/, '') : '').then(() => {
+        button.classList.add('copied');
+        button.querySelector('span').textContent = 'Copiado';
+        if (typeof haptic === 'function') haptic('light');
+        window.setTimeout(() => { button.classList.remove('copied'); button.querySelector('span').textContent = 'Copiar'; }, 1500);
+      }).catch(() => {});
+    });
+
     // Replaces fenced code blocks and inline code spans with keep(match).
     function protectMarkdownCode(text, keep) {
       var out = [];
@@ -5698,6 +5743,21 @@
       Array.from(root.querySelectorAll('a[href]')).forEach((link) => {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
+      });
+
+      // Every code block gets a «Copiar» button in its top right corner (the
+      // whole block, exactly as written). LaTeX blocks have their own.
+      Array.from(root.querySelectorAll('pre')).forEach((pre) => {
+        if (pre.dataset.copyReady || !pre.querySelector('code') || pre.closest('.latex-block, .tool-steps, .viz')) return;
+        pre.dataset.copyReady = '1';
+        pre.classList.add('code-block');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'code-copy';
+        button.setAttribute('data-code-copy', '');
+        button.setAttribute('aria-label', 'Copiar el código');
+        button.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>Copiar</span>';
+        pre.appendChild(button);
       });
 
       // Visuals and LaTeX previews first: the math pass then draws their formulas too.
@@ -9532,7 +9592,8 @@
       try {
         try {
           // The same tools, built again for each parallel agent (Ultra code).
-          const workTools = () => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          // onCost: what a tool spends besides the model (web searches), for the agent's own row.
+          const workTools = (onCost) => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal, onCost), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
           const agentTools = ultraCodeOn(chat) && !chat.guidedLearning
             ? InhousePi.createAgentTools({ runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job) })
             : [];
@@ -10156,6 +10217,12 @@
     async function runSubAgent(chat, model, modelId, workTools, job) {
       const parent = appState.activeTurn && appState.activeTurn.turn ? appState.activeTurn.turn.message : null;
       let shown = 0;
+      // Web searches and the like: already in the answer's cost (recordModelUsage),
+      // added here to this agent's own figure.
+      let toolsCost = 0;
+      let lastModelCost = 0;
+      let lastDoing = 'Pensando';
+      let lastSteps = 0;
       const live = (value) => {
         if (!parent || !(value > shown)) return;
         setLiveCost(parent, (Number(parent.liveCost) || Number(parent.cost) || 0) + (value - shown));
@@ -10176,7 +10243,10 @@
           history: [],
           prompt: { role: 'user', content: [{ type: 'text', text: job.task }], timestamp: Date.now() },
           thinkingLevel: effectiveThinkingLevel(chat) || 'off',
-          tools: workTools(),
+          tools: workTools((spent) => {
+            toolsCost += spent;
+            job.onUpdate({ doing: lastDoing, cost: lastModelCost + toolsCost, steps: lastSteps });
+          }),
           signal: job.signal,
           sessionId: chat.id + ':' + job.name,
           onUpdate: (update) => {
@@ -10184,17 +10254,17 @@
             const running = steps.filter((step) => step.status === 'running').pop();
             const cost = (update.cost || 0) + liveRequestCost(modelId, update.liveChars);
             live(cost);
-            job.onUpdate({
-              doing: running ? toolStepTitle(running) : (update.text ? 'Escribiendo el resultado' : (steps.length ? 'Pensando el siguiente paso' : 'Pensando')),
-              cost,
-              steps: steps.length
-            });
+            lastModelCost = cost;
+            lastSteps = steps.length;
+            lastDoing = running ? toolStepTitle(running) : (update.text ? 'Escribiendo el resultado' : (steps.length ? 'Pensando el siguiente paso' : 'Pensando'));
+            job.onUpdate({ doing: lastDoing, cost: cost + toolsCost, steps: lastSteps });
           }
         });
         recordModelUsage(modelId, { prompt_tokens: result.usage.input, completion_tokens: result.usage.output, cost: result.usage.cost });
-        return { text: result.text, cost: result.usage.cost };
+        return { text: result.text, cost: result.usage.cost + toolsCost };
       } catch (error) {
         if (error && error.usage && error.usage.cost) recordModelUsage(modelId, { prompt_tokens: error.usage.input, completion_tokens: error.usage.output, cost: error.usage.cost });
+        if (error && typeof error === 'object') error.usage = Object.assign({}, error.usage, { cost: ((error.usage && error.usage.cost) || 0) + toolsCost });
         throw error;
       }
     }
