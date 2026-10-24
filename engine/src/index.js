@@ -368,6 +368,10 @@ export async function runAgent(options) {
   }
   try {
     await agent.prompt(options.prompt);
+  } catch (error) {
+    // What the finished requests cost is spent even when the run fails.
+    if (error && typeof error === 'object') error.usage = usage;
+    throw error;
   } finally {
     if (signal) signal.removeEventListener('abort', onAbort);
     // A steer that arrived too late for this run goes back to the app.
@@ -378,10 +382,11 @@ export async function runAgent(options) {
     }
   }
 
-  if ((signal && signal.aborted) || (failure && failure.stopReason === 'aborted')) throw abortError();
+  if ((signal && signal.aborted) || (failure && failure.stopReason === 'aborted')) throw Object.assign(abortError(), { usage });
   if (failure) {
     const error = new Error(failure.errorMessage || 'El modelo ha devuelto un error.');
     error.partial = { text: join(doneTexts, ''), steps };
+    error.usage = usage;
     throw error;
   }
   return {

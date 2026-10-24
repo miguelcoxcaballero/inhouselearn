@@ -1654,7 +1654,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-steer">
+  <link rel="stylesheet" href="theme.css?v=20261024-costs">
 </head>
 <body>
 
@@ -1963,8 +1963,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-steer"></script>
-  <script src="composer-dock.js?v=20261024-steer"></script>
+  <script src="approval.js?v=20261024-costs"></script>
+  <script src="composer-dock.js?v=20261024-costs"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -2629,6 +2629,11 @@
         model: message && typeof message.model === 'string' ? message.model : '',
         createdAt: message && typeof message.createdAt === 'string' ? message.createdAt : nowIso(),
         versionOrder: 'chronological',
+        // What this answer cost (it used to be dropped here, so a reload or
+        // another device lost it); liveCost only while it is being written.
+        cost: message && Number.isFinite(Number(message.cost)) && message.cost !== null && message.cost !== '' ? Number(message.cost) : undefined,
+        liveCost: message && message.pending && Number.isFinite(Number(message.liveCost)) ? Number(message.liveCost) : undefined,
+        retryOnReturn: !!(message && message.retryOnReturn),
         toolSteps: Array.isArray(message && message.toolSteps) ? message.toolSteps.filter((step) => step && typeof step.name === 'string') : [],
         piMessages: Array.isArray(message && message.piMessages) ? message.piMessages : [],
         kind: message && typeof message.kind === 'string' ? message.kind : '',
@@ -7799,12 +7804,14 @@
       } catch (error) {
         if (error.name === 'AbortError') {
           if (msg.alternatives.length) {
+            // Back to the previous version; what the stopped attempt cost stays counted with it.
+            var spent = Number(msg.cost) || 0;
             var last = msg.alternatives.pop();
             msg.content = last.content;
             msg.parts = [{ text: last.content }];
             msg.provider = last.provider || msg.provider;
             msg.model = last.model || msg.model;
-            msg.cost = last.cost;
+            msg.cost = (Number(last.cost) || 0) + spent;
           }
           msg.activeAlternative = msg.alternatives.length;
           setComposerStatus('Regeneracion cancelada.');
@@ -9440,6 +9447,11 @@
           }
         }
       } catch (error) {
+        // A failed or stopped answer still cost what its finished requests did.
+        if (error && error.usage && error.usage.cost) {
+          recordModelUsage(modelId, { prompt_tokens: error.usage.input, completion_tokens: error.usage.output, cost: error.usage.cost }, { allocated: usageCostSteered });
+          usageCostSteered = 0;
+        }
         if (error.name === 'AbortError') throw error;
         const wrapped = new Error(describeAgentError(error.message));
         wrapped.partial = error.partial;
@@ -9907,6 +9919,12 @@
         view = visibleChat() ? streamViewFor(message) : null;
         if (view) await view.finish(text);
         return view ? view.renderedText : null;
+      } catch (error) {
+        // Cut, stopped or failed: the request in flight never reports its
+        // usage, so what the counter showed (its estimate) is what it cost.
+        const cutMessage = turn.message;
+        if (typeof cutMessage.liveCost === 'number' && cutMessage.liveCost > (Number(cutMessage.cost) || 0)) cutMessage.cost = cutMessage.liveCost;
+        throw error;
       } finally {
         usageCostTarget = null;
         usageCostSteered = 0;
@@ -9971,6 +9989,12 @@
               : '\n\n*(Detenido)*');
             partial.parts = [{ text: partial.content }];
             partial.toolSteps = (partial.toolSteps || []).map((step) => (step.status === 'running' ? Object.assign({}, step, { status: 'error', output: turn.runaway ? 'Cortado: el modelo se repetía.' : 'Detenido por el usuario.' }) : step));
+            partial.piMessages = [];
+          } else if (Number(partial.cost) > 0) {
+            // Nothing written yet, but it already cost something: it stays, so
+            // the conversation's total keeps it.
+            partial.content = '*(Detenido)*';
+            partial.parts = [{ text: partial.content }];
             partial.piMessages = [];
           } else {
             chat.messages = chat.messages.filter((message) => message.id !== partial.id && !(settings.nudged && message.id === userMessage.id));
