@@ -51,9 +51,16 @@ function initScript() {
             i += n;
             await new Promise((r) => setTimeout(r, reply.delay != null ? reply.delay : 22 + Math.random() * 30));
           }
-          (reply.tools || []).forEach((tool, index) => {
-            send(Object.assign({}, base, { choices: [{ index: 0, delta: { tool_calls: [{ index, id: 'call_' + index + Math.random().toString(36).slice(2, 7), type: 'function', function: { name: tool.name, arguments: JSON.stringify(tool.args) } }] }, finish_reason: null }] }));
-          });
+          for (const [index, tool] of (reply.tools || []).entries()) {
+            const args = JSON.stringify(tool.args);
+            // toolChunk: the arguments arrive little by little, as a model writes a long file.
+            const step = reply.toolChunk || args.length || 1;
+            for (let k = 0; k < Math.max(1, args.length); k += step) {
+              const head = k === 0 ? { id: 'call_' + index + Math.random().toString(36).slice(2, 7), type: 'function' } : {};
+              send(Object.assign({}, base, { choices: [{ index: 0, delta: { tool_calls: [Object.assign({ index }, head, { function: Object.assign(k === 0 ? { name: tool.name } : {}, { arguments: args.slice(k, k + step) }) })] }, finish_reason: null }] }));
+              if (reply.toolChunk) await new Promise((r) => setTimeout(r, reply.delay != null ? reply.delay : 25));
+            }
+          }
           send(Object.assign({}, base, { choices: [{ index: 0, delta: {}, finish_reason: reply.tools && reply.tools.length ? 'tool_calls' : 'stop' }], usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 } }));
           ctrl.enqueue(enc.encode('data: [DONE]\n\n'));
           ctrl.close();

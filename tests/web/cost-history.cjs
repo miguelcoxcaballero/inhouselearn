@@ -81,6 +81,18 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   });
   check('a Drive copy without costs (older page on another device) keeps every known cost', wiped.merged && wiped.after === wiped.before && wiped.before > 0, wiped);
 
+  // 7. While the model writes a long tool call (a file, code), the counter keeps counting.
+  await page.evaluate(() => { getActiveChat().approvalMode = 'auto'; window.__replies.push({ text: '', tools: [{ name: 'write_file', args: { path: 'largo.md', content: 'Una línea del archivo que el modelo escribe despacio.\n'.repeat(60) } }], toolChunk: 40, delay: 30 }, { text: 'Hecho.' }); });
+  await send(page, 'Escribe un archivo largo');
+  const counted = [];
+  for (let k = 0; k < 6; k++) {
+    await page.waitForTimeout(300);
+    counted.push(await page.evaluate(() => { const m = getActiveChat().messages.slice(-1)[0]; return { live: Number((m.liveCost || 0).toFixed(6)), shown: (document.querySelector('#thread .message:last-child .msg-cost') || {}).textContent, step: (m.toolSteps || []).length }; }));
+  }
+  await idle(page);
+  const writing = counted.filter((c) => !c.step);
+  check('while a long tool call is being written the cost counts up live (shown too)', writing.length >= 3 && writing[writing.length - 1].live > writing[0].live && writing[writing.length - 1].shown !== writing[0].shown, counted);
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

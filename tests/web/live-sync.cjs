@@ -1,7 +1,14 @@
 // Live sync between two devices through a fake Google Drive: B sees A's answer
 // grow while A is still receiving it, and ends with the same final chat.
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
-const { openApp, send, idle, SCRATCH } = require('./mock.cjs');
+const { SCRATCH } = require('./mock.cjs');
+// A priced model, so B's cost counter has something to count while A answers.
+const models = path.join(SCRATCH, 'models-priced-live-sync.json');
+fs.writeFileSync(models, JSON.stringify({ data: [{ id: 'deepseek/deepseek-v4.1-flash', name: 'DeepSeek: V4.1 Flash', supported_parameters: ['tools'], architecture: { input_modalities: ['text'], output_modalities: ['text'] }, pricing: { prompt: '0.000003', completion: '0.0004' } }] }));
+process.env.MODELS_JSON = models;
+const { openApp, send, idle } = require('./mock.cjs');
 const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label + (extra !== undefined ? ' — ' + JSON.stringify(extra) : ''));
 
 // In-memory Drive v3: files with appProperties, multipart and media uploads.
@@ -87,6 +94,8 @@ async function device(browser) {
   await B.page.click('.chat-item[data-chat-id="' + chatId + '"]');
   const lengths = [];
   const lags = [];
+  const costs = [];
+  let tagged = false;
   for (let k = 0; k < 12; k++) {
     await B.page.waitForTimeout(300);
     const [a, b] = await Promise.all([
@@ -94,6 +103,9 @@ async function device(browser) {
       B.page.evaluate((id) => { const c = appState.chats.find((x) => x.id === id); const m = c && c.messages.slice(-1)[0]; return m && m.role === 'assistant' ? m.content.length : 0; }, chatId)
     ]);
     lags.push(a - b);
+    const seen = await B.page.evaluate(() => ({ cost: Number(((document.querySelector('#thread .message:last-child .msg-cost') || {}).textContent || '').replace('$', '')) || 0, tag: !!document.querySelector('.remote-live') }));
+    costs.push(seen.cost);
+    tagged = tagged || seen.tag;
     if (k % 3 === 2) lengths.push(await B.page.evaluate(() => { const el = [...document.querySelectorAll('#thread .message')].pop(); return el ? el.innerText.length : 0; }));
   }
   lags.sort((x, y) => x - y);
@@ -101,6 +113,7 @@ async function device(browser) {
   const aBusy = await A.page.evaluate(() => appState.busy);
   const userShown = await B.page.evaluate(() => /Explícame algo despacio/.test(document.getElementById('thread').innerText));
   check('B shows the question and the answer growing while A is still answering', aBusy && userShown && lengths[0] > 0 && lengths[3] > lengths[0], { aBusy, userShown, lengths });
+  check('B counts the answer\'s cost up live while A writes it, with no «En directo» tag', costs[costs.length - 1] > costs[2] && costs[2] > 0 && !tagged, { costs, tagged });
   await B.page.screenshot({ path: SCRATCH + '/live-b-mid.png' });
   await idle(A.page, 60000);
   await B.page.waitForFunction(() => /FIN\./.test(document.getElementById('thread').innerText) && !getActiveChat().messages.some((m) => m.pending), null, { timeout: 15000 }).catch(() => {});

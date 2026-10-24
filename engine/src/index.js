@@ -202,6 +202,11 @@ export function defaultThinkingLevel(id) {
 
 // ─── Agente ──────────────────────────────────────────
 
+// What a tool call being written has so far (the model is billed for it too).
+const toolCallChars = (message) => (message && Array.isArray(message.content) ? message.content : [])
+  .filter((block) => block.type === 'toolCall')
+  .reduce((sum, block) => sum + (typeof block.partialArgs === 'string' && block.partialArgs ? block.partialArgs.length : JSON.stringify(block.arguments || {}).length) + String(block.name || '').length, 0);
+
 const textOf = (message, type) => (message && Array.isArray(message.content) ? message.content : [])
   .filter((block) => block.type === type)
   .map((block) => (type === 'text' ? block.text : block.thinking))
@@ -290,6 +295,7 @@ export async function runAgent(options) {
   const usage = { input: 0, output: 0, cost: 0 };
   let liveText = '';
   let liveThinking = '';
+  let liveTools = 0;
   let failure = null;
 
   const join = (parts, live) => parts.concat(live ? [live] : []).filter((part) => part && part.trim()).join('\n\n');
@@ -297,7 +303,7 @@ export async function runAgent(options) {
     if (typeof options.onUpdate === 'function') {
       // cost: what the finished requests cost; liveChars: what the current one has
       // written so far (the app estimates its price until the request ends).
-      options.onUpdate({ text: join(doneTexts, liveText), thinking: join(doneThinking, liveThinking), steps: steps.slice(), cost: usage.cost, liveChars: liveText.length + liveThinking.length });
+      options.onUpdate({ text: join(doneTexts, liveText), thinking: join(doneThinking, liveThinking), steps: steps.slice(), cost: usage.cost, liveChars: liveText.length + liveThinking.length + liveTools });
     }
   };
 
@@ -311,6 +317,7 @@ export async function runAgent(options) {
       messages = [];
       liveText = '';
       liveThinking = '';
+      liveTools = 0;
       if (typeof options.onSteer === 'function') options.onSteer({ message: event.message, segment });
       emit();
       return;
@@ -319,6 +326,7 @@ export async function runAgent(options) {
       const answer = answerOf(event.message);
       liveText = answer.text;
       liveThinking = answer.thinking;
+      liveTools = toolCallChars(event.message);
       emit();
     } else if (event.type === 'message_end' && event.message.role !== 'user') {
       const message = event.message;
@@ -326,6 +334,7 @@ export async function runAgent(options) {
       if (message.role === 'assistant') {
         liveText = '';
         liveThinking = '';
+        liveTools = 0;
         const answer = answerOf(message);
         doneTexts.push(answer.text);
         doneThinking.push(answer.thinking);

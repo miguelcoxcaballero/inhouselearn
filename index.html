@@ -1722,10 +1722,10 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
+  <link rel="stylesheet" href="composer-dock.css?v=20261024-cost">
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261024-index-b">
-  <link rel="stylesheet" href="theme.css?v=20261024-index">
+  <link rel="stylesheet" href="theme.css?v=20261024-cost">
 </head>
 <body>
 
@@ -2028,7 +2028,7 @@
   <script src="documents.js?v=20261024-templates"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261024-templates"></script>
+  <script src="vendor/pi-engine.js?v=20261024-cost"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -6488,8 +6488,14 @@
     function setLiveCost(message, value) {
       const next = Math.max(Number(message.liveCost) || 0, Number(value) || 0);
       message.liveCost = next;
+      showLiveCost(message);
+    }
+
+    // The counters of an answer being written (here or on another device).
+    function showLiveCost(message) {
+      if (typeof message.liveCost !== 'number') return;
       const el = document.querySelector('.msg-cost[data-cost-for="' + CSS.escape(message.id) + '"]');
-      if (el) { el.dataset.cost = String(next); kickCostCounters(); }
+      if (el && el.dataset.cost !== String(message.liveCost)) { el.dataset.cost = String(message.liveCost); kickCostCounters(); }
       updateChatCost();
     }
 
@@ -6656,8 +6662,7 @@
         '<article class="' + msgClass + '" data-msg-id="' + message.id + '">',
         '  <div class="message-badge ' + message.role + '">' + badgeMarkup + '</div>',
         '  <div class="message-body">',
-        '    <div class="message-meta">' + roleLabel + ' · ' + escapeHtml(formatWhen(message.createdAt)) +
-          (message.pending && message.remoteLive ? '<span class="remote-live" title="Se está escribiendo en otro dispositivo"><i></i>En directo</span>' : '') + '</div>',
+        '    <div class="message-meta">' + roleLabel + ' · ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
         '    <div class="bubble"><div class="bubble-content">' + (isUser ? '' : guidedChapterMarkup(message, chat)),
         '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>',
         '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + (isUser ? '' : renderMessageDocuments(message) + renderMessageSources(message)) + quickMarkup,
@@ -7522,17 +7527,19 @@
       const text = last ? last.content : '';
       // Everything but the growing text of the last message.
       const meta = JSON.stringify([payload.drop, payload.chat.title, payload.chat.customTitle, messages.map((message) => (
-        message === last ? Object.assign({}, message, { content: '', parts: [] }) : message
+        message === last ? Object.assign({}, message, { content: '', parts: [], liveCost: undefined }) : message
       ))]);
       const sent = share.peer;
+      const cost = last && typeof last.liveCost === 'number' ? last.liveCost : undefined;
       if (!done && last && meta === sent.meta && last.id === sent.id && text.startsWith(sent.text)) {
-        if (text === sent.text) return;
-        // Short keys: this goes out up to 20 times a second.
-        peerBroadcast({ t: 'd', u: share.turn, s: payload.seq, f: sent.text.length, a: text.slice(sent.text.length) });
+        if (text === sent.text && cost === sent.cost) return;
+        // Short keys: this goes out up to 20 times a second (c: what it has cost so far).
+        peerBroadcast({ t: 'd', u: share.turn, s: payload.seq, f: sent.text.length, a: text.slice(sent.text.length), c: cost });
         sent.text = text;
+        sent.cost = cost;
         return;
       }
-      share.peer = { meta, id: last ? last.id : '', text };
+      share.peer = { meta, id: last ? last.id : '', text, cost };
       peerBroadcast({ t: 'live', payload });
     }
 
@@ -7584,6 +7591,7 @@
           if (drawn && !isNew && before) { view.target = before; view.shown = before.length; }
         }
         view.push({ text: message.content });
+        showLiveCost(message);
         return;
       }
       const view = streamViews.has(message.id) ? streamViewFor(message) : null;
@@ -7706,6 +7714,7 @@
       const before = message.content;
       message.content = before + delta.a;
       message.parts = [{ text: message.content }];
+      if (typeof delta.c === 'number' && delta.c >= (Number(message.liveCost) || 0)) message.liveCost = delta.c;
       message.liveAt = Date.now();
       liveShowMessage(chat, message, false, before);
     }

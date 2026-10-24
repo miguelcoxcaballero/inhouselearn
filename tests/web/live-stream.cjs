@@ -260,7 +260,7 @@ async function run(mode) {
   check(L('the question appears on B at once'), questionAt - sentAt <= T(rtc ? 300 : 1000), questionAt - sentAt);
   check(L('B draws the answer close behind A'), m.shown.p50 <= T(rtc ? 450 : 1500) && m.shown.p95 <= T(rtc ? 800 : 2600), m.shown);
   check(L('the text on B never stalls while it should be moving'), m.stall <= T(rtc ? 300 : 900), m.stall);
-  check(L('B marks the answer as live while it is written'), live.tag && live.pending, live);
+  check(L('B has the answer pending while it is written, with no «En directo» tag'), !live.tag && live.pending, live);
   check(L('B ends with exactly A\'s chat, nothing pending'), (await same(A, B)).ok && !(await pendingOn(B)));
   if (rtc) check(L('the channel stays light (under 3 KB/s while streaming)'), bytes[0] / elapsed < 3000, { perSecond: Math.round(bytes[0] / elapsed), perChar: +(bytes[0] / m.final).toFixed(1) });
   else check(L('live writes stay under Drive\'s pace (2/s) and live requests moderate'), liveWrites.A / elapsed <= 2 && liveReqs.A / elapsed <= 3.6 && liveReqs.B / elapsed <= 3, { writes: +(liveWrites.A / elapsed).toFixed(2), A: +(liveReqs.A / elapsed).toFixed(2), B: +(liveReqs.B / elapsed).toFixed(2) });
@@ -287,7 +287,7 @@ async function run(mode) {
   await B.page.waitForFunction(() => /azúcar y oxígeno\./.test(document.getElementById('thread').innerText) && !getActiveChat().messages.some((m) => m.pending), null, { timeout: 15000 }).catch(() => {});
   const steerA = await chatOf(A);
   const steerB = await chatOf(B);
-  const caretsB = await B.page.evaluate(() => document.querySelectorAll('.stream-caret, .remote-live').length);
+  const caretsB = await B.page.evaluate(() => document.querySelectorAll('.stream-caret').length);
   check(L('steer: B ends with the same four messages, none left live'), steerA === steerB && !(await pendingOn(B)) && caretsB === 0, { a: steerA.split('\n').slice(-4).map((s) => s.slice(0, 24)), b: steerB.split('\n').slice(-4).map((s) => s.slice(0, 24)), caretsB });
 
   // 4. Stop on A: B keeps what was written, marked as stopped.
