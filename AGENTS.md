@@ -193,6 +193,12 @@ Mandatory guidance for every AI and developer working in this repository.
   (`READ_ONLY_TOOL`), no error is shown: the message says it will be repeated and
   `retryCutAnswers` regenerates it when the app is back in front, keeping the cut attempt's cost. A
   turn that changed something keeps its error. Test: `tests/web/cut-retry.cjs`.
+- **Answers with the app in the background (APK 1.0.6):** `syncAndroidWorking` (called from
+  `updateSendUi`) sends the shell `{type:'working', on, title, chat}` while an answer runs or the queue
+  has messages, and `{type:'answered', title, text, chat}` when it ends with the page hidden. The shell's
+  `AnswerService` (foreground `dataSync` service, ongoing notification) keeps the process alive and
+  shows «Respuesta lista»; its tap calls `window.inhouseLearnOpenChat(id)`. Older APKs ignore both.
+  Test: `tests/web/android-working.cjs`.
 - **Chat names:** after the first answer the chat's model names it (exactly three words, only the
   first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a

@@ -4,4 +4,12 @@
     <string name="saved">Guardado</string>
     <string name="save_failed">No se pudo guardar el archivo</string>
     <string name="no_app">No hay ninguna app para abrir este enlace</string>
+    <string name="answer_working">Inhouse Learn está respondiendo…</string>
+    <string name="answer_working_text">Puedes salir de la app: la respuesta sigue.</string>
+    <string name="answer_ready">Respuesta lista</string>
+    <string name="answer_ready_text">Toca para verla.</string>
+    <string name="channel_working">Respuesta en curso</string>
+    <string name="channel_working_description">Mientras Inhouse Learn termina una respuesta fuera de la app.</string>
+    <string name="channel_answers">Respuestas listas</string>
+    <string name="channel_answers_description">Avisa cuando una respuesta termina con la app cerrada.</string>
 </resources>

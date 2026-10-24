@@ -4344,6 +4344,43 @@
       saveState({ skipDrive: true }); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
     });
 
+    // A tap on the app's «Respuesta lista» notification opens that chat (APK 1.0.6).
+    window.inhouseLearnOpenChat = (id) => {
+      if (!id || id === appState.activeChatId || !appState.chats.some((chat) => chat.id === id)) return;
+      window.InhouseDictation?.cancel();
+      window.InhouseReadAloud?.stop();
+      appState.activeChatId = id;
+      appState.urlChatPending = '';
+      syncChatUrl(true);
+      saveState({ skipDrive: true }); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
+    };
+
+    // APK 1.0.6: while an answer runs (or messages wait in the queue) the app keeps
+    // the page alive in the background with a notification; when it ends with the
+    // app out of sight it shows «Respuesta lista». Older APKs ignore both messages.
+    let androidWorking = null;
+    function syncAndroidWorking() {
+      if (!ANDROID_APP) return;
+      const queued = typeof messageQueue === 'object' && messageQueue && messageQueue.items.length > 0 && !messageQueue.paused;
+      const on = !!appState.busy || queued;
+      if (on === !!(androidWorking && androidWorking.on)) return;
+      if (on) {
+        const chat = appState.chats.find((item) => item.messages.some((message) => message.pending)) || getActiveChat();
+        androidWorking = { on: true, chatId: chat ? chat.id : '' };
+        androidAppMessage({ type: 'working', on: true, title: chat ? chat.title || '' : '', chat: androidWorking.chatId });
+        return;
+      }
+      const chatId = androidWorking ? androidWorking.chatId : '';
+      androidWorking = { on: false, chatId };
+      androidAppMessage({ type: 'working', on: false });
+      const chat = appState.chats.find((item) => item.id === chatId);
+      const last = chat ? chat.messages.filter((message) => message.role === 'assistant' && !message.hidden).slice(-1)[0] : null;
+      if (document.hidden && last) {
+        const text = String(getVisibleContent(last) || '').replace(/```[\s\S]*?```/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[#*_`>|$\\]+/g, '').replace(/\s+/g, ' ').trim();
+        androidAppMessage({ type: 'answered', title: chat.title || '', text: text.slice(0, 240), chat: chat.id });
+      }
+    }
+
     function setComposerStatus(text) {
       const nextText = text || '';
       elements.composerStatus.textContent = nextText;
@@ -4438,6 +4475,7 @@
     }
 
     function updateSendUi() {
+      syncAndroidWorking();
       const driveLocked = false; // Drive es opcional: sin login se guarda en este navegador.
       const activeChat = getActiveChat();
       const guidedActive = !!(activeChat && activeChat.guidedLearning);

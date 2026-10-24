@@ -30,6 +30,15 @@ https://miguelcoxcaballero.github.io/inhouselearn/. Cada cambio en `index.html` 
 - Micrófono (desde 1.0.3): permiso de audio solicitado al grabar, únicamente para
   el origen de Learn. La web usa MediaRecorder y Whisper local, sin cuentas ni envío de audio; nunca el dictado
   del teclado. Al salir de la app se detiene la grabación para revisar el texto.
+- Respuestas con la app en segundo plano (desde 1.0.6, `AnswerService.java`): mientras la web
+  responde o tiene mensajes en cola manda `{type: 'working', on: true, title, chat}` y la app
+  arranca un servicio en primer plano (`dataSync`) con la notificación fija «Inhouse Learn está
+  respondiendo…». Así Android no congela la página y el stream no muere al salir de la app;
+  mientras tanto el WebView no se pausa y su renderer mantiene la prioridad aunque no se vea.
+  Con `{on: false}` se para (y como seguridad a los 30 min). Si la respuesta termina con la app
+  fuera, la web manda `answered` y sale «Respuesta lista» con el principio del texto; al tocarla
+  se abre ese chat (`window.inhouseLearnOpenChat`). El permiso de notificaciones (Android 13+) se
+  pide una vez, la primera vez que hay una respuesta en curso. Nada corre en un servidor.
 - Sin copia de seguridad de Android (`allowBackup=false`): el almacenamiento del WebView
   guarda el token de Google y la key de OpenRouter. Los chats ya se sincronizan con Drive.
 

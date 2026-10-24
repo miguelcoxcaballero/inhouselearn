@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 1.0.6: an answer goes on with the app in the background (AnswerService). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <!-- Inhouse services updater: hand verified APKs to Android's installer. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -45,6 +49,13 @@
                 <data android:scheme="inhouselearn" android:host="auth" />
             </intent-filter>
         </activity>
+
+        <!-- Keeps an answer running while the app is in the background, with an
+             ongoing notification; never exported, started only by MainActivity. -->
+        <service
+            android:name=".AnswerService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Inhouse services updater (UPDATER.md). The popup and the update settings;
              MainActivity runs the hidden checker through NativeUpdates. -->

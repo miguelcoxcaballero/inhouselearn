@@ -15,8 +15,8 @@ android {
         minSdk = 26
         targetSdk = 35
         // Raise both for every published APK; versionCode must always grow.
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
     }
 
     buildTypes {

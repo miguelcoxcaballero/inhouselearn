@@ -5,6 +5,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.SharedPreferences;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -93,6 +94,13 @@ public class MainActivity extends ComponentActivity {
     private NativeUpdates updates;
     private PermissionRequest pendingMicrophone;
     private boolean microphonePromptOpen;
+    // 1.0.6: an answer in progress keeps running with the app in the background (AnswerService).
+    private boolean working;
+    private boolean inFront;
+    private String pendingChat;
+
+    private final ActivityResultLauncher<String> notificationPermission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> { });
 
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), granted -> {
@@ -296,6 +304,14 @@ public class MainActivity extends ComponentActivity {
                 case "haptic":
                     haptic(message.optString("style"));
                     break;
+                case "working":
+                    // The page is answering (or has messages queued): keep it alive in the background.
+                    setWorking(message.optBoolean("on"), message.optString("title"), message.optString("chat"));
+                    break;
+                case "answered":
+                    // An answer ended while the app was out of sight: tell the user.
+                    if (!inFront) AnswerService.answered(this, message.optString("title"), message.optString("text"), message.optString("chat"));
+                    break;
                 case "theme":
                     // theme.js: la web dice si está en claro o en noche AMOLED.
                     applyThemeColors(message.optBoolean("dark", systemNight()));
@@ -306,6 +322,45 @@ public class MainActivity extends ComponentActivity {
         } catch (JSONException | IllegalArgumentException error) {
             // Malformed messages are ignored; only the app's own page can send them.
         }
+    }
+
+    // --- Answers in the background (1.0.6) -------------------------------------
+    // Android freezes an app in the background within seconds and the page's
+    // stream dies. While the page works, a foreground service with an ongoing
+    // notification keeps the process running, and the WebView renderer keeps
+    // its priority even when it is not visible.
+
+    private void setWorking(boolean on, String title, String chat) {
+        if (on == working) return;
+        working = on;
+        if (on) {
+            askNotificationsOnce();
+            AnswerService.start(this, title, chat);
+        } else {
+            AnswerService.stop(this);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && webView != null) {
+            webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, !on);
+        }
+    }
+
+    // Android 13+: the notifications permission, asked once, the first time an answer runs.
+    private void askNotificationsOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return;
+        SharedPreferences prefs = getSharedPreferences("inhouse-learn", MODE_PRIVATE);
+        if (prefs.getBoolean("askedNotifications", false)) return;
+        prefs.edit().putBoolean("askedNotifications", true).apply();
+        notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    // A tap on «Respuesta lista» opens its chat.
+    private void deliverPendingChat() {
+        if (!pageReady || pendingChat == null) return;
+        String chat = pendingChat;
+        pendingChat = null;
+        webView.evaluateJavascript("window.inhouseLearnOpenChat && window.inhouseLearnOpenChat("
+                + JSONObject.quote(chat) + ")", null);
     }
 
     // --- Haptics -------------------------------------------------------------
@@ -363,6 +418,12 @@ public class MainActivity extends ComponentActivity {
     }
 
     private void handleAppIntent(Intent intent) {
+        String chat = intent == null ? null : intent.getStringExtra(AnswerService.EXTRA_CHAT);
+        if (chat != null && !chat.isEmpty()) {
+            pendingChat = chat;
+            intent.removeExtra(AnswerService.EXTRA_CHAT);
+            deliverPendingChat();
+        }
         Uri data = intent == null ? null : intent.getData();
         if (data != null && APP_SCHEME.equals(data.getScheme())) handleAppUri(data);
     }
@@ -487,6 +548,7 @@ public class MainActivity extends ComponentActivity {
         public void onPageFinished(WebView view, String url) {
             pageReady = true;
             deliverPendingAuth();
+            deliverPendingChat();
             tellPageNight();
         }
 
@@ -558,7 +620,9 @@ public class MainActivity extends ComponentActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        inFront = true;
         webView.onResume();
+        AnswerService.clearAnswered(this);
         // Optional update prompts: B by default, Later snoozes them for 14 days.
         if (updates == null) updates = new NativeUpdates(getApplicationContext());
         updates.onResumed(this);
@@ -569,7 +633,9 @@ public class MainActivity extends ComponentActivity {
         if (updates != null) updates.onPaused(this);
         webView.evaluateJavascript("window.InhouseDictation && window.InhouseDictation.suspend()", null);
         webView.evaluateJavascript("window.InhouseReadAloud && window.InhouseReadAloud.suspend()", null);
-        webView.onPause();
+        inFront = false;
+        // An answer in progress keeps running (AnswerService); otherwise pause as always.
+        if (!working) webView.onPause();
         CookieManager.getInstance().flush();
         super.onPause();
     }
@@ -577,6 +643,7 @@ public class MainActivity extends ComponentActivity {
     @Override
     protected void onDestroy() {
         cancelPendingMicrophone();
+        if (working) AnswerService.stop(this);
         if (updates != null) updates.onDestroyed(this);
         webView.destroy();
         super.onDestroy();

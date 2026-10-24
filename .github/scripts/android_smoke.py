@@ -146,6 +146,9 @@ def main(apk):
         raise SystemExit('REQUEST_INSTALL_PACKAGES is missing')
     if 'android.permission.RECORD_AUDIO' not in packages:
         raise SystemExit('RECORD_AUDIO is missing for local dictation')
+    for permission in ('android.permission.FOREGROUND_SERVICE_DATA_SYNC', 'android.permission.POST_NOTIFICATIONS'):
+        if permission not in packages:
+            raise SystemExit(permission + ' is missing for answers in the background (AnswerService, 1.0.6)')
 
     # The updater settings are not exported; the emulator's root shell opens them
     # the way the profile menu's "Actualizaciones" does.

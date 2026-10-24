@@ -76,6 +76,8 @@ async function openApp(browser, device, options) {
   await page.route('https://openrouter.ai/api/v1/key**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"data":{"limit":null,"usage":1}}' }));
   await page.route('https://openrouter.ai/api/v1/credits**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
   await page.addInitScript(initScript);
+  // options.init: a script of the test that must run before the page (e.g. a fake Android shell).
+  if (options && options.init) await page.addInitScript(options.init);
   await page.goto(BASE, { waitUntil: 'load' });
   await page.waitForFunction(() => window.InhousePi && typeof runAssistantTurn === 'function');
   await page.waitForTimeout(1200);
