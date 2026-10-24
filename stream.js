@@ -395,7 +395,7 @@ class StreamView {
     }
     // Tool steps: only when a step starts, ends or prints.
     const steps = Array.isArray(message.toolSteps) ? message.toolSteps : [];
-    const stepsKey = steps.map((step) => step.id + step.status + (step.output ? step.output.length : 0)).join('|') + (this.target.trim() ? '|writing' : '');
+    const stepsKey = steps.map((step) => step.id + step.status + (step.output ? step.output.length : 0) + (step.agents ? JSON.stringify(step.agents) : '')).join('|') + (this.target.trim() ? '|writing' : '');
     if (stepsKey !== this.stepsKey) {
       this.stepsKey = stepsKey;
       const stepsSlot = this.article.querySelector('.slot-steps');

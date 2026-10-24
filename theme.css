@@ -362,6 +362,10 @@ html.theme-switching .topbar-popover,
 html.theme-switching .message.user-msg .bubble {
   transition: background-color 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease);
 }
+/* Logos de una sola tinta (currentColor → negro en un <img>): en blanco */
+html[data-theme="dark"] .brand-logo.brand-mono,
+html[data-theme="dark"] .company-chip-logo.brand-mono { filter: invert(1); }
+
 /* Aviso de sesión caducada (ámbar) */
 html[data-theme="dark"] .session-banner { border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.1); }
 

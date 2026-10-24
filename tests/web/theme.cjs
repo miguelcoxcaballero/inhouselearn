@@ -127,6 +127,17 @@ async function pick(page, pref) {
     await app.page.waitForTimeout(300);
     const remembered = await app.page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     check(remembered === 'dark', 'the next launch opens dark before the shell speaks (no light flash)', String(remembered));
+    // Single-colour company logos (MiMo, OpenAI, xAI…) turn white in the dark theme.
+    const logos = await app.page.evaluate(() => {
+      const host = document.createElement('div');
+      host.innerHTML = brandIconSvg('xiaomi/mimo-v2-pro') + brandIconSvg('anthropic/claude-sonnet-4.5');
+      document.body.appendChild(host);
+      const imgs = host.querySelectorAll('img');
+      const out = { mimo: getComputedStyle(imgs[0]).filter, claude: getComputedStyle(imgs[1]).filter };
+      host.remove();
+      return out;
+    });
+    check(/invert\(1\)/.test(logos.mimo) && logos.claude === 'none', 'dark theme: single-colour logos (MiMo) turn white, coloured ones (Claude) stay as they are', JSON.stringify(logos));
     check(app.errors.length === 0, 'no JavaScript errors in the app', app.errors.slice(0, 2).join(' | '));
     await app.context.close();
   } finally {

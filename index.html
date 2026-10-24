@@ -382,6 +382,8 @@
       padding: 0 6px;
       min-width: 0;
     }
+.thinking-segmented.with-ultra { grid-auto-flow: row; grid-template-columns: repeat(var(--levels, 1), minmax(0, 1fr)); }
+    .thinking-pill.ultra-pill { white-space: nowrap; grid-column: 1 / -1; padding: 0 10px; margin-top: 2px; }
     .thinking-pill:hover:not(.active) {
       color: var(--text);
       background: rgba(0,0,0,0.03);
@@ -1116,6 +1118,30 @@
     .session-banner-text b { font-weight: 650; }
     .session-banner-btn { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--text); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
     .session-banner-btn[disabled] { opacity: 0.5; cursor: default; }
+    /* Ultra code: rainbow text with a slow shimmer; a burst when it is turned on */
+    .ultra-text { background: linear-gradient(90deg, #ff5f6d, #ffb347, #f9e64f, #4ade80, #38bdf8, #a78bfa, #f472b6, #ff5f6d); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; font-weight: 700; animation: ultra-shimmer 4s linear infinite; }
+    @keyframes ultra-shimmer { to { background-position: 300% 0; } }
+    .thinking-pill.ultra-pill.active { box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.55), 0 0 14px rgba(244, 114, 182, 0.25); }
+    .ultra-burst { animation: ultra-burst 1.3s cubic-bezier(.2,.8,.2,1); }
+    .ultra-burst .ultra-text, .ultra-text.ultra-burst { animation: ultra-shimmer 0.6s linear 2, ultra-burst 1.3s cubic-bezier(.2,.8,.2,1); }
+    @keyframes ultra-burst { 0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } 25% { transform: scale(1.14); filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.8)); } 60% { transform: scale(0.98); } 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } }
+    .ultra-spark { position: fixed; z-index: 1000; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; pointer-events: none; animation: ultra-spark 0.85s cubic-bezier(.2,.8,.2,1) forwards; }
+    @keyframes ultra-spark { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { .ultra-text, .ultra-burst, .ultra-burst .ultra-text { animation: none; } }
+    /* Ultra code agents */
+    .agents-card { margin: 2px 0 10px; border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; background: var(--surface); font-size: 0.82rem; }
+    .agents-card.running { border-color: rgba(167, 139, 250, 0.5); }
+    .agents-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .agents-title { font-weight: 650; color: var(--text); }
+    .agents-card.running .agents-title { background: linear-gradient(90deg, #a78bfa, #f472b6, #38bdf8, #a78bfa); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: ultra-shimmer 3s linear infinite; }
+    .agents-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+    .agent-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .agent-mark { flex: 0 0 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #15803d; }
+    .agent-row[data-status="error"] .agent-mark { color: #b91c1c; }
+    .agent-row[data-status="running"] .agent-mark { border-radius: 50%; border: 2px solid rgba(167, 139, 250, 0.3); border-top-color: #a78bfa; animation: live-spin 0.8s linear infinite; box-sizing: border-box; width: 14px; height: 14px; flex-basis: 14px; }
+    .agent-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+    .agent-text b { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .agent-text small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .msg-cost-zeros { color: var(--muted); font-weight: 500; }
     .msg-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
     @media (prefers-reduced-motion: reduce) { .msg-cost, .msg-cost.ticking { transition: none; transform: none; text-shadow: none; } }
@@ -1669,7 +1695,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-usage">
+  <link rel="stylesheet" href="theme.css?v=20261024-ultra">
 </head>
 <body>
 
@@ -1978,8 +2004,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-usage"></script>
-  <script src="composer-dock.js?v=20261024-usage"></script>
+  <script src="approval.js?v=20261024-ultra"></script>
+  <script src="composer-dock.js?v=20261024-ultra"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -2522,9 +2548,14 @@
       return file ? 'icons/companies/' + file + '.svg' : '';
     }
 
+    // Single-colour logos drawn with currentColor: in an <img> that is black,
+    // invisible on the AMOLED dark theme, so theme.css turns them white there.
+    const MONO_LOGOS = new Set(['ai21', 'aionlabs', 'dotsstudio', 'ibm', 'inception', 'liquid', 'moonshot', 'nousresearch', 'openai', 'perceptron', 'reka', 'relace', 'xai', 'xiaomimimo', 'zai']);
+
     function brandIconSvg(modelId) {
       const logo = companyLogoSrc(companyIdOf(modelId));
-      if (logo) return '<img class="brand-logo" src="' + logo + '" alt="" decoding="async">';
+      const file = logo.replace(/^.*\//, '').replace(/\.svg$/, '');
+      if (logo) return '<img class="brand-logo' + (MONO_LOGOS.has(file) ? ' brand-mono' : '') + '" src="' + logo + '" alt="" decoding="async">';
       return providerLetterIcon(escapeHtml(companyLabelFor(modelId).charAt(0).toUpperCase() || '?'));
     }
 
@@ -2696,6 +2727,7 @@
         thinkingLevel: chat && typeof chat.thinkingLevel !== 'undefined'
           ? chat.thinkingLevel
           : APP_CONFIG.DEFAULT_THINKING_LEVEL,
+        ultraCode: !!(chat && chat.ultraCode),
         guidedLearning: chat && typeof chat.guidedLearning === 'boolean'
           ? chat.guidedLearning
           : defaultGuidedLearning,
@@ -3940,6 +3972,22 @@
 
     const THINKING_LABELS = { off: 'No', minimal: 'Mínimo', low: 'Bajo', medium: 'Medio', high: 'Alto', xhigh: 'Muy alto', max: 'Máximo' };
 
+    // Ultra code: the model's deepest reasoning plus parallel agents
+    // (spawn_agents), for any model that can use tools.
+    function ultraCodeOn(chatLike) {
+      const chat = getResolvedChat(chatLike);
+      return !!(chat && chat.ultraCode);
+    }
+
+    function effectiveThinkingLevel(chatLike) {
+      const chat = getResolvedChat(chatLike);
+      if (ultraCodeOn(chat)) {
+        const levels = thinkingLevelsForModel(activeModelName(chat)).filter((level) => level !== 'off');
+        return levels.length ? levels[levels.length - 1] : '';
+      }
+      return currentThinkingLevel(chat);
+    }
+
     function thinkingLabel(level) {
       return THINKING_LABELS[level] || level;
     }
@@ -4959,7 +5007,7 @@
       elements.companyChips.innerHTML = chips.map((chip) => {
         const logo = chip.id ? companyLogoSrc(chip.id) : '';
         return '<button type="button" class="company-chip' + (chip.id === modelPicker.company ? ' active' : '') + '" data-company-id="' + escapeHtml(chip.id) + '" title="' + chip.count + ' modelos">' +
-          (logo ? '<img class="company-chip-logo" src="' + logo + '" alt="" decoding="async">' : '') +
+          (logo ? '<img class="company-chip-logo brand-logo-chip' + (MONO_LOGOS.has(logo.replace(/^.*\//, '').replace(/\.svg$/, '')) ? ' brand-mono' : '') + '" src="' + logo + '" alt="" decoding="async">' : '') +
           escapeHtml(chip.label) + '</button>';
       }).join('');
     }
@@ -5063,19 +5111,25 @@
       renderModelList();
       if (elements.modelList) elements.modelList.scrollTop = scrollTop;
 
+      const ultra = ultraCodeOn(chat);
       if (elements.thinkingSection && elements.thinkingSegmented) {
-        elements.thinkingSection.classList.toggle('hidden', levels.length < 2);
-        elements.thinkingSegmented.innerHTML = levels.length < 2 ? '' : levels.map((level) => {
-          const isActive = level === thinkingLevel;
+        // Ultra code is offered for every model (agents need only tools).
+        elements.thinkingSection.classList.remove('hidden');
+        elements.thinkingSegmented.classList.add('with-ultra');
+        elements.thinkingSegmented.style.setProperty('--levels', String(Math.max(1, levels.length < 2 ? 1 : levels.length)));
+        elements.thinkingSegmented.innerHTML = (levels.length < 2 ? [] : levels).map((level) => {
+          const isActive = !ultra && level === thinkingLevel;
           return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
             ' data-thinking-level="' + escapeHtml(level) + '"' +
             ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
             '>' + escapeHtml(thinkingLabel(level)) + '</button>';
-        }).join('');
+        }).join('') +
+          '<button type="button" class="thinking-pill ultra-pill' + (ultra ? ' active' : '') + '" data-thinking-level="ultra" role="radio" aria-checked="' + (ultra ? 'true' : 'false') + '" title="Razonamiento máximo y agentes trabajando en paralelo">' +
+          '<span class="ultra-text">Ultra code</span></button>';
       }
 
       if (elements.modelCopy) {
-        elements.modelCopy.textContent = companyLabelFor(activeId) + (levels.length > 1 ? ' · razonamiento ' + thinkingLabel(thinkingLevel).toLowerCase() : '') + '. Se guarda en este chat.';
+        elements.modelCopy.textContent = companyLabelFor(activeId) + (ultra ? ' · Ultra code: razonamiento máximo y agentes en paralelo' : levels.length > 1 ? ' · razonamiento ' + thinkingLabel(thinkingLevel).toLowerCase() : '') + '. Se guarda en este chat.';
       }
       if (elements.modelTriggerKicker) {
         elements.modelTriggerKicker.textContent = companyLabelFor(activeId);
@@ -5088,8 +5142,9 @@
         elements.modelTriggerBrand.innerHTML = brandIconSvg(activeId);
       }
       if (elements.modelTriggerMeta) {
-        const showLevel = levels.length > 1 && !!thinkingLevel && thinkingLevel !== 'off';
-        elements.modelTriggerMeta.textContent = showLevel ? thinkingLabel(thinkingLevel) : '';
+        const showLevel = ultra || (levels.length > 1 && !!thinkingLevel && thinkingLevel !== 'off');
+        elements.modelTriggerMeta.textContent = ultra ? 'Ultra code' : showLevel ? thinkingLabel(thinkingLevel) : '';
+        elements.modelTriggerMeta.classList.toggle('ultra-text', ultra);
         elements.modelTriggerMeta.classList.toggle('hidden', !showLevel);
       }
       if (elements.apiKeyInput && document.activeElement !== elements.apiKeyInput) {
@@ -6121,8 +6176,9 @@
 
     function renderToolStepsMarkup(message) {
       const steps = visibleToolSteps(message);
+      const agents = renderAgentsPanel(message);
       // While the answer is being written: what it is doing right now (composer-dock.js).
-      if (message.pending && typeof renderLiveSteps === 'function') return renderLiveSteps(message, steps);
+      if (message.pending && typeof renderLiveSteps === 'function') return agents + renderLiveSteps(message, steps);
       const running = steps.some((step) => step.status === 'running');
       const failed = steps.filter((step) => step.status === 'error').length;
       let openState = null;
@@ -6140,7 +6196,7 @@
           '</div>'
         ].join('');
       }).join('');
-      return [
+      return agents + [
         '<details class="tool-steps"' + (openState === '1' ? ' open' : '') + ' data-steps-id="' + message.id + '">',
         '  <summary class="tool-steps-summary">',
         '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
@@ -6782,7 +6838,7 @@
         drop: share.ids.filter((id) => !present.includes(id)),
         chat: {
           id: chat.id, title: chat.title, customTitle: chat.customTitle || null, autoTitle: chat.autoTitle || null, autoTitleAt: chat.autoTitleAt || 0, createdAt: chat.createdAt, updatedAt: chat.updatedAt,
-          provider: chat.provider, model: chat.model, thinkingLevel: chat.thinkingLevel,
+          provider: chat.provider, model: chat.model, thinkingLevel: chat.thinkingLevel, ultraCode: !!chat.ultraCode,
           guidedLearning: !!chat.guidedLearning, course: chat.course || null
         },
         messages: chat.messages.filter((message) => present.includes(message.id)).map(liveMessageCopy)
@@ -8829,8 +8885,18 @@
           const btn = event.target.closest('[data-thinking-level]');
           if (!btn) return;
           const chat = getActiveChat();
+          if (btn.getAttribute('data-thinking-level') === 'ultra') {
+            // A second tap turns it off (some models have no other level to pick).
+            chat.ultraCode = !chat.ultraCode;
+            touchChat(chat);
+            updateConfigUi();
+            renderHistory();
+            if (chat.ultraCode) { playUltraCodeBurst(); haptic('success'); } else haptic('select');
+            return;
+          }
           const nextLevel = normalizeThinkingLevelForModel(chat.model, btn.getAttribute('data-thinking-level'));
-          if (nextLevel === currentThinkingLevel(chat)) return;
+          if (nextLevel === currentThinkingLevel(chat) && !chat.ultraCode) return;
+          chat.ultraCode = false;
           chat.thinkingLevel = nextLevel;
           touchChat(chat);
           updateConfigUi();
@@ -9199,6 +9265,7 @@
         userDrivePromptText(chat),
         extraGooglePromptText(),
         webPromptText(),
+        ultraPromptText(chat),
         approvalPromptText(chat),
         '',
         visualEventsText(chat),
@@ -9408,7 +9475,7 @@
         systemPrompt: buildAgentSystemPrompt(chat, libraryForModel),
         history,
         prompt,
-        thinkingLevel: currentThinkingLevel(chat) || 'off',
+        thinkingLevel: effectiveThinkingLevel(chat) || 'off',
         tools,
         signal,
         sessionId: chat.id,
@@ -9439,7 +9506,12 @@
       let result;
       try {
         try {
-          result = await run(guidedTools.concat(libraryTools, githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat)))));
+          // The same tools, built again for each parallel agent (Ultra code).
+          const workTools = () => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          const agentTools = ultraCodeOn(chat) && !chat.guidedLearning
+            ? InhousePi.createAgentTools({ runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job) })
+            : [];
+          result = await run(guidedTools.concat(workTools(), agentTools));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
           if (error.name !== 'AbortError' && /support tool use|tools? (is |are )?not supported/i.test(error.message)) {
@@ -10048,6 +10120,108 @@
       if (outcome === 'done') maybeRetitleChat(chat);
       // Messages written meanwhile go out now, one per finished turn.
       queueAfterTurn(turn, outcome);
+    }
+
+    /* ─── ULTRA CODE: AGENTES EN PARALELO ────────────── */
+    // One pi agent per part of the job, at the same time: the chat's model at
+    // its deepest reasoning, the same tools (and the same approval gate) but no
+    // spawn_agents of its own, no history: only its self-contained task. What
+    // it spends goes into the answer's cost (usageCostTarget is the message)
+    // and, while it runs, into the live counter.
+    async function runSubAgent(chat, model, modelId, workTools, job) {
+      const parent = appState.activeTurn && appState.activeTurn.turn ? appState.activeTurn.turn.message : null;
+      let shown = 0;
+      const live = (value) => {
+        if (!parent || !(value > shown)) return;
+        setLiveCost(parent, (Number(parent.liveCost) || Number(parent.cost) || 0) + (value - shown));
+        shown = value;
+      };
+      try {
+        const result = await InhousePi.runAgent({
+          model,
+          systemPrompt: [
+            APP_CONFIG.SYSTEM_PROMPT,
+            InhousePi.TEXT_QUALITY_PROMPT,
+            '',
+            'You are «' + job.name + '», one of several agents working in parallel for a main assistant (Ultra code). Do only your task, completely and carefully, with the tools you have; you cannot talk to the user. When you finish, answer with what you did and found (files, commits, links, results), concise and complete, for the main assistant to integrate.',
+            webPromptText(),
+            githubPromptText(chat),
+            userDrivePromptText(chat)
+          ].filter(Boolean).join('\n'),
+          history: [],
+          prompt: { role: 'user', content: [{ type: 'text', text: job.task }], timestamp: Date.now() },
+          thinkingLevel: effectiveThinkingLevel(chat) || 'off',
+          tools: workTools(),
+          signal: job.signal,
+          sessionId: chat.id + ':' + job.name,
+          onUpdate: (update) => {
+            const steps = update.steps || [];
+            const running = steps.filter((step) => step.status === 'running').pop();
+            const cost = (update.cost || 0) + liveRequestCost(modelId, update.liveChars);
+            live(cost);
+            job.onUpdate({
+              doing: running ? toolStepTitle(running) : (update.text ? 'Escribiendo el resultado' : (steps.length ? 'Pensando el siguiente paso' : 'Pensando')),
+              cost,
+              steps: steps.length
+            });
+          }
+        });
+        recordModelUsage(modelId, { prompt_tokens: result.usage.input, completion_tokens: result.usage.output, cost: result.usage.cost });
+        return { text: result.text, cost: result.usage.cost };
+      } catch (error) {
+        if (error && error.usage && error.usage.cost) recordModelUsage(modelId, { prompt_tokens: error.usage.input, completion_tokens: error.usage.output, cost: error.usage.cost });
+        throw error;
+      }
+    }
+
+    // Turning Ultra code on: the label lights up in a sweep of colours with a
+    // few sparks, like Claude's ultrathink, then keeps a slow shimmer.
+    function playUltraCodeBurst() {
+      const targets = [document.querySelector('.ultra-pill'), elements.modelTriggerMeta].filter(Boolean);
+      targets.forEach((el) => {
+        el.classList.remove('ultra-burst');
+        void el.offsetWidth;
+        el.classList.add('ultra-burst');
+        window.setTimeout(() => el.classList.remove('ultra-burst'), 1400);
+      });
+      const pill = document.querySelector('.ultra-pill');
+      if (!pill || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+      const box = pill.getBoundingClientRect();
+      for (let i = 0; i < 14; i++) {
+        const spark = document.createElement('span');
+        spark.className = 'ultra-spark';
+        const angle = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
+        const distance = 26 + Math.random() * 30;
+        spark.style.left = (box.left + box.width / 2) + 'px';
+        spark.style.top = (box.top + box.height / 2) + 'px';
+        spark.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+        spark.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+        spark.style.background = 'hsl(' + Math.round(i * 360 / 14) + ' 90% 60%)';
+        document.body.appendChild(spark);
+        window.setTimeout(() => spark.remove(), 900);
+      }
+    }
+
+    function ultraPromptText(chat) {
+      if (!ultraCodeOn(chat) || chat.guidedLearning) return '';
+      return '- Modo Ultra code: razonas al máximo y puedes poner a trabajar varios agentes a la vez con spawn_agents. Para trabajos grandes que se dividen (varios archivos o módulos de un repositorio, varias fuentes que investigar, varios documentos), planifica, reparte partes independientes con una tarea completa y autocontenida para cada agente, y después revisa e integra lo que devuelvan. Para algo pequeño, hazlo tú.';
+    }
+
+    // The parallel agents of a spawn_agents step: name, what it is doing and
+    // what it spends (counted up live, like the answer's cost).
+    function renderAgentsPanel(message) {
+      const steps = Array.isArray(message.toolSteps) ? message.toolSteps : [];
+      return steps.filter((step) => step.name === 'spawn_agents' && Array.isArray(step.agents) && step.agents.length).map((step) => {
+        const total = step.agents.reduce((sum, agent) => sum + (Number(agent.cost) || 0), 0);
+        const running = step.agents.filter((agent) => agent.status === 'running').length;
+        return '<div class="agents-card' + (running ? ' running' : '') + '">' +
+          '<div class="agents-head"><span class="agents-title">' + (running ? 'Agentes trabajando · ' + running + ' de ' + step.agents.length : step.agents.length + ' agentes en paralelo') + '</span>' +
+          costCounterMarkup(message.id + ':agents:' + step.id, total) + '</div>' +
+          '<ul class="agents-list">' + step.agents.map((agent, index) => '<li class="agent-row" data-status="' + escapeHtml(agent.status) + '">' +
+            '<span class="agent-mark" aria-hidden="true">' + (agent.status === 'done' ? '✓' : agent.status === 'error' ? '✕' : '') + '</span>' +
+            '<span class="agent-text"><b>' + escapeHtml(agent.name) + '</b><small>' + escapeHtml(agent.doing || '') + (agent.steps ? ' · ' + agent.steps + (agent.steps === 1 ? ' paso' : ' pasos') : '') + '</small></span>' +
+            costCounterMarkup(message.id + ':agent:' + step.id + ':' + index, Number(agent.cost) || 0) + '</li>').join('') + '</ul></div>';
+      }).join('');
     }
 
     /* ─── RESPUESTAS CORTADAS AL SALIR DE LA APP ─────── */

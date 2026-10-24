@@ -18,6 +18,7 @@ export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGith
 export { createDriveTools } from './gdrive.js';
 export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
+export { createAgentTools } from './agents.js';
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -345,6 +346,8 @@ export async function runAgent(options) {
         const output = resultText(event.partialResult);
         step.output = output.length > MAX_STEP_OUTPUT ? output.slice(-MAX_STEP_OUTPUT) : output;
         step.progress = output.split('\n').filter(Boolean).pop() || '';
+        // Ultra code: what each parallel agent is doing and spending.
+        if (event.partialResult && event.partialResult.details && Array.isArray(event.partialResult.details.agents)) step.agents = event.partialResult.details.agents;
         emit();
       }
     } else if (event.type === 'tool_execution_end') {
@@ -355,6 +358,7 @@ export async function runAgent(options) {
         step.output = output.length > MAX_STEP_OUTPUT ? output.slice(0, MAX_STEP_OUTPUT) + '\n…' : output;
         // Web pages a tool found or read: the app lists them as the answer's sources.
         if (event.result && event.result.details && Array.isArray(event.result.details.sources)) step.sources = event.result.details.sources.slice(0, 12);
+        if (event.result && event.result.details && Array.isArray(event.result.details.agents)) step.agents = event.result.details.agents;
       }
       emit();
     }
