@@ -20,6 +20,12 @@ function initScript() {
       let raw = init && init.body;
       if (!raw && input && typeof input.text === 'function') raw = await input.clone().text();
       const body = JSON.parse(raw || '{}');
+      // Small non-streaming requests (the chat's automatic name) answer on their own.
+      if (body.stream === false && !body.plugins) {
+        window.__titleRequests = (window.__titleRequests || []).concat([body]);
+        const title = window.__titleReply || { title: 'Conversación de prueba', changed: true };
+        return new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: JSON.stringify(title) } }], usage: { prompt_tokens: 200, completion_tokens: 10, cost: 0 } }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
       window.__requests.push(body);
       const reply = window.__replies.shift() || { text: 'ok' };
       if (reply.status) return new Response(JSON.stringify({ error: { message: reply.error || 'Provider returned error', code: reply.status } }), { status: reply.status, headers: { 'content-type': 'application/json' } });

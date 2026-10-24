@@ -153,6 +153,20 @@ Mandatory guidance for every AI and developer working in this repository.
   runs the live activity shows a turning blue globe; afterwards «Fuentes» under the answer lists the
   pages (`step.sources`, cited ones first, favicons from Google's s2 service). The cost's last two decimals
   (fractions of a cent) are always grey. Test: `tests/web/websearch.cjs`.
+- **One URL per conversation:** `?c=<chat id>`; a reload stays on it, back/forward move between
+  opened chats, no `?c=` opens the most recently used one. Drive's `activeChatId` never decides what
+  opens (it may be another device's or old); an unknown id opens a new chat and waits for Drive
+  (`urlChatPending`). Test: `tests/web/chat-url.cjs`.
+- **Fresh page:** the Android app keeps the page alive for days, so the page fetches its own
+  `index.html` fresh every 5 min and on resume, compares the `?v=` of its scripts and sheets, and
+  reloads (same chat, never while something is typed, running or awaiting approval). Bump the `?v=`
+  of what you change. An expired Google session shows a banner above the composer with «Volver a
+  entrar» (the app never blocks without Drive). Test: `tests/web/chat-url.cjs`.
+- **Chat names:** after the first answer the chat's model names it (exactly three words, only the
+  first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
+  topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a
+  course title is never touched. The change is typed out (`startTitleAnimation`), also on other
+  devices through live sync. Test: `tests/web/chat-title.cjs`.
 - **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
   closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
   repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue

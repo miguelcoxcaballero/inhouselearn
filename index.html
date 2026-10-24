@@ -536,6 +536,8 @@
       transition: none;
     }
     .chat-row:has(.chat-item.active) { background: var(--orange-soft); }
+    .title-typing::after { content: ''; display: inline-block; width: 1.5px; height: 1em; margin-left: 1px; vertical-align: -0.12em; background: currentColor; animation: title-caret 0.9s steps(1) infinite; }
+    @keyframes title-caret { 50% { opacity: 0; } }
     .chat-item-title { font-size: 0.81rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
     .chat-item-meta { font-size: 0.67rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chat-delete {
@@ -1104,10 +1106,16 @@
     .msg-source-text b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .msg-source-text small { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .send-wrap { position: relative; display: inline-flex; flex: 0 0 auto; width: max-content; }
-    .chat-cost { position: absolute; bottom: calc(100% + 3px); left: -30px; width: 104px; text-align: center; font-size: 0.6rem; font-weight: 600; color: #15803d; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; transition: transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
+    .chat-cost { position: absolute; bottom: calc(100% + 3px); right: 0; text-align: right; font-size: 0.6rem; font-weight: 600; color: #15803d; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; transition: transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
     .chat-cost.hidden { display: none; }
     .chat-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
     @media (prefers-reduced-motion: reduce) { .chat-cost, .chat-cost.ticking { transition: none; transform: none; text-shadow: none; } }
+    .session-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 9px 10px 9px 14px; border: 1px solid rgba(180, 83, 9, 0.35); border-radius: 14px; background: rgba(245, 158, 11, 0.1); font-size: 0.8rem; color: var(--text); }
+    .session-banner.hidden { display: none; }
+    .session-banner-text { flex: 1; min-width: 0; line-height: 1.35; }
+    .session-banner-text b { font-weight: 650; }
+    .session-banner-btn { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--text); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
+    .session-banner-btn[disabled] { opacity: 0.5; cursor: default; }
     .msg-cost-zeros { color: var(--muted); font-weight: 500; }
     .msg-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
     @media (prefers-reduced-motion: reduce) { .msg-cost, .msg-cost.ticking { transition: none; transform: none; text-shadow: none; } }
@@ -1646,7 +1654,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-gmail">
+  <link rel="stylesheet" href="theme.css?v=20261024-titles">
 </head>
 <body>
 
@@ -1763,6 +1771,10 @@
         <footer class="composer-area">
           <div class="composer-inner">
           <div class="workspace-bar hidden" id="workspace-bar"></div>
+          <div class="session-banner hidden" id="session-banner" role="status">
+            <span class="session-banner-text"><b>La sesión de Google ha caducado.</b> Tus chats no se guardan en Drive ni se ven en tus otros dispositivos.</span>
+            <button type="button" class="session-banner-btn" id="session-relogin">Volver a entrar</button>
+          </div>
           <div class="composer-shell">
             <div class="composer-attachments hidden" id="composer-attachments"></div>
             <textarea id="composer" class="composer" rows="1" placeholder="Pregunta lo que quieras"></textarea>
@@ -1951,8 +1963,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-gmail"></script>
-  <script src="composer-dock.js?v=20261024-gmail"></script>
+  <script src="approval.js?v=20261024-titles"></script>
+  <script src="composer-dock.js?v=20261024-titles"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -2651,6 +2663,8 @@
         id: chat && typeof chat.id === 'string' ? chat.id : uid('chat'),
         title: chat && typeof chat.title === 'string' && chat.title.trim() ? chat.title : 'Nuevo chat',
         customTitle: chat && typeof chat.customTitle === 'string' ? chat.customTitle : null,
+        autoTitle: chat && typeof chat.autoTitle === 'string' && chat.autoTitle.trim() ? chat.autoTitle : null,
+        autoTitleAt: chat && Number(chat.autoTitleAt) > 0 ? Number(chat.autoTitleAt) : 0,
         pinned: !!(chat && chat.pinned),
         createdAt,
         updatedAt: chat && typeof chat.updatedAt === 'string' ? chat.updatedAt : createdAt,
@@ -2831,11 +2845,12 @@
       merged.sort((a, b) => chatFreshness(b) - chatFreshness(a));
       appState.chats = merged;
       mergeBinariesIntoChats(appState.chats, remote);
-      if (!localHadContent && remote.activeChatId && byId.has(remote.activeChatId)) {
-        appState.activeChatId = remote.activeChatId;
-      }
+      // The URL's conversation, if Drive brought it; never Drive's own
+      // activeChatId (another device's, or an old one).
+      applyUrlChatPending();
       if (!appState.chats.some((chat) => chat.id === appState.activeChatId)) {
-        appState.activeChatId = appState.chats.length ? appState.chats[0].id : '';
+        const recent = mostRecentChat();
+        appState.activeChatId = recent ? recent.id : '';
       }
       ensureActiveChat();
       const after = JSON.stringify(appState.chats);
@@ -2894,8 +2909,11 @@
       if (!normalized) {
         return false;
       }
+      const previous = appState.activeChatId;
       appState.chats = normalized.chats;
-      appState.activeChatId = normalized.activeChatId;
+      if (!applyUrlChatPending()) {
+        appState.activeChatId = appState.chats.some((chat) => chat.id === previous) ? previous : (mostRecentChat() || {}).id || '';
+      }
       if (snapshot && typeof snapshot.guidedLearning === 'boolean') {
         appState.guidedLearning = snapshot.guidedLearning;
       }
@@ -3980,6 +3998,7 @@
       if (chat && chat.guidedLearning && chat.course && chat.course.title) {
         return chat.course.title;
       }
+      if (chat && chat.autoTitle) return chat.autoTitle;
       const firstUser = messages.find((message) => message.role === 'user' && !message.hidden && message.content.trim());
       if (!firstUser) {
         const firstAttachmentMessage = messages.find((message) => message.role === 'user' && Array.isArray(message.attachments) && message.attachments.length);
@@ -4037,8 +4056,148 @@
       } catch (error) {
         console.warn('No se pudo restaurar localStorage:', error);
       }
+      chooseStartChat();
       ensureActiveChat();
     }
+
+    /* ─── LA VERSIÓN NUEVA DE LA PÁGINA ────────────────── */
+    // The Android app keeps the page alive for days (and a tab can stay open
+    // just as long), so a release on GitHub Pages would never reach it. Every
+    // few minutes and when the app comes back to the front, the page fetches
+    // its own index.html fresh and compares the versions of its scripts and
+    // sheets (?v=…); if they changed it reloads, as soon as nothing is running
+    // and nothing is half-typed, on the same conversation (?c=).
+    const PAGE_CHECK_MS = 5 * 60 * 1000;
+    let pageCheckAt = 0;
+    let pageReloadWanted = false;
+
+    function assetVersions(root) {
+      return Array.from(root.querySelectorAll('script[src*="?v="], link[rel="stylesheet"][href*="?v="]'))
+        .map((el) => (el.getAttribute('src') || el.getAttribute('href') || '').replace(/^\.\//, '')).sort().join('|');
+    }
+
+    async function checkForNewPage(force) {
+      if (!force && Date.now() - pageCheckAt < 60000) return false;
+      pageCheckAt = Date.now();
+      try {
+        const response = await fetch(location.pathname + '?fresh=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) return false;
+        const remote = assetVersions(new DOMParser().parseFromString(await response.text(), 'text/html'));
+        if (!remote || remote === assetVersions(document)) return false;
+        pageReloadWanted = true;
+        reloadWhenIdle();
+        return true;
+      } catch (_) { return false; }
+    }
+
+    function reloadWhenIdle() {
+      if (!pageReloadWanted) return;
+      const typing = elements.composer && elements.composer.value.trim();
+      const approving = document.querySelector('.dock-approve');
+      if (appState.busy || typing || approving || (appState.composerAttachments || []).length) {
+        window.setTimeout(reloadWhenIdle, 5000);
+        return;
+      }
+      // Never in a loop: at most once a minute.
+      try {
+        const last = Number(sessionStorage.getItem('inhouse-learn-page-reload') || 0);
+        if (Date.now() - last < 60000) return;
+        sessionStorage.setItem('inhouse-learn-page-reload', String(Date.now()));
+      } catch (_) {}
+      saveState({ skipDrive: true });
+      reloadPage();
+    }
+
+    // A new address skips any copy the WebView kept; _v is dropped on arrival.
+    function reloadPage() {
+      const url = new URL(location.href);
+      url.searchParams.set('_v', String(Date.now()));
+      if (appState.activeChatId) url.searchParams.set('c', appState.activeChatId);
+      location.replace(url.toString());
+    }
+
+    (function dropReloadMark() {
+      try {
+        const url = new URL(location.href);
+        if (!url.searchParams.has('_v')) return;
+        url.searchParams.delete('_v');
+        history.replaceState(history.state, '', url.pathname + url.search + url.hash);
+      } catch (_) {}
+    })();
+
+    window.setTimeout(() => checkForNewPage(true), 8000);
+    window.setInterval(() => checkForNewPage(false), PAGE_CHECK_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForNewPage(false); });
+
+    /* ─── UNA URL POR CONVERSACIÓN ─────────────────────── */
+    // ?c=<chat id> names the open conversation: a reload stays on it, the link
+    // can be saved or shared between the user's devices, and back/forward move
+    // between the conversations opened. Without ?c= the most recently used
+    // conversation opens. The snapshot's own activeChatId (which may come from
+    // another device or be old) never decides what opens.
+    function chatIdFromUrl() {
+      try { return new URLSearchParams(location.search).get('c') || ''; } catch (_) { return ''; }
+    }
+
+    function mostRecentChat() {
+      return appState.chats.slice().sort((a, b) => chatFreshness(b) - chatFreshness(a))[0] || null;
+    }
+
+    function chooseStartChat() {
+      const wanted = chatIdFromUrl();
+      if (wanted && appState.chats.some((chat) => chat.id === wanted)) {
+        appState.activeChatId = wanted;
+        appState.urlChatPending = '';
+        return;
+      }
+      if (wanted) {
+        // Not here yet (it may arrive with Drive) or it was never saved: a new
+        // chat meanwhile, and that one opens if Drive brings it.
+        appState.urlChatPending = wanted;
+        const chat = createChat();
+        appState.chats.unshift(chat);
+        appState.activeChatId = chat.id;
+        return;
+      }
+      const recent = mostRecentChat();
+      if (recent) appState.activeChatId = recent.id;
+    }
+
+    // After Drive's chats arrive: the conversation the URL asked for, if it came
+    // and the user has not started something else meanwhile.
+    function applyUrlChatPending() {
+      const wanted = appState.urlChatPending;
+      if (!wanted || !appState.chats.some((chat) => chat.id === wanted)) return false;
+      const current = appState.chats.find((chat) => chat.id === appState.activeChatId);
+      appState.urlChatPending = '';
+      if (current && chatHasMeaningfulContent(current)) return false;
+      appState.activeChatId = wanted;
+      return true;
+    }
+
+    function chatUrl(chatId) {
+      const url = new URL(location.href);
+      url.searchParams.delete('_v');
+      if (chatId) url.searchParams.set('c', chatId); else url.searchParams.delete('c');
+      return url.pathname + url.search + url.hash;
+    }
+
+    // Keeps the address bar on the open conversation; push for the user's own
+    // switches (back goes to the previous one), replace for everything else.
+    function syncChatUrl(push) {
+      const id = appState.activeChatId;
+      if (!id || chatIdFromUrl() === id) return;
+      try { history[push ? 'pushState' : 'replaceState']({ chatId: id }, '', chatUrl(id)); } catch (_) {}
+    }
+
+    window.addEventListener('popstate', () => {
+      const wanted = chatIdFromUrl();
+      if (!wanted || wanted === appState.activeChatId || !appState.chats.some((chat) => chat.id === wanted)) return;
+      window.InhouseDictation?.cancel();
+      window.InhouseReadAloud?.stop();
+      appState.activeChatId = wanted;
+      saveState({ skipDrive: true }); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
+    });
 
     function setComposerStatus(text) {
       const nextText = text || '';
@@ -5598,9 +5757,11 @@
       const known = !!chat && chat.messages.some((message) => message.role === 'assistant' && (typeof message.cost === 'number' || typeof message.liveCost === 'number' || (message.alternatives || []).some((v) => typeof v.cost === 'number')));
       el.classList.toggle('hidden', !known);
       if (!known) return;
-      // Centred on the send button (dictation.js puts its button next to it).
+      // Over the send button, ending at its right edge (never past the screen;
+      // dictation.js puts its button next to it inside the same wrapper).
       const send = document.getElementById('send-btn');
-      if (send && send.offsetWidth) el.style.width = (send.offsetWidth + 60) + 'px';
+      const wrap = send && send.parentElement;
+      if (send && wrap) el.style.right = Math.max(0, wrap.offsetWidth - send.offsetLeft - send.offsetWidth) + 'px';
       const key = 'chat:' + chat.id;
       el.dataset.costFor = key;
       el.dataset.cost = String(chatTotalCost(chat));
@@ -5898,6 +6059,7 @@
       enhanceRichContent(elements.thread);
       bindThreadActions();
       updateChatCost();
+      syncChatUrl(false);
       if (!settings.preserveScroll) {
         requestAnimationFrame(scrollThreadToBottom);
       } else {
@@ -6599,7 +6761,7 @@
         done: !!done,
         drop: share.ids.filter((id) => !present.includes(id)),
         chat: {
-          id: chat.id, title: chat.title, customTitle: chat.customTitle || null, createdAt: chat.createdAt, updatedAt: chat.updatedAt,
+          id: chat.id, title: chat.title, customTitle: chat.customTitle || null, autoTitle: chat.autoTitle || null, autoTitleAt: chat.autoTitleAt || 0, createdAt: chat.createdAt, updatedAt: chat.updatedAt,
           provider: chat.provider, model: chat.model, thinkingLevel: chat.thinkingLevel,
           guidedLearning: !!chat.guidedLearning, course: chat.course || null
         },
@@ -6789,6 +6951,9 @@
       if (parseSnapshotMoment(payload.chat.updatedAt) >= parseSnapshotMoment(chat.updatedAt)) {
         chat.title = payload.chat.title || chat.title;
         chat.customTitle = payload.chat.customTitle || chat.customTitle || null;
+        if (payload.chat.autoTitle) { chat.autoTitle = payload.chat.autoTitle; chat.autoTitleAt = payload.chat.autoTitleAt || chat.autoTitleAt || 0; }
+        // Renamed on another device: the same typing animation here.
+        if (title && chat.title !== title) startTitleAnimation(chat.id, title, chat.title);
         chat.updatedAt = payload.chat.updatedAt;
         chat.guidedLearning = !!payload.chat.guidedLearning;
         if (payload.chat.course) chat.course = normalizeCourse(payload.chat.course);
@@ -7404,6 +7569,8 @@
           window.InhouseDictation?.cancel();
           window.InhouseReadAloud?.stop();
           appState.activeChatId = btn.dataset.chatId;
+          appState.urlChatPending = '';
+          syncChatUrl(true);
           setChatsDrawer(false);
           saveState(); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
         });
@@ -7476,6 +7643,8 @@
       const chat = createChat();
       appState.chats.unshift(chat);
       appState.activeChatId = chat.id;
+      appState.urlChatPending = '';
+      syncChatUrl(true);
       resetComposerAttachments();
       saveState();
       updateConfigUi();
@@ -8389,6 +8558,8 @@
       if (gdriveBtn) gdriveBtn.addEventListener('click', onUserDriveItem);
       const gdriveAccountBtn = document.getElementById('gdrive-account-btn');
       if (gdriveAccountBtn) gdriveAccountBtn.addEventListener('click', disconnectUserDrive);
+      const sessionRelogin = document.getElementById('session-relogin');
+      if (sessionRelogin) sessionRelogin.addEventListener('click', reloginFromBanner);
       const extraGoogleBtn = document.getElementById('extra-google-btn');
       if (extraGoogleBtn) extraGoogleBtn.addEventListener('click', linkExtraGoogleAccount);
       const folderInput = document.getElementById('folder-input');
@@ -8795,7 +8966,43 @@
             : 'Sin Google Drive: el historial se guarda en este navegador.');
       elements.authCopy.textContent = providerCopy + ' ' + driveCopy;
       updateAuthGateUi();
+      updateSessionBanner();
     }
+
+    // The app never blocks without Drive, so an expired session (the Android
+    // app cannot renew it silently) must be said out loud: until the user
+    // signs in again nothing syncs and the other devices see nothing.
+    function sessionExpired() {
+      return hasOauthConfig() && !!(appState.profile || hasStoredGoogleRememberSession()) &&
+        !hasFreshGoogleAccessToken() && !googleSessionPromise;
+    }
+
+    function updateSessionBanner() {
+      const banner = document.getElementById('session-banner');
+      if (banner) banner.classList.toggle('hidden', !sessionExpired());
+    }
+
+    async function reloginFromBanner() {
+      const button = document.getElementById('session-relogin');
+      if (button) { button.disabled = true; button.textContent = 'Abriendo Google…'; }
+      try {
+        await loginWithGoogle({ interactive: true, toast: false });
+        // Catch up at once: other devices' chats in, this one's out.
+        await pullDriveChanges(true).catch(() => false);
+        scheduleDriveSync({ immediate: true });
+        renderHistory();
+        renderThread({ preserveScroll: true });
+      } catch (error) {
+        showToast('Google', error && error.message ? error.message : 'No se pudo volver a entrar.');
+      } finally {
+        if (button) { button.disabled = false; button.textContent = 'Volver a entrar'; }
+        updateAuthUi();
+      }
+    }
+
+    // Tokens expire with time, not with an event.
+    window.setInterval(updateSessionBanner, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) updateSessionBanner(); });
 
     // ─── OPENROUTER (todo en el navegador) ────────────
     // Las peticiones salen directamente del navegador a OpenRouter con la
@@ -9784,8 +9991,133 @@
       if (nudge && chat.id === appState.activeChatId) {
         runAssistantTurn(chat, nudge, { nudged: true });
       }
+      if (outcome === 'done') maybeRetitleChat(chat);
       // Messages written meanwhile go out now, one per finished turn.
       queueAfterTurn(turn, outcome);
+    }
+
+    /* ─── NOMBRE AUTOMÁTICO DEL CHAT ─────────────────── */
+    // Three words, very descriptive, only the first letter in capitals, made
+    // by the chat's own model after the first answer; every few messages it
+    // checks whether the topic changed a lot, and only then renames the chat.
+    // A name the user wrote (customTitle) or a Guided Learning course title is
+    // never touched. The change is typed out (startTitleAnimation).
+    const RETITLE_EVERY = 3;
+    const retitling = new Set();
+
+    function normalizeChatTitle(raw) {
+      const words = String(raw || '').replace(/[^\p{L}\p{N}-]+/gu, ' ').split(/\s+/).filter(Boolean);
+      if (words.length < 3) return '';
+      const text = words.slice(0, 3).join(' ').toLocaleLowerCase('es');
+      return text.charAt(0).toLocaleUpperCase('es') + text.slice(1);
+    }
+
+    function visibleUserCount(chat) {
+      return chat.messages.filter((message) => message.role === 'user' && !message.hidden && !message.kind).length;
+    }
+
+    // One small request with the user's key and the chat's model: the answer is
+    // JSON {title, changed}. Kept apart so it can be replaced in tests.
+    async function requestChatTitle(chat, current) {
+      const apiKey = getApiSettings().apiKey;
+      if (!apiKey) return null;
+      const model = resolveRequestModelId(chat);
+      const recent = chat.messages.filter((message) => !message.hidden && (message.role === 'user' || message.role === 'assistant') && String(message.content || '').trim())
+        .slice(-8).map((message) => (message.role === 'user' ? 'Usuario: ' : 'Asistente: ') + String(message.content).replace(/\s+/g, ' ').slice(0, 500)).join('\n');
+      const response = await fetch(InhousePi.OPENROUTER_BASE_URL + '/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'X-Title': 'inhouse learn' },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          max_tokens: 300,
+          usage: { include: true },
+          messages: [
+            { role: 'system', content: 'You name chat conversations. Answer ONLY with JSON: {"title": "...", "changed": true|false}. The title is EXACTLY three words, very descriptive of the main topic right now, in the language of the conversation, no punctuation. ' + (current ? 'The chat is called "' + current + '". Set changed=true and give a new title only if the topic has changed a lot; otherwise changed=false and repeat the current title.' : 'Set changed=true.') },
+            { role: 'user', content: recent }
+          ]
+        })
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) return null;
+      const content = String((data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '');
+      const match = /\{[\s\S]*\}/.exec(InhousePi.splitReasoning(content).text || content);
+      let parsed = null;
+      try { parsed = match ? JSON.parse(match[0]) : null; } catch (_) {}
+      return { title: parsed && parsed.title, changed: !!(parsed && parsed.changed), cost: data.usage && Number(data.usage.cost) || 0, usage: data.usage || null, model };
+    }
+
+    async function maybeRetitleChat(chat) {
+      if (!chat || chat.customTitle || (chat.guidedLearning && chat.course && chat.course.title) || retitling.has(chat.id)) return;
+      const count = visibleUserCount(chat);
+      if (!count || (chat.autoTitle && count - (chat.autoTitleAt || 0) < RETITLE_EVERY)) return;
+      retitling.add(chat.id);
+      try {
+        const current = chat.autoTitle || '';
+        const answer = await requestChatTitle(chat, current);
+        if (!answer) return;
+        // Its cost belongs to the conversation: added to the last answer.
+        const last = chat.messages.slice().reverse().find((message) => message.role === 'assistant' && !message.pending);
+        if (last && answer.cost) last.cost = (Number(last.cost) || 0) + answer.cost;
+        if (answer.usage) {
+          const target = usageCostTarget;
+          usageCostTarget = null;
+          recordModelUsage(answer.model, { prompt_tokens: answer.usage.prompt_tokens, completion_tokens: answer.usage.completion_tokens, cost: answer.cost });
+          usageCostTarget = target;
+        }
+        chat.autoTitleAt = count;
+        const next = normalizeChatTitle(answer.title);
+        if (chat.customTitle || !next || (current && (!answer.changed || next === current))) { saveState({ skipDrive: true }); return; }
+        const before = chat.title;
+        chat.autoTitle = next;
+        chat.title = deriveTitle(chat.messages, chat);
+        saveState();
+        if (before !== chat.title) startTitleAnimation(chat.id, before, chat.title);
+        renderHistory();
+        if (chat.id === appState.activeChatId) { syncGuidedBannerSlot(chat); updateChatCost(); }
+      } catch (error) {
+        console.warn('No se pudo poner nombre al chat:', error);
+      } finally {
+        retitling.delete(chat.id);
+      }
+    }
+
+    // Like someone at a keyboard: the old name is deleted letter by letter,
+    // a short pause, and the new one typed with an uneven rhythm. Every frame
+    // writes the text into whatever shows the title (the list, the header), so
+    // a redraw in the middle does not break it.
+    const titleAnimations = new Map();
+    let titleFrame = 0;
+
+    function startTitleAnimation(chatId, from, to) {
+      if (!to || from === to) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const steps = [];
+      let t = 0;
+      for (let i = String(from || '').length; i >= 0; i--) { steps.push({ at: t, text: String(from || '').slice(0, i) }); t += 28 + Math.random() * 18; }
+      t += 220;
+      for (let i = 1; i <= to.length; i++) { t += 55 + Math.random() * 70 + (to[i - 2] === ' ' ? 60 : 0); steps.push({ at: t, text: to.slice(0, i) }); }
+      titleAnimations.set(chatId, { start: performance.now(), steps, end: t + 600, to });
+      if (!titleFrame) titleFrame = requestAnimationFrame(tickTitleAnimations);
+    }
+
+    function tickTitleAnimations(now) {
+      titleFrame = 0;
+      titleAnimations.forEach((anim, chatId) => {
+        const elapsed = now - anim.start;
+        let text = anim.to;
+        for (const step of anim.steps) { if (step.at <= elapsed) text = step.text; else break; }
+        const done = elapsed >= anim.end;
+        const targets = Array.from(document.querySelectorAll('[data-title-chat-id="' + CSS.escape(chatId) + '"]')).filter((el) => !el.querySelector('input'));
+        if (chatId === appState.activeChatId && elements.topTitleMain) targets.push(elements.topTitleMain);
+        targets.forEach((el) => {
+          if (done) { el.classList.remove('title-typing'); el.textContent = anim.to; return; }
+          el.classList.add('title-typing');
+          if (el.textContent !== text) el.textContent = text;
+        });
+        if (done) titleAnimations.delete(chatId);
+      });
+      if (titleAnimations.size) titleFrame = requestAnimationFrame(tickTitleAnimations);
     }
 
     // Une el motor de pi con la app: key de OpenRouter y cabeceras de la app.
