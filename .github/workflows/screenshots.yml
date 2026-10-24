@@ -81,11 +81,13 @@ jobs:
           [[ -z "$REF" || "$REF" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] || { echo "::error::ref must be a branch or a commit"; exit 1; }
           [[ -z "$URL" || "$URL" =~ ^https?://[^[:space:]]+$ ]] || { echo "::error::url must be an http(s) address"; exit 1; }
           [[ -z "$SERVE" || ( "$SERVE" =~ ^[A-Za-z0-9._/-]{1,120}$ && "$SERVE" != *..* ) ]] || { echo "::error::serve must be a folder of the checkout"; exit 1; }
+      # From the branch the workflow runs on when it is this repository (so a
+      # change to the script can be tried on its own branch), else from main.
       - name: Get the screenshot tool
         uses: actions/checkout@v5
         with:
           repository: miguelcoxcaballero/inhouselearn
-          ref: main
+          ref: ${{ github.repository == 'miguelcoxcaballero/inhouselearn' && github.ref_name || 'main' }}
           path: tool
           persist-credentials: false
       - name: Get the project
@@ -130,6 +132,8 @@ jobs:
               [ -d "../app/$SERVE" ] || { echo "::error::The folder '$SERVE' does not exist (did setup build it?)"; exit 1; }
               (cd "../app/$SERVE" && python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &)
               for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/ && break; sleep 0.2; done
+              # The script checks the requested .html pages against it before opening Chromium.
+              export SERVE_DIR="$GITHUB_WORKSPACE/app/$SERVE"
             fi
           fi
           OUT="$GITHUB_WORKSPACE/out" node .github/scripts/screenshots.cjs
