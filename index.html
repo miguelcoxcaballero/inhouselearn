@@ -1724,7 +1724,8 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-iq">
+  <link rel="stylesheet" href="chats-menu.css?v=20261024-index">
+  <link rel="stylesheet" href="theme.css?v=20261024-index">
 </head>
 <body>
 
@@ -1790,13 +1791,19 @@
             <svg width="22" height="22" xmlns="http://www.w3.org/2000/svg" viewBox="25 23.5 58 58" aria-hidden="true"><path d="M54 25 C69 25 77 36 77 47 C77 57 69 62 66 68 H42 C39 62 31 57 31 47 C31 36 39 25 54 25 Z" fill="#F2A900" stroke="#F2A900" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 73 H64 M47 79 H61" fill="none" stroke="#A97600" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 52.5 L54 43.5 L63 52.5" fill="none" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             inhouse learn
           </div>
+          <button class="chats-search-btn" id="chats-search-btn" type="button" aria-label="Buscar chats" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/></svg>
+          </button>
           <button class="sidebar-close" id="sidebar-close" type="button" aria-label="Cerrar chats">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
+        <div class="chats-search hidden" id="chats-search">
+          <input type="search" id="chats-search-input" placeholder="Buscar en tus chats" aria-label="Buscar en tus chats" autocomplete="off" enterkeyhint="search">
+        </div>
         <div class="sidebar-new-chat">
-          <button class="btn btn-primary" id="new-chat-btn">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <button class="btn" id="new-chat-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
             <span class="btn-label">Nuevo chat</span>
           </button>
         </div>
@@ -3073,6 +3080,8 @@
         if (!local || remoteTime > chatFreshness(local) ||
             (remoteTime === chatFreshness(local) && ((remoteChat.messages || []).length > (local.messages || []).length || (local.messages || []).some(message => message.pending)))) {
           if (local) keepKnownCosts(local, remoteChat);
+          // Drive brought more of this chat from another device: news.
+          if (local && (remoteChat.messages || []).length > (local.messages || []).length) markChatUnreadIfAway(remoteChat.id);
           byId.set(remoteChat.id, remoteChat);
         }
       });
@@ -4492,6 +4501,7 @@
       window.InhouseReadAloud?.stop();
       appState.activeChatId = id;
       appState.urlChatPending = '';
+      setChatUnread(id, false);
       syncChatUrl(true);
       saveState({ skipDrive: true }); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
     };
@@ -4617,6 +4627,7 @@
 
     function updateSendUi() {
       syncAndroidWorking();
+      trackTurnForUnread();
       const driveLocked = false; // Drive es opcional: sin login se guarda en este navegador.
       const activeChat = getActiveChat();
       const guidedActive = !!(activeChat && activeChat.guidedLearning);
@@ -7519,6 +7530,8 @@
       if (created || added || payload.done || chat.title !== title) renderHistory();
       if (visible) syncGuidedBannerSlot(chat);
       if (payload.done) {
+        // Another device answered here: news, unless the user is looking at it.
+        if (payload.messages.some((raw) => raw && raw.role === 'assistant')) markChatUnreadIfAway(chat.id);
         // However it arrived, that tab's live file has nothing new to wait for.
         if (appState.liveFiles) appState.liveFiles.forEach((entry) => { if (entry.device === payload.device) { entry.pending = false; entry.hotUntil = 0; } });
         saveState({ skipDrive: true });
@@ -8046,7 +8059,8 @@
       chat.title = deriveTitle(chat.messages, chat);
       appState.chats = appState.chats.filter((item) => item.id !== chat.id);
       appState.chats.unshift(chat);
-      appState.activeChatId = chat.id;
+      // Never moves the user: an answer that ends while they read another chat
+      // leaves news there instead (renderHistory's diamond).
       saveState();
     }
 
@@ -8075,54 +8089,202 @@
       };
     }
 
+    /* ─── MENÚ DE CHATS «ÍNDICE» (chats-menu.css) ─────────────────────── */
+    // Novedades: a chat whose answer ended while the user was elsewhere (another
+    // chat, the app in the background) or that another device wrote in. Only
+    // this device's: kept in localStorage, never synced; opening it clears it.
+    const UNREAD_KEY = 'inhouse-learn-unread-chats';
+    function unreadChats() {
+      try { return JSON.parse(localStorage.getItem(UNREAD_KEY) || '{}') || {}; } catch (_) { return {}; }
+    }
+    function setChatUnread(chatId, on) {
+      if (!chatId) return;
+      const map = unreadChats();
+      if (!!map[chatId] === !!on) return;
+      if (on) map[chatId] = Date.now(); else delete map[chatId];
+      try { localStorage.setItem(UNREAD_KEY, JSON.stringify(map)); } catch (_) {}
+      renderHistory();
+    }
+    function markChatUnreadIfAway(chatId) {
+      if (chatId && (chatId !== appState.activeChatId || document.hidden)) setChatUnread(chatId, true);
+    }
+    // The open chat, seen: its news are read.
+    function clearActiveUnread() {
+      if (!document.hidden && appState.activeChatId && unreadChats()[appState.activeChatId]) setChatUnread(appState.activeChatId, false);
+    }
+    document.addEventListener('visibilitychange', clearActiveUnread);
+
+    // A turn that ends away from its chat leaves news there.
+    let unreadTurnChat = '';
+    function trackTurnForUnread() {
+      if (appState.busy) {
+        if (!unreadTurnChat) {
+          const running = appState.chats.find((chat) => chat.messages.some((message) => message.pending));
+          unreadTurnChat = running ? running.id : appState.activeChatId;
+        }
+        return;
+      }
+      if (!unreadTurnChat) return;
+      const chatId = unreadTurnChat;
+      unreadTurnChat = '';
+      markChatUnreadIfAway(chatId);
+    }
+
+    function shortWhen(iso) {
+      const d = new Date(iso), now = new Date();
+      if (isNaN(d)) return '';
+      const min = (now - d) / 60000;
+      const days = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
+      if (days === 0) return min < 60 ? Math.max(1, Math.round(min)) + ' min' : Math.round(min / 60) + ' h';
+      if (days === 1) return 'ayer';
+      if (days < 7) return d.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+      return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+    }
+    function chatGroupLabel(iso) {
+      const d = new Date(iso), now = new Date();
+      const days = Math.floor((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
+      if (days <= 0) return 'Hoy';
+      if (days === 1) return 'Ayer';
+      if (days < 7) return 'Esta semana';
+      const month = d.toLocaleDateString('es-ES', { month: 'long' });
+      return month.charAt(0).toUpperCase() + month.slice(1) + (d.getFullYear() !== now.getFullYear() ? ' ' + d.getFullYear() : '');
+    }
+    // 0 today … 3 older than a week: the size and strength of the title.
+    function chatRecency(chat) {
+      if (chat.pinned) return 1;
+      const days = (Date.now() - new Date(chat.updatedAt)) / 864e5;
+      return days < 1 ? 0 : days < 2 ? 1 : days < 7 ? 2 : 3;
+    }
+
+    const CHAT_PIN_SVG = '<svg class="pn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
+    let chatSearchQuery = '';
+
     function renderHistory() {
-      var allChats = appState.chats.slice().sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
-      var pinned = allChats.filter(function(c) { return c.pinned; });
-      var unpinned = allChats.filter(function(c) { return !c.pinned; });
-      var pinIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 11.24V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3v5.24a2 2 0 0 1-1.11 1.31l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>';
+      const unread = unreadChats();
+      // The open chat, on screen: its news are read.
+      if (unread[appState.activeChatId] && !document.hidden) {
+        delete unread[appState.activeChatId];
+        try { localStorage.setItem(UNREAD_KEY, JSON.stringify(unread)); } catch (_) {}
+      }
+      const fold = (text) => String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const query = fold(chatSearchQuery.trim());
+      const allChats = appState.chats.slice().sort(function(a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); })
+        .filter((chat) => !query || fold(chat.title).includes(query));
       function chatRowMarkup(chat) {
-        return [
-          '<div class="chat-row">',
-          '  <button class="chat-pin ' + (chat.pinned ? 'pinned' : '') + '" data-pin-chat-id="' + chat.id + '" title="' + (chat.pinned ? 'Desfijar' : 'Fijar') + '">' + pinIcon + '</button>',
-          '  <button class="chat-item ' + (chat.id === appState.activeChatId ? 'active' : '') + '" data-chat-id="' + chat.id + '">',
-          '    <div class="chat-item-title" data-title-chat-id="' + chat.id + '">' + escapeHtml(chat.title || 'Nuevo chat') + '</div>',
-          '    <div class="chat-item-meta">' + escapeHtml(formatWhen(chat.updatedAt) + ' | ' + activeModelBadge(chat)) + '</div>',
-          '  </button>',
-          '  <button class="chat-delete" data-delete-chat-id="' + chat.id + '" aria-label="Eliminar" title="Eliminar">',
-          '    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
-          '  </button>',
-          '</div>'
-        ].join('');
+        const classes = ['chat-item', 'ix', 'r' + chatRecency(chat)];
+        if (chat.id === appState.activeChatId) classes.push('active');
+        if (unread[chat.id] && chat.id !== appState.activeChatId) classes.push('unread');
+        const state = (unread[chat.id] ? 'Con novedades. ' : '') + (chat.pinned ? 'Fijado. ' : '');
+        return '<button type="button" class="' + classes.join(' ') + '" data-chat-id="' + chat.id + '" aria-label="' + escapeHtml(state + (chat.title || 'Nuevo chat') + ', ' + shortWhen(chat.updatedAt)) + '">' +
+          '<span class="t" data-title-chat-id="' + chat.id + '">' + escapeHtml(chat.title || 'Nuevo chat') + '</span>' +
+          '<span class="l" aria-hidden="true"></span>' + (chat.pinned ? CHAT_PIN_SVG : '') +
+          '<span class="d" aria-hidden="true">' + escapeHtml(shortWhen(chat.updatedAt)) + '</span>' +
+          '<span class="more" data-chat-menu="' + chat.id + '" role="button" aria-label="Opciones del chat" tabindex="-1"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></span>' +
+          '</button>';
       }
-      var html = '';
-      if (pinned.length) {
-        html += '<div class="sidebar-section-label">Fijadas</div>' + pinned.map(chatRowMarkup).join('');
+      let html = '';
+      if (query) {
+        html = allChats.length ? allChats.map(chatRowMarkup).join('') : '<div class="ix-empty">Ningún chat se llama así.</div>';
+      } else {
+        const pinned = allChats.filter((chat) => chat.pinned);
+        if (pinned.length) html += '<div class="ix-h">Fijadas</div>' + pinned.map(chatRowMarkup).join('');
+        let last = '';
+        allChats.filter((chat) => !chat.pinned).forEach((chat) => {
+          const group = chatGroupLabel(chat.updatedAt);
+          if (group !== last) { html += '<div class="ix-h">' + escapeHtml(group) + '</div>'; last = group; }
+          html += chatRowMarkup(chat);
+        });
       }
-      if (unpinned.length) html += '<div class="sidebar-section-label">Recientes</div>';
-      html += unpinned.map(chatRowMarkup).join('');
       elements.chatList.innerHTML = html;
 
-      elements.chatList.querySelectorAll('[data-chat-id]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+      elements.chatList.querySelectorAll('.chat-item[data-chat-id]').forEach(function(btn) {
+        btn.addEventListener('click', function(event) {
+          if (btn.dataset.longPressed) { delete btn.dataset.longPressed; return; }
+          if (event.target.closest('[data-chat-menu]')) { event.stopPropagation(); openChatMenu(btn.dataset.chatId, btn); return; }
+          if (event.target.closest('.chat-rename-input')) return;
           window.InhouseDictation?.cancel();
           window.InhouseReadAloud?.stop();
           appState.activeChatId = btn.dataset.chatId;
           appState.urlChatPending = '';
+          setChatUnread(btn.dataset.chatId, false);
           syncChatUrl(true);
           setChatsDrawer(false);
           saveState(); updateConfigUi(); updateSendUi(); renderHistory(); renderThread();
         });
-      });
-      elements.chatList.querySelectorAll('[data-delete-chat-id]').forEach(function(btn) {
-        btn.addEventListener('click', function(e) { e.stopPropagation(); deleteChat(btn.dataset.deleteChatId); });
-      });
-      elements.chatList.querySelectorAll('[data-pin-chat-id]').forEach(function(btn) {
-        btn.addEventListener('click', function(e) { e.stopPropagation(); togglePinChat(btn.dataset.pinChatId); });
+        btn.addEventListener('contextmenu', function(event) { event.preventDefault(); openChatMenu(btn.dataset.chatId, btn); });
+        // Long press on a phone: the same menu.
+        let timer = 0;
+        btn.addEventListener('touchstart', function() {
+          timer = setTimeout(function() { btn.dataset.longPressed = '1'; haptic('select'); openChatMenu(btn.dataset.chatId, btn); }, 480);
+        }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(function(type) { btn.addEventListener(type, function() { clearTimeout(timer); }, { passive: true }); });
       });
       elements.chatList.querySelectorAll('[data-title-chat-id]').forEach(function(el) {
         el.addEventListener('dblclick', function(e) { e.stopPropagation(); startRenameChat(el.dataset.titleChatId); });
       });
     }
+
+    function closeChatMenu() {
+      const menu = document.getElementById('chat-menu');
+      if (menu) menu.remove();
+    }
+
+    function openChatMenu(chatId, anchor) {
+      closeChatMenu();
+      const chat = appState.chats.find((item) => item.id === chatId);
+      if (!chat) return;
+      const icon = (d) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+      const menu = document.createElement('div');
+      menu.id = 'chat-menu';
+      menu.className = 'chat-menu';
+      menu.setAttribute('role', 'menu');
+      menu.innerHTML =
+        '<button type="button" role="menuitem" data-act="pin">' + CHAT_PIN_SVG.replace('class="pn" ', '') + (chat.pinned ? 'Desfijar' : 'Fijar') + '</button>' +
+        '<button type="button" role="menuitem" data-act="rename">' + icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/>') + 'Renombrar</button>' +
+        (unreadChats()[chatId] ? '<button type="button" role="menuitem" data-act="read">' + icon('<path d="M20 6 9 17l-5-5"/>') + 'Marcar como leído</button>' : '') +
+        '<button type="button" role="menuitem" data-act="delete" class="danger">' + icon('<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>') + 'Eliminar</button>';
+      document.body.appendChild(menu);
+      const box = anchor.getBoundingClientRect();
+      const width = menu.offsetWidth, height = menu.offsetHeight;
+      menu.style.left = Math.max(8, Math.min(box.right - width - 4, window.innerWidth - width - 8)) + 'px';
+      menu.style.top = (box.bottom + 4 + height < window.innerHeight ? box.bottom + 4 : Math.max(8, box.top - height - 4)) + 'px';
+      menu.addEventListener('click', function(event) {
+        const act = event.target.closest('[data-act]');
+        if (!act) return;
+        closeChatMenu();
+        if (act.dataset.act === 'pin') togglePinChat(chatId);
+        else if (act.dataset.act === 'rename') startRenameChat(chatId);
+        else if (act.dataset.act === 'read') setChatUnread(chatId, false);
+        else if (act.dataset.act === 'delete') deleteChat(chatId);
+      });
+      const first = menu.querySelector('button');
+      if (first) first.focus({ preventScroll: true });
+      setTimeout(function() {
+        document.addEventListener('pointerdown', function away(event) {
+          if (!menu.contains(event.target)) { closeChatMenu(); document.removeEventListener('pointerdown', away, true); }
+        }, true);
+      }, 0);
+      menu.addEventListener('keydown', function(event) { if (event.key === 'Escape') { closeChatMenu(); anchor.focus(); } });
+    }
+
+    function setChatSearch(open) {
+      const box = document.getElementById('chats-search');
+      const input = document.getElementById('chats-search-input');
+      const button = document.getElementById('chats-search-btn');
+      if (!box || !input) return;
+      box.classList.toggle('hidden', !open);
+      if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) { input.focus(); } else { input.value = ''; if (chatSearchQuery) { chatSearchQuery = ''; renderHistory(); } }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      const button = document.getElementById('chats-search-btn');
+      const input = document.getElementById('chats-search-input');
+      if (button) button.addEventListener('click', function() { setChatSearch(document.getElementById('chats-search').classList.contains('hidden')); });
+      if (input) {
+        input.addEventListener('input', function() { chatSearchQuery = input.value; renderHistory(); });
+        input.addEventListener('keydown', function(event) { if (event.key === 'Escape') setChatSearch(false); });
+      }
+    });
 
     async function deleteChat(chatId) {
       const targetId = String(chatId || '');

@@ -384,3 +384,14 @@ html[data-theme="dark"] .msg-action-btn.copied:hover { color: var(--green); }
 @media (prefers-reduced-motion: reduce) {
   html.theme-switching * { transition: none !important; }
 }
+
+/* Menú de chats «Índice» (chats-menu.css) */
+html[data-theme="dark"] .chat-item.ix:hover { background: rgba(255,255,255,0.04); }
+html[data-theme="dark"] .chat-item.ix.active { background: #1c1c1c; box-shadow: none; }
+html[data-theme="dark"] .sidebar-new-chat #new-chat-btn svg { color: #F2A900; }
+html[data-theme="dark"] .sidebar-new-chat #new-chat-btn { box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+html[data-theme="dark"] .chats-search-btn:hover,
+html[data-theme="dark"] .chat-menu button:hover,
+html[data-theme="dark"] .chat-menu button:focus-visible { background: rgba(255,255,255,0.06); }
+html[data-theme="dark"] .chat-menu button.danger,
+html[data-theme="dark"] .chat-menu button.danger svg { color: #ff8a7a; }
