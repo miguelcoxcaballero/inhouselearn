@@ -48,6 +48,9 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const normal = await page.evaluate(() => ({ ask: !!document.querySelector('[data-ask-visual]'), text: (document.querySelector('#thread .message:last-child .g-quick') || {}).innerText || '' }));
   check('normal chat: no «Muéstramelo en visual» button', !normal.ask && !/Muéstramelo/.test(normal.text), normal);
   const guided = await page.evaluate(() => guidedQuickRepliesMarkup.toString().includes("visual: 'Muéstramelo'"));
+  // A new chat starts with Guided Learning off, even if the last chat had it on.
+  const fresh = await page.evaluate(() => { appState.guidedLearning = true; return createChat().guidedLearning; });
+  check('a new chat starts with Guided Learning off', fresh === false, fresh);
   check('Guided Learning keeps its «Muéstramelo» quick reply', guided);
 
   // 4. No dark notices for confirmations: copy marks the button instead.

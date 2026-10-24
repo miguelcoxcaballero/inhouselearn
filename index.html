@@ -1640,7 +1640,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-cost">
+  <link rel="stylesheet" href="theme.css?v=20261024-cost2">
 </head>
 <body>
 
@@ -1942,8 +1942,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-cost"></script>
-  <script src="composer-dock.js?v=20261024-cost"></script>
+  <script src="approval.js?v=20261024-cost2"></script>
+  <script src="composer-dock.js?v=20261024-cost2"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -3944,7 +3944,8 @@
         provider: 'openrouter',
         model,
         thinkingLevel: normalizeThinkingLevelForModel(model, recent ? recent.thinkingLevel : ''),
-        guidedLearning: !!appState.guidedLearning,
+        // A new chat always starts as a normal chat; Guided Learning is turned on per chat.
+        guidedLearning: false,
         course: null
       };
     }
@@ -5529,12 +5530,11 @@
       return '<span class="msg-cost" title="Coste de este mensaje" data-cost-for="' + escapeHtml(messageId) + '" data-cost="' + target + '">' + costCounterHtml(shown) + '</span>';
     }
 
-    // "$0.0500" → "$0.05" in green and the trailing "00" (up to the last two
-    // decimals, when they are zeros) in grey.
+    // "$0.0070" → "$0.00" in green and "70" in grey: the last two decimals are
+    // fractions of a cent, always grey.
     function costCounterHtml(value) {
       const text = '$' + Math.max(0, value).toFixed(4);
-      const zeros = (/(0{1,2})$/.exec(text) || ['', ''])[1];
-      return zeros ? text.slice(0, text.length - zeros.length) + '<span class="msg-cost-zeros">' + zeros + '</span>' : text;
+      return text.slice(0, -2) + '<span class="msg-cost-zeros">' + text.slice(-2) + '</span>';
     }
 
     function kickCostCounters() {

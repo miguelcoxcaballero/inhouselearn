@@ -4,7 +4,7 @@
 // searches the thread shows a turning globe, «Buscando en internet» and the
 // query; afterwards a «Fuentes» row under the answer lists the pages (the cited
 // ones first); the search's own cost counts in the answer's cost; the model is
-// told it can search and must cite. Trailing zeros of the cost are grey.
+// told it can search and must cite. The cost's last two decimals are grey.
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
@@ -77,9 +77,9 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   // 3 model requests (0.0005 each) + the search (0.0074).
   check('the search\'s own cost counts in the answer\'s cost', Math.abs(cost.stored - 0.0089) < 1e-9, cost);
 
-  // Grey trailing zeros: $0.0500 → "$0.05" + grey "00".
-  const zeros = await page.evaluate(() => [costCounterHtml(0.05), costCounterHtml(0.0089), costCounterHtml(0.001), costCounterHtml(0)]);
-  check('the last two decimals, when zeros, are grey', zeros[0] === '$0.05<span class="msg-cost-zeros">00</span>' && zeros[1] === '$0.0089' && zeros[2] === '$0.00<span class="msg-cost-zeros">10</span>'.replace('<span class="msg-cost-zeros">10</span>', '1<span class="msg-cost-zeros">0</span>') && zeros[3] === '$0.00<span class="msg-cost-zeros">00</span>', zeros);
+  // The last two decimals (fractions of a cent) are always grey: $0.0070 → "$0.00" + grey "70".
+  const zeros = await page.evaluate(() => [costCounterHtml(0.007), costCounterHtml(0.0089), costCounterHtml(0)]);
+  check('the last two decimals are always grey', zeros[0] === '$0.00<span class="msg-cost-zeros">70</span>' && zeros[1] === '$0.00<span class="msg-cost-zeros">89</span>' && zeros[2] === '$0.00<span class="msg-cost-zeros">00</span>', zeros);
 
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();

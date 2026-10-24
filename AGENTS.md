@@ -150,8 +150,8 @@ Mandatory guidance for every AI and developer working in this repository.
   the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007
   a search, counted in the answer's cost), and pages are read through `r.jina.ai`. While a web tool
   runs the live activity shows a turning blue globe; afterwards «Fuentes» under the answer lists the
-  pages (`step.sources`, cited ones first, favicons from Google's s2 service). The cost's trailing zeros
-  (up to the last two decimals) are grey. Test: `tests/web/websearch.cjs`.
+  pages (`step.sources`, cited ones first, favicons from Google's s2 service). The cost's last two decimals
+  (fractions of a cent) are always grey. Test: `tests/web/websearch.cjs`.
 - **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
   closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
   repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue
