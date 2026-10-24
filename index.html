@@ -1654,7 +1654,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-retry">
+  <link rel="stylesheet" href="theme.css?v=20261024-steer">
 </head>
 <body>
 
@@ -1963,8 +1963,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-retry"></script>
-  <script src="composer-dock.js?v=20261024-retry"></script>
+  <script src="approval.js?v=20261024-steer"></script>
+  <script src="composer-dock.js?v=20261024-steer"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -7739,6 +7739,7 @@
         appState.activeController = null;
         updateSendUi();
         if (chat.id === appState.activeChatId) patchThreadMessage(message, chat);
+        if (typeof queueDrain === 'function') window.setTimeout(queueDrain, 0);
       }
     }
 
@@ -7832,6 +7833,8 @@
         updateSendUi();
         renderHistory();
         patchThreadMessage(msg, chat, { keepText: keepText });
+        // Messages queued (or sent with «Ahora») meanwhile go out now.
+        if (typeof queueDrain === 'function') window.setTimeout(queueDrain, 0);
       }
     }
 
