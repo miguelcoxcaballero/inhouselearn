@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261024-pr3-valid",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-24T01:28:56.145Z",
+  "shots": [
+    {
+      "name": "Inicio válido",
+      "file": "1-inicio-valido.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
