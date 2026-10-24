@@ -1,0 +1,26 @@
+{
+  "id": "shot-20261024-133202-1umc",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-24T13:32:57.682Z",
+  "shots": [
+    {
+      "name": "Móvil · barra de cerca",
+      "file": "1-movil-barra-de-cerca.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Móvil · pantalla",
+      "file": "2-movil-pantalla.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Escritorio · barra de cerca",
+      "file": "3-escritorio-barra-de-cerca.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
