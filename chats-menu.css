@@ -2,8 +2,9 @@
    Índice de libro: títulos en serifa (Newsreader) cuyo tamaño dice lo
    reciente (hoy, más grande; lo antiguo, más pequeño y tenue), una línea de
    puntos suave hasta la fecha corta en versalitas, y grupos Fijadas / Hoy /
-   Ayer / Esta semana / mes. Rombo naranja a la izquierda: el chat tiene
-   novedades. Chincheta junto a la fecha: fijado. El abierto, una píldora.
+   Ayer / Esta semana / mes. Chincheta en el margen izquierdo: fijado.
+   Novedades: título en negrita, rombo naranja junto a la fecha y la fecha en
+   naranja, como un correo sin leer. El abierto, una píldora.
    Fijar, renombrar y borrar: mantener pulsado (o clic derecho / «⋯»).
    El modo noche de lo que no son tokens está en theme.css. */
 
@@ -39,7 +40,8 @@
   -webkit-mask-image: linear-gradient(#000 calc(100% - 96px), transparent calc(100% - 20px));
   mask-image: linear-gradient(#000 calc(100% - 96px), transparent calc(100% - 20px));
 }
-.chat-list { gap: 0; padding: 4px 14px 104px; }
+.chat-list { gap: 0; padding: 4px 14px 104px 30px; }
+.ix-h { margin-left: -4px !important; }
 
 .ix-h {
   display: flex; align-items: center; gap: 10px; margin: 24px 10px 6px;
@@ -64,7 +66,9 @@
 .ix.active .t { font-weight: 500; }
 .ix .l { flex: 1 0 8px; border-bottom: 1.5px dotted var(--border-strong); opacity: .5; transform: translateY(-4px); }
 .ix .d { flex: none; font: 500 .66rem 'DM Sans', sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.ix .pn { flex: none; width: 13.5px; height: 13.5px; color: var(--muted); transform: translateY(1px); margin-right: -2px; }
+.ix .gut { position: absolute; left: -12px; top: 50%; margin-top: -7px; width: 13.5px; height: 13.5px; color: var(--muted); }
+.ix .gut .pn { display: block; width: 13.5px; height: 13.5px; }
+.ix .nw { flex: none; width: 6px; height: 6px; margin-right: 2px; border-radius: 1px; transform: rotate(45deg) translateY(-2px); background: var(--orange); }
 .ix .more {
   display: none; flex: none; width: 28px; height: 22px; margin: -4px -6px -4px 0; border-radius: 11px;
   align-items: center; justify-content: center; color: var(--muted); background: transparent; border: 0; cursor: pointer;
@@ -83,13 +87,9 @@
 .ix.r3 { opacity: .62; }
 .ix.active { opacity: 1; }
 
-/* Novedades: rombo en el margen, título algo más marcado y fecha en naranja. */
-.ix.unread::before {
-  content: ''; position: absolute; left: 0; top: 50%; margin-top: -3px; width: 6px; height: 6px;
-  border-radius: 1px; transform: rotate(45deg); background: var(--orange);
-}
+/* Novedades: título en negrita, rombo junto a la fecha y fecha en naranja. */
 .ix.unread { opacity: 1; }
-.ix.unread .t { font-weight: 550; }
+.ix.unread .t { font-weight: 600; }
 .ix.unread .d { color: var(--orange); }
 
 /* Mantener pulsado / clic derecho: fijar, renombrar, eliminar. */

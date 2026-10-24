@@ -1,6 +1,6 @@
 // The chats menu «Índice» (chats-menu.css): groups Fijadas/Hoy/Ayer/…, serif
-// titles sized by recency, short date, pin for pinned chats and an orange
-// diamond for chats with news (an answer that ended while the user was in
+// titles sized by recency, short date, a pin on the left for pinned chats and,
+// for chats with news, a bold title with an orange diamond and date (an answer that ended while the user was in
 // another chat or away, or another device wrote there; this device only).
 // Long press / right click opens Fijar · Renombrar · Eliminar; a search
 // filters by title. «Nuevo chat» sits bottom right.
@@ -40,8 +40,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await idle(page, 30000);
   await page.evaluate(() => setChatsDrawer(true));
   await page.waitForTimeout(300);
-  const news = await page.evaluate((id) => { const row = document.querySelector('.chat-item[data-chat-id="' + id + '"]'); return { unread: row.classList.contains('unread'), diamond: getComputedStyle(row, '::before').content !== 'none', color: getComputedStyle(row.querySelector('.d')).color, label: row.getAttribute('aria-label') }; }, first);
-  check('an answer that ends while you are in another chat marks it with news (diamond, orange date)', news.unread && news.diamond && /Con novedades/.test(news.label), news);
+  const news = await page.evaluate((id) => { const row = document.querySelector('.chat-item[data-chat-id="' + id + '"]'); return { unread: row.classList.contains('unread'), diamond: !!row.querySelector('.nw'), bold: Number(getComputedStyle(row.querySelector('.t')).fontWeight) >= 600, color: getComputedStyle(row.querySelector('.d')).color, label: row.getAttribute('aria-label') }; }, first);
+  check('an answer that ends while you are in another chat marks it with news (bold title, diamond and orange date)', news.unread && news.diamond && news.bold && /Con novedades/.test(news.label), news);
   await page.click('.chat-item[data-chat-id="' + first + '"]');
   await page.evaluate(() => setChatsDrawer(true));
   await page.waitForTimeout(300);
@@ -66,7 +66,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await page.waitForSelector('#chat-menu');
   const items = await page.evaluate(() => [...document.querySelectorAll('#chat-menu button')].map((b) => b.textContent.trim()));
   await page.click('#chat-menu [data-act="pin"]');
-  const pinned = await page.evaluate((id) => ({ pinned: appState.chats.find((c) => c.id === id).pinned, pin: !!document.querySelector('.chat-item[data-chat-id="' + id + '"] .pn') }), target);
+  const pinned = await page.evaluate((id) => ({ pinned: appState.chats.find((c) => c.id === id).pinned, pin: !!document.querySelector('.chat-item[data-chat-id="' + id + '"] .gut .pn') }), target);
   check('right click / long press opens Fijar · Renombrar · Eliminar, and Fijar pins it (with its pin)', items[0] === 'Fijar' && items.includes('Renombrar') && items.includes('Eliminar') && pinned.pinned && pinned.pin, { items, pinned });
 
   // Search filters by title, accents ignored.

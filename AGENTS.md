@@ -211,8 +211,8 @@ Mandatory guidance for every AI and developer working in this repository.
 - **Chats menu «Índice»:** `chats-menu.css` + `renderHistory` (dark mode in `theme.css`). Groups
   Fijadas / Hoy / Ayer / Esta semana / month; serif titles (Newsreader) sized and faded by recency
   (`chatRecency`), a soft dotted leader to a short small-caps date (`shortWhen`); the open chat is a
-  pill. A **pin** next to the date means pinned; an **orange diamond** on the left (plus an orange
-  date) means news: an answer that ended while the user was in another chat or away
+  pill. A **pin** in the left gutter means pinned; news show as a **bold title with an orange
+  diamond and orange date** (like unread mail): an answer that ended while the user was in another chat or away
   (`trackTurnForUnread`), or another device wrote there (live payload / Drive merge). News are this
   device's only (`localStorage` `inhouse-learn-unread-chats`) and clear when the chat is seen. Long
   press / right click / «⋯» opens Fijar · Renombrar · (Marcar como leído) · Eliminar; the magnifier

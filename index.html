@@ -1724,7 +1724,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="chats-menu.css?v=20261024-index">
+  <link rel="stylesheet" href="chats-menu.css?v=20261024-index-b">
   <link rel="stylesheet" href="theme.css?v=20261024-index">
 </head>
 <body>
@@ -8176,8 +8176,10 @@
         if (unread[chat.id] && chat.id !== appState.activeChatId) classes.push('unread');
         const state = (unread[chat.id] ? 'Con novedades. ' : '') + (chat.pinned ? 'Fijado. ' : '');
         return '<button type="button" class="' + classes.join(' ') + '" data-chat-id="' + chat.id + '" aria-label="' + escapeHtml(state + (chat.title || 'Nuevo chat') + ', ' + shortWhen(chat.updatedAt)) + '">' +
+          (chat.pinned ? '<span class="gut" aria-hidden="true">' + CHAT_PIN_SVG + '</span>' : '') +
           '<span class="t" data-title-chat-id="' + chat.id + '">' + escapeHtml(chat.title || 'Nuevo chat') + '</span>' +
-          '<span class="l" aria-hidden="true"></span>' + (chat.pinned ? CHAT_PIN_SVG : '') +
+          '<span class="l" aria-hidden="true"></span>' +
+          (classes.includes('unread') ? '<i class="nw" aria-hidden="true"></i>' : '') +
           '<span class="d" aria-hidden="true">' + escapeHtml(shortWhen(chat.updatedAt)) + '</span>' +
           '<span class="more" data-chat-menu="' + chat.id + '" role="button" aria-label="Opciones del chat" tabindex="-1"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></span>' +
           '</button>';
