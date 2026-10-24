@@ -76,8 +76,19 @@ async function openApp(browser, device, options) {
   await page.route('https://openrouter.ai/api/v1/key**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"data":{"limit":null,"usage":1}}' }));
   await page.route('https://openrouter.ai/api/v1/credits**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{}' }));
   await page.addInitScript(initScript);
-  await page.goto(BASE, { waitUntil: 'load' });
+  // options.url: another page than BASE. options.waitReady === false: no wait
+  // for the app; the caller gets the HTTP response, checks it and calls
+  // prepareApp itself (.github/scripts/screenshots.cjs).
+  const opts = options || {};
+  const response = await page.goto(opts.url || BASE, { waitUntil: 'load' });
+  if (opts.waitReady === false) return { page, errors, context, response };
   await page.waitForFunction(() => window.InhousePi && typeof runAssistantTurn === 'function');
+  await prepareApp(page);
+  return { page, errors, context, response };
+}
+
+// The app is loaded: the same starting point for every test.
+async function prepareApp(page) {
   await page.waitForTimeout(1200);
   await page.evaluate(() => {
     if (typeof closeModelMenu === 'function') closeModelMenu();
@@ -85,7 +96,6 @@ async function openApp(browser, device, options) {
     chat.model = 'deepseek/deepseek-v4.1-flash';
     saveState({ skipDrive: true });
   });
-  return { page, errors, context };
 }
 
 async function send(page, text) {
@@ -98,4 +108,4 @@ async function idle(page, timeout) {
   await page.waitForTimeout(200);
 }
 
-module.exports = { openApp, send, idle, SCRATCH, BASE };
+module.exports = { openApp, prepareApp, send, idle, SCRATCH, BASE };
