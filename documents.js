@@ -35,6 +35,9 @@
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    dotx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.template',
+    potx: 'application/vnd.openxmlformats-officedocument.presentationml.template',
+    xltx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.template',
     csv: 'text/csv', txt: 'text/plain', md: 'text/markdown', html: 'text/html', json: 'application/json',
     png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', svg: 'image/svg+xml'
   };
@@ -48,9 +51,10 @@
     const ext = extOf(name);
     const type = String(mime || '').toLowerCase();
     if (ext === 'pdf' || type === 'application/pdf') return 'pdf';
-    if (ext === 'docx' || type === MIME.docx) return 'docx';
-    if (ext === 'pptx' || type === MIME.pptx) return 'pptx';
-    if (ext === 'xlsx' || ext === 'xls' || ext === 'ods' || type === MIME.xlsx) return 'xlsx';
+    // Templates (.dotx, .potx, .xltx) and macro files are the same packages.
+    if (/^(docx|dotx|docm|dotm)$/.test(ext) || type === MIME.docx || /wordprocessingml|ms-word/.test(type)) return 'docx';
+    if (/^(pptx|potx|pptm)$/.test(ext) || type === MIME.pptx || /presentationml|ms-powerpoint/.test(type)) return 'pptx';
+    if (/^(xlsx|xltx|xlsm|xls|ods)$/.test(ext) || type === MIME.xlsx || /spreadsheetml|ms-excel/.test(type)) return 'xlsx';
     if (type.startsWith('image/') || /^(png|jpe?g|webp|gif|bmp)$/.test(ext)) return 'image';
     return '';
   }
@@ -99,6 +103,26 @@
       }).catch((error) => { delete scriptPromises[key]; throw error; });
     }
     return scriptPromises[key];
+  }
+
+  // A template (.dotx/.potx/.xltx) differs from its document only in the main
+  // part's content type: rewritten, Word, PowerPoint and Excel open it as a
+  // normal file with the template's cover, styles, headers and margins.
+  function documentContentTypes(xml) {
+    return xml
+      .replace(/application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.template\.main\+xml|application\/vnd\.ms-word\.(template\.macroEnabledTemplate|document\.macroEnabled)\.main\+xml/g, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml')
+      .replace(/application\/vnd\.openxmlformats-officedocument\.presentationml\.template\.main\+xml|application\/vnd\.ms-powerpoint\.(template|presentation)\.macroEnabled\.main\+xml/g, 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml')
+      .replace(/application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.template\.main\+xml|application\/vnd\.ms-excel\.(template|sheet)\.macroEnabled\.main\+xml/g, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml');
+  }
+  async function asDocument(bytes) {
+    const zip = await zipOf(bytes);
+    const file = zip.file('[Content_Types].xml');
+    if (!file) return bytes;
+    const before = await file.async('string');
+    const after = documentContentTypes(before);
+    if (after === before) return bytes;
+    zip.file('[Content_Types].xml', after);
+    return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
   }
 
   async function zipOf(bytes) {
@@ -638,7 +662,7 @@
     const bytes = bytesOf(file.bytes);
     const kind = kindOf(file.name, file.mimeType);
     if (kind === 'pdf') return renderPdf(bytes, opts.pages, opts.max);
-    if (kind === 'docx') return renderDocx(bytes, opts.pages, opts.max);
+    if (kind === 'docx') return renderDocx(await asDocument(bytes), opts.pages, opts.max);
     if (kind === 'pptx') return renderPptx(bytes, opts.pages, opts.max);
     if (kind === 'xlsx') return renderSheet(bytes, opts.pages, opts.max);
     if (kind === 'image') {
@@ -703,10 +727,28 @@
     }
     throw new Error('saveDocument(' + path + '): no sé guardar este objeto. Pasa bytes, un PDFDocument de pdf-lib, un docx.Document, una presentación de PptxGenJS, un JSZip o un libro de SheetJS.');
   };
+  // Saved as .docx/.pptx/.xlsx, a filled template (.dotx/.potx/.xltx) becomes a
+  // normal document: only the main part's content type changes.
+  const asDocument = async (bytes, path) => {
+    if (!/\\.(docx|pptx|xlsx)$/i.test(path) || !self.JSZip || bytes[0] !== 0x50 || bytes[1] !== 0x4b) return bytes;
+    try {
+      const zip = await self.JSZip.loadAsync(bytes);
+      const file = zip.file('[Content_Types].xml');
+      if (!file) return bytes;
+      const before = await file.async('string');
+      const after = before
+        .replace(/application\\/vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.template\\.main\\+xml|application\\/vnd\\.ms-word\\.(template\\.macroEnabledTemplate|document\\.macroEnabled)\\.main\\+xml/g, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml')
+        .replace(/application\\/vnd\\.openxmlformats-officedocument\\.presentationml\\.template\\.main\\+xml|application\\/vnd\\.ms-powerpoint\\.(template|presentation)\\.macroEnabled\\.main\\+xml/g, 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml')
+        .replace(/application\\/vnd\\.openxmlformats-officedocument\\.spreadsheetml\\.template\\.main\\+xml|application\\/vnd\\.ms-excel\\.(template|sheet)\\.macroEnabled\\.main\\+xml/g, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml');
+      if (after === before) return bytes;
+      zip.file('[Content_Types].xml', after);
+      return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    } catch (_) { return bytes; }
+  };
   const saveDocument = (path, data) => {
     const clean = String(path || '').trim().replace(/^(\\.\\/|\\/)+/, '');
     if (!clean) throw new Error('saveDocument necesita un nombre, p. ej. "informe.pdf".');
-    saves.push(toBytes(data, clean).then((bytes) => ({ path: clean, bytes })));
+    saves.push(toBytes(data, clean).then((bytes) => asDocument(bytes, clean)).then((bytes) => ({ path: clean, bytes })));
     return clean;
   };
   const listDocuments = () => documents.map((doc) => Object.assign({}, doc));
@@ -788,5 +830,5 @@
     });
   }
 
-  window.InhouseDocs = { kindOf, mimeFor, render, run, pptxText, pageList };
+  window.InhouseDocs = { kindOf, mimeFor, render, run, pptxText, pageList, asDocument };
 })();

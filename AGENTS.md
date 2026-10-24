@@ -167,7 +167,12 @@ Mandatory guidance for every AI and developer working in this repository.
   (`drive_write_file`, `drive_edit_file`, `drive_organize`) is one call for one file and one action and
   goes through `approveChange` with `always: true`: it asks EVERY time, also in «Acceso total»; the
   first approved change asks Google for `drive` (write). Never add a Drive write that skips this.
-  Test: `tests/web/gdrive.cjs`.
+  `drive_read` also reads Word/PowerPoint/Excel and their templates (`.dotx/.potx/.xltx`) as text
+  (`officeTextOf`), and `drive_import` (read-only for Drive, also `extra_drive_import`) copies a file
+  itself, shared drives included, into the chat library (Google Docs/Sheets/Slides as .docx/.xlsx/.pptx),
+  so `doc_view`/`doc_edit` work on the real file. A template filled in `doc_edit` and saved as
+  `.docx/.pptx/.xlsx` becomes a normal document (`saveDocument` rewrites the main part's content type),
+  keeping its cover, styles, headers and margins. Tests: `tests/web/gdrive.cjs`, `tests/web/drive-templates.cjs`.
 - **Another Google account for a question:** + menu → Otra cuenta de Google links a second account
   (Google's account chooser; `gmail.readonly` + `drive.readonly`, never the session's token; on Android
   the Custom Tab state is `android.x…` and is never applied as the session). Its token lives only in

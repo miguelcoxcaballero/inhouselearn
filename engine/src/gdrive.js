@@ -65,6 +65,18 @@ function lineStats(before, after) {
   return { added, removed };
 }
 
+// Word, PowerPoint and Excel files (templates included): read as text, or imported whole.
+const OFFICE_NAME = /\.(docx|dotx|docm|dotm|pptx|potx|pptm|xlsx|xltx|xlsm)$/i;
+const isOffice = (file) => OFFICE_NAME.test(file.name || '') || /officedocument|ms-word|ms-excel|ms-powerpoint/.test(file.mimeType || '');
+// Google files, imported as the Office file the user would download.
+const IMPORTS = {
+  'application/vnd.google-apps.document': { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: '.docx' },
+  'application/vnd.google-apps.spreadsheet': { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ext: '.xlsx' },
+  'application/vnd.google-apps.presentation': { mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', ext: '.pptx' },
+  'application/vnd.google-apps.drawing': { mime: 'application/pdf', ext: '.pdf' }
+};
+const MAX_IMPORT_BYTES = 30 * 1024 * 1024;
+
 const isText = (file) => TEXT_MIME.test(file.mimeType || '') || TEXT_NAME.test(file.name || '');
 const isGoogle = (file) => String(file.mimeType || '').startsWith('application/vnd.google-apps.');
 
@@ -205,10 +217,48 @@ export function createDriveTools(ctx) {
           const part = clip(pdf.text, params.from, MAX_READ_CHARS);
           return textResult(head + 'Páginas ' + first + '–' + Math.min(pdf.pages, last) + ' de ' + pdf.pages + ':\n' + part.text + part.note + (last < pdf.pages ? '\n(Sigue con pages="' + (last + 1) + '-' + Math.min(pdf.pages, last + 10) + '".)' : ''), { id: file.id, pages: pdf.pages });
         }
+        if (isOffice(file) && typeof ctx.officeText === 'function') {
+          const buffer = await (await call(API + '/files/' + encodeURIComponent(file.id) + '?alt=media&supportsAllDrives=true', null, 'descargar')).arrayBuffer();
+          const part = clip(await ctx.officeText(buffer, file.name, file.mimeType), params.from, MAX_READ_CHARS);
+          return textResult(head + part.text + part.note + (ctx.importFile ? '\n\n(Para verlo tal cual o usarlo como plantilla, tráelo al chat con ' + prefix + 'drive_import.)' : ''), { id: file.id, chars: part.total });
+        }
         const text = await textOf(file);
-        if (text == null) return textResult(head + 'No sé leer este tipo de archivo (' + file.mimeType + ') como texto.');
+        if (text == null) return textResult(head + 'No sé leer este tipo de archivo (' + file.mimeType + ') como texto.' + (ctx.importFile ? ' Puedes traerlo al chat con ' + prefix + 'drive_import.' : ''));
         const part = clip(text, params.from, MAX_READ_CHARS);
         return textResult(head + part.text + part.note, { id: file.id, chars: part.total });
+      }
+    },
+    {
+      name: 'drive_import',
+      label: 'Drive: traer al chat',
+      description: 'Bring a file of the user\'s Drive (shared drives too) into this chat\'s library as the original file, to look at it page by page (doc_view) and to fill or edit it with doc_edit: Word documents and templates (.docx, .dotx), PowerPoint (.pptx, .potx), Excel (.xlsx, .xltx), PDFs and images. Google Docs/Sheets/Slides come as .docx/.xlsx/.pptx. Use it whenever the user wants a document made «with our template» or «like this file»: import the template, then build the new document from it with doc_edit so its cover, styles, headers, footers and margins stay exactly the same. It only reads Drive; nothing changes there.',
+      parameters: Type.Object({
+        id: Type.String({ description: 'File id (from drive_search / drive_list) or its link.' })
+      }),
+      execute: async (id, params) => {
+        if (typeof ctx.importFile !== 'function') throw new Error('Este chat no puede guardar archivos.');
+        const file = await meta(idOf(params.id));
+        if (file.mimeType === FOLDER) throw new Error(file.name + ' es una carpeta: importa sus archivos uno a uno.');
+        if (Number(file.size) > MAX_IMPORT_BYTES) throw new Error(file.name + ' pesa ' + Math.round(Number(file.size) / 1048576) + ' MB: el máximo es 30 MB.');
+        let name = file.name;
+        let mimeType = file.mimeType;
+        let response;
+        if (IMPORTS[file.mimeType]) {
+          const target = IMPORTS[file.mimeType];
+          response = await call(API + '/files/' + encodeURIComponent(file.id) + '/export?mimeType=' + encodeURIComponent(target.mime), null, 'exportar');
+          mimeType = target.mime;
+          if (!name.toLowerCase().endsWith(target.ext)) name += target.ext;
+        } else if (isGoogle(file)) {
+          throw new Error(file.name + ' es un archivo de Google que no se puede descargar como documento.');
+        } else {
+          response = await call(API + '/files/' + encodeURIComponent(file.id) + '?alt=media&supportsAllDrives=true', null, 'descargar');
+        }
+        const buffer = await response.arrayBuffer();
+        if (buffer.byteLength > MAX_IMPORT_BYTES) throw new Error(name + ' pesa más de 30 MB.');
+        const doc = await ctx.importFile({ name, mimeType, bytes: buffer, source: file.webViewLink || '' });
+        return textResult('Traído al chat: ' + doc.ref + ' · ' + doc.path + ' (' + Math.max(1, Math.round(buffer.byteLength / 1024)) + ' KB). Míralo con doc_view("' + doc.ref + '") y úsalo en doc_edit con await readDocument("' + doc.ref + '").' +
+          (/\.(dotx|dotm|potx|xltx)$/i.test(name) ? ' Es una plantilla: guarda el resultado como .docx/.pptx/.xlsx y saveDocument lo convierte en documento normal conservando portada, estilos, cabeceras y márgenes.' : ''),
+          { id: file.id, documents: [{ ref: doc.ref, id: doc.id, path: doc.path, size: buffer.byteLength, kind: doc.kind }] });
       }
     },
     {

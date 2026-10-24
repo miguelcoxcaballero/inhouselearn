@@ -2024,11 +2024,11 @@
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="library.js?v=20261024-latex"></script>
-  <script src="documents.js?v=20261024-docs"></script>
+  <script src="library.js?v=20261024-templates"></script>
+  <script src="documents.js?v=20261024-templates"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261024-latex"></script>
+  <script src="vendor/pi-engine.js?v=20261024-templates"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -3291,9 +3291,9 @@
       if (mime.startsWith('image/')) return 'image';
       if (mime.startsWith('audio/')) return 'audio';
       if (mime.startsWith('video/')) return 'video';
-      if (ext === 'docx' || ext === 'odt') return 'doc';
-      if (ext === 'pptx') return 'slides';
-      if (ext === 'xlsx' || ext === 'xls' || ext === 'ods' || ext === 'csv' || ext === 'tsv') return 'sheet';
+      if (ext === 'docx' || ext === 'odt' || ext === 'dotx' || ext === 'docm' || ext === 'dotm') return 'doc';
+      if (ext === 'pptx' || ext === 'potx' || ext === 'pptm') return 'slides';
+      if (ext === 'xltx' || ext === 'xlsm' || ext === 'xlsx' || ext === 'xls' || ext === 'ods' || ext === 'csv' || ext === 'tsv') return 'sheet';
       if (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('javascript') || mime.includes('typescript') || mime.includes('yaml') || ext === 'md' || ext === 'log') return 'text';
       return 'binary';
     }
@@ -3444,9 +3444,10 @@
       if (!(window.mammoth && window.mammoth.extractRawText)) {
         throw new Error('Mammoth no esta cargado.');
       }
-      const result = await window.mammoth.extractRawText({
-        arrayBuffer: await file.arrayBuffer()
-      });
+      let buffer = await file.arrayBuffer();
+      // A Word template (.dotx) reads as its document.
+      if (window.InhouseDocs && /\.(dotx|dotm|docm)$/i.test(file.name || '')) { const doc = await InhouseDocs.asDocument(new Uint8Array(buffer)); buffer = doc.buffer.slice(doc.byteOffset, doc.byteOffset + doc.byteLength); }
+      const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
       return truncateText(result && result.value ? result.value : '', MAX_TEXT_ATTACHMENT_CHARS);
     }
 
@@ -4913,6 +4914,35 @@
       return { text: parts.join('\n\n'), pages: pdf.numPages };
     }
 
+    // Word / PowerPoint / Excel (templates too) as text, for drive_read.
+    async function officeTextOf(buffer, name, mimeType) {
+      const kind = window.InhouseDocs ? InhouseDocs.kindOf(name, mimeType) : '';
+      const bytes = new Uint8Array(buffer);
+      if (kind === 'docx') {
+        const doc = window.InhouseDocs ? await InhouseDocs.asDocument(bytes) : bytes;
+        return ((await window.mammoth.extractRawText({ arrayBuffer: doc.buffer.slice(doc.byteOffset, doc.byteOffset + doc.byteLength) })) || {}).value || '';
+      }
+      if (kind === 'pptx') return (await InhouseDocs.pptxText(bytes)).map((slide) => 'Diapositiva ' + slide.n + ':\n' + slide.text).join('\n\n');
+      if (kind === 'xlsx') {
+        const workbook = XLSX.read(bytes, { type: 'array' });
+        return workbook.SheetNames.map((sheet) => 'Hoja: ' + sheet + '\n' + XLSX.utils.sheet_to_csv(workbook.Sheets[sheet], { blankrows: false })).join('\n\n');
+      }
+      throw new Error('No sé leer ' + name + ' como texto.');
+    }
+
+    // drive_import: the file itself into this chat's library (original kept).
+    function driveImporterFor(chat) {
+      const library = window.InhouseLibrary && window.indexedDB ? window.InhouseLibrary : null;
+      if (!library) return null;
+      return async ({ name, mimeType, bytes }) => {
+        const file = new File([bytes], name, { type: mimeType || '' });
+        const { added, skipped } = await library.ingest(chat.id, [{ file, path: name }], {});
+        if (!added[0]) throw new Error('No se pudo guardar ' + name + ' en el chat: ' + ((skipped[0] && skipped[0].reason) || 'formato no compatible'));
+        refreshLibraryCount();
+        return added[0];
+      };
+    }
+
     function userDriveToolsFor(chat, signal, acceptsImages) {
       if (!chat.userDrive || !userDriveAccess()) return [];
       return InhousePi.createDriveTools({
@@ -4921,6 +4951,8 @@
         fetch: (url, options) => driveFetch(url, options, true),
         confirm: (request) => approveChange(chat, request),
         pdfText: pdfTextOf,
+        officeText: officeTextOf,
+        importFile: driveImporterFor(chat),
         ensureWrite: async () => {
           if (userDriveAccess() === 'write') return;
           await setUserDriveAccess('write', USER_DRIVE_WRITE);
@@ -4930,7 +4962,7 @@
 
     function userDrivePromptText(chat) {
       if (!chat.userDrive || !userDriveAccess()) return '';
-      return '- Google Drive del usuario: puedes buscar y leer sus archivos con drive_search, drive_list y drive_read (Documentos, Hojas, Presentaciones, PDFs, texto e imágenes). Úsalos cuando hable de sus apuntes, documentos o archivos; no digas que no puedes verlos. Cambiar algo (drive_write_file, drive_edit_file, drive_organize) solo si lo pide, un archivo y una acción por llamada: la app le pide permiso cada vez.';
+      return '- Google Drive del usuario: puedes buscar y leer sus archivos con drive_search, drive_list y drive_read (Documentos, Hojas, Presentaciones, Word/PowerPoint/Excel y sus plantillas .dotx/.potx/.xltx, PDFs, texto e imágenes), también en unidades compartidas. Para ver un archivo tal cual o usarlo como plantilla, tráelo al chat con drive_import (lee, no cambia nada en Drive) y trabaja con doc_view / doc_edit. Úsalos cuando hable de sus apuntes, documentos o archivos; no digas que no puedes verlos. Cambiar algo (drive_write_file, drive_edit_file, drive_organize) solo si lo pide, un archivo y una acción por llamada: la app le pide permiso cada vez.';
     }
 
     /* ─── INTERNET ───────────────────────────────────── */
@@ -5073,7 +5105,7 @@
     }
 
     function documentsPromptText() {
-      return '- Documentos: con doc_edit creas y editas PDF, Word (.docx), PowerPoint (.pptx) y Excel (.xlsx) (pdf-lib, docx, PptxGenJS, JSZip, SheetJS) y con doc_view miras sus páginas como imágenes, igual que las vería el usuario (también para «escanear» un documento subido: tablas, gráficos, letra a mano). Lo que guardas va a la biblioteca del chat y el usuario lo abre y lo descarga debajo de tu respuesta. Cuando te pidan un documento, hazlo de verdad con doc_edit (no lo pegues como texto), cuida el diseño, revísalo con doc_view y corrige lo que veas mal antes de decir que está listo. Para cambiar un documento del usuario, guarda una copia con otro nombre salvo que te pida reemplazarlo.' +
+      return '- Documentos: con doc_edit creas y editas PDF, Word (.docx), PowerPoint (.pptx) y Excel (.xlsx) (pdf-lib, docx, PptxGenJS, JSZip, SheetJS) y con doc_view miras sus páginas como imágenes, igual que las vería el usuario (también para «escanear» un documento subido: tablas, gráficos, letra a mano). Lo que guardas va a la biblioteca del chat y el usuario lo abre y lo descarga debajo de tu respuesta. Cuando te pidan un documento, hazlo de verdad con doc_edit (no lo pegues como texto), cuida el diseño, revísalo con doc_view y corrige lo que veas mal antes de decir que está listo. Para cambiar un documento del usuario, guarda una copia con otro nombre salvo que te pida reemplazarlo. Si te piden un documento «con la plantilla» (una .dotx/.docx de Drive o subida al chat), nunca la imites ni preguntes si puedes abrirla: tráela (drive_import si está en Drive), mírala con doc_view, y en doc_edit cárgala con JSZip, cambia o añade el texto en word/document.xml usando los estilos que ya tiene (w:pStyle de sus títulos y párrafos), deja intactos portada, cabeceras, pies, márgenes y estilos, y guárdala como .docx (saveDocument convierte la plantilla en documento). Revisa el resultado con doc_view.' +
         (window.InhouseTex ? '\n- LaTeX: escribe el .tex (y .bib, capítulos, estilos) con write_file, corrígelo con edit_file y compílalo con latex_compile (TeX Live 2026 completo en el navegador: pdflatex, xelatex, lualatex, BibTeX/Biber, makeindex, tikz, pgfplots, beamer…). El PDF queda en la biblioteca para «Ver» y «Descargar». Para un PDF con fórmulas, apuntes, exámenes, artículos o presentaciones beamer, LaTeX suele dar el mejor resultado. Si hay errores, corrige las líneas que te indique y compila otra vez; revisa el PDF con doc_view.' : '');
     }
 
@@ -5313,10 +5345,10 @@
       return fetch(url, Object.assign({ cache: 'no-store' }, options, { headers }));
     }
 
-    function extraGoogleToolsFor(signal, acceptsImages) {
+    function extraGoogleToolsFor(signal, acceptsImages, chat) {
       const account = extraGoogleAccount();
       if (!account) return [];
-      const ctx = { prefix: 'extra_', account: account.email, readOnly: true, signal, acceptsImages, fetch: extraGoogleFetch, pdfText: pdfTextOf, confirm: async () => false, ensureWrite: async () => { throw new Error('Solo lectura.'); } };
+      const ctx = { prefix: 'extra_', account: account.email, readOnly: true, signal, acceptsImages, fetch: extraGoogleFetch, pdfText: pdfTextOf, officeText: officeTextOf, importFile: chat ? driveImporterFor(chat) : null, confirm: async () => false, ensureWrite: async () => { throw new Error('Solo lectura.'); } };
       return (account.drive ? InhousePi.createDriveTools(ctx) : []).concat(account.gmail ? InhousePi.createGmailTools(ctx) : []);
     }
 
@@ -10144,7 +10176,7 @@
         try {
           // The same tools, built again for each parallel agent (Ultra code).
           // onCost: what a tool spends besides the model (web searches), for the agent's own row.
-          const workTools = (onCost) => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image')), webToolsFor(chat, signal, onCost), documentToolsFor(chat, signal, model.input.includes('image')), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          const workTools = (onCost) => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image'), chat), webToolsFor(chat, signal, onCost), documentToolsFor(chat, signal, model.input.includes('image')), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
           const agentTools = ultraCodeOn(chat) && !chat.guidedLearning
             ? InhousePi.createAgentTools({ runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job) })
             : [];

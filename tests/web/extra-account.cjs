@@ -107,7 +107,7 @@ async function google(route) {
   const pill = await page.evaluate(() => document.querySelector('.extra-google-pill').innerText);
   check('linking it shows a pill with its email in the composer', /club@example\.org/.test(pill), pill);
   const tools = await page.evaluate(() => extraGoogleToolsFor(null, true).map((t) => t.name).sort());
-  check('the model gets read-only Gmail and Drive tools for it (shared drives too), no write tool', JSON.stringify(tools) === JSON.stringify(['extra_drive_list', 'extra_drive_read', 'extra_drive_search', 'extra_drive_shared_drives', 'extra_gmail_read', 'extra_gmail_search']), tools);
+  check('the model gets read-only Gmail and Drive tools for it (shared drives too), no write tool (drive_import only copies into the chat)', JSON.stringify(tools) === JSON.stringify(['extra_drive_import', 'extra_drive_list', 'extra_drive_read', 'extra_drive_search', 'extra_drive_shared_drives', 'extra_gmail_read', 'extra_gmail_search']), tools);
   await page.evaluate(() => window.__replies.push(
     { text: '', tools: [{ name: 'extra_gmail_search', args: { query: 'presupuesto taller' } }] },
     { text: '', tools: [{ name: 'extra_gmail_read', args: { id: 'm1' } }] },

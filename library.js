@@ -119,9 +119,10 @@
     const mime = String(file.type || '').toLowerCase();
     if (mime === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
     if (mime.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/.test(name)) return 'image';
-    if (/\.(docx|odt)$/.test(name)) return 'doc';
-    if (/\.pptx$/.test(name)) return 'slides';
-    if (/\.(xlsx|xls|ods)$/.test(name)) return 'sheet';
+    // Templates (.dotx/.potx/.xltx) and macro files read like their documents.
+    if (/\.(docx|dotx|docm|dotm|odt)$/.test(name)) return 'doc';
+    if (/\.(pptx|potx|pptm)$/.test(name)) return 'slides';
+    if (/\.(xlsx|xltx|xlsm|xls|ods)$/.test(name)) return 'sheet';
     if (mime.startsWith('text/') || mime.includes('json') || TEXT_EXT.test(name)) return 'text';
     return '';
   }
@@ -231,7 +232,10 @@
 
   async function readDoc(file) {
     if (!(window.mammoth && window.mammoth.extractRawText)) throw new Error('Mammoth no está cargado.');
-    const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    let buffer = await file.arrayBuffer();
+    // A Word template (.dotx) reads as its document.
+    if (window.InhouseDocs && /\.(dotx|dotm|docm)$/i.test(file.name || '')) { const doc = await window.InhouseDocs.asDocument(new Uint8Array(buffer)); buffer = doc.buffer.slice(doc.byteOffset, doc.byteOffset + doc.byteLength); }
+    const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
     return (result && result.value) || '';
   }
 
