@@ -382,8 +382,18 @@
       padding: 0 6px;
       min-width: 0;
     }
-.thinking-segmented.with-ultra { grid-auto-flow: row; grid-template-columns: repeat(var(--levels, 1), minmax(0, 1fr)); }
-    .thinking-pill.ultra-pill { white-space: nowrap; grid-column: 1 / -1; padding: 0 10px; margin-top: 2px; }
+.thinking-segmented:has(.thinking-select) { display: block; position: relative; }
+    .thinking-select { width: 100%; height: 36px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+    .thinking-select:hover { border-color: var(--border-strong); }
+    .thinking-select svg { flex: 0 0 auto; color: var(--muted); transition: transform 0.15s var(--ease); }
+    .thinking-select[aria-expanded="true"] svg { transform: rotate(180deg); }
+    .thinking-menu { margin-top: 6px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 4px; display: flex; flex-direction: column; gap: 2px; animation: fadeIn 0.12s var(--ease) both; }
+    .thinking-menu.hidden { display: none; }
+    .thinking-option { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 0.85rem; font-weight: 600; text-align: left; cursor: pointer; }
+    .thinking-option small { font-size: 0.72rem; font-weight: 400; color: var(--muted); }
+    .thinking-option:hover { background: var(--surface-hover); }
+    .thinking-option.active { background: var(--surface-hover); }
+    .thinking-option.ultra-option.active { box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.55); }
     .thinking-pill:hover:not(.active) {
       color: var(--text);
       background: rgba(0,0,0,0.03);
@@ -1121,7 +1131,7 @@
     /* Ultra code: rainbow text with a slow shimmer; a burst when it is turned on */
     .ultra-text { background: linear-gradient(90deg, #ff5f6d, #ffb347, #f9e64f, #4ade80, #38bdf8, #a78bfa, #f472b6, #ff5f6d); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; font-weight: 700; animation: ultra-shimmer 4s linear infinite; }
     @keyframes ultra-shimmer { to { background-position: 300% 0; } }
-    .thinking-pill.ultra-pill.active { box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.55), 0 0 14px rgba(244, 114, 182, 0.25); }
+
     .ultra-burst { animation: ultra-burst 1.3s cubic-bezier(.2,.8,.2,1); }
     .ultra-burst .ultra-text, .ultra-text.ultra-burst { animation: ultra-shimmer 0.6s linear 2, ultra-burst 1.3s cubic-bezier(.2,.8,.2,1); }
     @keyframes ultra-burst { 0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } 25% { transform: scale(1.14); filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.8)); } 60% { transform: scale(0.98); } 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } }
@@ -1695,7 +1705,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-ultra">
+  <link rel="stylesheet" href="theme.css?v=20261024-dropdown">
 </head>
 <body>
 
@@ -1920,7 +1930,7 @@
 
                     <div class="model-popover-section hidden" id="thinking-section">
                       <div class="model-popover-section-label">Razonamiento</div>
-                      <div class="thinking-segmented" id="thinking-segmented" role="radiogroup"></div>
+                      <div class="thinking-segmented" id="thinking-segmented"></div>
                     </div>
 
                     <div class="model-popover-section api-key-section" id="api-key-section">
@@ -2004,8 +2014,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-ultra"></script>
-  <script src="composer-dock.js?v=20261024-ultra"></script>
+  <script src="approval.js?v=20261024-dropdown"></script>
+  <script src="composer-dock.js?v=20261024-dropdown"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -5113,19 +5123,25 @@
 
       const ultra = ultraCodeOn(chat);
       if (elements.thinkingSection && elements.thinkingSegmented) {
-        // Ultra code is offered for every model (agents need only tools).
+        // One dropdown: the model's levels and, for every model, Ultra code
+        // (only in colours once it is on). Models without levels get «Normal».
         elements.thinkingSection.classList.remove('hidden');
-        elements.thinkingSegmented.classList.add('with-ultra');
-        elements.thinkingSegmented.style.setProperty('--levels', String(Math.max(1, levels.length < 2 ? 1 : levels.length)));
-        elements.thinkingSegmented.innerHTML = (levels.length < 2 ? [] : levels).map((level) => {
-          const isActive = !ultra && level === thinkingLevel;
-          return '<button type="button" class="thinking-pill' + (isActive ? ' active' : '') + '"' +
-            ' data-thinking-level="' + escapeHtml(level) + '"' +
-            ' role="radio" aria-checked="' + (isActive ? 'true' : 'false') + '"' +
-            '>' + escapeHtml(thinkingLabel(level)) + '</button>';
-        }).join('') +
-          '<button type="button" class="thinking-pill ultra-pill' + (ultra ? ' active' : '') + '" data-thinking-level="ultra" role="radio" aria-checked="' + (ultra ? 'true' : 'false') + '" title="Razonamiento máximo y agentes trabajando en paralelo">' +
-          '<span class="ultra-text">Ultra code</span></button>';
+        const options = (levels.length < 2 ? [{ id: 'normal', label: 'Normal', note: 'Sin agentes' }] : levels.map((level) => ({ id: level, label: thinkingLabel(level) })))
+          .concat([{ id: 'ultra', label: 'Ultra code', note: 'Razonamiento máximo y agentes en paralelo' }]);
+        const current = ultra ? 'ultra' : (levels.length < 2 ? 'normal' : thinkingLevel);
+        const open = elements.thinkingSegmented.dataset.open === '1';
+        const currentLabel = (options.find((option) => option.id === current) || options[0]).label;
+        elements.thinkingSegmented.innerHTML =
+          '<button type="button" class="thinking-select" data-thinking-toggle aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+            '<span class="thinking-select-label' + (ultra ? ' ultra-text' : '') + '">' + escapeHtml(currentLabel) + '</span>' +
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
+          '</button>' +
+          '<div class="thinking-menu' + (open ? '' : ' hidden') + '" role="listbox">' + options.map((option) => {
+            const active = option.id === current;
+            return '<button type="button" class="thinking-option' + (active ? ' active' : '') + (option.id === 'ultra' ? ' ultra-option' : '') + '" data-thinking-level="' + escapeHtml(option.id) + '" role="option" aria-selected="' + (active ? 'true' : 'false') + '">' +
+              '<span class="thinking-option-label' + (option.id === 'ultra' && active ? ' ultra-text' : '') + '">' + escapeHtml(option.label) + '</span>' +
+              (option.note ? '<small>' + escapeHtml(option.note) + '</small>' : '') + '</button>';
+          }).join('') + '</div>';
       }
 
       if (elements.modelCopy) {
@@ -8542,6 +8558,7 @@
       if (!elements.modelMenuPopup || !elements.modelMenuBtn) return;
       const shouldOpen = elements.modelMenuPopup.classList.contains('hidden');
       closeProfileMenu();
+      if (elements.thinkingSegmented) elements.thinkingSegmented.dataset.open = '0';
       if (shouldOpen) {
         modelPicker.query = '';
         modelPicker.company = '';
@@ -8882,20 +8899,28 @@
       }
       if (elements.thinkingSegmented) {
         elements.thinkingSegmented.addEventListener('click', (event) => {
+          if (event.target.closest('[data-thinking-toggle]')) {
+            elements.thinkingSegmented.dataset.open = elements.thinkingSegmented.dataset.open === '1' ? '0' : '1';
+            renderModelControls();
+            return;
+          }
           const btn = event.target.closest('[data-thinking-level]');
           if (!btn) return;
           const chat = getActiveChat();
-          if (btn.getAttribute('data-thinking-level') === 'ultra') {
-            // A second tap turns it off (some models have no other level to pick).
-            chat.ultraCode = !chat.ultraCode;
+          const picked = btn.getAttribute('data-thinking-level');
+          elements.thinkingSegmented.dataset.open = '0';
+          if (picked === 'ultra' || picked === 'normal') {
+            const turnOn = picked === 'ultra';
+            if (!!chat.ultraCode === turnOn) { renderModelControls(); return; }
+            chat.ultraCode = turnOn;
             touchChat(chat);
             updateConfigUi();
             renderHistory();
-            if (chat.ultraCode) { playUltraCodeBurst(); haptic('success'); } else haptic('select');
+            if (turnOn) { playUltraCodeBurst(); haptic('success'); } else haptic('select');
             return;
           }
-          const nextLevel = normalizeThinkingLevelForModel(chat.model, btn.getAttribute('data-thinking-level'));
-          if (nextLevel === currentThinkingLevel(chat) && !chat.ultraCode) return;
+          const nextLevel = normalizeThinkingLevelForModel(chat.model, picked);
+          if (nextLevel === currentThinkingLevel(chat) && !chat.ultraCode) { renderModelControls(); return; }
           chat.ultraCode = false;
           chat.thinkingLevel = nextLevel;
           touchChat(chat);
@@ -10177,14 +10202,14 @@
     // Turning Ultra code on: the label lights up in a sweep of colours with a
     // few sparks, like Claude's ultrathink, then keeps a slow shimmer.
     function playUltraCodeBurst() {
-      const targets = [document.querySelector('.ultra-pill'), elements.modelTriggerMeta].filter(Boolean);
+      const targets = [document.querySelector('.thinking-select-label'), elements.modelTriggerMeta].filter(Boolean);
       targets.forEach((el) => {
         el.classList.remove('ultra-burst');
         void el.offsetWidth;
         el.classList.add('ultra-burst');
         window.setTimeout(() => el.classList.remove('ultra-burst'), 1400);
       });
-      const pill = document.querySelector('.ultra-pill');
+      const pill = document.querySelector('.thinking-select');
       if (!pill || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
       const box = pill.getBoundingClientRect();
       for (let i = 0; i < 14; i++) {

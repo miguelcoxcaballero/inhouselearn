@@ -172,8 +172,9 @@ Mandatory guidance for every AI and developer working in this repository.
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a
   course title is never touched. The change is typed out (`startTitleAnimation`), also on other
   devices through live sync. Test: `tests/web/chat-title.cjs`.
-- **Ultra code:** a reasoning option in the model picker for every model (`chat.ultraCode`; a second
-  tap turns it off). It uses the model's deepest level (`effectiveThinkingLevel`) and gives the model
+- **Ultra code:** an option of the reasoning dropdown in the model picker, for every model
+  (`chat.ultraCode`; any other level, or «Normal» for models without levels, turns it off; it is in
+  colours only once chosen). It uses the model's deepest level (`effectiveThinkingLevel`) and gives the model
   `spawn_agents` (`engine/src/agents.js`): up to 6 pi agents at once, each with a self-contained task,
   the same tools and approval gate but no `spawn_agents`, no history. A card in the thread shows each
   agent, what it is doing and its live cost (`step.agents`); their cost goes into the answer's.
