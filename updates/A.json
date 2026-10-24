@@ -2,15 +2,24 @@
   "schemaVersion": 1,
   "channel": "A",
   "latest": {
-    "version": "1.0.5",
-    "versionCode": 6,
-    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.5/inhouse-learn-1.0.5.apk",
-    "apkSha256": "a3288aaad94651745ff2f3de27201f7df705ceb66d2faa2cf3053c01892a73c8",
-    "apkSizeBytes": 202276,
-    "changelog": "Night mode follows the phone; status bar fixed.",
-    "releasedAt": "2026-10-23T20:33:03+00:00"
+    "version": "1.0.6",
+    "versionCode": 7,
+    "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.6/inhouse-learn-1.0.6.apk",
+    "apkSha256": "9478432ef0a9cff77c25a34976ed495b22bb69073bd8ab5d6e686adadeddc62b",
+    "apkSizeBytes": 214620,
+    "changelog": "Answers continue in the background",
+    "releasedAt": "2026-10-24T08:35:40+00:00"
   },
   "releases": [
+    {
+      "version": "1.0.6",
+      "versionCode": 7,
+      "apkUrl": "https://github.com/miguelcoxcaballero/inhouselearn/releases/download/android-v1.0.6/inhouse-learn-1.0.6.apk",
+      "apkSha256": "9478432ef0a9cff77c25a34976ed495b22bb69073bd8ab5d6e686adadeddc62b",
+      "apkSizeBytes": 214620,
+      "changelog": "Answers continue in the background",
+      "releasedAt": "2026-10-24T08:35:40+00:00"
+    },
     {
       "version": "1.0.5",
       "versionCode": 6,
