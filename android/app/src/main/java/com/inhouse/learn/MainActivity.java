@@ -79,6 +79,7 @@ public class MainActivity extends ComponentActivity {
     static final String APP_PATH = "/inhouselearn/";
     static final String START_URL = APP_ORIGIN + APP_PATH + "?app=android";
     static final String APP_SCHEME = "inhouselearn";
+    static final String PKCE_SCHEME = "com.inhouse.learn";
     static final String GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/";
     static final long SPLASH_MAX_MS = 2500;
 
@@ -426,6 +427,12 @@ public class MainActivity extends ComponentActivity {
         }
         Uri data = intent == null ? null : intent.getData();
         if (data != null && APP_SCHEME.equals(data.getScheme())) handleAppUri(data);
+        // PKCE sign-in (1.0.7): com.inhouse.learn:/oauth2redirect?code=…&state=… — the page
+        // checks the state and exchanges the code (index.html, inhouseLearnAuth).
+        if (data != null && PKCE_SCHEME.equals(data.getScheme()) && data.getEncodedQuery() != null) {
+            pendingAuthQuery = data.getEncodedQuery();
+            deliverPendingAuth();
+        }
     }
 
     private void handleAppUri(Uri uri) {

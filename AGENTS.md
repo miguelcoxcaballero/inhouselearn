@@ -25,6 +25,15 @@ Mandatory guidance for every AI and developer working in this repository.
   (exactly that, no trailing slash) → the early script at the top of `index.html` →
   `app-auth.html` → `inhouselearn://auth`. Keep those three and `MainActivity` in step, and
   keep `redirect_uri` equal to a URI registered on the client.
+  **A session that never expires in the app (APK ≥ 1.0.7, like Inhouse Notes):** with
+  `APP_CONFIG.ANDROID_OAUTH_CLIENT_ID` set (an OAuth client of type *Android* for
+  `com.inhouse.learn` + the Inhouse key's SHA-1 `3D:BE:BA:8C:62:10:B9:00:32:21:DB:DD:0F:45:94:69:D1:89:6B:76`,
+  custom URI scheme enabled), sign-in uses PKCE: Google returns a code to
+  `com.inhouse.learn:/oauth2redirect` (the APK's intent filter → `inhouseLearnAuth`), the page exchanges
+  it with its verifier for an access token and a refresh token (localStorage
+  `inhouse-learn-android-refresh-token`, this device only) and renews silently from then on
+  (`refreshGoogleAccessTokenInApp`). A revoked refresh token is dropped; «Cerrar sesión» revokes it.
+  Empty ID or an older APK: the one-hour implicit token as before. Test: `tests/web/android-pkce.cjs`.
 - **Updates** come from the shared Inhouse services updater below: the native
   `MainActivity` calls `NativeUpdates`, and the popup and settings are `UpdateActivity`.
   The web page never receives an install bridge; it only asks the shell to open the

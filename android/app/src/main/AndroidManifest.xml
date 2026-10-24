@@ -48,6 +48,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="inhouselearn" android:host="auth" />
             </intent-filter>
+            <!-- 1.0.7: Google sign-in with PKCE (the Android OAuth client, like Inhouse Notes)
+                 returns its code to com.inhouse.learn:/oauth2redirect; Google requires the
+                 reverse-DNS scheme equal to the package. The page exchanges the code. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.inhouse.learn" />
+            </intent-filter>
         </activity>
 
         <!-- Keeps an answer running while the app is in the background, with an

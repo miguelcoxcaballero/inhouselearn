@@ -54,6 +54,14 @@ https://miguelcoxcaballero.github.io/inhouselearn/. Cada cambio en `index.html` 
    «Volver a la app» por si Chrome no abre el intent solo.
 3. La app llama a `window.inhouseLearnAuth(query)`; la web comprueba el `state` y guarda el token.
 
+**Sesión que no caduca (desde 1.0.7, igual que Inhouse Notes):** si `APP_CONFIG.ANDROID_OAUTH_CLIENT_ID`
+de `index.html` tiene un cliente OAuth de tipo *Android* (paquete `com.inhouse.learn`, SHA-1 de la clave de
+Inhouse `3D:BE:BA:8C:62:10:B9:00:32:21:DB:DD:0F:45:94:69:D1:89:6B:76`, «esquema de URI personalizado»
+activado en su configuración avanzada), el inicio de sesión usa PKCE: Google devuelve un código a
+`com.inhouse.learn:/oauth2redirect` (filtro de intent de `MainActivity` → `window.inhouseLearnAuth`), la web
+lo cambia por un token de acceso y un *refresh token*, y a partir de ahí renueva el acceso sola. Sin ese
+cliente todo sigue como abajo.
+
 **Google Cloud:** el cliente OAuth `435784295430-cmug…` ya tiene
 `https://miguelcoxcaballero.github.io/inhouselearn` como URI de redirección autorizada; la
 app usa exactamente esa (`redirect_uri` en `requestGoogleAccessTokenInApp`). Si cambia el

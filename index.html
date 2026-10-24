@@ -2040,6 +2040,11 @@
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
+      // Android OAuth client (type "Android", package com.inhouse.learn + the Inhouse key's
+      // SHA-1) for PKCE + a refresh token in the app, exactly as Inhouse Notes does: the
+      // session renews itself and never asks to sign in again. Empty: the app keeps the
+      // one-hour token of the web client (sign in again when it expires).
+      ANDROID_OAUTH_CLIENT_ID: '',
       GOOGLE_CLOUD_PROJECT: '',
       DEFAULT_PROVIDER: 'openrouter',
       // Sin modelo fijo: por defecto, el más usado esta semana en OpenRouter.
@@ -2063,6 +2068,79 @@
     let androidAuthPending = null;
     if (ANDROID_APP) document.documentElement.classList.add('in-android-app');
 
+    /* Sesión que no caduca en la app (como Inhouse Notes): PKCE con el cliente OAuth
+       Android y un refresh token guardado en este dispositivo. Google devuelve el código
+       a com.inhouse.learn:/oauth2redirect, que solo abre esta app (APK ≥ 1.0.7, que lo
+       pasa a inhouseLearnAuth), y la página lo cambia por tokens. Después renueva el
+       acceso sola, sin abrir nada, mientras el refresh token valga. */
+    const ANDROID_PKCE_REDIRECT_URI = 'com.inhouse.learn:/oauth2redirect';
+    const ANDROID_REFRESH_TOKEN_KEY = 'inhouse-learn-android-refresh-token';
+    const ANDROID_PKCE_VERIFIER_KEY = 'inhouse-learn-android-pkce-verifier';
+    const ANDROID_PKCE_SCOPES_KEY = 'inhouse-learn-android-pkce-scopes';
+
+    function androidShellVersion() {
+      const match = navigator.userAgent.match(/InhouseLearnApp\/(\d+)\.(\d+)\.(\d+)/);
+      return match ? Number(match[1]) * 10000 + Number(match[2]) * 100 + Number(match[3]) : 0;
+    }
+
+    function useAndroidPkce() {
+      return ANDROID_APP && !!APP_CONFIG.ANDROID_OAUTH_CLIENT_ID && androidShellVersion() >= 10007;
+    }
+
+    function androidRefreshToken() {
+      try { return localStorage.getItem(ANDROID_REFRESH_TOKEN_KEY) || ''; } catch (_) { return ''; }
+    }
+
+    function forgetAndroidRefreshToken() {
+      try { localStorage.removeItem(ANDROID_REFRESH_TOKEN_KEY); localStorage.removeItem(ANDROID_PKCE_SCOPES_KEY); } catch (_) {}
+    }
+
+    function base64UrlBytes(bytes) {
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    async function googleTokenRequest(fields) {
+      const body = new URLSearchParams(Object.assign({ client_id: APP_CONFIG.ANDROID_OAUTH_CLIENT_ID }, fields));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString(), signal: controller.signal });
+        const text = await response.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) {}
+        if (!response.ok || !data || !data.access_token) {
+          const error = new Error('Google: ' + ((data && (data.error_description || data.error)) || ('HTTP ' + response.status)));
+          error.status = response.status;
+          error.code = data && data.error;
+          throw error;
+        }
+        if (data.refresh_token) {
+          try {
+            localStorage.setItem(ANDROID_REFRESH_TOKEN_KEY, data.refresh_token);
+            localStorage.setItem(ANDROID_PKCE_SCOPES_KEY, googleOauthScopes().join(' '));
+          } catch (_) {}
+        }
+        return { access_token: data.access_token, expires_in: Number(data.expires_in || 3600), scope: data.scope || '' };
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    // Silent renewal with the stored refresh token. A revoked or expired one is
+    // dropped, so the next sign-in asks Google for a new one.
+    async function refreshGoogleAccessTokenInApp() {
+      const refreshToken = androidRefreshToken();
+      if (!refreshToken) throw new Error('La sesión de Google ha caducado. Vuelve a entrar con Google.');
+      try {
+        return await googleTokenRequest({ grant_type: 'refresh_token', refresh_token: refreshToken });
+      } catch (error) {
+        if (error.status === 400 || error.status === 401 || error.code === 'invalid_grant') forgetAndroidRefreshToken();
+        throw error;
+      }
+    }
+
     function androidAppMessage(message) {
       window.InhouseLearnApp.postMessage(JSON.stringify(message));
     }
@@ -2070,6 +2148,17 @@
     // extra: { scopes } for another account linked for a question (its token
     // never replaces the session's; state "android.x…" marks it).
     function requestGoogleAccessTokenInApp(promptMode, loginHint, extra) {
+      // With a refresh token (and the scopes it was given for) the app never asks again.
+      if (!extra && useAndroidPkce() && androidRefreshToken()) {
+        let sameScopes = false;
+        try { sameScopes = localStorage.getItem(ANDROID_PKCE_SCOPES_KEY) === googleOauthScopes().join(' '); } catch (_) {}
+        if (promptMode === 'none' || sameScopes) {
+          return refreshGoogleAccessTokenInApp().catch((error) => {
+            if (promptMode === 'none') throw error;
+            return requestGoogleAccessTokenInApp(promptMode, loginHint, extra);
+          });
+        }
+      }
       if (promptMode === 'none' && !extra) {
         // No silent renewal in the app: keep the token until it expires,
         // then the sign-in gate asks for one tap to sign in again.
@@ -2081,6 +2170,7 @@
         }
         return Promise.reject(new Error('La sesión de Google ha caducado. Vuelve a entrar con Google.'));
       }
+      if (!extra && useAndroidPkce()) return startAndroidPkceSignIn(loginHint);
       // "android." marks the return for the early script at the top of this page.
       const state = 'android.' + (extra ? 'x' : '') + Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
       localStorage.setItem(ANDROID_AUTH_STATE_KEY, state);
@@ -2105,6 +2195,43 @@
       });
     }
 
+    // Interactive sign-in with PKCE (Inhouse Notes' flow): Google returns a code to
+    // com.inhouse.learn:/oauth2redirect, the app hands it to inhouseLearnAuth and the
+    // page exchanges it (with the verifier only this page knows) for tokens.
+    async function startAndroidPkceSignIn(loginHint) {
+      const verifier = base64UrlBytes(crypto.getRandomValues(new Uint8Array(32)));
+      const challenge = base64UrlBytes(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
+      const state = 'android.p' + Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem(ANDROID_AUTH_STATE_KEY, state);
+      localStorage.setItem(ANDROID_PKCE_VERIFIER_KEY, verifier);
+      const params = new URLSearchParams({
+        client_id: APP_CONFIG.ANDROID_OAUTH_CLIENT_ID,
+        redirect_uri: ANDROID_PKCE_REDIRECT_URI,
+        response_type: 'code',
+        scope: googleOauthScopes().join(' '),
+        access_type: 'offline',
+        include_granted_scopes: 'true',
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        state: state
+      });
+      // Google only sends a refresh token on consent: ask for it when there is none.
+      if (!androidRefreshToken()) params.set('prompt', 'consent');
+      if (loginHint) params.set('login_hint', loginHint);
+      return new Promise((resolve, reject) => {
+        if (androidAuthPending) androidAuthPending.reject(new Error('OAuth cancelado.'));
+        androidAuthPending = { resolve: resolve, reject: reject };
+        androidAppMessage({ type: 'signIn', url: 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString() });
+      });
+    }
+
+    async function completeAndroidPkce(params) {
+      const verifier = localStorage.getItem(ANDROID_PKCE_VERIFIER_KEY) || '';
+      localStorage.removeItem(ANDROID_PKCE_VERIFIER_KEY);
+      if (!verifier) throw new Error('Falta el verificador del inicio de sesión. Vuelve a entrar.');
+      return googleTokenRequest({ grant_type: 'authorization_code', code: params.get('code'), code_verifier: verifier, redirect_uri: ANDROID_PKCE_REDIRECT_URI });
+    }
+
     function applyGoogleTokenResponse(response) {
       appState.accessToken = response.access_token;
       appState.accessTokenExpiresAt = response.expires_in ? Date.now() + (Number(response.expires_in) * 1000) : 0;
@@ -2121,6 +2248,20 @@
       localStorage.removeItem(ANDROID_AUTH_STATE_KEY);
       const pending = androidAuthPending;
       androidAuthPending = null;
+      // PKCE (com.inhouse.learn:/oauth2redirect?code=…): exchange the code for tokens.
+      if (String(params.get('state')).startsWith('android.p') && params.get('code')) {
+        completeAndroidPkce(params).then((response) => {
+          if (pending) { pending.resolve(response); return; }
+          applyGoogleTokenResponse(response);
+          syncGoogleSession(response, {}).catch((error) => {
+            setAuthGateStatus(error && error.message ? error.message : 'No se pudo completar la sesión con Google.', { error: true });
+          }).finally(() => { updateAuthUi(); updateConfigUi(); updateSendUi(); });
+        }).catch((error) => {
+          if (pending) pending.reject(error);
+          else setAuthGateStatus(error.message, { error: true });
+        });
+        return;
+      }
       if (params.get('error') || !params.get('access_token')) {
         const error = new Error(params.get('error') === 'access_denied' || !params.get('error')
           ? 'OAuth cancelado.' : 'Google: ' + params.get('error'));
@@ -3745,7 +3886,7 @@
       if (localStorage.getItem(AUTH_SKIP_RESTORE_KEY) === '1') {
         return false;
       }
-      return !!appState.accessToken || hasStoredGoogleRememberSession() || !!getStoredGoogleHintEmail();
+      return !!appState.accessToken || hasStoredGoogleRememberSession() || !!getStoredGoogleHintEmail() || (useAndroidPkce() && !!androidRefreshToken());
     }
 
     function hasDriveIdentitySession() {
@@ -3900,7 +4041,7 @@
       }
       const refreshInMs = Number.isFinite(delayMs)
         ? Math.max(0, delayMs)
-        : Math.max(0, appState.accessTokenExpiresAt - Date.now() - (ANDROID_APP ? -1000 : AUTH_REFRESH_SKEW_MS));
+        : Math.max(0, appState.accessTokenExpiresAt - Date.now() - (ANDROID_APP && !(useAndroidPkce() && androidRefreshToken()) ? -1000 : AUTH_REFRESH_SKEW_MS));
       googleTokenRefreshTimer = window.setTimeout(async function() {
         try {
           const refreshed = await loginWithGoogle({
@@ -7882,6 +8023,10 @@
         google.accounts.oauth2.revoke(appState.accessToken, function() {});
       }
       rememberManualLogout();
+      // The app's refresh token goes too (and is revoked at Google).
+      const refreshToken = androidRefreshToken();
+      if (refreshToken) fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(refreshToken), { method: 'POST' }).catch(() => {});
+      forgetAndroidRefreshToken();
       clearGoogleSessionState({
         preserveRemember: false
       });
