@@ -175,9 +175,11 @@ Mandatory guidance for every AI and developer working in this repository.
   keeping its cover, styles, headers and margins. Tests: `tests/web/gdrive.cjs`, `tests/web/drive-templates.cjs`.
 - **Another Google account for a question:** + menu → Otra cuenta de Google links a second account
   (Google's account chooser; `gmail.readonly` + `drive.readonly`, never the session's token; on Android
-  the Custom Tab state is `android.x…` and is never applied as the session). Its token lives only in
-  this tab's memory, shows as a pill in the composer (stays across messages) and removing the pill
-  revokes it. The model gets read-only `extra_gmail_search`, `extra_gmail_read` (`engine/src/gmail.js`)
+  the Custom Tab state is `android.x…` and is never applied as the session). It belongs to the chat
+  where it was linked (`extraGoogleByChat`; `extraGoogle` is a window accessor for the open chat's):
+  its token is kept on this device only (`localStorage` `inhouse-learn-extra-google`, never Drive), it
+  shows as a pill in that chat's composer across messages and reloads (Google's hour still applies:
+  then the pill says «caducada»), and removing the pill or deleting the chat revokes it. The model gets read-only `extra_gmail_search`, `extra_gmail_read` (`engine/src/gmail.js`)
   and `extra_drive_*` (shared drives included). Test: `tests/web/extra-account.cjs`.
 - **Cost of each answer:** under every answer, always visible: the model's logo, its name and
   `$X.XXXX` in green (`message.cost`, each version keeps its own; tool rounds, repairs and steering
@@ -225,6 +227,11 @@ Mandatory guidance for every AI and developer working in this repository.
   press / right click / «⋯» opens Fijar · Renombrar · (Marcar como leído) · Eliminar; the magnifier
   filters by title; «Nuevo chat» (`#new-chat-btn`) sits bottom right. `touchChat` never changes the
   open chat. Test: `tests/web/chats-menu.cjs`.
+- **The composer is per chat:** attachments waiting to be sent (`appState.composerAttachments` is an
+  accessor for the open chat's `composerDrafts`) and the linked Google account belong to their chat;
+  another chat never shows them, and they survive reloads (attachments in IndexedDB
+  `inhouse-learn-drafts`, written only after the saved ones are read) until the user removes them or
+  the message is sent. Test: `tests/web/chat-composer.cjs`.
 - **Chat names:** after the first answer the chat's model names it (exactly three words, only the
   first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a

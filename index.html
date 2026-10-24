@@ -2375,10 +2375,110 @@
       driveSyncPromise: null,
       driveSyncQueued: false,
       authGateReason: '',
-      composerAttachments: [],
       openRouterCredits: null,
       guidedLearning: false
     };
+
+    /* What sits in the composer belongs to its chat: the attachments waiting to
+       be sent and the other Google account linked for questions. Switching chats
+       shows that chat's own; they stay until the user removes them (or the
+       message is sent), also after a reload or reopening the app. Kept on this
+       device only: attachments in IndexedDB (they can be big), the account in
+       localStorage (never in Drive). */
+    const composerDrafts = new Map();
+    Object.defineProperty(appState, 'composerAttachments', {
+      configurable: true,
+      enumerable: false,
+      get() {
+        const id = appState.activeChatId || '';
+        if (!composerDrafts.has(id)) composerDrafts.set(id, []);
+        return composerDrafts.get(id);
+      },
+      set(value) {
+        composerDrafts.set(appState.activeChatId || '', Array.isArray(value) ? value : []);
+        persistComposerDraft(appState.activeChatId);
+      }
+    });
+    function composerDraftOf(chatId) {
+      if (!composerDrafts.has(chatId)) composerDrafts.set(chatId, []);
+      return composerDrafts.get(chatId);
+    }
+    let draftsDbPromise = null;
+    function draftsDb() {
+      if (!draftsDbPromise) {
+        draftsDbPromise = new Promise((resolve, reject) => {
+          if (!window.indexedDB) return reject(new Error('IndexedDB no disponible'));
+          const request = indexedDB.open('inhouse-learn-drafts', 1);
+          request.onupgradeneeded = () => request.result.createObjectStore('attachments');
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        draftsDbPromise.catch(() => {});
+      }
+      return draftsDbPromise;
+    }
+    // Nothing is written before the saved drafts are read: the first render on
+    // start-up (still empty) would otherwise erase them.
+    let composerDraftsLoaded = false;
+    function persistComposerDraft(chatId) {
+      if (!chatId || !composerDraftsLoaded) return;
+      const items = (composerDrafts.get(chatId) || []).filter((item) => item && !item.pending);
+      draftsDb().then((db) => new Promise((resolve) => {
+        const tx = db.transaction('attachments', 'readwrite');
+        if (items.length) tx.objectStore('attachments').put(JSON.parse(JSON.stringify(items)), chatId);
+        else tx.objectStore('attachments').delete(chatId);
+        tx.oncomplete = resolve;
+        tx.onerror = resolve;
+      })).catch((error) => console.warn('Adjuntos del chat: no se pudieron guardar.', error));
+    }
+    async function loadComposerDrafts() {
+      try {
+        const db = await draftsDb();
+        await new Promise((resolve) => {
+          const tx = db.transaction('attachments', 'readonly');
+          const keys = tx.objectStore('attachments').getAllKeys();
+          const values = tx.objectStore('attachments').getAll();
+          tx.oncomplete = () => {
+            keys.result.forEach((key, i) => { if (!(composerDrafts.get(key) || []).length) composerDrafts.set(key, values.result[i] || []); });
+            resolve();
+          };
+          tx.onerror = resolve;
+        });
+      } catch (_) {}
+      composerDraftsLoaded = true;
+      // Anything added while they were loading is saved now.
+      composerDrafts.forEach((items, chatId) => { if (items.length) persistComposerDraft(chatId); });
+      renderComposerAttachments();
+      updateSendUi();
+    }
+
+    const EXTRA_GOOGLE_KEY = 'inhouse-learn-extra-google';
+    const extraGoogleByChat = new Map(Object.entries((() => { try { return JSON.parse(localStorage.getItem(EXTRA_GOOGLE_KEY) || '{}') || {}; } catch (_) { return {}; } })()));
+    function persistExtraGoogle() {
+      try {
+        const map = {};
+        extraGoogleByChat.forEach((account, chatId) => { if (account && account.token) map[chatId] = account; });
+        if (Object.keys(map).length) localStorage.setItem(EXTRA_GOOGLE_KEY, JSON.stringify(map)); else localStorage.removeItem(EXTRA_GOOGLE_KEY);
+      } catch (_) {}
+    }
+    // `extraGoogle` (used across the app) is the open chat's linked account.
+    Object.defineProperty(window, 'extraGoogle', {
+      configurable: true,
+      get() { return extraGoogleByChat.get(appState.activeChatId || '') || null; },
+      set(value) {
+        const id = appState.activeChatId || '';
+        if (value) extraGoogleByChat.set(id, value); else extraGoogleByChat.delete(id);
+        persistExtraGoogle();
+      }
+    });
+    function forgetChatComposer(chatId) {
+      const account = extraGoogleByChat.get(chatId);
+      if (account && account.token && typeof revokeGoogleToken === 'function') revokeGoogleToken(account.token);
+      extraGoogleByChat.delete(chatId);
+      persistExtraGoogle();
+      composerDrafts.delete(chatId);
+      persistComposerDraft(chatId);
+    }
 
     const elements = {
       chatList: document.getElementById('chat-list'),
@@ -3337,6 +3437,9 @@
       }
       const items = appState.composerAttachments || [];
       const extra = extraGoogleAccount();
+      // Whatever changed (added, removed, the account's status): saved for this chat.
+      persistComposerDraft(appState.activeChatId);
+      persistExtraGoogle();
       elements.composerAttachments.classList.toggle('hidden', !items.length && !extra);
       elements.composerAttachments.innerHTML = (extra ? extraGoogleBadgeMarkup(extra) : '') + items.map((item) => attachmentBadgeMarkup(item, true)).join('');
       const unlink = elements.composerAttachments.querySelector('[data-remove-extra-google]');
@@ -3615,7 +3718,7 @@
       try {
         if (inline) {
           for (const item of items) {
-            appState.composerAttachments.push(await prepareAttachment(item.file));
+            composerDraftOf(chat.id).push(await prepareAttachment(item.file));
           }
           // Also searchable later; failures here never block the message.
           if (library) library.ingest(chat.id, items).then(refreshLibraryCount).catch((error) => console.warn('Biblioteca:', error));
@@ -3623,7 +3726,7 @@
           const { added, skipped } = await library.ingest(chat.id, items);
           if (!added.length) throw new Error('No pude leer ninguno de esos archivos' + (skipped[0] ? ' (' + skipped[0].reason + ')' : '') + '.');
           const folder = fromFolder ? items[0].path.split('/')[0] : '';
-          appState.composerAttachments.push({
+          composerDraftOf(chat.id).push({
             id: uid('att'),
             name: (folder ? folder + ' · ' : '') + (added.length === 1 ? added[0].path : added.length + ' archivos'),
             size: totalBytes,
@@ -5230,8 +5333,7 @@
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/drive.readonly'
     ];
-    // var: renderComposerAttachments may run before this line on start-up.
-    var extraGoogle = null;
+    // `extraGoogle`: the open chat's linked account (window accessor next to appState).
 
     function extraGoogleAccount() {
       return extraGoogle && extraGoogle.token ? extraGoogle : null;
@@ -5269,6 +5371,8 @@
 
     async function linkExtraGoogleAccount() {
       if (appState.busy) return;
+      // The account belongs to the chat where it was linked, even if the user moves on meanwhile.
+      const linkChatId = appState.activeChatId;
       try {
         const response = await requestExtraGoogleToken();
         const token = response.access_token;
@@ -5280,25 +5384,28 @@
           showToast('Otra cuenta de Google', 'Es la misma cuenta con la que ya has entrado: elige otra.');
           return;
         }
-        if (extraGoogle) revokeGoogleToken(extraGoogle.token);
+        const previous = extraGoogleByChat.get(linkChatId);
+        if (previous) revokeGoogleToken(previous.token);
         // What Google really granted (the token's own scopes; the Android flow
         // does not say), then one small call to each API: the pill and the
         // model know at once what works and why not.
         const granted = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token)).then((r) => r.ok ? r.json() : {}).catch(() => ({}));
         const grantedScopes = String(granted.scope || response.scope || '').split(/\s+/).filter(Boolean);
         const has = (scope) => !grantedScopes.length || grantedScopes.includes(scope);
-        extraGoogle = {
+        extraGoogleByChat.set(linkChatId, {
           email,
           token,
           expiresAt: Date.now() + (Number(response.expires_in) || 3600) * 1000,
           gmail: has('https://www.googleapis.com/auth/gmail.readonly'),
           drive: has('https://www.googleapis.com/auth/drive.readonly'),
           status: {}
-        };
-        const account = extraGoogle;
+        });
+        persistExtraGoogle();
+        const account = extraGoogleByChat.get(linkChatId);
         account.status.gmail = account.gmail ? await probeGoogleApi(token, 'https://gmail.googleapis.com/gmail/v1/users/me/profile', 'Gmail') : { kind: 'scope', text: 'no diste permiso para leer el correo: quita la cuenta, vuelve a vincularla y deja marcada la casilla de Gmail.' };
         account.status.drive = account.drive ? await probeGoogleApi(token, 'https://www.googleapis.com/drive/v3/about?fields=user', 'Google Drive') : { kind: 'scope', text: 'no diste permiso para leer Drive: quita la cuenta, vuelve a vincularla y deja marcada la casilla de Drive.' };
-        if (extraGoogle !== account) return;
+        if (extraGoogleByChat.get(linkChatId) !== account) return;
+        persistExtraGoogle();
         renderComposerAttachments();
         const problems = ['gmail', 'drive'].filter((api) => account.status[api].kind !== 'ok').map((api) => (api === 'gmail' ? 'Gmail' : 'Drive') + ': ' + account.status[api].text);
         if (problems.length) showToast(email, problems.join('\n'));
@@ -6615,6 +6722,8 @@
     }
 
     function renderThread(options) {
+      // The composer shows the open chat's own attachments and linked account.
+      renderComposerAttachments();
       const settings = Object.assign({ preserveScroll: false }, options);
       const chat = getActiveChat();
       renderWorkspaceBar();
@@ -8350,6 +8459,7 @@
         window.InhouseReadAloud?.stop();
       }
       rememberDeletedChat(targetId);
+      forgetChatComposer(targetId);
 
       if (!appState.chats.length) {
         const chat = createChat();
@@ -11125,6 +11235,7 @@
       renderThread();
       autoResizeComposer();
       renderComposerAttachments();
+      loadComposerDrafts();
       updateSendUi();
       updateGuidedLearningUi();
       bindEvents();

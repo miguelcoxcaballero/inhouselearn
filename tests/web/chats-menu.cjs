@@ -31,7 +31,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
 
   // News: an answer that ends while the user is in another chat leaves an orange diamond.
   const first = await page.evaluate(() => appState.chats[0].id);
-  await page.evaluate(() => { window.__replies.push({ text: 'Una respuesta que tarda un poco en llegar entera para cambiar de chat.', delay: 40 }); });
+  await page.evaluate(() => { window.__replies.push({ text: 'Una respuesta que tarda un poco en llegar entera para cambiar de chat. '.repeat(6), delay: 40, chunk: 4 }); });
   await page.evaluate(() => setChatsDrawer(false));
   await send(page, 'Explícame la fase oscura');
   await page.waitForFunction(() => appState.busy);
