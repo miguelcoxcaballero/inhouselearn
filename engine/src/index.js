@@ -16,6 +16,8 @@ import { createGithubTools, githubWhoAmI, githubPushStaged } from './github.js';
 
 export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, githubPushStaged, normalizePath, runInSandbox };
 export { createDriveTools } from './gdrive.js';
+export { createGmailTools } from './gmail.js';
+export { createWebTools } from './web.js';
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -291,7 +293,9 @@ export async function runAgent(options) {
   const join = (parts, live) => parts.concat(live ? [live] : []).filter((part) => part && part.trim()).join('\n\n');
   const emit = () => {
     if (typeof options.onUpdate === 'function') {
-      options.onUpdate({ text: join(doneTexts, liveText), thinking: join(doneThinking, liveThinking), steps: steps.slice() });
+      // cost: what the finished requests cost; liveChars: what the current one has
+      // written so far (the app estimates its price until the request ends).
+      options.onUpdate({ text: join(doneTexts, liveText), thinking: join(doneThinking, liveThinking), steps: steps.slice(), cost: usage.cost, liveChars: liveText.length + liveThinking.length });
     }
   };
 
@@ -349,6 +353,8 @@ export async function runAgent(options) {
         step.status = event.isError ? 'error' : 'done';
         const output = resultText(event.result);
         step.output = output.length > MAX_STEP_OUTPUT ? output.slice(0, MAX_STEP_OUTPUT) + '\n…' : output;
+        // Web pages a tool found or read: the app lists them as the answer's sources.
+        if (event.result && event.result.details && Array.isArray(event.result.details.sources)) step.sources = event.result.details.sources.slice(0, 12);
       }
       emit();
     }

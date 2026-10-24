@@ -134,6 +134,24 @@ Mandatory guidance for every AI and developer working in this repository.
   goes through `approveChange` with `always: true`: it asks EVERY time, also in «Acceso total»; the
   first approved change asks Google for `drive` (write). Never add a Drive write that skips this.
   Test: `tests/web/gdrive.cjs`.
+- **Another Google account for a question:** + menu → Otra cuenta de Google links a second account
+  (Google's account chooser; `gmail.readonly` + `drive.readonly`, never the session's token; on Android
+  the Custom Tab state is `android.x…` and is never applied as the session). Its token lives only in
+  this tab's memory, shows as a pill in the composer (stays across messages) and removing the pill
+  revokes it. The model gets read-only `extra_gmail_search`, `extra_gmail_read` (`engine/src/gmail.js`)
+  and `extra_drive_*` (shared drives included). Test: `tests/web/extra-account.cjs`.
+- **Cost of each answer:** under every answer, always visible: the model's logo, its name and
+  `$X.XXXX` in green (`message.cost`, each version keeps its own; tool rounds, repairs and steering
+  split correctly). While it is written the price counts up live and animated (`liveCost`: finished
+  requests plus the current one estimated from its characters and the output price), then settles
+  on the real figure. Test: `tests/web/extra-account.cjs`.
+- **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
+  cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with
+  the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007
+  a search, counted in the answer's cost), and pages are read through `r.jina.ai`. While a web tool
+  runs the live activity shows a turning blue globe; afterwards «Fuentes» under the answer lists the
+  pages (`step.sources`, cited ones first, favicons from Google's s2 service). The cost's trailing zeros
+  (up to the last two decimals) are grey. Test: `tests/web/websearch.cjs`.
 - **What the chat shows:** reasoning a model writes inside its answer (`<think>…</think>`, or only a
   closing tag) goes to the thinking section (`splitReasoning` in `engine/src/index.js`); a model stuck
   repeating the same lines is cut (`runawayCut` in `index.html`), keeping what came before, and the queue

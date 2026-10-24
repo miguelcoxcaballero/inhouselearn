@@ -439,8 +439,20 @@ const STEP_TEXT = {
   drive_read: ['Leyendo de tu Drive', 'Leído de tu Drive'],
   drive_write_file: ['Guardando en tu Drive', 'Guardado en tu Drive'],
   drive_edit_file: ['Editando en tu Drive', 'Editado en tu Drive'],
-  drive_organize: ['Organizando tu Drive', 'Drive organizado']
+  drive_organize: ['Organizando tu Drive', 'Drive organizado'],
+  drive_shared_drives: ['Mirando tus unidades compartidas', 'Unidades compartidas'],
+  extra_drive_search: ['Buscando en el Drive de la otra cuenta', 'Buscado en el Drive de la otra cuenta'],
+  extra_drive_list: ['Mirando una carpeta de la otra cuenta', 'Carpeta de la otra cuenta'],
+  extra_drive_read: ['Leyendo del Drive de la otra cuenta', 'Leído del Drive de la otra cuenta'],
+  extra_drive_shared_drives: ['Mirando las unidades compartidas de la otra cuenta', 'Unidades compartidas de la otra cuenta'],
+  extra_gmail_search: ['Buscando en el correo de la otra cuenta', 'Buscado en el correo de la otra cuenta'],
+  extra_gmail_read: ['Leyendo un correo de la otra cuenta', 'Correo leído de la otra cuenta'],
+  web_search: ['Buscando en internet', 'Buscado en internet'],
+  web_fetch: ['Leyendo en internet', 'Leído en internet']
 };
+
+const GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.7 3.9 5.9 3.9 9.5s-1.3 6.8-3.9 9.5c-2.6-2.7-3.9-5.9-3.9-9.5S9.4 5.2 12 2.5z"/></svg>';
+const isWebStep = (step) => !!step && /^web_/.test(step.name);
 
 function baseName(path) {
   return String(path || '').split('/').filter(Boolean).pop() || String(path || '');
@@ -499,7 +511,15 @@ function describeToolStep(step) {
       // What the release is doing right now (build, signature, publication…).
       target = running && step.progress ? String(step.progress).replace(/: https?:\/\/\S+$/, '').slice(0, 80) : '';
       break;
+    case 'web_search':
+      target = args.query ? '«' + String(args.query).slice(0, 70) + '»' : '';
+      break;
+    case 'web_fetch':
+      try { target = new URL(String(args.url || '')).hostname.replace(/^www\./, ''); } catch (_) { target = ''; }
+      break;
     case 'drive_search':
+    case 'extra_drive_search':
+    case 'extra_gmail_search':
       target = args.query ? '«' + String(args.query).slice(0, 60) + '»' : '';
       break;
     case 'search_library':
@@ -550,13 +570,14 @@ function renderLiveSteps(message, steps) {
     const info = describeToolStep(step);
     const time = stepTime(step);
     const firstLine = String(step.output || '').split('\n')[0].slice(0, 90);
-    return '<li class="live-done' + (step.status === 'error' ? ' error' : '') + '"><span class="live-mark">' + (step.status === 'error' ? '✕' : '✓') + '</span>' +
+    return '<li class="live-done' + (step.status === 'error' ? ' error' : '') + (isWebStep(step) ? ' web' : '') + '"><span class="live-mark">' + (step.status === 'error' ? '✕' : isWebStep(step) ? GLOBE : '✓') + '</span>' +
       '<span class="live-done-title">' + escapeHtml(info ? info.title : (TOOL_LABELS[step.name] || step.name)) + '</span>' +
       (step.status === 'error' && firstLine ? '<span class="live-done-note">' + escapeHtml(firstLine) + '</span>' : '') +
       (time.end && time.end - time.start >= 1000 ? '<span class="live-done-time">' + formatSeconds(time.end - time.start) + '</span>' : '') + '</li>';
   }).join('');
   return '<div class="live-steps" data-live-steps="' + escapeHtml(message.id) + '">' +
-    '<div class="live-now' + (waiting ? ' waiting' : '') + '"><span class="live-spin" aria-hidden="true"></span>' +
+    // On the internet: a turning globe instead of the spinner, unmistakable.
+    '<div class="live-now' + (waiting ? ' waiting' : '') + (!waiting && isWebStep(running) ? ' web' : '') + '">' + (!waiting && isWebStep(running) ? '<span class="live-globe" title="En internet">' + GLOBE + '</span>' : '<span class="live-spin" aria-hidden="true"></span>') +
     '<span class="live-now-text"><b>' + escapeHtml(waiting ? 'Esperando tu aprobación' : leadTitle) + '</b>' +
     (!waiting && lead && lead.target ? ' <span class="live-target">' + escapeHtml(lead.target) + '</span>' : '') +
     (!waiting && lead && lead.where ? '<span class="live-where"> · ' + escapeHtml(lead.where) + '</span>' : '') +

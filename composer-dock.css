@@ -135,6 +135,14 @@
 .live-done-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b91c1c; }
 .live-done-time { margin-left: auto; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .live-tally { margin: 4px 0 0 4px; font-size: 0.72rem; color: var(--muted); }
+/* En internet: un globo azul que gira en lugar del círculo naranja. */
+.live-now.web { border-color: rgba(37,99,235,0.35); background: linear-gradient(90deg, rgba(37,99,235,0.09), transparent 70%); }
+.live-globe { width: 17px; height: 17px; flex: 0 0 auto; color: #2563eb; display: inline-flex; animation: live-globe 2.4s ease-in-out infinite; }
+.live-globe svg { width: 17px; height: 17px; }
+@keyframes live-globe { 0%, 100% { transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.12); } }
+.live-done.web .live-mark { color: #2563eb; display: inline-flex; align-self: center; }
+.live-done.web .live-mark svg { width: 12px; height: 12px; }
+@media (prefers-reduced-motion: reduce) { .live-globe { animation: none; } }
 /* With the live card, the three typing dots are redundant. */
 .bubble-content:has(.live-steps) .md-root > .typing { display: none; }
 

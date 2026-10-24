@@ -15,6 +15,7 @@ const FIELDS = 'id,name,mimeType,modifiedTime,size,parents,webViewLink,owners(di
 const MAX_READ_CHARS = 40000;
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const FOLDER = 'application/vnd.google-apps.folder';
+const WRITE_TOOLS = new Set(['drive_write_file', 'drive_edit_file', 'drive_organize']);
 // Google files have no bytes of their own: they are exported.
 const EXPORTS = {
   'application/vnd.google-apps.document': 'text/plain',
@@ -118,7 +119,18 @@ export function createDriveTools(ctx) {
     await ctx.ensureWrite();
   }
 
-  return [
+  const tools = [
+    {
+      name: 'drive_shared_drives',
+      label: 'Drive: unidades compartidas',
+      description: 'List the shared drives (unidades compartidas) this Google account belongs to, with their ids. Their files also come up in drive_search; use a shared drive id as folder in drive_list or drive_search to look inside it.',
+      parameters: Type.Object({}),
+      execute: async () => {
+        const data = await json(API + '/drives?pageSize=100&fields=' + encodeURIComponent('drives(id,name)'), null, 'listar las unidades compartidas');
+        const drives = data.drives || [];
+        return textResult(drives.length ? drives.map((drive) => drive.name + ' · id ' + drive.id).join('\n') : 'Esta cuenta no tiene unidades compartidas.', { count: drives.length });
+      }
+    },
     {
       name: 'drive_search',
       label: 'Drive: buscar',
@@ -313,4 +325,11 @@ export function createDriveTools(ctx) {
       }
     }
   ];
+  // Another account linked for a question: read-only tools with their own
+  // names (extra_drive_*), next to the user's own Drive if that is on too.
+  const prefix = ctx.prefix || '';
+  const accountNote = ctx.account ? ' (Google account ' + ctx.account + ', read-only)' : '';
+  return tools
+    .filter((tool) => !ctx.readOnly || !WRITE_TOOLS.has(tool.name))
+    .map((tool) => prefix || accountNote ? Object.assign({}, tool, { name: prefix + tool.name, description: tool.description + accountNote }) : tool);
 }
