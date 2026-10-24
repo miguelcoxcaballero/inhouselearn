@@ -162,6 +162,11 @@ Mandatory guidance for every AI and developer working in this repository.
   reloads (same chat, never while something is typed, running or awaiting approval). Bump the `?v=`
   of what you change. An expired Google session shows a banner above the composer with «Volver a
   entrar» (the app never blocks without Drive). Test: `tests/web/chat-url.cjs`.
+- **Answers cut by leaving the app:** Android pauses the page and the stream dies with a network
+  error. If the page was hidden during the turn and everything that ran was read-only
+  (`READ_ONLY_TOOL`), no error is shown: the message says it will be repeated and
+  `retryCutAnswers` regenerates it when the app is back in front, keeping the cut attempt's cost. A
+  turn that changed something keeps its error. Test: `tests/web/cut-retry.cjs`.
 - **Chat names:** after the first answer the chat's model names it (exactly three words, only the
   first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a

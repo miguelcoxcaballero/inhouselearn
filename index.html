@@ -1654,7 +1654,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-titles">
+  <link rel="stylesheet" href="theme.css?v=20261024-retry">
 </head>
 <body>
 
@@ -1963,8 +1963,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-titles"></script>
-  <script src="composer-dock.js?v=20261024-titles"></script>
+  <script src="approval.js?v=20261024-retry"></script>
+  <script src="composer-dock.js?v=20261024-retry"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -7742,7 +7742,7 @@
       }
     }
 
-    async function regenerateMessage(msgId) {
+    async function regenerateMessage(msgId, options) {
       if (appState.busy) return;
       var chat = getActiveChat();
       var idx = chat.messages.findIndex(function(m) { return m.id === msgId; });
@@ -7779,7 +7779,8 @@
       msg.activeAlternative = msg.alternatives.length;
       msg.provider = activeProviderName(chat);
       msg.model = resolveRequestModelId(chat);
-      msg.cost = 0;
+      // A retry after a cut keeps what the cut attempt already cost.
+      msg.cost = options && options.keepCost ? (Number(msg.cost) || 0) : 0;
       touchChat(chat);
       appState.busy = true;
       appState.activeController = new AbortController();
@@ -7787,6 +7788,7 @@
       updateSendUi();
       patchThreadMessage(msg, chat);
       var keepText = null;
+      var hiddenBefore = pageHiddenCount;
       try {
         keepText = await streamAssistantReply(chat, { message: msg, steering: {}, liveShare: null });
         msg.activeAlternative = msg.alternatives.length;
@@ -7805,6 +7807,15 @@
           }
           msg.activeAlternative = msg.alternatives.length;
           setComposerStatus('Regeneracion cancelada.');
+        } else if (cutByLeaving(error, hiddenBefore, msg)) {
+          // Cut again by leaving the app: asked again on return (see retryCutAnswers).
+          msg.content = '*(Se cortó al salir de la app. La repito en cuanto vuelvas.)*';
+          msg.parts = [{ text: msg.content }];
+          msg.toolSteps = [];
+          msg.piMessages = [];
+          msg.retryOnReturn = true;
+          msg.activeAlternative = msg.alternatives.length;
+          setComposerStatus('');
         } else {
           msg.content = 'Error: ' + error.message;
           msg.parts = [{ text: msg.content }];
@@ -9934,6 +9945,7 @@
       const turn = { message: assistantMessage, steering: {}, liveShare: null };
       appState.activeTurn = { chatId: chat.id, turn };
       turn.liveShare = liveShareStart(chat, userMessage, assistantMessage);
+      const hiddenBefore = pageHiddenCount;
       let keepText = null;
       let nudge = null;
       let outcome = 'done';
@@ -9961,6 +9973,18 @@
             chat.messages = chat.messages.filter((message) => message.id !== partial.id && !(settings.nudged && message.id === userMessage.id));
           }
           setComposerStatus(turn.runaway ? '' : 'Solicitud cancelada.');
+        } else if (cutByLeaving(error, hiddenBefore, turn.message)) {
+          // Android paused the page (the user left the app) and the connection
+          // to the model died: no error, the answer is asked again on return.
+          outcome = 'error';
+          const cut = turn.message;
+          cut.content = '*(Se cortó al salir de la app. La repito en cuanto vuelvas.)*';
+          cut.parts = [{ text: cut.content }];
+          cut.toolSteps = [];
+          cut.piMessages = [];
+          cut.retryOnReturn = true;
+          touchChat(chat);
+          setComposerStatus('');
         } else {
           outcome = 'error';
           haptic('error');
@@ -9994,6 +10018,42 @@
       if (outcome === 'done') maybeRetitleChat(chat);
       // Messages written meanwhile go out now, one per finished turn.
       queueAfterTurn(turn, outcome);
+    }
+
+    /* ─── RESPUESTAS CORTADAS AL SALIR DE LA APP ─────── */
+    // Leaving the Android app (or locking the phone) pauses the page and the
+    // stream from the model dies with a network error. That is not shown as an
+    // error: the answer is asked again as soon as the app is back in front,
+    // keeping what the cut attempt cost. Only when what ran in that turn was
+    // read-only: a turn that changed something (GitHub, Drive, files) is not
+    // repeated by itself; it keeps its error and the «Regenerar» button.
+    let pageHiddenCount = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { pageHiddenCount++; return; }
+      window.setTimeout(retryCutAnswers, 600);
+    });
+
+    const NETWORK_ERROR = /network|failed to fetch|load failed|fetch failed|err_|connection|terminated|socket|aborted by the browser|no se pudo conectar/i;
+    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$)/;
+
+    function cutByLeaving(error, hiddenBefore, message) {
+      if (!NETWORK_ERROR.test(String(error && error.message || ''))) return false;
+      if (!document.hidden && pageHiddenCount === hiddenBefore) return false;
+      const steps = (error.partial && error.partial.steps) || message.toolSteps || [];
+      return steps.every((step) => READ_ONLY_TOOL.test(step.name || ''));
+    }
+
+    function retryCutAnswers() {
+      if (document.hidden || appState.busy) return;
+      const chat = getActiveChat();
+      const cut = chat && chat.messages.find((message) => message.retryOnReturn && message.role === 'assistant');
+      if (!cut) return;
+      cut.retryOnReturn = false;
+      cut.content = '';
+      cut.parts = [];
+      regenerateMessage(cut.id, { keepCost: true }).then(() => {
+        if (typeof messageQueue !== 'undefined' && messageQueue.paused) { messageQueue.paused = false; if (typeof queueDrain === 'function') queueDrain(); }
+      });
     }
 
     /* ─── NOMBRE AUTOMÁTICO DEL CHAT ─────────────────── */

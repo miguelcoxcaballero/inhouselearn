@@ -44,6 +44,8 @@ function initScript() {
           let i = 0;
           while (i < text.length) {
             if (signal && signal.aborted) { ctrl.error(new DOMException('aborted', 'AbortError')); return; }
+            // As when Android pauses the page: the connection dies mid-answer.
+            if (reply.networkError && i >= Math.min(text.length - 1, reply.networkError === true ? 30 : reply.networkError)) { ctrl.error(new TypeError('network error')); return; }
             const n = reply.chunk || (3 + Math.floor(Math.random() * 14));
             send(Object.assign({}, base, { choices: [{ index: 0, delta: { content: text.slice(i, i + n) }, finish_reason: null }] }));
             i += n;
