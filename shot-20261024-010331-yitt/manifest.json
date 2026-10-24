@@ -1,0 +1,20 @@
+{
+  "id": "shot-20261024-010331-yitt",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-24T01:04:11.958Z",
+  "shots": [
+    {
+      "name": "actual móvil",
+      "file": "1-actual-movil.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "actual escritorio",
+      "file": "2-actual-escritorio.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
