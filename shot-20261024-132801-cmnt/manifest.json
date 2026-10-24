@@ -1,0 +1,20 @@
+{
+  "id": "shot-20261024-132801-cmnt",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-24T13:28:52.341Z",
+  "shots": [
+    {
+      "name": "Móvil · después",
+      "file": "1-movil-despues.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Escritorio · después",
+      "file": "2-escritorio-despues.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
