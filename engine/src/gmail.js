@@ -49,17 +49,43 @@ const header = (message, name) => {
   return found ? found.value : '';
 };
 
+// What a Google API error means for the user, in words they can act on.
+export function googleProblem(status, data, api) {
+  const error = (data && data.error) || {};
+  const message = String(error.message || '');
+  const reasons = [].concat(error.errors || [], error.details || []).map((item) => String((item && item.reason) || '')).join(' ');
+  if (/SERVICE_DISABLED|accessNotConfigured/.test(reasons) || /has not been used in project|is disabled/i.test(message)) {
+    return { kind: 'disabled', text: 'la API de ' + api + ' no está activada en el proyecto de Google Cloud de la app. Si se acaba de activar, Google tarda unos minutos en aplicarlo: vuelve a intentarlo en un rato; no hace falta volver a vincular la cuenta.' };
+  }
+  if (/ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficientPermissions/.test(reasons) || /insufficient authentication scopes|insufficient permission/i.test(message)) {
+    return { kind: 'scope', text: 'esa cuenta no dio permiso para ' + api + ': quítala del cuadro de texto, vuelve a vincularla y deja marcada la casilla de ' + api + ' en la pantalla de Google.' };
+  }
+  if (status === 401) return { kind: 'expired', text: 'la sesión de esa cuenta ha caducado: quítala y vuelve a vincularla.' };
+  if (/admin|domain|policy|organization/i.test(message + ' ' + reasons)) {
+    return { kind: 'admin', text: 'el administrador de esa cuenta (Google Workspace) no deja que esta app lea ' + api + ': ' + message };
+  }
+  return { kind: 'other', text: message || 'error' };
+}
+
 export function createGmailTools(ctx) {
+  // A Google API that was just turned on in Google Cloud takes a few minutes
+  // to answer: SERVICE_DISABLED is retried a few times before giving up.
   async function json(url, what) {
-    const response = await ctx.fetch(url, { signal: ctx.signal });
-    if (!response.ok) {
-      let message = '';
-      try { const data = await response.json(); message = data && data.error && data.error.message; } catch (_) {}
-      const error = new Error('Gmail ' + response.status + (what ? ' al ' + what : '') + ': ' + (message || response.statusText || 'error') + (response.status === 401 ? ' (la sesión de esa cuenta ha caducado: vuelve a vincularla)' : response.status === 403 ? ' (Google no dio permiso de leer el correo: vuelve a vincular la cuenta y marca Gmail)' : ''));
+    for (let attempt = 0; ; attempt++) {
+      const response = await ctx.fetch(url, { signal: ctx.signal });
+      if (response.ok) return response.json();
+      let data = null;
+      try { data = await response.json(); } catch (_) {}
+      const problem = googleProblem(response.status, data, 'Gmail');
+      if (problem.kind === 'disabled' && attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        continue;
+      }
+      const error = new Error('Gmail ' + response.status + (what ? ' al ' + what : '') + ': ' + problem.text);
       error.status = response.status;
+      error.kind = problem.kind;
       throw error;
     }
-    return response.json();
   }
   const prefix = ctx.prefix || '';
   const accountNote = ctx.account ? ' (Google account ' + ctx.account + ', read-only)' : '';

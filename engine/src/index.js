@@ -16,7 +16,7 @@ import { createGithubTools, githubWhoAmI, githubPushStaged } from './github.js';
 
 export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, githubPushStaged, normalizePath, runInSandbox };
 export { createDriveTools } from './gdrive.js';
-export { createGmailTools } from './gmail.js';
+export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 

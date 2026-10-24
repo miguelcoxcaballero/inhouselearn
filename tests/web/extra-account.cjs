@@ -18,6 +18,8 @@ const { openApp, send, idle } = require('./mock.cjs');
 const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label + (extra !== undefined ? ' — ' + JSON.stringify(extra).slice(0, 500) : ''));
 
 const revoked = [];
+let gmailDisabled = 0; // how many more Gmail calls answer SERVICE_DISABLED (just turned on in Google Cloud)
+const disabled = (route) => route.fulfill({ status: 403, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ error: { code: 403, message: 'Gmail API has not been used in project 435784295430 before or it is disabled.', details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'SERVICE_DISABLED' }] } }) });
 const seenTokens = new Set();
 const b64url = (text) => Buffer.from(text).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
@@ -30,6 +32,8 @@ async function google(route) {
   if (url.hostname === 'gmail.googleapis.com' || url.pathname.startsWith('/drive/v3/') && req.headers().authorization === 'Bearer extra-token') seenTokens.add(req.headers().authorization);
   if (url.hostname === 'gmail.googleapis.com') {
     if (req.headers().authorization !== 'Bearer extra-token') return json({ error: { message: 'wrong account' } }, 401);
+    if (gmailDisabled > 0) { gmailDisabled--; return disabled(route); }
+    if (url.pathname.endsWith('/profile')) return json({ emailAddress: 'club@example.org' });
     if (url.pathname.endsWith('/messages')) return json({ messages: [{ id: 'm1' }] });
     if (url.pathname.endsWith('/messages/m1') && url.searchParams.get('format') === 'metadata') return json({ id: 'm1', snippet: 'El presupuesto aprobado es 420 €', payload: { headers: [{ name: 'From', value: 'Tesorería <tesoreria@example.org>' }, { name: 'Subject', value: 'Presupuesto del taller' }, { name: 'Date', value: 'Tue, 3 Feb 2026 10:00:00 +0100' }] } });
     if (url.pathname.endsWith('/messages/m1')) return json({ id: 'm1', payload: { mimeType: 'multipart/mixed', headers: [{ name: 'From', value: 'Tesorería <tesoreria@example.org>' }, { name: 'To', value: 'club@example.org' }, { name: 'Subject', value: 'Presupuesto del taller' }, { name: 'Date', value: 'Tue, 3 Feb 2026 10:00:00 +0100' }], parts: [{ mimeType: 'text/plain', body: { data: b64url('Hola,\nel presupuesto aprobado para el taller es de 420 €.\nUn saludo') } }, { filename: 'factura.pdf', mimeType: 'application/pdf', body: { attachmentId: 'a1', size: 20480 } }] } });
@@ -128,6 +132,31 @@ async function google(route) {
   const after = await page.evaluate(() => ({ pill: !!document.querySelector('.extra-google-pill'), tools: extraGoogleToolsFor(null, true).length, prompt: extraGooglePromptText(), stored: JSON.stringify(localStorage).includes('extra-token') }));
   check('removing the pill revokes the token and the tools go away', !after.pill && after.tools === 0 && after.prompt === '' && revoked.includes('extra-token'), { after, revoked });
   check('the extra token is never written to storage', !after.stored);
+
+  // Gmail API not turned on yet in Google Cloud: linking says so on the pill and
+  // in a notice; once it is on, a search works (the app retries a just-enabled API).
+  gmailDisabled = 1;
+  await page.evaluate(() => { window.requestExtraGoogleToken = async () => ({ access_token: 'extra-token', expires_in: 3600 }); });
+  await page.click('#plus-btn');
+  await page.click('#extra-google-btn');
+  await page.waitForSelector('.extra-google-pill');
+  await page.waitForTimeout(300);
+  const off = await page.evaluate(() => ({ pill: document.querySelector('.extra-google-pill').innerText, title: document.querySelector('.extra-google-pill').title, toast: Array.from(document.querySelectorAll('.toast')).map((t) => t.innerText).join(' '), prompt: extraGooglePromptText() }));
+  check('Gmail API off in Google Cloud: the pill says Gmail ✕ and why, and a notice explains it', /Gmail ✕/.test(off.pill) && /Drive ✓/.test(off.pill) && /no está activada en el proyecto de Google Cloud/.test(off.title) && /Google tarda unos minutos/.test(off.toast) && /no hace falta volver a vincular/.test(off.prompt), off);
+  gmailDisabled = 2;
+  await page.evaluate(() => window.__replies.push({ text: '', tools: [{ name: 'extra_gmail_search', args: { query: 'presupuesto' } }] }, { text: 'Encontrado.' }));
+  await send(page, 'Mira en el correo');
+  await idle(page, 40000);
+  const retried = await page.evaluate(() => { const tools = window.__requests.slice(-1)[0].messages.filter((m) => m.role === 'tool'); return String(tools[tools.length - 1].content); });
+  check('…a just-enabled API is retried: the search works after two SERVICE_DISABLED answers', /id m1 · /.test(retried), retried.slice(0, 200));
+  gmailDisabled = 5;
+  await page.evaluate(() => window.__replies.push({ text: '', tools: [{ name: 'extra_gmail_search', args: { query: 'presupuesto' } }] }, { text: 'No.' }));
+  await send(page, 'Otra vez el correo');
+  await idle(page, 40000);
+  const still = await page.evaluate(() => { const tools = window.__requests.slice(-1)[0].messages.filter((m) => m.role === 'tool'); return String(tools[tools.length - 1].content); });
+  check('…if it is still off, the model gets the plain reason: turn it on in Google Cloud, wait, no need to re-link', /no está activada en el proyecto de Google Cloud/.test(still) && /no hace falta volver a vincular/.test(still), still.slice(0, 300));
+  gmailDisabled = 0;
+  await page.click('.extra-google-pill [data-remove-extra-google]');
 
   // The same account as the session is refused.
   await page.evaluate(() => { window.requestExtraGoogleToken = async () => ({ access_token: 'same-token', expires_in: 3600 }); });

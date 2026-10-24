@@ -8,6 +8,7 @@
 // ctx: { fetch(url, options) → Response con el token de Google, confirm(request),
 //   ensureWrite(), pdfText(arrayBuffer, fromPage, toPage)?, acceptsImages, signal }
 import { Type } from '@earendil-works/pi-ai';
+import { googleProblem } from './gmail.js';
 
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
@@ -84,17 +85,24 @@ function bytesToBase64(buffer) {
 
 export function createDriveTools(ctx) {
   async function call(url, options, what) {
-    const response = await ctx.fetch(url, Object.assign({ signal: ctx.signal }, options || {}));
-    if (!response.ok) {
-      let message = '';
-      try { const data = await response.json(); message = data && data.error && data.error.message; } catch (_) {}
-      const hint = response.status === 403 ? ' (Google no da permiso: puede que el archivo no sea tuyo o que falte el permiso de Drive; vuelve a conectar Drive en el menú +)'
+    for (let attempt = 0; ; attempt++) {
+      const response = await ctx.fetch(url, Object.assign({ signal: ctx.signal }, options || {}));
+      if (response.ok) return response;
+      let data = null;
+      try { data = await response.json(); } catch (_) {}
+      const problem = googleProblem(response.status, data, 'Google Drive');
+      // Just turned on in Google Cloud: it answers after a few minutes.
+      if (problem.kind === 'disabled' && attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        continue;
+      }
+      const hint = problem.kind !== 'other' ? '' : response.status === 403 ? ' (Google no da permiso: puede que el archivo no sea tuyo o que falte el permiso de Drive; vuelve a conectar Drive en el menú +)'
         : response.status === 404 ? ' (no existe o no tienes acceso)' : '';
-      const error = new Error('Google Drive ' + response.status + (what ? ' al ' + what : '') + ': ' + (message || response.statusText || 'error') + hint);
+      const error = new Error('Google Drive ' + response.status + (what ? ' al ' + what : '') + ': ' + (problem.kind === 'other' ? (problem.text === 'error' ? response.statusText || 'error' : problem.text) : problem.text) + hint);
       error.status = response.status;
+      error.kind = problem.kind;
       throw error;
     }
-    return response;
   }
   const json = async (url, options, what) => (await call(url, options, what)).json();
   const meta = (id) => json(API + '/files/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=' + encodeURIComponent(FIELDS), null, 'leer el archivo');

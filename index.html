@@ -868,6 +868,7 @@
     .composer-attachment button:hover { background: rgba(0,0,0,0.08); color: var(--text); }
     .extra-google-pill .composer-attachment-name { max-width: 220px; font-weight: 600; }
     .extra-google-pill.expired { opacity: 0.6; }
+    .extra-google-state { font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
     .composer-row { display: flex; align-items: flex-end; gap: 4px; }
     .attach-btn {
       width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%;
@@ -1645,7 +1646,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261023-live">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="theme.css?v=20261024-cost3">
+  <link rel="stylesheet" href="theme.css?v=20261024-gmail">
 </head>
 <body>
 
@@ -1950,8 +1951,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-cost3"></script>
-  <script src="composer-dock.js?v=20261024-cost3"></script>
+  <script src="approval.js?v=20261024-gmail"></script>
+  <script src="composer-dock.js?v=20261024-gmail"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -4562,9 +4563,14 @@
 
     function extraGoogleBadgeMarkup(account) {
       const expired = account.expiresAt && account.expiresAt <= Date.now();
-      return '<div class="composer-attachment extra-google-pill' + (expired ? ' expired' : '') + '" title="' + escapeHtml(account.email + ' · Gmail y Drive, solo lectura' + (expired ? ' · caducada: quítala y vuelve a vincularla' : '')) + '">' +
+      const status = account.status || {};
+      const state = (api, label) => !status[api] ? '' : status[api].kind === 'ok' ? label + ' ✓' : label + ' ✕';
+      const summary = [state('gmail', 'Gmail'), state('drive', 'Drive')].filter(Boolean).join(' · ');
+      const why = ['gmail', 'drive'].filter((api) => status[api] && status[api].kind !== 'ok').map((api) => (api === 'gmail' ? 'Gmail: ' : 'Drive: ') + status[api].text).join('\n');
+      return '<div class="composer-attachment extra-google-pill' + (expired ? ' expired' : '') + '" title="' + escapeHtml(account.email + ' · solo lectura' + (why ? '\n' + why : '') + (expired ? '\nCaducada: quítala y vuelve a vincularla' : '')) + '">' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1a10 10 0 0 0 0 9.2z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.7 9.4 5.9 12 5.9z"/></svg>' +
         '<span class="composer-attachment-name">' + escapeHtml(account.email) + (expired ? ' · caducada' : '') + '</span>' +
+        (summary && !expired ? '<span class="extra-google-state">' + escapeHtml(summary) + '</span>' : '') +
         '<button type="button" data-remove-extra-google aria-label="Quitar la cuenta ' + escapeHtml(account.email) + '">×</button></div>';
     }
 
@@ -4599,17 +4605,43 @@
           return;
         }
         if (extraGoogle) revokeGoogleToken(extraGoogle.token);
+        // What Google really granted (the token's own scopes; the Android flow
+        // does not say), then one small call to each API: the pill and the
+        // model know at once what works and why not.
+        const granted = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(token)).then((r) => r.ok ? r.json() : {}).catch(() => ({}));
+        const grantedScopes = String(granted.scope || response.scope || '').split(/\s+/).filter(Boolean);
+        const has = (scope) => !grantedScopes.length || grantedScopes.includes(scope);
         extraGoogle = {
           email,
           token,
           expiresAt: Date.now() + (Number(response.expires_in) || 3600) * 1000,
-          gmail: !response.scope || scopes.includes('https://www.googleapis.com/auth/gmail.readonly'),
-          drive: !response.scope || scopes.includes('https://www.googleapis.com/auth/drive.readonly')
+          gmail: has('https://www.googleapis.com/auth/gmail.readonly'),
+          drive: has('https://www.googleapis.com/auth/drive.readonly'),
+          status: {}
         };
+        const account = extraGoogle;
+        account.status.gmail = account.gmail ? await probeGoogleApi(token, 'https://gmail.googleapis.com/gmail/v1/users/me/profile', 'Gmail') : { kind: 'scope', text: 'no diste permiso para leer el correo: quita la cuenta, vuelve a vincularla y deja marcada la casilla de Gmail.' };
+        account.status.drive = account.drive ? await probeGoogleApi(token, 'https://www.googleapis.com/drive/v3/about?fields=user', 'Google Drive') : { kind: 'scope', text: 'no diste permiso para leer Drive: quita la cuenta, vuelve a vincularla y deja marcada la casilla de Drive.' };
+        if (extraGoogle !== account) return;
         renderComposerAttachments();
+        const problems = ['gmail', 'drive'].filter((api) => account.status[api].kind !== 'ok').map((api) => (api === 'gmail' ? 'Gmail' : 'Drive') + ': ' + account.status[api].text);
+        if (problems.length) showToast(email, problems.join('\n'));
         if (elements.composer) elements.composer.focus();
       } catch (error) {
         if (!/cancel/i.test(String(error && error.message))) showToast('Otra cuenta de Google', error && error.message ? error.message : 'No se pudo vincular.');
+      }
+    }
+
+    // One cheap call to a Google API with a fresh token: ok, or what is wrong
+    // (API not turned on in Google Cloud, permission not granted, admin policy).
+    async function probeGoogleApi(token, url, api) {
+      try {
+        const response = await fetch(url, { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+        if (response.ok) return { kind: 'ok', text: '' };
+        const data = await response.json().catch(() => null);
+        return InhousePi.googleProblem(response.status, data, api);
+      } catch (error) {
+        return { kind: 'other', text: 'no se pudo comprobar (' + (error && error.message ? error.message : 'red') + ').' };
       }
     }
 
@@ -4649,7 +4681,9 @@
       if (!account) return '';
       return '- Otra cuenta de Google vinculada para esta pregunta: ' + account.email + ' (no es la cuenta con la que el usuario ha entrado). Solo lectura: ' +
         [account.gmail ? 'su correo con extra_gmail_search (sintaxis del buscador de Gmail) y extra_gmail_read' : '', account.drive ? 'su Drive y sus unidades compartidas con extra_drive_search, extra_drive_list, extra_drive_read y extra_drive_shared_drives' : ''].filter(Boolean).join('; ') +
-        '. Úsalas cuando pregunte por el correo, los archivos o las unidades compartidas de esa cuenta, y di de qué cuenta sale cada dato. No puedes enviar, borrar ni cambiar nada en ella.';
+        '. Úsalas cuando pregunte por el correo, los archivos o las unidades compartidas de esa cuenta, y di de qué cuenta sale cada dato. No puedes enviar, borrar ni cambiar nada en ella.' +
+        ['gmail', 'drive'].filter((api) => account.status && account.status[api] && account.status[api].kind !== 'ok' && account.status[api].kind !== 'scope')
+          .map((api) => ' Al vincularla, ' + (api === 'gmail' ? 'Gmail' : 'Drive') + ' respondió: ' + account.status[api].text + ' Inténtalo igualmente (si se acaba de activar, la app reintenta) y, si falla, explícaselo con esas palabras.').join('');
     }
 
     function githubPromptText(chat) {
