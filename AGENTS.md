@@ -245,10 +245,12 @@ Mandatory guidance for every AI and developer working in this repository.
   first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a
   course title is never touched. Renaming by hand saves it as `customTitle` and plays the same typing animation
-   (`startTitleAnimation`): the name is edited where it is shown —its row in the list (`startRenameChat`), or the open
-   chat's name in the top bar, which is tapped (or Enter) and works even after the list closed itself— and also from
-   «Renombrar chat» in the + menu and «Renombrar» in the row's menu; Escape discards the edit and an empty name is
-   ignored. A redraw of the list keeps the text being typed (`renaming`). Before that, the provisional name from the first message follows the same
+   (`startTitleAnimation`): the open chat's name in the top bar is tapped (or Enter) and written over itself with NO box,
+   border or underline: the `<b>` becomes `contenteditable="plaintext-only"` while editing (`startRenameChat`, `renaming`),
+    so only the native caret blinks, the arrow keys move it and the text never shifts, and it still works after the list
+   itself closed. It also starts from «Renombrar chat» in the + menu and «Renombrar» in the row's menu (a chat that is not
+    open is opened first). Escape discards the edit and an empty name is
+   ignored. Before that, the provisional name from the first message follows the same
   rules (at most three words, filler like «me», «el», «explícame» left out; `TITLE_FILLER`). The change is typed out (`startTitleAnimation`), also on other
   devices through live sync. Test: `tests/web/chat-title.cjs`.
 - **Ultra code:** an option of the reasoning dropdown in the model picker, for every model
