@@ -1,0 +1,44 @@
+{
+  "id": "shot-20261025-172315-g6vy",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "prop/compositor",
+  "at": "2026-10-25T17:31:16.610Z",
+  "shots": [
+    {
+      "name": "A movil oscuro",
+      "file": "1-a-movil-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "A escritorio claro",
+      "file": "2-a-escritorio-claro.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "B movil oscuro",
+      "file": "3-b-movil-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "B escritorio claro",
+      "file": "4-b-escritorio-claro.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "C movil oscuro",
+      "file": "5-c-movil-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "C escritorio claro",
+      "file": "6-c-escritorio-claro.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
