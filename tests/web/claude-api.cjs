@@ -154,6 +154,76 @@ function toolReply(name, input) {
   });
   check('a Claude key alone is enough for a Claude chat (not for OpenRouter\'s models)', alone.ready === true && alone.other === false, alone);
 
+  // 9. Priority: OpenRouter's copy of a Claude model goes direct, and new chats use Claude.
+  const priority = await page.evaluate(() => {
+    saveApiSettings({ apiKey: 'sk-or-test' });
+    const extra = { id: 'anthropic/claude-sonnet-5.5', name: 'Claude Sonnet 5.5', company: 'Anthropic', companyId: 'anthropic', rank: 1, pricing: {}, price: { input: 2, output: 10 }, context: 1000000, maxOutput: 64000, images: true, tools: true, reasoning: null };
+    const other = { id: 'deepseek/deepseek-v4.1-flash', name: 'V4.1 Flash', company: 'DeepSeek', companyId: 'deepseek', rank: 2, pricing: {}, price: { input: 0, output: 0 }, context: 128000, maxOutput: 8000, images: false, tools: true, reasoning: null };
+    setModelCatalog([extra, other], Date.now());
+    const old = createChat('Viejo');
+    old.model = 'anthropic/claude-sonnet-5.5';
+    old.messages.push({ id: 'm-old', role: 'user', content: 'hola', createdAt: new Date().toISOString() });
+    appState.chats.unshift(old);
+    const deep = createChat('Deep');
+    deep.model = 'deepseek/deepseek-v4.1-flash';
+    appState.chats.unshift(deep);
+    applyClaudeModels();
+    const fresh = createChat('Nuevo');
+    return {
+      listed: modelCatalog.entries.map((entry) => entry.id),
+      old: old.model,
+      fresh: fresh.model,
+      normalized: normalizeModelId('anthropic/claude-sonnet-5.5'),
+      deep: deep.model
+    };
+  });
+  check('with the key, OpenRouter\'s Claude copies leave the list and their chats go direct', !priority.listed.includes('anthropic/claude-sonnet-5.5') && priority.listed.includes('deepseek/deepseek-v4.1-flash') && priority.old === 'claude-api/claude-sonnet-5-5' && priority.normalized === 'claude-api/claude-sonnet-5-5' && priority.deep === 'deepseek/deepseek-v4.1-flash', priority);
+  check('…and a new chat uses Claude even after a chat on another model', priority.fresh === 'claude-api/claude-opus-5-5', priority);
+
+  // 10. Claude's credit left: monthly credit minus this period's Claude answers.
+  const balance = await page.evaluate(() => {
+    const ahead = new Date(Date.now() + 10 * 86400e3);
+    saveApiSettings({ claudeCredit: 100, claudeNextRenew: localDayKey(ahead), claudeKeySince: '', claudeOffset: { period: '', spent: 0 } });
+    const period = claudePeriod(new Date());
+    // Linked on Oct 25 with the next credit on Nov 26 (as in the user's account): counted from Oct 25.
+    saveApiSettings({ claudeNextRenew: '2026-11-26', claudeKeySince: '2026-10-25T12:00:00' });
+    const linked = claudePeriod(new Date(2026, 9, 25, 18));
+    const later = claudePeriod(new Date(2026, 10, 27, 9));
+    saveApiSettings({ claudeNextRenew: localDayKey(ahead), claudeKeySince: '' });
+    const chat = createChat('Gasto');
+    const inside = new Date(period.start.getTime() + 3600e3).toISOString();
+    const before = new Date(period.start.getTime() - 86400e3).toISOString();
+    chat.messages.push(
+      { id: 'a1', role: 'assistant', content: 'x', model: 'claude-api/claude-opus-5-5', cost: 2.5, createdAt: inside, alternatives: [{ content: 'y', model: 'claude-api/claude-opus-5-5', cost: 0.5, createdAt: inside }] },
+      { id: 'a2', role: 'assistant', content: 'x', model: 'claude-api/claude-opus-5-5', cost: 9, createdAt: before },
+      { id: 'a3', role: 'assistant', content: 'x', model: 'deepseek/deepseek-v4.1-flash', cost: 4, createdAt: inside });
+    appState.chats = appState.chats.filter((c) => !c.messages.some((m) => m.role === 'assistant' && isClaudeModelId(m.model)));
+    appState.chats.unshift(chat);
+    const first = claudeBalance();
+    keepClaudeSpendOf(chat);
+    appState.chats = appState.chats.filter((c) => c !== chat);
+    const afterDelete = claudeBalance();
+    setClaudeRealBalance(80);
+    const adjusted = claudeBalance();
+    getActiveChat().model = 'claude-api/claude-opus-5-5';
+    updateConfigUi();
+    renderUsageDonut();
+    toggleModelMenu();
+    return {
+      first: first.left, afterDelete: afterDelete.left, adjusted: adjusted.left,
+      text: document.querySelector('#claude-balance .claude-balance-text').textContent,
+      visible: !document.getElementById('claude-balance').classList.contains('hidden'),
+      donut: document.getElementById('usage-btn').title || document.getElementById('usage-donut').textContent,
+      renew: period.next.getDate(), aheadDay: ahead.getDate(), linked: [localDayKey(linked.start), localDayKey(linked.next)], later: [localDayKey(later.start), localDayKey(later.next)]
+    };
+  });
+  check('Claude\'s credit left counts only this period\'s Claude answers (older versions included)', balance.first === 97 && balance.renew === balance.aheadDay, balance);
+  check('…the period runs from the last renewal to the next (a plan linked the day before counts from then)', balance.linked[0] === '2026-10-25' && balance.linked[1] === '2026-11-26' && balance.later[0] === '2026-11-26' && balance.later[1] === '2026-12-26', balance);
+  check('…a deleted chat\'s spending stays counted, and «saldo real» adjusts it', balance.afterDelete === 97 && Math.abs(balance.adjusted - 80) < 1e-9, balance);
+  check('…shown under the key («Quedan $80… de $100 · se renueva el 26 …») and in the usage ring of a Claude chat', /^Quedan \$80/.test(balance.text) && /de \$100/.test(balance.text) && /se renueva el \d+/.test(balance.text) && balance.visible && /Claude/.test(balance.donut), balance);
+  const popup = await page.evaluate(() => { closeModelMenu(); toggleUsagePopup(); return document.getElementById('usage-popup-content').textContent; });
+  check('the usage popup shows Claude\'s credit first', /Claude · tu API\$80/.test(popup.replace(/\s+/g, '')) || /Claude · tu API/.test(popup) && /\$80/.test(popup), popup.slice(0, 200));
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

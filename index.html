@@ -1414,6 +1414,19 @@
     .claude-key-section { padding-top: 8px; }
     .claude-key-state { margin-left: 4px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #16a34a; }
     .claude-key-state.error { color: #dc2626; }
+    .claude-balance { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 8px; font-size: 0.74rem; color: var(--text); width: 100%; }
+    .claude-balance-text { position: relative; padding-bottom: 5px; font-variant-numeric: tabular-nums; }
+    .claude-balance-text::before, .claude-balance-text::after { content: ''; position: absolute; left: 0; bottom: 0; height: 2px; border-radius: 2px; }
+    .claude-balance-text::before { right: 0; background: var(--border); }
+    .claude-balance-text::after { width: var(--claude-left, 100%); background: #16a34a; transition: width 0.4s ease; }
+    .claude-balance-text[data-low="true"]::after { background: #dc2626; }
+    .claude-balance-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; width: 100%; }
+    .claude-balance-form[hidden] { display: none; }
+    .claude-balance-form label { display: flex; flex-direction: column; gap: 3px; font-size: 0.68rem; color: var(--muted); }
+    .claude-balance-form input { width: 76px; height: 28px; padding: 0 8px; border: none; border-radius: 8px; background: rgba(0,0,0,0.045); color: var(--text); font: inherit; font-size: 0.78rem; outline: none; }
+    .claude-balance-form input.claude-date { width: 128px; }
+    .claude-money { display: inline-flex; align-items: center; gap: 2px; }
+    .claude-money::before { content: '$'; color: var(--muted); font-size: 0.78rem; }
     .google-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
     .google-account-copy { font-size: 0.8rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
     .google-account-row .btn { flex: 0 0 auto; }
@@ -1754,7 +1767,7 @@
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261025-claude">
+  <link rel="stylesheet" href="theme.css?v=20261025-claude2">
 </head>
 <body>
 
@@ -2014,6 +2027,16 @@
                       <div class="api-key-row">
                         <input class="api-input" id="claude-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" aria-label="API key de Claude">
                         <button class="btn btn-primary btn-sm" id="claude-key-btn" type="button">Guardar</button>
+                      </div>
+                      <div class="claude-balance hidden" id="claude-balance">
+                        <span class="claude-balance-text"></span>
+                        <button type="button" class="usage-link" id="claude-balance-adjust">Ajustar</button>
+                        <form class="claude-balance-form" id="claude-balance-form" hidden>
+                          <label>Crédito al mes <span class="claude-money"><input name="credit" inputmode="decimal" autocomplete="off"></span></label>
+                          <label>Próxima renovación <input name="next" type="date" class="claude-date"></label>
+                          <label>Saldo real ahora <span class="claude-money"><input name="real" inputmode="decimal" autocomplete="off" placeholder="opcional"></span></label>
+                          <button class="btn btn-primary btn-sm" type="submit">Guardar</button>
+                        </form>
                       </div>
                       <div class="api-key-hint" id="claude-key-hint">Opcional. Con ella salen arriba Opus, Sonnet, Haiku y Fable y se pagan con el cr&eacute;dito API de tu plan de Claude, directo a Anthropic. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
                     </div>
@@ -2743,9 +2766,19 @@
       return getApiSettings().anthropicKey && InhousePi.claudeApiModels ? InhousePi.claudeApiModels() : [];
     }
 
+    // OpenRouter's copy of a Claude model the key covers («anthropic/claude-opus-5.5»
+    // → «claude-api/claude-opus-5-5»): with the key it always goes direct.
+    function directClaudeId(modelId) {
+      const match = /^anthropic\/(claude-[a-z]+-[\d.]+)$/.exec(String(modelId || ''));
+      if (!match || !getApiSettings().anthropicKey || !InhousePi.claudeApiModels) return '';
+      const id = 'claude-api/' + match[1].replace(/\./g, '-');
+      return InhousePi.claudeApiModels().some((entry) => entry.id === id) ? id : '';
+    }
+
     function setModelCatalog(openRouterEntries, fetchedAt) {
       modelCatalog.openRouter = openRouterEntries;
-      const entries = claudeCatalogEntries().concat(openRouterEntries);
+      const claude = claudeCatalogEntries();
+      const entries = claude.concat(claude.length ? openRouterEntries.filter((entry) => !directClaudeId(entry.id)) : openRouterEntries);
       modelCatalog.entries = entries;
       modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
       modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
@@ -2762,6 +2795,13 @@
       setModelCatalog(modelCatalog.openRouter || [], modelCatalog.fetchedAt);
       const after = defaultModelId();
       appState.chats.forEach((chat) => {
+        // Every chat on OpenRouter's copy of a Claude model moves to the direct one.
+        const direct = directClaudeId(chat.model);
+        if (direct) {
+          chat.model = direct;
+          chat.thinkingLevel = normalizeThinkingLevelForModel(direct, chat.thinkingLevel);
+          return;
+        }
         if (chat.messages.length) return;
         if (chat.model === before || chat.model === FALLBACK_MODEL_ID || (InhousePi.isClaudeApiModel && InhousePi.isClaudeApiModel(chat.model) && !getApiSettings().anthropicKey)) {
           chat.model = after;
@@ -2927,7 +2967,7 @@
         return custom.indexOf('/') > 0 ? custom : defaultModelId();
       }
       // Los IDs de OpenRouter son compañía/modelo; lo demás (Gemini directo) es de versiones viejas.
-      return raw.indexOf('/') > 0 ? raw : defaultModelId();
+      return raw.indexOf('/') > 0 ? (directClaudeId(raw) || raw) : defaultModelId();
     }
 
     function thinkingLevelsForModel(modelId) {
@@ -3136,7 +3176,7 @@
     // Android app gets the OpenRouter key back after signing in with Google.
     function buildSyncedSettings() {
       const api = getApiSettings();
-      return { openRouter: { apiKey: api.apiKey, managementKey: api.managementKey, anthropicKey: api.anthropicKey || '', updatedAt: api.updatedAt || '' } };
+      return { openRouter: { apiKey: api.apiKey, managementKey: api.managementKey, anthropicKey: api.anthropicKey || '', claudeCredit: api.claudeCredit, claudeNextRenew: api.claudeNextRenew, claudeKeySince: api.claudeKeySince, claudeOffset: api.claudeOffset, updatedAt: api.updatedAt || '' } };
     }
 
     function normalizeSyncedSettings(settings) {
@@ -3147,6 +3187,10 @@
           apiKey: typeof source.apiKey === 'string' ? source.apiKey : '',
           managementKey: typeof source.managementKey === 'string' ? source.managementKey : '',
           anthropicKey: typeof source.anthropicKey === 'string' ? source.anthropicKey : '',
+          claudeCredit: source.claudeCredit,
+          claudeNextRenew: source.claudeNextRenew,
+          claudeKeySince: source.claudeKeySince,
+          claudeOffset: source.claudeOffset,
           updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : ''
         }
       };
@@ -3160,6 +3204,12 @@
       if ((local.updatedAt || '') >= remote.updatedAt) return false;
       // A copy saved by an older page has no anthropicKey: it keeps this browser's.
       const remoteClaude = typeof remote.anthropicKey === 'string' ? remote.anthropicKey : local.anthropicKey;
+      const claudeBudget = {};
+      if (Number(remote.claudeCredit) > 0) claudeBudget.claudeCredit = Number(remote.claudeCredit);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(remote.claudeNextRenew || ''))) claudeBudget.claudeNextRenew = remote.claudeNextRenew;
+      if (remote.claudeKeySince) claudeBudget.claudeKeySince = String(remote.claudeKeySince);
+      if (remote.claudeOffset && typeof remote.claudeOffset === 'object') claudeBudget.claudeOffset = { period: String(remote.claudeOffset.period || ''), spent: Number(remote.claudeOffset.spent) || 0 };
+      if (Object.keys(claudeBudget).length) saveApiSettings(claudeBudget, { fromDrive: true });
       if (remote.apiKey === local.apiKey && remote.managementKey === local.managementKey && remoteClaude === local.anthropicKey) {
         saveApiSettings({ updatedAt: remote.updatedAt }, { fromDrive: true });
         return false;
@@ -4447,7 +4497,9 @@
     function createChat(title) {
       const recent = appState.chats[0];
       // A Claude model without its key (removed since) is not inherited.
-      const inherited = recent && !(isClaudeModelId(recent.model) && !getApiSettings().anthropicKey) ? recent : null;
+      // With a Claude key, new chats use Claude (the last Claude model chosen, else the first).
+      const claudeKey = !!getApiSettings().anthropicKey;
+      const inherited = recent && (claudeKey ? isClaudeModelId(recent.model) : !isClaudeModelId(recent.model)) ? recent : null;
       const model = inherited ? normalizeModelId(inherited.model) : defaultModelId();
       return {
         id: uid('chat'),
@@ -5963,6 +6015,7 @@
         elements.claudeKeyState.classList.toggle('error', !!apiSettings.anthropicKey && check === 'rejected');
         elements.claudeKeyState.dataset.state = !apiSettings.anthropicKey ? '' : check === 'rejected' ? 'error' : check === 'checking' ? 'checking' : 'ok';
       }
+      renderClaudeBalance();
       if (elements.modelMenuStatus) {
         let statusCopy;
         if (!apiSettings.apiKey && apiSettings.anthropicKey) {
@@ -8771,6 +8824,7 @@
         appState.activeController.abort();
       }
 
+      keepClaudeSpendOf(targetChat);
       appState.chats = appState.chats.filter((chat) => chat.id !== targetId);
       if (window.InhouseLibrary && window.indexedDB) window.InhouseLibrary.removeChat(targetId).catch(() => {});
       githubStageDrop(targetId);
@@ -9656,6 +9710,14 @@
     function renderUsageDonut() {
       var svg = document.getElementById('usage-donut');
       if (!svg) return;
+      // A Claude chat: the ring is Claude's credit left.
+      var activeChat = typeof getActiveChat === 'function' ? getActiveChat() : null;
+      if (getApiSettings().anthropicKey && activeChat && isClaudeModelId(activeChat.model)) {
+        var claude = claudeBalance();
+        renderDonutSegments(svg, [{ label: 'Crédito de Claude', remaining: claude.left, color: quotaColor(claude.credit ? claude.left / claude.credit : 0) }], 'remaining', claude.credit,
+          formatBalance(claude.left) + ' de crédito de Claude', function(entry) { return entry.label + ': ' + formatBalance(entry.remaining) + ' de ' + formatBalance(claude.credit); });
+        return;
+      }
       var credits = appState.openRouterCredits;
       if (credits && credits.total > 0) {
         var remaining = Math.max(0, credits.total - credits.used);
@@ -9712,8 +9774,14 @@
       var hasKey = !!getApiSettings().apiKey;
       var credits = appState.openRouterCredits;
       var usage = getUsageData();
+      var claudeHtml = '';
+      if (getApiSettings().anthropicKey) {
+        var claude = claudeBalance();
+        claudeHtml = '<div class="usage-left usage-claude"><span>Claude · tu API</span><b>' + escapeHtml(formatBalance(claude.left)) + '</b></div>' +
+          '<div class="usage-note">' + escapeHtml(claudeBalanceText(claude)) + '. Gastado este periodo: ' + escapeHtml(formatUsd(claude.spent)) + '. Se ajusta en el selector de modelo.</div>';
+      }
       if (!hasKey) {
-        content.innerHTML = '<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>';
+        content.innerHTML = claudeHtml || '<div class="usage-note">Abre el selector de modelo y pega tu API key de OpenRouter para empezar.</div>';
         return;
       }
       var left = credits && credits.source === 'account' ? Math.max(0, credits.total - credits.used)
@@ -9736,8 +9804,8 @@
       var parts = top.map(function(id, index) { return { label: modelLabelFor(id), cost: usage.byModel[id].cost || 0, color: modelDonutColor(index) }; });
       if (rest > 0) parts.push({ label: 'Otros', cost: rest, color: 'var(--border-strong)' });
       var pct = function(value) { return sum ? Math.round(value / sum * 100) : 0; };
-      content.innerHTML =
-        '<div class="usage-left"><span>Te queda</span><b>' + (left === null ? '—' : escapeHtml(formatBalance(left))) + '</b></div>' +
+      content.innerHTML = claudeHtml +
+        '<div class="usage-left"><span>' + (claudeHtml ? 'OpenRouter' : 'Te queda') + '</span><b>' + (left === null ? '—' : escapeHtml(formatBalance(left))) + '</b></div>' +
         (left === null ? '<div class="usage-note">OpenRouter solo da el saldo de la cuenta a una <button type="button" class="usage-link" id="usage-balance-toggle">key de gestión</button>.</div>' +
           '<form class="usage-key-form" id="usage-management-form" hidden><input type="password" id="usage-management-key" autocomplete="off" spellcheck="false" placeholder="Key de gestión (sk-or-…)" aria-label="Key de gestión de OpenRouter"><button class="btn btn-sm btn-primary" type="submit">Ver</button></form>' +
           (credits && credits.managementError ? '<div class="usage-note error">' + escapeHtml(credits.managementError) + '</div>' : '') : '') +
@@ -10171,6 +10239,7 @@
         saveApiKeyFromInput();
       });
       if (elements.claudeKeyBtn) elements.claudeKeyBtn.addEventListener('click', () => { saveClaudeKeyFromInput(); });
+      bindClaudeBalance();
       if (elements.claudeKeyInput) {
         elements.claudeKeyInput.addEventListener('keydown', (event) => {
           if (event.key === 'Enter') {
@@ -10386,6 +10455,13 @@
           managementKey: String(stored.managementKey || ''),
           // Optional: Claude straight from Anthropic (the API credit of a Claude plan).
           anthropicKey: String(stored.anthropicKey || ''),
+          // Claude's monthly API credit, the day it renews and what was spent
+          // outside these chats this period (deleted chats, other apps).
+          claudeCredit: Number(stored.claudeCredit) > 0 ? Number(stored.claudeCredit) : 100,
+          // Next renewal (YYYY-MM-DD, from console.anthropic.com) and when the key was first saved.
+          claudeNextRenew: /^\d{4}-\d{2}-\d{2}$/.test(String(stored.claudeNextRenew || '')) ? String(stored.claudeNextRenew) : '',
+          claudeKeySince: String(stored.claudeKeySince || ''),
+          claudeOffset: stored.claudeOffset && typeof stored.claudeOffset === 'object' ? { period: String(stored.claudeOffset.period || ''), spent: Number(stored.claudeOffset.spent) || 0 } : { period: '', spent: 0 },
           // When apiKey or managementKey last changed; decides which copy wins against Drive.
           updatedAt: String(stored.updatedAt || '')
         };
@@ -10397,7 +10473,8 @@
       const previous = getApiSettings();
       const next = Object.assign({}, previous, patch || {});
       const fromDrive = !!(options && options.fromDrive);
-      const keysChanged = next.apiKey !== previous.apiKey || next.managementKey !== previous.managementKey || next.anthropicKey !== previous.anthropicKey;
+      const keysChanged = next.apiKey !== previous.apiKey || next.managementKey !== previous.managementKey || next.anthropicKey !== previous.anthropicKey ||
+        next.claudeCredit !== previous.claudeCredit || next.claudeNextRenew !== previous.claudeNextRenew || JSON.stringify(next.claudeOffset) !== JSON.stringify(previous.claudeOffset);
       if (keysChanged && !fromDrive) next.updatedAt = nowIso();
       apiSettingsCache = next;
       try {
@@ -10454,7 +10531,7 @@
 
     async function saveClaudeKeyFromInput() {
       const value = String(elements.claudeKeyInput && elements.claudeKeyInput.value || '').trim();
-      saveApiSettings({ anthropicKey: value });
+      saveApiSettings(value && !getApiSettings().claudeKeySince ? { anthropicKey: value, claudeKeySince: nowIso() } : { anthropicKey: value });
       appState.claudeKeyCheck = null;
       applyClaudeModels();
       if (!value) return;
@@ -10474,6 +10551,130 @@
         closeModelMenu();
         elements.composer.focus();
       }
+    }
+
+    // ─── Claude's remaining credit ───────────────────────
+    // Anthropic gives no balance to a normal API key (only to admin keys, which
+    // individual accounts cannot create), so it is counted here: the monthly
+    // credit minus what Claude's answers cost since the credit renewed, in every
+    // chat (they sync between devices), plus what was spent elsewhere.
+    // Same day a month later (the 31st becomes the month's last day).
+    function addMonths(date, months) {
+      const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
+      const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+      return new Date(target.getFullYear(), target.getMonth(), Math.min(date.getDate(), last));
+    }
+
+    // The credit period: from the last renewal to the next one. Anthropic gives the
+    // first credit when the plan is linked, so a key saved a few days before the
+    // first renewal counts from that day.
+    function claudePeriod(now) {
+      const api = getApiSettings();
+      const today = now || new Date();
+      const midnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const since = api.claudeKeySince ? new Date(api.claudeKeySince) : null;
+      const sinceDay = since && !isNaN(since) ? new Date(since.getFullYear(), since.getMonth(), since.getDate()) : null;
+      let next = api.claudeNextRenew ? new Date(api.claudeNextRenew + 'T00:00:00') : addMonths(sinceDay || midnight, 1);
+      if (isNaN(next)) next = addMonths(midnight, 1);
+      while (next <= midnight) next = addMonths(next, 1);
+      let start = addMonths(next, -1);
+      // Before the first renewal (renewal days are not exactly a month apart from the
+      // linking day), the period began when the key was saved.
+      if (start > midnight) start = sinceDay && sinceDay <= midnight ? sinceDay : addMonths(start, -1);
+      else if (sinceDay && sinceDay < start && start - sinceDay <= 7 * 86400e3) start = sinceDay;
+      return { start, next, key: localDayKey(start) };
+    }
+
+    function chatClaudeSpend(chat, since) {
+      const from = since.getTime();
+      let total = 0;
+      const add = (model, createdAt, cost) => {
+        if (isClaudeModelId(model) && Date.parse(createdAt || '') >= from) total += Number(cost) || 0;
+      };
+      ((chat && chat.messages) || []).forEach((message) => {
+        if (message.role !== 'assistant') return;
+        add(message.model, message.createdAt, message.pending && typeof message.liveCost === 'number' ? message.liveCost : message.cost);
+        (message.alternatives || []).forEach((version) => add(version.model || message.model, version.createdAt || message.createdAt, version.cost));
+      });
+      return total;
+    }
+
+    function claudeBalance() {
+      const api = getApiSettings();
+      const period = claudePeriod();
+      const inChats = appState.chats.reduce((sum, chat) => sum + chatClaudeSpend(chat, period.start), 0);
+      const elsewhere = api.claudeOffset && api.claudeOffset.period === period.key ? api.claudeOffset.spent : 0;
+      const spent = Math.max(0, inChats + elsewhere);
+      return { credit: api.claudeCredit, spent, left: Math.max(0, api.claudeCredit - spent), next: period.next, periodKey: period.key, inChats };
+    }
+
+    // A deleted chat's Claude spending this period stays counted.
+    function keepClaudeSpendOf(chat) {
+      if (!chat || !getApiSettings().anthropicKey) return;
+      const period = claudePeriod();
+      const spent = chatClaudeSpend(chat, period.start);
+      if (!spent) return;
+      const offset = getApiSettings().claudeOffset;
+      saveApiSettings({ claudeOffset: { period: period.key, spent: (offset.period === period.key ? offset.spent : 0) + spent } });
+    }
+
+    // «Saldo real ahora» from console.anthropic.com: whatever else used the credit
+    // (Claude Code, other apps) becomes the period's spending elsewhere.
+    function setClaudeRealBalance(real) {
+      const balance = claudeBalance();
+      saveApiSettings({ claudeOffset: { period: balance.periodKey, spent: balance.credit - real - balance.inChats } });
+    }
+
+    function claudeBalanceText(balance) {
+      const when = balance.next.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+      return 'Quedan ' + formatBalance(balance.left) + ' de ' + formatBalance(balance.credit) + ' · se renueva el ' + when;
+    }
+
+    function renderClaudeBalance() {
+      const box = document.getElementById('claude-balance');
+      if (!box) return;
+      const api = getApiSettings();
+      box.classList.toggle('hidden', !api.anthropicKey);
+      if (!api.anthropicKey) return;
+      const balance = claudeBalance();
+      const text = box.querySelector('.claude-balance-text');
+      const ratio = balance.credit ? balance.left / balance.credit : 0;
+      if (text) {
+        text.textContent = claudeBalanceText(balance);
+        text.style.setProperty('--claude-left', Math.round(ratio * 100) + '%');
+        text.dataset.low = ratio < 0.15 ? 'true' : 'false';
+      }
+      const form = document.getElementById('claude-balance-form');
+      if (form && form.hidden) {
+        form.elements.credit.value = String(api.claudeCredit);
+        form.elements.next.value = localDayKey(claudePeriod().next);
+        form.elements.real.value = '';
+      }
+    }
+
+    function bindClaudeBalance() {
+      const toggle = document.getElementById('claude-balance-adjust');
+      const form = document.getElementById('claude-balance-form');
+      if (!toggle || !form) return;
+      toggle.addEventListener('click', () => {
+        form.hidden = !form.hidden;
+        renderClaudeBalance();
+        if (!form.hidden) form.elements.real.focus();
+      });
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const credit = parseFloat(String(form.elements.credit.value).replace(',', '.'));
+        const nextRenew = String(form.elements.next.value || '');
+        const patch = {};
+        if (credit > 0) patch.claudeCredit = credit;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(nextRenew)) patch.claudeNextRenew = nextRenew;
+        saveApiSettings(patch);
+        const real = parseFloat(String(form.elements.real.value).replace(',', '.'));
+        if (Number.isFinite(real) && real >= 0) setClaudeRealBalance(real);
+        form.hidden = true;
+        renderClaudeBalance();
+        renderUsageDonut();
+      });
     }
 
     // GET /v1/models costs nothing: it tells whether Anthropic accepts the key.
@@ -12180,7 +12381,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.10.25.3';
+    const APP_VERSION = '2026.10.25.4';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

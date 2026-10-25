@@ -203,7 +203,15 @@ Mandatory guidance for every AI and developer working in this repository.
   chosen effort (default high, Haiku medium), prompt caching, Anthropic's prices for the cost. A Claude chat names itself
   with `quickComplete` and searches with Anthropic's server-side `web_search` (`claudeWebSearch`, $0.01 a search
   counted in the answer). A Claude key alone is enough for Claude chats (`hasKeyFor`); OpenRouter's models still need
-  OpenRouter's key. Errors read in Spanish (`describeClaudeError`). Test: `tests/web/claude-api.cjs`.
+  OpenRouter's key. Errors read in Spanish (`describeClaudeError`). **Priority:** with the key, OpenRouter's copies of
+  those Claude models leave the list and any chat on one moves to the direct model (`directClaudeId`, also in
+  `normalizeModelId`), and new chats start on Claude (the last Claude model used, else Opus 5.5). **Credit left:**
+  Anthropic gives no balance to a normal key (admin keys don't exist for individual accounts), so `claudeBalance()` =
+  monthly credit (`claudeCredit`, 100) − the cost of Claude answers (older versions included) in every chat since the
+  last renewal (`claudePeriod`: `claudeNextRenew` from the console, first period from `claudeKeySince`) − spending
+  elsewhere (`claudeOffset`: deleted chats via `keepClaudeSpendOf`, «Saldo real ahora» via `setClaudeRealBalance`).
+  Shown under the key with a thin bar and «Ajustar» (credit, next renewal, real balance), in the usage ring of a Claude
+  chat and first in the usage popup; synced with the other settings. Test: `tests/web/claude-api.cjs`.
 - **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
   cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with
   the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007

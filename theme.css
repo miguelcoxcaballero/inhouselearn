@@ -454,3 +454,6 @@ html[data-theme="dark"] .dock-approve-queue { background: rgba(255, 255, 255, 0.
 /* The Claude API key state in the model picker. */
 html[data-theme="dark"] .claude-key-state { color: #4ade80; }
 html[data-theme="dark"] .claude-key-state.error { color: #f87171; }
+html[data-theme="dark"] .claude-balance-text::after { background: #4ade80; }
+html[data-theme="dark"] .claude-balance-text[data-low="true"]::after { background: #f87171; }
+html[data-theme="dark"] .claude-balance-form input { background: rgba(255, 255, 255, 0.06); }
