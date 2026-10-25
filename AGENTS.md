@@ -235,7 +235,10 @@ Mandatory guidance for every AI and developer working in this repository.
   device's only (`localStorage` `inhouse-learn-unread-chats`) and clear when the chat is seen. Long
   press / right click / «⋯» opens Fijar · Renombrar · (Marcar como leído) · Eliminar; the magnifier
   filters by title; «Nuevo chat» (`#new-chat-btn`) sits bottom right. `touchChat` never changes the
-  open chat. Test: `tests/web/chats-menu.cjs`.
+  open chat. Small, right under the Google account: the version that is running (`APP_VERSION` +
+   `renderAppVersion`, `.sidebar-version`) and, inside the Android app, the APK's own version read from
+   `InhouseLearnApp/<version>` in the User-Agent. **Every push to `main` raises `APP_VERSION`** (the day's
+   date and that day's change number, e.g. `2026.10.25.1` → `2026.10.25.2`). Test: `tests/web/chats-menu.cjs`.
 - **The composer is per chat:** attachments waiting to be sent (`appState.composerAttachments` is an
   accessor for the open chat's `composerDrafts`) and the linked Google account belong to their chat;
   another chat never shows them, and they survive reloads (attachments in IndexedDB

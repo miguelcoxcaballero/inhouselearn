@@ -113,6 +113,14 @@
 .sidebar-account .profile-btn img { width: 30px; height: 30px; }
 .sidebar-account .profile-btn-text b { font-size: .9rem; font-weight: 600; }
 .sidebar-account .profile-btn-text small { font-size: .74rem; }
+/* La versión que corre, pequeñita y bajo la cuenta: la de la web y, dentro de
+   la app, también la de la APK que la envuelve. */
+.sidebar-version {
+  margin: -4px 14px 10px; padding-top: 2px; text-align: center;
+  font: 500 .62rem 'DM Sans', sans-serif; letter-spacing: .03em; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; user-select: none;
+}
 /* El nombre se escribe sobre el propio nombre de la fila: el campo es
    invisible y lo único que se ve es el cursor parpadeante de .title-typing. */
 .chat-rename-input { position: absolute; inset: 0; width: 100%; height: 100%; font: inherit; border: 0; background: transparent; color: transparent; caret-color: transparent; opacity: .01; outline: none; padding: 0; margin: 0; }

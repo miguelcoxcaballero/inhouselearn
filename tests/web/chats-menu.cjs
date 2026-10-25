@@ -29,6 +29,26 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     /Newsreader/.test(menu.serif) && menu.rows[0].pin && !menu.rows[1].pin && menu.rows[1].d === '12 min' && menu.rows[2].d === 'ayer', menu);
   check('recent chats are bigger than old ones', sizes[1] > sizes[3], sizes);
 
+  // La versión que corre, pequeñita bajo la cuenta de Google; y la de la APK
+  // cuando la página corre dentro de la app.
+  const version = await page.evaluate(() => ({
+    text: document.getElementById('sidebar-version').textContent.trim(),
+    expected: 'v' + APP_VERSION,
+    under: (() => { const v = document.getElementById('sidebar-version').getBoundingClientRect(); const a = document.querySelector('.sidebar-account').getBoundingClientRect(); return v.top >= a.bottom - 8; })()
+  }));
+  const apkVersion = await page.evaluate(() => {
+    const real = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', { value: real + ' InhouseLearnApp/9.9.9', configurable: true });
+    renderAppVersion();
+    const text = document.getElementById('sidebar-version').textContent.trim();
+    Object.defineProperty(navigator, 'userAgent', { value: real, configurable: true });
+    renderAppVersion();
+    return { text, back: document.getElementById('sidebar-version').textContent.trim() };
+  });
+  check('the running version shows under the Google account, with the APK one inside the app',
+    version.text === version.expected && version.under && apkVersion.text === version.expected + ' · APK 9.9.9' && apkVersion.back === version.expected,
+    { version, apkVersion });
+
   // News: an answer that ends while the user is in another chat leaves an orange diamond.
   const first = await page.evaluate(() => appState.chats[0].id);
   await page.evaluate(() => { window.__replies.push({ text: 'Una respuesta que tarda un poco en llegar entera para cambiar de chat. '.repeat(6), delay: 40, chunk: 4 }); });

@@ -1748,7 +1748,7 @@
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
   <link rel="stylesheet" href="composer-dock.css?v=20261026-ultra">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="chats-menu.css?v=20261026-restore">
+  <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
   <link rel="stylesheet" href="theme.css?v=20261026-ultra">
@@ -1860,6 +1860,7 @@
               </div>
             </div>
           </div>
+        <div class="sidebar-version" id="sidebar-version" aria-live="polite"></div>
         <div class="sidebar-profile hidden" id="profile-card">
           <div class="sidebar-avatar-wrap">
             <img class="sidebar-avatar" id="profile-avatar-sidebar" alt="">
@@ -12010,6 +12011,26 @@
       toggle.addEventListener('change', () => { setHapticsEnabled(toggle.checked); if (toggle.checked) haptic('select'); });
     }
 
+    // La versión que corre: la de la web y, dentro de la app Android, la de la
+    // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
+    // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
+    // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
+    const APP_VERSION = '2026.10.25.2';
+
+    function apkVersion() {
+      const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');
+      return match ? match[1] : '';
+    }
+
+    function renderAppVersion() {
+      const el = document.getElementById('sidebar-version');
+      if (!el) return;
+      const apk = apkVersion();
+      const text = 'v' + APP_VERSION + (apk ? ' · APK ' + apk : '');
+      if (el.textContent !== text) el.textContent = text;
+      el.title = 'inhouse learn ' + APP_VERSION + (apk ? ' · app ' + apk : ' · web');
+    }
+
     async function boot() {
       configureEngine();
       bindHapticsToggle();
@@ -12024,6 +12045,7 @@
       renderHistory();
       renderThread();
       bindTitleRename();
+      renderAppVersion();
       autoResizeComposer();
       renderComposerAttachments();
       loadComposerDrafts();
@@ -12059,6 +12081,7 @@
 
     // The chat list is a drawer that slides in from the left at every width.
     function setChatsDrawer(open) {
+      renderAppVersion();
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('sidebar-overlay');
       const button = document.getElementById('hamburger-btn');
