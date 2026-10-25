@@ -1,0 +1,20 @@
+{
+  "id": "shot-20261025-173959-px5p",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "prop/compositor",
+  "at": "2026-10-25T17:42:24.807Z",
+  "shots": [
+    {
+      "name": "D movil oscuro vacio",
+      "file": "1-d-movil-oscuro-vacio.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "D escritorio claro escribiendo",
+      "file": "2-d-escritorio-claro-escribiendo.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
