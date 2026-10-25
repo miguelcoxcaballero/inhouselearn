@@ -596,8 +596,14 @@
     const zip = await zipOf(bytes);
     const { slides, cx, cy } = await slideParts(zip);
     const images = [];
-    const scale = RENDER_WIDTH / cx;
-    for (const n of pageList(spec, slides.length, max)) {
+    for (const n of pageList(spec, slides.length, max)) images.push(canvasImage(await slideCanvas(zip, slides, cx, cy, n, RENDER_WIDTH), n));
+    return { total: slides.length, unit: 'diapositiva', images };
+  }
+
+  // One slide drawn on a canvas `width` pixels wide.
+  async function slideCanvas(zip, slides, cx, cy, n, width) {
+    const scale = width / cx;
+    {
       const slidePath = slides[n - 1];
       const slide = xml(await zip.file(slidePath).async('string'));
       const rels = await relsOf(zip, slidePath);
@@ -608,7 +614,7 @@
       const master = masterPath && zip.file(masterPath) ? xml(await zip.file(masterPath).async('string')) : null;
       const theme = masterPath ? await themeOf(zip, masterPath) : {};
       const canvas = document.createElement('canvas');
-      canvas.width = RENDER_WIDTH;
+      canvas.width = width;
       canvas.height = Math.round(cy * scale);
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#fff';
@@ -643,9 +649,8 @@
       }
       const tree = slide.getElementsByTagNameNS('*', 'spTree')[0];
       if (tree) await drawTree(ctx, tree, env, (box) => box);
-      images.push(canvasImage(canvas, n));
+      return canvas;
     }
-    return { total: slides.length, unit: 'diapositiva', images };
   }
 
   // From a layout or master only what is not a placeholder (those are templates for the slide).
@@ -676,6 +681,143 @@
       return { total: 1, unit: 'imagen', images: [canvasImage(canvas, 1)] };
     }
     throw new Error('No sé dibujar ' + (file.name || 'este archivo') + ': solo PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx) e imágenes.');
+  }
+
+  /* ── API: preview (la vista previa para la persona) ──────────────── */
+
+  // Fast, for a person (render() makes the model's images): PDF pages and
+  // slides are drawn only when they come near the screen, at the screen's
+  // size; Word and Excel are shown as documents (no picture of each page);
+  // images as they are. host: an empty element; signal: stops the work when
+  // the preview closes. → { total, unit }
+  async function preview(file, host, options) {
+    const opts = options || {};
+    const signal = opts.signal;
+    const bytes = bytesOf(file.bytes);
+    const kind = kindOf(file.name, file.mimeType);
+    const pixelWidth = () => Math.min(1600, Math.max(320, Math.round((host.clientWidth || 800) * Math.min(2, window.devicePixelRatio || 1))));
+    const aborted = () => !!(signal && signal.aborted);
+    if (kind === 'pdf') {
+      const pdf = await pdfjs().getDocument({ data: bytes.slice() }).promise;
+      if (signal) signal.addEventListener('abort', () => { if (pdf.destroy) pdf.destroy(); }, { once: true });
+      const first = await pdf.getPage(1);
+      const base = first.getViewport({ scale: 1 });
+      lazyPages(host, pdf.numPages, 'página', base.height / base.width, async (n) => {
+        const page = n === 1 ? first : await pdf.getPage(n);
+        const pageBase = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: pixelWidth() / pageBase.width });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        return canvas;
+      }, signal);
+      return { total: pdf.numPages, unit: 'página' };
+    }
+    if (kind === 'pptx') {
+      const zip = await zipOf(bytes);
+      const { slides, cx, cy } = await slideParts(zip);
+      lazyPages(host, slides.length, 'diapositiva', cy / cx, (n) => slideCanvas(zip, slides, cx, cy, n, pixelWidth()), signal);
+      return { total: slides.length, unit: 'diapositiva' };
+    }
+    if (kind === 'docx') {
+      await loadScript('jszip');
+      await loadScript('docxPreview');
+      const box = document.createElement('div');
+      box.className = 'doc-html doc-word';
+      host.appendChild(box);
+      await window.docx.renderAsync(new Blob([await asDocument(bytes)]), box, box, { className: 'inhouse-docx', inWrapper: false, breakPages: true, ignoreLastRenderedPageBreak: false, renderHeaders: true, renderFooters: true, renderFootnotes: true, useBase64URL: true });
+      if (aborted()) return { total: 0, unit: 'página' };
+      const pages = Array.from(box.querySelectorAll('section.inhouse-docx'));
+      // Pages keep Word's width; a narrow screen sees them scaled down.
+      const fit = () => {
+        const widest = Math.max(1, ...pages.map((page) => page.scrollWidth));
+        box.style.zoom = String(Math.min(1, (host.clientWidth - 8) / widest));
+      };
+      fit();
+      if (window.ResizeObserver) new ResizeObserver(fit).observe(host);
+      return { total: pages.length, unit: 'página' };
+    }
+    if (kind === 'xlsx') {
+      if (!(window.XLSX && window.XLSX.read)) throw new Error('SheetJS no está cargado.');
+      const workbook = window.XLSX.read(bytes, { type: 'array' });
+      workbook.SheetNames.forEach((name) => {
+        const sheet = workbook.Sheets[name];
+        if (sheet['!ref']) {
+          const range = window.XLSX.utils.decode_range(sheet['!ref']);
+          range.e.r = Math.min(range.e.r, range.s.r + 499);
+          range.e.c = Math.min(range.e.c, range.s.c + 49);
+          sheet['!ref'] = window.XLSX.utils.encode_range(range);
+        }
+        const section = document.createElement('section');
+        section.className = 'doc-html doc-sheet';
+        section.innerHTML = '<h3>' + name.replace(/[<>&]/g, '') + '</h3><div class="doc-sheet-scroll">' + window.XLSX.utils.sheet_to_html(sheet, { header: '', footer: '' }) + '</div>';
+        host.appendChild(section);
+      });
+      return { total: workbook.SheetNames.length, unit: 'hoja' };
+    }
+    if (kind === 'image') {
+      const img = document.createElement('img');
+      img.className = 'doc-image';
+      img.alt = file.name || '';
+      img.src = URL.createObjectURL(new Blob([bytes], { type: file.mimeType || mimeFor(file.name) }));
+      host.appendChild(img);
+      return { total: 1, unit: 'imagen' };
+    }
+    throw new Error('No sé enseñar ' + (file.name || 'este archivo') + ': solo PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx) e imágenes.');
+  }
+
+  // A placeholder per page with the page's proportions (so the scroll bar is
+  // right from the start); each is drawn when it is within a screen of view,
+  // one at a time, nearest first.
+  function lazyPages(host, total, unit, ratio, draw, signal) {
+    const figures = [];
+    const queue = [];
+    let busy = false;
+    const label = unit.charAt(0).toUpperCase() + unit.slice(1);
+    for (let n = 1; n <= total; n++) {
+      const figure = document.createElement('figure');
+      figure.className = 'doc-page lazy';
+      figure.dataset.page = String(n);
+      figure.innerHTML = '<div class="doc-page-sheet" style="aspect-ratio:' + (1 / ratio).toFixed(4) + '"></div><figcaption>' + label + ' ' + n + ' de ' + total + '</figcaption>';
+      host.appendChild(figure);
+      figures.push(figure);
+    }
+    const pump = async () => {
+      if (busy) return;
+      busy = true;
+      while (queue.length && !(signal && signal.aborted)) {
+        const figure = queue.shift();
+        if (!figure.classList.contains('lazy')) continue;
+        figure.classList.remove('lazy');
+        try {
+          const canvas = await draw(Number(figure.dataset.page));
+          if (signal && signal.aborted) break;
+          canvas.className = 'doc-page-canvas';
+          figure.querySelector('.doc-page-sheet').replaceWith(canvas);
+        } catch (error) {
+          figure.querySelector('.doc-page-sheet').textContent = 'No se pudo dibujar: ' + error.message;
+        }
+        // Let the page paint between pages.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      busy = false;
+    };
+    const want = (figure) => {
+      if (!figure.classList.contains('lazy') || queue.includes(figure)) return;
+      queue.push(figure);
+      queue.sort((a, b) => Number(a.dataset.page) - Number(b.dataset.page));
+      pump();
+    };
+    if (!('IntersectionObserver' in window)) { figures.slice(0, 40).forEach(want); return; }
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) want(entry.target); }), { root: null, rootMargin: '100% 0px' });
+    figures.forEach((figure) => observer.observe(figure));
+    if (signal) signal.addEventListener('abort', () => observer.disconnect(), { once: true });
+    // The first page straight away, before the observer's first round.
+    want(figures[0]);
   }
 
   /* ── API: run (crear y editar con código) ─────────────────────────── */
@@ -836,5 +978,13 @@
     });
   }
 
-  window.InhouseDocs = { kindOf, mimeFor, render, run, pptxText, pageList, asDocument };
+  // Starts downloading what a Word preview needs (the first open is then quick).
+  let warmed = false;
+  function warm() {
+    if (warmed) return;
+    warmed = true;
+    loadScript('jszip').then(() => loadScript('docxPreview')).catch(() => { warmed = false; });
+  }
+
+  window.InhouseDocs = { kindOf, mimeFor, render, preview, warm, run, pptxText, pageList, asDocument };
 })();

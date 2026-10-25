@@ -120,7 +120,12 @@ Mandatory guidance for every AI and developer working in this repository.
   8 MB), and shows under the answer with «Ver» (every page) and «Descargar» (`step.documents`). In
   «Preguntar» saving asks first (`approveChange`). Uploaded PDF/Word/PowerPoint/Excel keep their
   original too, so they can be viewed and edited; `.pptx` is read slide by slide (notes included).
-  Test: `tests/web/documents.cjs`.
+  «Ver» uses the quick `InhouseDocs.preview(file, host, { signal })`, not `render` (the model's JPEGs): PDF pages
+  and slides are placeholders with the right proportions drawn on canvases at the screen's size only when they come
+  near the view (`lazyPages`, one at a time, first page at once), Word is shown as docx-preview's own pages (zoomed
+  to fit) and Excel as tables, images as they are; closing the preview aborts it. Hovering or touching «Ver» warms
+  docx-preview (`InhouseDocs.warm`). A 26-page Word went from ~16 s to ~0.1 s, a 60-page PDF from 2.4 s (40 pages)
+  to 0.4 s. Test: `tests/web/documents.cjs`.
 - **LaTeX:** `latex.js` (`InhouseTex`) runs TeX Live 2026 inside the browser with BusyTeX
   (WebAssembly, AGPL, loaded at run time from `texlyre.github.io/texlyre-busytex/core/busytex/`, which
   serves it with CORS): pdflatex, xelatex, lualatex, BibTeX/Biber, makeindex and reruns. Nothing is

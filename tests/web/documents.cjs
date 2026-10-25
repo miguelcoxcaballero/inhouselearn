@@ -125,9 +125,14 @@ return 'ok';
   check('the library reads the PowerPoint slide by slide, notes included', /Diapositiva 1[\s\S]*Fase luminosa/.test(read) && /Ciclo de Calvin/.test(read) && /Recordar el ATP/.test(read), read);
 
   // 5. «Ver» opens every page; «Descargar» gives the file.
+  // The quick preview: slides drawn on canvases as they come into view.
+  const opened = Date.now();
   await page.click('#thread .message:last-child .msg-doc:nth-child(3) [data-doc-open]');
-  await page.waitForSelector('#preview-body .doc-page img', { timeout: 20000 });
-  const preview = await page.evaluate(() => ({ title: document.getElementById('preview-title').textContent, pages: document.querySelectorAll('#preview-body .doc-page img').length }));
+  await page.waitForSelector('#preview-body .doc-page .doc-page-canvas', { timeout: 20000 });
+  const firstPageMs = Date.now() - opened;
+  await page.waitForFunction(() => document.querySelectorAll('#preview-body .doc-page .doc-page-canvas').length === 2, null, { timeout: 20000 });
+  const preview = await page.evaluate(() => ({ title: document.getElementById('preview-title').textContent, pages: document.querySelectorAll('#preview-body .doc-page .doc-page-canvas').length, figures: document.querySelectorAll('#preview-body .doc-page').length }));
+  check('the preview shows the first slide quickly (no waiting for all of them as images)', firstPageMs < 4000 && preview.figures === 2, { firstPageMs, preview });
   await page.screenshot({ path: path.join(SCRATCH, 'documents-preview.png') });
   const download = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
   await page.click('#preview-body [data-doc-download]');

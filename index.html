@@ -1112,7 +1112,17 @@
     .msg-doc-text small { color: var(--ink-3); font-size: 0.74rem; }
     .doc-pages { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0 24px; }
     .doc-page { margin: 0; width: 100%; max-width: 900px; }
-    .doc-page img { display: block; width: 100%; height: auto; background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+    .doc-page img, .doc-page-canvas, .doc-page-sheet { display: block; width: 100%; height: auto; background: #fff; border-radius: 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+    .doc-page-sheet { background: linear-gradient(100deg, #fff 40%, #f3f1ec 50%, #fff 60%) 0 0 / 200% 100%; animation: doc-sheet-wait 1.2s linear infinite; color: var(--ink-3); font-size: 0.8rem; display: grid; place-items: center; }
+    @keyframes doc-sheet-wait { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .doc-page-sheet { animation: none; } }
+    .doc-html { width: 100%; max-width: 900px; }
+    .doc-word section.inhouse-docx { margin: 0 auto 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); background: #fff; color: #000; }
+    .doc-sheet h3 { margin: 0 0 8px; font-size: 0.9rem; }
+    .doc-sheet-scroll { overflow: auto; max-height: 70vh; background: #fff; color: #000; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.18); }
+    .doc-sheet-scroll table { border-collapse: collapse; font: 13px Arial, sans-serif; }
+    .doc-sheet-scroll td { border: 1px solid #c8c8c8; padding: 3px 6px; white-space: nowrap; }
+    .doc-image { display: block; max-width: 100%; height: auto; border-radius: 6px; }
     .doc-page figcaption { text-align: center; color: var(--ink-3); font-size: 0.74rem; margin-top: 6px; }
     .doc-pages-status { color: var(--ink-3); font-size: 0.85rem; }
     .msg-sources { margin-top: 12px; font-size: 0.8rem; }
@@ -2141,7 +2151,7 @@
   <script src="library.js?v=20261024-templates"></script>
   <script src="study.js?v=20261026-restore"></script>
   <script src="study-view.js?v=20261026-restore"></script>
-  <script src="documents.js?v=20261026-review2"></script>
+  <script src="documents.js?v=20261025-preview"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
   <script src="vendor/pi-engine.js?v=20261025-empty"></script>
@@ -5570,7 +5580,9 @@
       if (file) downloadBlob(new Blob([file.bytes], { type: file.mimeType || InhouseDocs.mimeFor(file.name) }), file.name);
     }
 
-    // Every page as the model sees it, with «Descargar» on top.
+    let docPreviewAbort = null;
+
+    // Every page of the document, with «Descargar» on top.
     async function openDocumentPreview(ref) {
       const file = await documentFile(ref);
       if (!file) return;
@@ -5580,14 +5592,32 @@
       body.innerHTML = '<div class="file-preview doc-preview"><div class="file-preview-actions"><button type="button" class="btn btn-outline btn-sm" data-doc-download="' + escapeHtml(file.doc.ref) + '">Descargar</button></div><div class="doc-pages"><p class="doc-pages-status">Preparando las páginas…</p></div></div>';
       overlay.classList.remove('hidden');
       const pages = body.querySelector('.doc-pages');
+      // The quick preview (InhouseDocs.preview): pages drawn as they come into
+      // view at the screen's size, Word and Excel as documents. Closing stops it.
+      if (docPreviewAbort) docPreviewAbort.abort();
+      const controller = new AbortController();
+      docPreviewAbort = controller;
       try {
-        const result = await InhouseDocs.render(file, { max: 40 });
-        pages.innerHTML = result.images.map((image) => '<figure class="doc-page"><img alt="' + escapeHtml(result.unit + ' ' + image.page) + '" src="data:' + image.mimeType + ';base64,' + image.data + '"><figcaption>' + escapeHtml(result.unit.charAt(0).toUpperCase() + result.unit.slice(1) + ' ' + image.page + ' de ' + result.total) + '</figcaption></figure>').join('') +
-          (result.total > result.images.length ? '<p class="doc-pages-status">Se muestran ' + result.images.length + ' de ' + result.total + '. Descárgalo para verlo entero.</p>' : '');
+        if (typeof InhouseDocs.preview === 'function') {
+          const status = pages.querySelector('.doc-pages-status');
+          await InhouseDocs.preview(file, pages, { signal: controller.signal });
+          if (status && status.parentNode) status.remove();
+        } else {
+          const result = await InhouseDocs.render(file, { max: 40 });
+          pages.innerHTML = result.images.map((image) => '<figure class="doc-page"><img alt="' + escapeHtml(result.unit + ' ' + image.page) + '" src="data:' + image.mimeType + ';base64,' + image.data + '"><figcaption>' + escapeHtml(result.unit.charAt(0).toUpperCase() + result.unit.slice(1) + ' ' + image.page + ' de ' + result.total) + '</figcaption></figure>').join('');
+        }
       } catch (error) {
-        pages.innerHTML = '<p class="doc-pages-status">No se pudo dibujar: ' + escapeHtml(error.message) + '</p>';
+        if (!controller.signal.aborted) pages.innerHTML = '<p class="doc-pages-status">No se pudo dibujar: ' + escapeHtml(error.message) + '</p>';
       }
     }
+
+    // Hovering or touching «Ver» starts downloading what Word previews need.
+    const warmDocs = (event) => {
+      if (!event.target.closest || !event.target.closest('[data-doc-open]') || !window.InhouseDocs || !InhouseDocs.warm) return;
+      InhouseDocs.warm();
+    };
+    document.addEventListener('pointerover', warmDocs, { passive: true });
+    document.addEventListener('touchstart', warmDocs, { passive: true });
 
     document.addEventListener('click', (event) => {
       const openButton = event.target.closest('[data-doc-open]');
@@ -9372,6 +9402,7 @@
     }
 
     function closeAttachmentPreview() {
+      if (docPreviewAbort) { docPreviewAbort.abort(); docPreviewAbort = null; }
       document.getElementById('preview-overlay').classList.add('hidden');
       document.getElementById('preview-body').innerHTML = '';
     }
@@ -12645,7 +12676,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.10.25.8';
+    const APP_VERSION = '2026.10.25.9';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');
