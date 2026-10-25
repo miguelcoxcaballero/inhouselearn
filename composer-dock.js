@@ -706,7 +706,7 @@ function renderLiveSteps(message, steps) {
   }).join('');
   return '<div class="live-steps" data-live-steps="' + escapeHtml(message.id) + '">' +
     // On the internet: a turning globe instead of the spinner, unmistakable.
-    '<div class="live-now' + (waiting ? ' waiting' : '') + (!waiting && isWebStep(running) ? ' web' : '') + '">' + (!waiting && isWebStep(running) ? '<span class="live-globe" title="En internet">' + GLOBE + '</span>' : '<span class="live-spin" aria-hidden="true"></span>') +
+    '<div class="live-now' + (waiting ? ' waiting' : '') + (asking ? ' asking' : '') + (!waiting && isWebStep(running) ? ' web' : '') + '">' + (!waiting && isWebStep(running) ? '<span class="live-globe" title="En internet">' + GLOBE + '</span>' : '<span class="live-spin" aria-hidden="true"></span>') +
     '<span class="live-now-text"><b>' + escapeHtml(asking ? 'Esperando tu respuesta' : waiting ? 'Esperando tu aprobación' : leadTitle) + '</b>' +
     (!waiting && lead && lead.target ? ' <span class="live-target">' + escapeHtml(lead.target) + '</span>' : '') +
     (!waiting && lead && lead.where ? '<span class="live-where"> · ' + escapeHtml(lead.where) + '</span>' : '') +

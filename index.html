@@ -1742,11 +1742,11 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261025-harness">
+  <link rel="stylesheet" href="composer-dock.css?v=20261025-study">
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-study">
-  <link rel="stylesheet" href="study.css?v=20261025-study">
-  <link rel="stylesheet" href="theme.css?v=20261025-study">
+  <link rel="stylesheet" href="study.css?v=20261025-polish">
+  <link rel="stylesheet" href="theme.css?v=20261025-polish">
 </head>
 <body>
 
@@ -2057,8 +2057,8 @@
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="library.js?v=20261024-templates"></script>
-  <script src="study.js?v=20261025-study"></script>
-  <script src="study-view.js?v=20261025-study"></script>
+  <script src="study.js?v=20261025-polish"></script>
+  <script src="study-view.js?v=20261025-polish"></script>
   <script src="documents.js?v=20261025-harness"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
@@ -2077,7 +2077,7 @@
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261024-copy"></script>
-  <script src="composer-dock.js?v=20261025-harness"></script>
+  <script src="composer-dock.js?v=20261025-study"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -6664,7 +6664,7 @@
         ['Explícame un tema desde cero', 'Explícame desde cero un tema que me cuesta. Pregúntame primero cuál es y qué sé ya.'],
         ['Hazme un test con mis apuntes', 'Voy a pegarte mis apuntes. Hazme un test de 5 preguntas para ver qué domino y qué no.'],
         ['Convierte un PDF en apuntes', 'Te voy a subir un PDF. Conviértelo en apuntes claros, con lo importante destacado.'],
-        ['Plan de estudio para un examen', 'Tengo un examen pronto. Ayúdame a hacer un plan de estudio realista, día a día.']
+        ['Plan de estudio para un examen', 'Tengo un examen pronto. Pregúntame de qué asignatura es, la fecha, los temas (y cuánto cuenta cada uno) y cuántas horas a la semana tengo, y organízalo en Estudio para que me salga el plan día a día con sus repasos.']
       ];
       const heroMarkup = chat && chat.guidedLearning ? renderGuidedHero(chat) : [
         '<section class="hero">',

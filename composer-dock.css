@@ -107,12 +107,14 @@
 /* Plan del modelo (update_plan), en el hilo */
 .plan-card { margin: 4px 0 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .plan-head { display: flex; justify-content: space-between; gap: 10px; font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
-.plan-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.plan-card .plan-list { list-style: none; margin: 6px 0 0 !important; padding: 0 !important; display: grid; gap: 4px; }
+.plan-card .plan-list li { margin: 0 !important; padding: 0 !important; }
 .plan-list li { display: flex; align-items: baseline; gap: 9px; font-size: 0.88rem; line-height: 1.4; }
-.plan-mark { flex: none; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border-strong); transform: translateY(2px); }
+.plan-mark { flex: none; box-sizing: border-box; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--border-strong); transform: translateY(2px); }
 .plan-list li.done { color: var(--muted); }
 .plan-list li.done .plan-text { text-decoration: line-through; text-decoration-color: var(--border-strong); }
-.plan-list li.done .plan-mark { background: #15803d; border-color: #15803d; }
+.plan-list li.done .plan-mark { position: relative; background: #15803d; border-color: #15803d; }
+.plan-list li.done .plan-mark::after { content: ''; position: absolute; left: 3.6px; top: 1.2px; width: 3.2px; height: 6.4px; border: solid #fff; border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
 .plan-list li.in_progress .plan-text { font-weight: 600; }
 .plan-list li.in_progress .plan-mark { border-color: var(--orange); border-top-color: transparent; animation: plan-spin 0.9s linear infinite; }
 @keyframes plan-spin { to { transform: translateY(2px) rotate(360deg); } }
@@ -152,6 +154,10 @@
   animation: live-spin 0.8s linear infinite;
 }
 .live-now.waiting .live-spin { border-color: rgba(185,28,28,0.2); border-top-color: #b91c1c; animation-duration: 1.6s; }
+/* A question (ask_user) is not an alarm: the brand's orange, calm. */
+.live-now.waiting.asking { border-color: var(--orange-border, rgba(224,122,60,0.4)); background: linear-gradient(90deg, var(--orange-soft), transparent 70%); }
+.live-now.waiting.asking .live-spin { border-color: rgba(224,122,60,0.2); border-top-color: var(--orange); }
+.dock-ask [hidden] { display: none !important; }
 .live-now-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
 .live-now-text b { color: var(--text); font-weight: 600; }
 .live-target { color: var(--text); font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.8rem; }
