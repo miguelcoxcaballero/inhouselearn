@@ -200,6 +200,12 @@ Mandatory guidance for every AI and developer working in this repository.
   runs the live activity shows a turning blue globe; afterwards «Fuentes» under the answer lists the
   pages (`step.sources`, cited ones first, favicons from Google's s2 service). The cost's last two decimals
   (fractions of a cent) are always grey. Test: `tests/web/websearch.cjs`.
+- **Saved chats on this device:** `saveState` writes the whole snapshot to IndexedDB (`inhouse-learn-state`,
+  `writeStateDb`, one write at a time, newest waiting) and tries localStorage too; a localStorage copy that does
+  not fit (~5 MB) is removed, and `::stamp` names the current copy. `loadState` (awaited at the start of `boot`)
+  opens localStorage's copy only when its stamp matches, otherwise IndexedDB's: a reload never shows an old copy
+  while Drive loads. `saveState` does nothing until the saved chats are read (`appState.stateLoaded`). Test:
+  `tests/web/state-reload.cjs`.
 - **One URL per conversation:** `?c=<chat id>`; a reload stays on it, back/forward move between
   opened chats, no `?c=` opens the most recently used one. Drive's `activeChatId` never decides what
   opens (it may be another device's or old); an unknown id opens a new chat and waits for Drive

@@ -4456,32 +4456,98 @@
     }
 
     function saveState(options) {
+      // Never before the saved chats are read: an empty start would overwrite them.
+      if (!appState.stateLoaded) return;
       const settings = Object.assign({
         skipDrive: false
       }, options);
       const payload = {
         version: 1,
         savedAt: nowIso(),
+        stamp: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
         chats: appState.chats.map((chat) => normalizeStoredChat(chat, { includeBinaries: false })),
         activeChatId: appState.activeChatId,
         auth: buildStoredAuthState(),
         guidedLearning: !!appState.guidedLearning
       };
+      const json = JSON.stringify(payload);
+      // localStorage holds ~5 MB: a long history stops fitting, and a failed
+      // write used to leave an OLD copy there that the next load showed until
+      // Drive arrived. Now the full copy always goes to IndexedDB, the stamp
+      // says which copy is current, and a copy that cannot be written is removed.
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        localStorage.setItem(STORAGE_KEY, json);
       } catch (error) {
-        console.warn('localStorage save failed:', error);
+        try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
       }
+      try { localStorage.setItem(STORAGE_KEY + '::stamp', payload.stamp); } catch (_) {}
+      writeStateDb(json);
       if (!settings.skipDrive) {
         scheduleDriveSync();
       }
     }
 
-    function loadState() {
+    /* The saved chats in IndexedDB (the whole copy; localStorage may not fit it). */
+    let stateDbPromise = null;
+    const stateDbWrite = { busy: false, next: null };
+    function stateDb() {
+      if (!stateDbPromise) {
+        stateDbPromise = new Promise((resolve, reject) => {
+          if (!window.indexedDB) return reject(new Error('IndexedDB no disponible'));
+          const request = indexedDB.open('inhouse-learn-state', 1);
+          request.onupgradeneeded = () => request.result.createObjectStore('snapshots');
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        stateDbPromise.catch(() => {});
+      }
+      return stateDbPromise;
+    }
+
+    // One write at a time; while one runs only the newest waits.
+    function writeStateDb(json) {
+      if (stateDbWrite.busy) { stateDbWrite.next = json; return; }
+      stateDbWrite.busy = true;
+      stateDb().then((db) => new Promise((resolve, reject) => {
+        const tx = db.transaction('snapshots', 'readwrite');
+        tx.objectStore('snapshots').put(json, STORAGE_KEY);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      })).catch((error) => console.warn('No se pudo guardar en IndexedDB:', error)).finally(() => {
+        stateDbWrite.busy = false;
+        const next = stateDbWrite.next;
+        stateDbWrite.next = null;
+        if (next) writeStateDb(next);
+      });
+    }
+
+    function readStateDb(timeoutMs) {
+      const read = stateDb().then((db) => new Promise((resolve) => {
+        const request = db.transaction('snapshots', 'readonly').objectStore('snapshots').get(STORAGE_KEY);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => resolve(null);
+      })).catch(() => null);
+      return Promise.race([read, new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs || 1500))]);
+    }
+
+    // The copy to open with: localStorage's when it is the current one (its
+    // stamp matches), otherwise IndexedDB's — never an old copy.
+    async function readSavedPayload() {
+      let local = null;
+      try { local = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (_) {}
+      let stamp = '';
+      try { stamp = localStorage.getItem(STORAGE_KEY + '::stamp') || ''; } catch (_) {}
+      if (local && (!stamp || local.stamp === stamp)) return local;
+      let stored = null;
+      try { stored = JSON.parse((await readStateDb(1500)) || 'null'); } catch (_) {}
+      if (stored && (!local || stored.stamp === stamp || String(stored.savedAt || '') >= String(local.savedAt || ''))) return stored;
+      return local;
+    }
+
+    async function loadState() {
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const payload = JSON.parse(raw);
+        const payload = await readSavedPayload();
+        if (!payload) { appState.stateLoaded = true; chooseStartChat(); ensureActiveChat(); return; }
         const parsed = normalizeSnapshot(payload, {
           defaultGuidedLearning: payload && typeof payload.guidedLearning === 'boolean'
             ? payload.guidedLearning
@@ -4504,6 +4570,7 @@
       } catch (error) {
         console.warn('No se pudo restaurar localStorage:', error);
       }
+      appState.stateLoaded = true;
       chooseStartChat();
       ensureActiveChat();
     }
@@ -11534,13 +11601,13 @@
       toggle.addEventListener('change', () => { setHapticsEnabled(toggle.checked); if (toggle.checked) haptic('select'); });
     }
 
-    function boot() {
+    async function boot() {
       configureEngine();
       bindHapticsToggle();
       setupAppDownload();
       initThreadFollow();
       loadModelCatalogFromCache();
-      loadState();
+      await loadState();
       loadGoogleTokenFromStorage();
       restoreCachedGoogleProfile();
       updateConfigUi();
