@@ -168,15 +168,39 @@ async function approveChange(chat, request) {
   // branch): in «Auto» they go ahead like the chat's own files.
   if (mode === 'auto' && options.kind === 'screenshot') return true;
   // Above the composer, not over the whole screen: the user can keep writing.
+  // A parallel agent (Ultra code) says who asks: its name and colour on the card.
   const card = {
     title: options.title || 'Confirmar',
     message: options.summary || options.message || '',
     items: options.items || [],
     danger: !!(options.mainBranch || options.danger),
     confirmText: options.confirmText || 'Aprobar',
-    cancelText: options.cancelText || 'No'
+    cancelText: options.cancelText || 'No',
+    agent: options.agent ? String(options.agent) : '',
+    agentHue: Number.isFinite(Number(options.agentHue)) && options.agentHue !== null && options.agentHue !== '' ? Number(options.agentHue) : undefined,
+    signal: options.signal || null
   };
-  return typeof dockApprove === 'function' ? dockApprove(card) : confirmDialog(card);
+  // onWait: the agent's lane says «esperando» while the card (or its place in
+  // line) waits for the user. Never called when the change is auto-approved.
+  const onWait = typeof options.onWait === 'function' ? options.onWait : null;
+  const callWait = (value) => { try { onWait(value); } catch (_) {} };
+  if (onWait) callWait(true);
+  try {
+    return await (typeof dockApprove === 'function' ? dockApprove(card) : confirmDialog(card));
+  } finally {
+    if (onWait) callWait(false);
+  }
+}
+
+// What a wrapped tool adds to every approval it asks for (approvalWorkspaceTools).
+function approvalMetaFields(meta) {
+  const fields = {};
+  if (!meta) return fields;
+  if (meta.agent) fields.agent = meta.agent;
+  if (meta.agentHue !== undefined && meta.agentHue !== null) fields.agentHue = meta.agentHue;
+  if (typeof meta.onWait === 'function') fields.onWait = meta.onWait;
+  if (meta.signal) fields.signal = meta.signal;
+  return fields;
 }
 
 function approvalFileRequest(toolName, params) {
@@ -196,16 +220,19 @@ function approvalFileRequest(toolName, params) {
 
 // Envuelve las herramientas de archivos del chat: en «Preguntar» el usuario
 // las aprueba una a una. run_js solo pregunta si su código guarda archivos.
-function approvalWorkspaceTools(chat, tools) {
+// meta (un agente de Ultra code): { agent, agentHue, onWait } va en cada
+// aprobación que pidan, para que la tarjeta diga quién pregunta.
+function approvalWorkspaceTools(chat, tools, meta = {}) {
+  const extra = approvalMetaFields(meta);
   return (tools || []).map((tool) => {
     if (tool.name === 'run_js') {
       return Object.assign({}, tool, {
         execute: async (id, params, ...rest) => {
           if (approvalModeOf(chat) === 'ask' && typeof params.code === 'string' && /\bwriteFile\s*\(/.test(params.code)) {
-            const ok = await approveChange(chat, {
+            const ok = await approveChange(chat, Object.assign({
               title: 'Ejecutar JavaScript que guarda archivos',
               summary: 'El código va a guardar archivos en este chat.'
-            });
+            }, extra));
             if (!ok) throw new Error('El usuario no ha aprobado la ejecución. No lo repitas sin preguntarle.');
           }
           return tool.execute(id, params, ...rest);
@@ -216,7 +243,7 @@ function approvalWorkspaceTools(chat, tools) {
     return Object.assign({}, tool, {
       execute: async (id, params, ...rest) => {
         if (approvalModeOf(chat) === 'ask') {
-          const ok = await approveChange(chat, approvalFileRequest(tool.name, params));
+          const ok = await approveChange(chat, Object.assign(approvalFileRequest(tool.name, params), extra));
           if (!ok) throw new Error('El usuario no ha aprobado este cambio. No lo repitas sin preguntarle qué quiere cambiar.');
         }
         return tool.execute(id, params, ...rest);
