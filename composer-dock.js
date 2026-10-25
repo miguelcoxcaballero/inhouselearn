@@ -3,7 +3,9 @@
 
    • La aprobación de un cambio (dockApprove): una tarjeta con el título, el
      resumen y los archivos con sus +/−, en vez de un diálogo a pantalla
-     completa. Se puede seguir escribiendo mientras está abierta.
+     completa. Se puede seguir escribiendo mientras está abierta. Si llegan
+     varias a la vez (los agentes de Ultra code), esperan en fila: la tarjeta
+     dice qué agente pregunta y cuántas hay detrás («+N en espera»).
    • Los cambios de GitHub preparados y sin subir (githubStageStore): el
      modelo los prepara con github_edit_file / github_write_files y los sube
      de una vez; si queda algo sin subir, aquí está con «Subir» y «Descartar».
@@ -259,44 +261,106 @@ function renderQueueSlot() {
 
 /* ─── Aprobación encima del cuadro ──────────────────────────────────── */
 
-const dockApproval = { pending: null };
+// One card at a time; the others wait in line (FIFO). Parallel agents
+// (Ultra code) can ask at once: none of them is refused because another
+// asked first, and the card says who asks and how many are waiting.
+const dockApproval = { pending: null, queue: [] };
 
-// { title, message, items: [{ path, status, added, removed }], danger, confirmText, cancelText } → Promise<boolean>
+function dockAgentChip(request) {
+  if (!request || !request.agent) return '';
+  const hue = Number(request.agentHue);
+  const style = Number.isFinite(hue) ? ' style="--agent-hue:hsl(' + Math.round(hue) + ' 75% 60%)"' : '';
+  return '<span class="dock-agent-chip"' + style + '><i aria-hidden="true"></i>' + escapeHtml(String(request.agent).slice(0, 40)) + '</span>';
+}
+
+function dockApprovalQueueText() {
+  const waiting = dockApproval.queue.length;
+  return waiting ? '+' + waiting + ' en espera' : '';
+}
+
+function dockApprovalCardHtml(request) {
+  const items = Array.isArray(request.items) ? request.items : [];
+  const added = items.reduce((sum, item) => sum + (Number(item.added) || 0), 0);
+  const removed = items.reduce((sum, item) => sum + (Number(item.removed) || 0), 0);
+  const queueText = dockApprovalQueueText();
+  return '<div class="dock-card dock-approve' + (request.danger ? ' danger' : '') + '" role="alertdialog" aria-live="assertive" aria-label="' + escapeHtml(request.title || 'Aprobar') + '">' +
+    '<div class="dock-approve-head">' + dockAgentChip(request) + '<b>' + escapeHtml(request.title || 'Aprobar') + '</b>' +
+    (items.length ? '<span class="dock-approve-stats">' + items.length + (items.length === 1 ? ' archivo' : ' archivos') + (added ? ' · <span class="add">+' + added + '</span>' : '') + (removed ? ' <span class="del">−' + removed + '</span>' : '') + '</span>' : '') +
+    '<span class="dock-approve-queue"' + (queueText ? '' : ' hidden') + '>' + queueText + '</span></div>' +
+    (request.message ? '<p class="dock-approve-msg">' + escapeHtml(request.message) + '</p>' : '') +
+    (items.length ? '<ul class="dock-approve-files">' + items.map((item) => '<li><span class="st">' + escapeHtml(item.status || '') + '</span><code>' + escapeHtml(item.path || '') + '</code>' +
+      (item.added ? '<span class="add">+' + Number(item.added) + '</span>' : '') + (item.removed ? '<span class="del">−' + Number(item.removed) + '</span>' : '') + '</li>').join('') + '</ul>' : '') +
+    '<div class="dock-approve-actions"><button type="button" class="dock-btn" data-dock="reject">' + escapeHtml(request.cancelText || 'No') + '</button>' +
+    '<button type="button" class="dock-btn primary" data-dock="approve">' + escapeHtml(request.confirmText || 'Aprobar') + '</button></div></div>';
+}
+
+// Only the «+N en espera» count changes while the same card is open.
+function dockApprovalSyncQueue() {
+  const slot = document.getElementById('dock-approval');
+  const badge = slot && slot.querySelector('.dock-approve-queue');
+  if (!badge) return;
+  const text = dockApprovalQueueText();
+  badge.textContent = text;
+  badge.hidden = !text;
+}
+
+function dockApprovalShow(entry) {
+  const slot = composerDockEl() && document.getElementById('dock-approval');
+  if (!slot) { dockApprovalSettle(entry, false); return; }
+  dockApproval.pending = entry;
+  slot.innerHTML = dockApprovalCardHtml(entry.request);
+  haptic('select');
+  refreshLiveSteps();
+}
+
+// Answers one request (shown or still waiting) and opens the next in line.
+function dockApprovalSettle(entry, value) {
+  if (!entry || entry.settled) return;
+  entry.settled = true;
+  if (entry.signal) entry.signal.removeEventListener('abort', entry.onAbort);
+  const wasShown = dockApproval.pending === entry;
+  if (wasShown) dockApproval.pending = null;
+  else dockApproval.queue = dockApproval.queue.filter((item) => item !== entry);
+  entry.resolve(!!value);
+  if (!wasShown) { dockApprovalSyncQueue(); return; }
+  const next = dockApproval.queue.shift();
+  if (next) { dockApprovalShow(next); return; }
+  const slot = document.getElementById('dock-approval');
+  if (slot && !dockAsking.pending) slot.innerHTML = '';
+  refreshLiveSteps();
+}
+
+// { title, message, items: [{ path, status, added, removed }], danger, confirmText, cancelText,
+//   agent, agentHue, signal } → Promise<boolean>
 function dockApprove(request) {
   const slot = composerDockEl() && document.getElementById('dock-approval');
   if (!slot) return confirmDialog(request);
-  if (dockApproval.pending) dockApproval.pending.resolve(false);
   return new Promise((resolve) => {
-    const signal = appState.activeController && appState.activeController.signal;
-    const finish = (value) => {
-      if (!dockApproval.pending || dockApproval.pending.resolve !== finish) return;
-      dockApproval.pending = null;
-      slot.innerHTML = '';
-      if (signal) signal.removeEventListener('abort', onAbort);
-      refreshLiveSteps();
-      resolve(value);
-    };
-    const onAbort = () => finish(false);
-    if (signal) signal.addEventListener('abort', onAbort);
-    dockApproval.pending = { resolve: finish };
-    const items = Array.isArray(request.items) ? request.items : [];
-    const added = items.reduce((sum, item) => sum + (Number(item.added) || 0), 0);
-    const removed = items.reduce((sum, item) => sum + (Number(item.removed) || 0), 0);
-    slot.innerHTML = '<div class="dock-card dock-approve' + (request.danger ? ' danger' : '') + '" role="alertdialog" aria-live="assertive" aria-label="' + escapeHtml(request.title || 'Aprobar') + '">' +
-      '<div class="dock-approve-head"><b>' + escapeHtml(request.title || 'Aprobar') + '</b>' +
-      (items.length ? '<span class="dock-approve-stats">' + items.length + (items.length === 1 ? ' archivo' : ' archivos') + (added ? ' · <span class="add">+' + added + '</span>' : '') + (removed ? ' <span class="del">−' + removed + '</span>' : '') + '</span>' : '') + '</div>' +
-      (request.message ? '<p class="dock-approve-msg">' + escapeHtml(request.message) + '</p>' : '') +
-      (items.length ? '<ul class="dock-approve-files">' + items.map((item) => '<li><span class="st">' + escapeHtml(item.status || '') + '</span><code>' + escapeHtml(item.path || '') + '</code>' +
-        (item.added ? '<span class="add">+' + Number(item.added) + '</span>' : '') + (item.removed ? '<span class="del">−' + Number(item.removed) + '</span>' : '') + '</li>').join('') + '</ul>' : '') +
-      '<div class="dock-approve-actions"><button type="button" class="dock-btn" data-dock="reject">' + escapeHtml(request.cancelText || 'No') + '</button>' +
-      '<button type="button" class="dock-btn primary" data-dock="approve">' + escapeHtml(request.confirmText || 'Aprobar') + '</button></div></div>';
-    haptic('select');
-    refreshLiveSteps();
+    // A request waiting in line is answered «no» as soon as its turn (or its
+    // agent) is stopped, without ever being shown.
+    const signal = (request && request.signal) || (appState.activeController && appState.activeController.signal) || null;
+    if (signal && signal.aborted) { resolve(false); return; }
+    const entry = { request: request || {}, resolve, signal, settled: false, onAbort: null };
+    entry.onAbort = () => dockApprovalSettle(entry, false);
+    if (signal) signal.addEventListener('abort', entry.onAbort);
+    if (dockApproval.pending) {
+      dockApproval.queue.push(entry);
+      dockApprovalSyncQueue();
+      return;
+    }
+    dockApprovalShow(entry);
   });
 }
 
 function dockApprovalAnswer(value) {
-  if (dockApproval.pending) dockApproval.pending.resolve(value);
+  if (dockApproval.pending) dockApprovalSettle(dockApproval.pending, value);
+}
+
+// End of a turn: nothing stays waiting. Every request (shown or queued) is «no».
+function dockApprovalClear() {
+  const queued = dockApproval.queue.splice(0);
+  queued.forEach((entry) => dockApprovalSettle(entry, false));
+  if (dockApproval.pending) dockApprovalSettle(dockApproval.pending, false);
 }
 
 /* ─── Una pregunta del modelo con respuestas para tocar (ask_user) ──── */
@@ -354,7 +418,9 @@ function dockAskFinish(value) {
   if (!state) return;
   dockAsking.pending = null;
   if (state.signal) state.signal.removeEventListener('abort', state.onAbort);
+  // An approval that was waiting under the question comes back.
   if (!dockApproval.pending) state.slot.innerHTML = '';
+  else state.slot.innerHTML = dockApprovalCardHtml(dockApproval.pending.request);
   refreshLiveSteps();
   state.resolve(value);
 }
@@ -678,6 +744,21 @@ function formatSeconds(ms) {
   return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
 }
 
+// Mini orbs for the live row of a spawn_agents step: one per agent, in its colour.
+function liveAgentOrbs(step) {
+  const agents = Array.isArray(step && step.agents) ? step.agents.slice(0, 12) : [];
+  if (!agents.length) return '<span class="live-spin" aria-hidden="true"></span>';
+  return '<span class="live-orbs" aria-hidden="true">' + agents.map((agent, index) => {
+    const hue = Number.isFinite(Number(agent && agent.hue)) ? Math.round(Number(agent.hue)) : (index * 67 + 260) % 360;
+    return '<i data-status="' + escapeHtml((agent && agent.status) || 'queued') + '" style="--agent-hue:hsl(' + hue + ' 75% 60%)"></i>';
+  }).join('') + '</span>';
+}
+
+function agentsCount(step) {
+  const n = Array.isArray(step && step.agents) && step.agents.length ? step.agents.length : ((step && step.args && Array.isArray(step.args.agents)) ? step.args.agents.length : 0);
+  return n;
+}
+
 function renderLiveSteps(message, steps) {
   const list = steps || [];
   const running = list.filter((step) => step.status === 'running').pop() || null;
@@ -686,7 +767,15 @@ function renderLiveSteps(message, steps) {
   const waiting = !!dockApproval.pending || asking;
   const lead = running ? describeToolStep(running) : null;
   const writing = !running && !!String(message.content || '').trim();
-  const leadTitle = running ? (lead ? lead.verb : (TOOL_LABELS[running.name] || running.name)) : (writing ? 'Escribiendo la respuesta' : 'Pensando el siguiente paso');
+  // Ultra code: while spawn_agents runs the main agent coordinates; when it
+  // ends, it integrates what they brought back (until it starts writing).
+  const coordinating = running && running.name === 'spawn_agents' ? running : null;
+  const lastDone = done[done.length - 1];
+  const integrating = !running && !writing && lastDone && lastDone.name === 'spawn_agents' && lastDone.status !== 'error' ? lastDone : null;
+  const plural = (n) => n + (n === 1 ? ' agente' : ' agentes');
+  let leadTitle = running ? (lead ? lead.verb : (TOOL_LABELS[running.name] || running.name)) : (writing ? 'Escribiendo la respuesta' : 'Pensando el siguiente paso');
+  if (coordinating) leadTitle = agentsCount(coordinating) ? 'Coordinando ' + plural(agentsCount(coordinating)) : 'Coordinando los agentes';
+  else if (integrating) leadTitle = agentsCount(integrating) ? 'Integrando lo de ' + plural(agentsCount(integrating)) : 'Integrando lo de los agentes';
   const since = running ? stepTime(running).start : (done.length ? (stepTime(done[done.length - 1]).end || Date.now()) : Date.now());
   const counts = { read: 0, edit: 0, search: 0 };
   done.forEach((step) => {
@@ -704,14 +793,21 @@ function renderLiveSteps(message, steps) {
       (step.status === 'error' && firstLine ? '<span class="live-done-note">' + escapeHtml(firstLine) + '</span>' : '') +
       (time.end && time.end - time.start >= 1000 ? '<span class="live-done-time">' + formatSeconds(time.end - time.start) + '</span>' : '') + '</li>';
   }).join('');
+  const web = !waiting && isWebStep(running);
+  const icon = web ? '<span class="live-globe" title="En internet">' + GLOBE + '</span>' : (!waiting && coordinating ? liveAgentOrbs(coordinating) : '<span class="live-spin" aria-hidden="true"></span>');
+  // A busy provider being retried (engine retry): a quiet line, not an error.
+  const retry = message.liveRetry && message.liveRetry.attempt
+    ? '<div class="live-retry" role="status">Reintentando (' + Number(message.liveRetry.attempt) + '/' + Number(message.liveRetry.max || message.liveRetry.attempt) + ')…</div>'
+    : '';
   return '<div class="live-steps" data-live-steps="' + escapeHtml(message.id) + '">' +
     // On the internet: a turning globe instead of the spinner, unmistakable.
-    '<div class="live-now' + (waiting ? ' waiting' : '') + (asking ? ' asking' : '') + (!waiting && isWebStep(running) ? ' web' : '') + '">' + (!waiting && isWebStep(running) ? '<span class="live-globe" title="En internet">' + GLOBE + '</span>' : '<span class="live-spin" aria-hidden="true"></span>') +
+    '<div class="live-now' + (waiting ? ' waiting' : '') + (asking ? ' asking' : '') + (web ? ' web' : '') + (!waiting && (coordinating || integrating) ? ' agents' : '') + '">' + icon +
     '<span class="live-now-text"><b>' + escapeHtml(asking ? 'Esperando tu respuesta' : waiting ? 'Esperando tu aprobación' : leadTitle) + '</b>' +
-    (!waiting && lead && lead.target ? ' <span class="live-target">' + escapeHtml(lead.target) + '</span>' : '') +
-    (!waiting && lead && lead.where ? '<span class="live-where"> · ' + escapeHtml(lead.where) + '</span>' : '') +
+    (!waiting && !coordinating && lead && lead.target ? ' <span class="live-target">' + escapeHtml(lead.target) + '</span>' : '') +
+    (!waiting && !coordinating && lead && lead.where ? '<span class="live-where"> · ' + escapeHtml(lead.where) + '</span>' : '') +
     (waiting ? '<span class="live-where"> · encima del cuadro de texto</span>' : '') + '</span>' +
     '<span class="live-time" data-live-since="' + since + '">' + formatSeconds(Date.now() - since) + '</span></div>' +
+    retry +
     (history ? '<ol class="live-history">' + history + '</ol>' : '') +
     (done.length ? '<div class="live-tally">' + done.length + (done.length === 1 ? ' paso' : ' pasos') + (tally ? ' · ' + tally : '') + '</div>' : '') +
     '</div>';

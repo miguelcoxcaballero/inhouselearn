@@ -428,3 +428,25 @@ html[data-theme="dark"] .study-btn.danger { color: #fca5a5; border-color: rgba(2
   html[data-theme="dark"] .study-edit:hover,
   html[data-theme="dark"] .study-icon:hover { background: rgba(255,255,255,0.06); }
 }
+
+/* Ultra code: el tablero de los agentes (ultra.css) y la fila «Coordinando»
+   (composer-dock.css). Los mismos tokens en negro AMOLED: estados algo más
+   claros para que se lean sobre #000 y carriles apenas más claros que el fondo. */
+html[data-theme="dark"] {
+  --ua-accent: #a78bfa;
+  --ua-accent-soft: rgba(167, 139, 250, 0.13);
+  --ua-read: #94a3b8;
+  --ua-search: #2dd4bf;
+  --ua-edit: #fb923c;
+  --ua-web: #60a5fa;
+  --ua-ok: #4ade80;
+  --ua-err: #f87171;
+  --ua-wait: #fbbf24;
+  --ua-lane-bg: rgba(255, 255, 255, 0.035);
+}
+html[data-theme="dark"] .ua-card { background: var(--surface); }
+html[data-theme="dark"] .ua-role { background: rgba(255, 255, 255, 0.04); }
+html[data-theme="dark"] .ua-file.conflict { background: rgba(248, 113, 113, 0.1); }
+html[data-theme="dark"] .ua-copy { background: rgba(255, 255, 255, 0.04); }
+html[data-theme="dark"] .dock-approve-head .dock-agent-chip,
+html[data-theme="dark"] .dock-approve-queue { background: rgba(255, 255, 255, 0.06); }

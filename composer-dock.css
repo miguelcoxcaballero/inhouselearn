@@ -89,6 +89,16 @@
 .dock-card .del { color: #b91c1c; flex: 0 0 auto; }
 .dock-approve-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 
+/* Quién pide la aprobación (un agente de Ultra code) y cuántas esperan detrás */
+.dock-approve-head .dock-agent-chip {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 46%; padding: 1px 8px 1px 6px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 650; color: var(--text-secondary); background: var(--surface-hover); border: 1px solid var(--border-strong);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-self: center;
+}
+.dock-agent-chip i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--agent-hue, var(--ua-accent, var(--orange))); }
+.dock-approve-queue { margin-left: auto; align-self: center; padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 650; color: var(--muted); background: var(--surface-hover); }
+.dock-approve-queue[hidden] { display: none; }
+
 /* Pregunta del modelo (ask_user) */
 .dock-ask { border-color: rgba(224,122,60,0.55); box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow); }
 .dock-ask-options { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
@@ -178,6 +188,17 @@
 .live-done.web .live-mark { color: #2563eb; display: inline-flex; align-self: center; }
 .live-done.web .live-mark svg { width: 12px; height: 12px; }
 @media (prefers-reduced-motion: reduce) { .live-globe { animation: none; } }
+/* Ultra code: «Coordinando N agentes» con un orbe pequeño por agente */
+.live-now.agents { border-color: color-mix(in srgb, var(--ua-accent, #7c3aed) 35%, transparent); background: linear-gradient(90deg, var(--ua-accent-soft, rgba(124,58,237,0.08)), transparent 70%); }
+.live-orbs { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; max-width: 40%; overflow: hidden; }
+.live-orbs i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--agent-hue); opacity: 0.3; }
+.live-orbs i[data-status="running"] { opacity: 1; animation: live-pulse 1.2s ease-in-out infinite; }
+.live-orbs i[data-status="waiting"] { opacity: 1; background: var(--ua-wait, #d97706); }
+.live-orbs i[data-status="done"] { opacity: 1; background: var(--ua-ok, var(--green)); }
+.live-orbs i[data-status="error"] { opacity: 1; background: var(--ua-err, #dc2626); }
+/* Un proveedor ocupado que se reintenta: una línea discreta, no un error. */
+.live-retry { margin: 5px 0 0 6px; font-size: 0.74rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .live-orbs i { animation: none; } }
 /* With the live card, the three typing dots are redundant. */
 .bubble-content:has(.live-steps) .md-root > .typing { display: none; }
 

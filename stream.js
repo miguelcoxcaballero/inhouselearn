@@ -220,6 +220,7 @@ class StreamView {
     this.thinkingAt = 0;
     this.thinkingShown = '';
     this.stepsKey = '';
+    this.agentsKey = '';
     this.cardsKey = '';
     this.finishWaiters = [];
     this.mdRoot = articleEl.querySelector('.md-root');
@@ -393,15 +394,30 @@ class StreamView {
       const label = details.querySelector('.reasoning-summary span:last-child');
       if (label) label.textContent = 'Razonamiento';
     }
-    // Tool steps: only when a step starts, ends or prints.
+    // Tool steps: only when a step starts, ends or prints. The agents of
+    // spawn_agents are not redrawn here (their board is patched in place
+    // below); only their statuses count, for the mini orbs of the live row.
     const steps = Array.isArray(message.toolSteps) ? message.toolSteps : [];
-    const stepsKey = steps.map((step) => step.id + step.status + (step.output ? step.output.length : 0) + (step.agents ? JSON.stringify(step.agents) : '')).join('|') + (this.target.trim() ? '|writing' : '');
+    const stepsKey = steps.map((step) => step.id + step.status + (step.output ? step.output.length : 0) +
+      (Array.isArray(step.agents) ? ':' + step.agents.map((agent) => (agent && agent.status ? agent.status[0] : '')).join('') : '')).join('|') +
+      (this.target.trim() ? '|writing' : '') + (message.liveRetry ? '|retry' + message.liveRetry.attempt : '');
     if (stepsKey !== this.stepsKey) {
       this.stepsKey = stepsKey;
       const stepsSlot = this.article.querySelector('.slot-steps');
       if (stepsSlot) {
         stepsSlot.innerHTML = visibleToolSteps(message).length ? renderToolStepsMarkup(message) : '';
         bindThreadActions(stepsSlot);
+      }
+    }
+    // Ultra code's board (ultra.js): patched in place, so its lanes, orbs and
+    // running animations survive every update.
+    const agentSteps = steps.filter((step) => step.name === 'spawn_agents' && Array.isArray(step.agents));
+    const agentsKey = agentSteps.length ? JSON.stringify(agentSteps.map((step) => [step.id, step.status, step.agents, step.waves, step.budget, step.verify, step.files, step.details && step.details.verify, step.details && step.details.files])) : '';
+    if (agentsKey !== this.agentsKey) {
+      this.agentsKey = agentsKey;
+      const agentsSlot = this.article.querySelector('.slot-agents');
+      if (agentsSlot && window.UltraAgents && typeof window.UltraAgents.patch === 'function') {
+        window.UltraAgents.patch(agentsSlot, message, { remote: !!this.remote });
       }
     }
     // Course cards (plan, quiz, exam) appear as soon as their tool runs.
