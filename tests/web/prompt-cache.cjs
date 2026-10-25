@@ -50,6 +50,22 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   check('each turn ends with a <contexto_app> block with the time and the files of that turn', r.tails.every((t) => t.startsWith('<contexto_app>')) && /Ahora: /.test(r.lastTail) && /notas\.md/.test(r.lastTail), r.tails);
   check('the per-turn block is never saved in the chat', !r.saved);
 
+  // A GitHub chat: what gets prepared between turns goes in the per-turn block,
+  // the system prompt stays the same.
+  const gh = await page.evaluate(async () => {
+    window.githubToken = () => 'github_pat_test';
+    window.githubLogin = () => 'tester';
+    newChat();
+    const chat = getActiveChat();
+    chat.github = true;
+    const first = stableSystemPrompt(chat);
+    githubStageStore(chat).put({ repo: 'tester/demo', branch: 'main', files: { 'x.js': 'y' }, deletes: [], notes: [] });
+    chat.githubRepo = 'tester/demo';
+    const second = stableSystemPrompt(chat);
+    return { same: first === second, github: /GitHub \(cuenta @tester\)/.test(first), tail: /preparados sin subir: tester\/demo@main \(x\.js\)/.test(turnContextText(chat, null)), agents: subAgentSystemPrompt(chat) === subAgentSystemPrompt(chat) };
+  });
+  check('a GitHub chat keeps its system prompt when changes are prepared (they go in the per-turn block)', gh.same && gh.github && gh.tail, gh);
+
   // Guided Learning: its own method, not «Cómo trabajar».
   await page.evaluate(() => { newChat(); getActiveChat().guidedLearning = true; window.__bodies = []; window.__replies.push({ text: '¿Qué quieres aprender?' }); });
   await send(page, 'Quiero aprender');

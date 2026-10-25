@@ -693,8 +693,13 @@
 
   const RUNNER = `
 ;(function () {
-  for (const name of ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'indexedDB', 'caches', 'BroadcastChannel']) {
-    try { Object.defineProperty(self, name, { value: undefined, writable: false, configurable: false }); } catch (_) {}
+  for (const name of ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'indexedDB', 'caches', 'BroadcastChannel', 'Worker', 'SharedWorker', 'WebTransport', 'RTCPeerConnection']) {
+    // On self AND every prototype above it: the real functions live on
+  // WorkerGlobalScope.prototype, and shadowing them on self alone leaves them
+  // reachable through Object.getPrototypeOf(self).
+  for (let o = self; o; o = Object.getPrototypeOf(o)) {
+    try { Object.defineProperty(o, name, { value: undefined, writable: false, configurable: false }); } catch (_) {}
+  }
   }
   const format = (value) => {
     if (typeof value === 'string') return value;

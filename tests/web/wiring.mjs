@@ -28,8 +28,18 @@ const NEEDED = {
   'escalate:': 'raising the reasoning after tool errors',
   'subAgentSystemPrompt(': 'the shared prompt of the parallel agents',
   'settleAgentSteps(': 'agents never left running',
-  'src="ultra.js': 'the Ultra code board'
+  'src="ultra.js': 'the Ultra code board',
+  'createSubAgentReportTool': 'submit_result for the parallel agents',
+  'githubTurnText(': 'GitHub state in the per-turn block (not the cached prompt)',
+  'agentGithubStage(': 'a GitHub stage per parallel agent'
 };
+
+test('the engine bundle exports what index.html feature-checks', () => {
+  const engine = readFileSync(new URL('../../engine/src/index.js', import.meta.url), 'utf8');
+  for (const name of ['createSubAgentReportTool', 'planAgents', 'ownsPath', 'configureSandbox', 'globToRegExp', 'createInteractTools', 'createStudyTools']) {
+    assert.ok(new RegExp('export \\{[^}]*\\b' + name + '\\b').test(engine), 'engine/src/index.js does not export ' + name + ' (index.html checks it and silently goes without).');
+  }
+});
 
 test('index.html keeps the tools, Estudio and persistence wiring', () => {
   for (const [needle, what] of Object.entries(NEEDED)) {

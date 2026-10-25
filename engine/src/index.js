@@ -21,7 +21,7 @@ export { createToolCoach, NOTE_MARK, ageToolResults, estimateContextChars };
 export { createDriveTools } from './gdrive.js';
 export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
-export { createAgentTools } from './agents.js';
+export { createAgentTools, createSubAgentReportTool, planAgents, ownsPath } from './agents.js';
 export { createDocumentTools } from './documents.js';
 export { createInteractTools } from './interact.js';
 export { createStudyTools } from './study.js';

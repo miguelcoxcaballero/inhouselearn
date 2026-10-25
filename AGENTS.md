@@ -294,7 +294,11 @@ Mandatory guidance for every AI and developer working in this repository.
   panel shows the share). run_js has math.js and Algebrite (`sandboxPrelude`, Cache API
   `inhouse-sandbox-libs-v1`, evaluated before the sandbox's network is removed) plus `nsolve`, `integrate`,
   `table`; without them it still works. Tests: `prompt-cache.cjs`, `context-aging.mjs`, `coach.mjs`,
-  `harness.cjs`. `tests/web/wiring.mjs` fails if a merge drops this wiring.
+  `harness.cjs`, `sandbox-net.cjs`. `tests/web/wiring.mjs` fails if a merge drops this wiring or the engine stops
+  exporting what the page feature-checks. Trade-off: earlier user messages are resent without the context block
+  they had, so the cached prefix covers the system prompt and tools, not the history. GitHub's repository and
+  staged changes are per-turn (`githubTurnText`). Both sandboxes block the network on every prototype of the
+  worker's global scope; run_js waits ≤ 4 s for the maths libraries and honours Stop meanwhile.
 - **The model's working tools** (`engine/src/tools.js`, `interact.js`): `read_file` returns numbered lines
   (`  12→text`) by ranges (`offset`/`limit`, ≤ 2000 lines or 20 000 characters, and says the next offset);
   `search_files` greps the chat files (plain text or regex, glob `path`, context lines); `write_file` refuses

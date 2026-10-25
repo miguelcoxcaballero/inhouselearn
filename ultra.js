@@ -35,6 +35,8 @@
   // Steps this page saw running: if a full redraw shows them finished before
   // the last patch did, the completion moment still plays once.
   const seenRunning = new Set();
+  // Steps another device is answering: their end is not celebrated here.
+  const remoteSteps = new Set();
   // The latest data each card was drawn with: the click handlers need it for
   // the lazy bodies and «Copiar» (never kept in the DOM, it can be large).
   const cardData = new WeakMap();
@@ -74,7 +76,9 @@
 
   function agentSteps(message) {
     const steps = message && Array.isArray(message.toolSteps) ? message.toolSteps : [];
-    return steps.filter((step) => step && step.name === 'spawn_agents' && Array.isArray(step.agents) && step.agents.length);
+    // Saved data can be old or damaged: only plain agent objects are drawn.
+    return steps.filter((step) => step && step.name === 'spawn_agents' && Array.isArray(step.agents) && step.agents.some((agent) => agent && typeof agent === 'object'))
+      .map((step) => (step.agents.every((agent) => agent && typeof agent === 'object') ? step : Object.assign({}, step, { agents: step.agents.filter((agent) => agent && typeof agent === 'object') })));
   }
 
   // waves, budget, verify and files: on the step, or in its result details.
@@ -171,7 +175,7 @@
     let raw = String(summary || agent.result || '');
     // Only the «Resultado» section of the closing report, not the ones after it.
     const section = /^#+\s*(?:Resultado|Result)\s*\n([\s\S]*?)(?=^#+\s|$(?![\s\S]))/im.exec(raw);
-    if (!summary && section && section[1].trim()) raw = section[1];
+    if ((!summary || (agent.report && agent.report.synthesized)) && section && section[1].trim()) raw = section[1];
     const text = raw.replace(/[#*_`>]+/g, ' ').replace(/\s+/g, ' ').trim();
     return text ? text.slice(0, 140) + (text.length > 140 ? '…' : '') : '';
   }
@@ -504,7 +508,7 @@
     // A finished card drawn now (reload, redraw) must not celebrate later.
     steps.forEach((step) => {
       if (stepRunning(step)) { seenRunning.add(step.id); return; }
-      if (seenRunning.has(step.id) && !celebrated.has(step.id)) {
+      if (seenRunning.has(step.id) && !celebrated.has(step.id) && !remoteSteps.has(step.id)) {
         window.setTimeout(() => {
           const card = document.querySelector('.ua-card[data-step="' + cssEscape(String(step.id)) + '"]');
           if (card) celebrate(card, step.id);
@@ -513,12 +517,14 @@
         celebrated.add(step.id);
       }
     });
-    return steps.map((step) => cardMarkup(message, step)).join('');
+    // One bad step never breaks the drawing of the whole thread.
+    return steps.map((step) => { try { return cardMarkup(message, step); } catch (error) { console.warn('Ultra: no se pudo dibujar un paso de agentes.', error); return ''; } }).join('');
   }
 
   function patch(slotEl, message, options) {
     if (!slotEl || !message) return;
     const steps = agentSteps(message);
+    if (options && options.remote) steps.forEach((step) => remoteSteps.add(step.id));
     const keep = new Set();
     steps.forEach((step, i) => {
       let card = Array.from(slotEl.children).find((el) => el.classList && el.classList.contains('ua-card') && el.dataset.step === String(step.id));

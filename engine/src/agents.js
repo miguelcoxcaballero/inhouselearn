@@ -74,7 +74,8 @@ function globRegExp(glob) {
   return new RegExp('^' + out + (/[*?]/.test(text) || /\.[^/]+$/.test(text) ? '' : '(?:/.*)?') + '$');
 }
 
-const ownsPath = (globs, path) => (globs || []).some((glob) => { try { return globRegExp(glob).test(String(path || '').replace(/^\/+/, '')); } catch (_) { return false; } });
+// Exported: the app enforces owned files with the same rules (a folder owns its subtree).
+export const ownsPath = (globs, path) => (globs || []).some((glob) => { try { return globRegExp(glob).test(String(path || '').replace(/^\/+/, '')); } catch (_) { return false; } });
 
 // ─── Plan ────────────────────────────────────────────
 // planAgents(list) → { nodes, waves, warnings }. Throws when a dependency does

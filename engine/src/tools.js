@@ -192,8 +192,13 @@ function loadPrelude() {
 // El código corre en un Web Worker: hilo aparte (un bucle infinito no congela la
 // app y se corta con terminate()), sin DOM ni localStorage, y sin red.
 const WORKER_SOURCE = `
-for (const name of ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'indexedDB', 'caches', 'BroadcastChannel']) {
-  try { Object.defineProperty(self, name, { value: undefined, writable: false, configurable: false }); } catch (_) {}
+for (const name of ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'importScripts', 'indexedDB', 'caches', 'BroadcastChannel', 'Worker', 'SharedWorker', 'WebTransport', 'RTCPeerConnection']) {
+  // On self AND every prototype above it: the real functions live on
+  // WorkerGlobalScope.prototype, and shadowing them on self alone leaves them
+  // reachable through Object.getPrototypeOf(self).
+  for (let o = self; o; o = Object.getPrototypeOf(o)) {
+    try { Object.defineProperty(o, name, { value: undefined, writable: false, configurable: false }); } catch (_) {}
+  }
 }
 const format = (value) => {
   if (typeof value === 'string') return value;
@@ -241,8 +246,21 @@ function workerSource(prelude) {
 
 const workerUrls = new Map();
 
+const PRELUDE_WAIT_MS = 4000;
+
 export async function runInSandbox(code, files, signal) {
-  const prelude = await loadPrelude();
+  if (signal && signal.aborted) return { logs: [], writes: {}, error: 'Cancelado.' };
+  // The libraries may still be downloading (or a stalled network may never
+  // answer): wait a little, honour Stop, and otherwise run without them this
+  // time while the download goes on for the next run.
+  let stopWaiting = null;
+  const waited = await Promise.race([
+    loadPrelude(),
+    new Promise((resolve) => { const timer = setTimeout(() => resolve(''), PRELUDE_WAIT_MS); stopWaiting = () => { clearTimeout(timer); resolve(null); }; if (signal) signal.addEventListener('abort', stopWaiting, { once: true }); })
+  ]);
+  if (signal && stopWaiting) signal.removeEventListener('abort', stopWaiting);
+  if (waited === null || (signal && signal.aborted)) return { logs: [], writes: {}, error: 'Cancelado.' };
+  const prelude = waited;
   if (!workerUrls.has(prelude)) {
     // Old Blob URLs are not revoked: a worker still starting may be loading one.
     workerUrls.set(prelude, URL.createObjectURL(new Blob([workerSource(prelude)], { type: 'text/javascript' })));
@@ -545,6 +563,10 @@ export function createWorkspaceTools(workspace, opts = {}) {
       executionMode: 'sequential',
       execute: async (toolCallId, params) => {
         const path = normalizePath(params.path);
+        if (typeof opts.canWrite === 'function') {
+          const verdict = opts.canWrite(path);
+          if (verdict !== true && verdict !== undefined) throw new Error(typeof verdict === 'string' ? verdict : 'No puedes borrar ' + path + '.');
+        }
         if (!workspace.remove(path)) throw new Error('No existe el archivo ' + path + ' en los archivos del chat.' + (/^D\d+$/i.test(path) ? ' ' + path + ' es un documento de la biblioteca: bórralo con delete_library.' : ''));
         seen.delete(path);
         const warning = onWrite(path, 'delete');

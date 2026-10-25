@@ -308,6 +308,15 @@ export function createGithubTools(ctx) {
       if (!head) {
         const baseSha = await branchSha(repo, base);
         if (!baseSha) throw new Error('No existe la rama base ' + base + '.');
+        // The base moved since the approval: the same files changed there must
+        // not be overwritten by content computed on the old base.
+        if (seenBase && baseSha !== seenBase) {
+          const moved = await gh('GET', '/repos/' + repo + '/compare/' + seenBase + '...' + baseSha);
+          const changed = new Set();
+          (moved.files || []).forEach((file) => { changed.add(file.filename); if (file.previous_filename) changed.add(file.previous_filename); });
+          const overlap = files.map((file) => file.path).concat(deletes).filter((path) => changed.has(path));
+          if (overlap.length) throw new Error('Otro agente cambió ' + overlap.join(', ') + ' en ' + base + ' mientras tanto; lee la versión nueva y repite el cambio.');
+        }
         try {
           await gh('POST', '/repos/' + repo + '/git/refs', { ref: 'refs/heads/' + branch, sha: baseSha });
           head = baseSha;
