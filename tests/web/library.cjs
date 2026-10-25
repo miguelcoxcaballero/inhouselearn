@@ -84,7 +84,7 @@ function makePng(w, h) {
   await idle(page, 60000);
   const flow = await page.evaluate(() => {
     const reqs = window.__requests;
-    const sys = (reqs[0].messages.find((m) => m.role === 'system') || {}).content || '';
+    const sys = ((reqs[0].messages.find((m) => m.role === 'system') || {}).content || '') + JSON.stringify((reqs[0].messages.filter((m) => m.role === 'user').pop() || {}).content || '');
     const toolNames = (reqs[0].tools || []).map((t) => t.function.name);
     const results = reqs[reqs.length - 1].messages.filter((m) => m.role === 'tool').map((m) => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)).slice(0, 300));
     const user = reqs[0].messages.filter((m) => m.role === 'user').map((m) => JSON.stringify(m.content)).join(' ');

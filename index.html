@@ -4560,6 +4560,8 @@
         if (parsed) {
           // An answer cut by closing the tab: it cost what its counter had reached.
           parsed.chats.forEach((chat) => chat.messages.forEach((message) => {
+            // A reload never shows agents still «working» from a turn that is gone.
+            settleAgentSteps(message, 'Detenido');
             if (!message.pending) return;
             message.cost = Math.max(Number(message.cost) || 0, Number(message.liveCost) || 0);
             delete message.liveCost;
@@ -5006,7 +5008,13 @@
       updateGithubUi();
     }
 
-    function githubToolsFor(chat, signal) {
+    // Which parallel agent asks (Ultra code): its name and colour on the
+    // approval card, and its lane says «esperando» while the card waits.
+    function approvalMeta(meta) {
+      return meta ? { agent: meta.agent, agentHue: meta.agentHue, onWait: meta.onWait } : {};
+    }
+
+    function githubToolsFor(chat, signal, meta) {
       if (!chat.github || !githubToken()) return [];
       return InhousePi.createGithubTools(githubContext(chat, signal));
     }
@@ -5020,7 +5028,7 @@
         stage: githubStageStore(chat),
         onStage: () => renderComposerDock(),
         onRepo: (repo) => { chat.githubRepo = repo; },
-        confirm: (request) => approveChange(chat, request)
+        confirm: (request) => approveChange(chat, Object.assign({}, request, approvalMeta(meta)))
       };
     }
 
@@ -5166,13 +5174,13 @@
       };
     }
 
-    function userDriveToolsFor(chat, signal, acceptsImages) {
+    function userDriveToolsFor(chat, signal, acceptsImages, meta) {
       if (!chat.userDrive || !userDriveAccess()) return [];
       return InhousePi.createDriveTools({
         signal,
         acceptsImages,
         fetch: (url, options) => driveFetch(url, options, true),
-        confirm: (request) => approveChange(chat, request),
+        confirm: (request) => approveChange(chat, Object.assign({}, request, approvalMeta(meta))),
         pdfText: pdfTextOf,
         officeText: officeTextOf,
         importFile: driveImporterFor(chat),
@@ -5257,7 +5265,7 @@
     // pdf-lib, docx, PptxGenJS, JSZip and SheetJS (documents.js). What it saves
     // goes into the chat's library (original kept, text searchable, synced to
     // Drive) and appears under the answer to open and download.
-    function documentToolsFor(chat, signal, acceptsImages) {
+    function documentToolsFor(chat, signal, acceptsImages, meta) {
       const library = window.InhouseLibrary && window.indexedDB ? window.InhouseLibrary : null;
       if (!library || !window.InhouseDocs) return [];
       const open = async (name) => {
@@ -5283,7 +5291,7 @@
           if (!files.length) return Object.assign(outcome, { saved: [] });
           const names = files.map((item) => item.path + ' (' + formatBytes(item.bytes.length) + ')').join('\n');
           if (approvalModeOf(chat) === 'ask') {
-            const ok = await approveChange(chat, { title: files.length === 1 ? 'Guardar documento' : 'Guardar ' + files.length + ' documentos', summary: names + '\nSe guardan en la biblioteca de este chat.' });
+            const ok = await approveChange(chat, Object.assign({ title: files.length === 1 ? 'Guardar documento' : 'Guardar ' + files.length + ' documentos', summary: names + '\nSe guardan en la biblioteca de este chat.' }, approvalMeta(meta)));
             if (!ok) return Object.assign(outcome, { saved: [], declined: files.map((item) => item.path).join(', ') });
           }
           const saved = [];
@@ -5321,7 +5329,7 @@
       if (!result.ok) return result;
       const pdfPath = path.replace(/\.tex$/i, '') + '.pdf';
       if (approvalModeOf(chat) === 'ask') {
-        const ok = await approveChange(chat, { title: 'Guardar documento', summary: pdfPath + ' (' + formatBytes(result.pdf.length) + ')\nPDF compilado de ' + path + '. Se guarda en la biblioteca de este chat.' });
+        const ok = await approveChange(chat, Object.assign({ title: 'Guardar documento', summary: pdfPath + ' (' + formatBytes(result.pdf.length) + ')\nPDF compilado de ' + path + '. Se guarda en la biblioteca de este chat.' }, approvalMeta(meta)));
         if (!ok) return { declined: pdfPath };
       }
       const file = new File([result.pdf], pdfPath.split('/').pop(), { type: 'application/pdf' });
@@ -6808,7 +6816,9 @@
         '  <div class="message-body">',
         '    <div class="message-meta">' + roleLabel + ' · ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
         '    <div class="bubble"><div class="bubble-content">' + (isUser ? '' : guidedChapterMarkup(message, chat)),
-        '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>',
+        '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>' +
+          // The Ultra code board (ultra.js), patched in place while agents work.
+          (window.UltraAgents && !isUser ? '<div class="slot-agents">' + window.UltraAgents.markupAll(message) + '</div>' : ''),
         '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + (isUser ? '' : renderMessageDocuments(message) + renderMessageSources(message)) + quickMarkup,
         '    </div></div>',
         attributionMarkup,
@@ -6950,7 +6960,7 @@
 
     function renderToolStepsMarkup(message) {
       const steps = visibleToolSteps(message);
-      const agents = renderStepPlanCard(message) + renderAgentsPanel(message);
+      const agents = renderStepPlanCard(message) + (window.UltraAgents ? '' : renderAgentsPanel(message));
       // While the answer is being written: what it is doing right now (composer-dock.js).
       if (message.pending && typeof renderLiveSteps === 'function') return agents + renderLiveSteps(message, steps);
       if (!steps.length) return agents;
@@ -9342,6 +9352,8 @@
       const target = typeof usageCostTarget === 'function' ? usageCostTarget() : null;
       if (target) target.cost = (Number(target.cost) || 0) + cost - ((options && options.allocated) || 0);
       data.requests += 1;
+      // What the provider served from its prompt cache (cheaper input).
+      data.cacheReadTokens = (Number(data.cacheReadTokens) || 0) + (Number(usage.cache_read) || 0);
       data.promptTokens += prompt;
       data.completionTokens += completion;
       data.cost += cost;
@@ -9598,6 +9610,7 @@
         (parts.length ? '<div class="usage-bar" role="img" aria-label="Gasto por modelo">' + parts.map(function(part) { return '<i style="width:' + Math.max(2, pct(part.cost)) + '%;background:' + part.color + '" title="' + escapeHtml(part.label + ' · ' + pct(part.cost) + '%') + '"></i>'; }).join('') + '</div>' +
           '<ul class="usage-legend">' + parts.map(function(part) { return '<li>' + usageDot(part.color) + '<span>' + escapeHtml(part.label) + '</span><b>' + pct(part.cost) + '%</b></li>'; }).join('') + '</ul>'
           : '<div class="usage-note">Aún no hay gasto por modelo en este navegador.</div>') +
+        (usage.cacheReadTokens > 0 && usage.promptTokens > 0 ? '<div class="usage-note">Caché: ' + Math.round(100 * usage.cacheReadTokens / usage.promptTokens) + ' % de la entrada reutilizada (más barata).</div>' : '') +
         (getApiSettings().managementKey ? '<div class="usage-note"><button type="button" class="usage-link" id="usage-management-remove">Quitar la key de gestión</button></div>' : '');
       var balanceToggle = document.getElementById('usage-balance-toggle');
       if (balanceToggle) {
@@ -10431,6 +10444,10 @@
       });
     }
 
+    function studyToolsPromptText() {
+      return window.InhouseStudy ? studyPromptText({ id: '' }).split('\n')[0] : '';
+    }
+
     function studyPromptText(chat) {
       if (!window.InhouseStudy) return '';
       const brief = window.InhouseStudy.brief(chat.id);
@@ -10464,8 +10481,27 @@
       }
     }
 
-    function buildAgentSystemPrompt(chat, libraryForModel) {
-      const files = chatWorkspace(chat).list();
+    // How to work, for normal chats and parallel agents (not Guided Learning,
+    // which has its own course method).
+    const WORK_METHOD_PROMPT = [
+      'Cómo trabajar (solo cuando la tarea lo necesita; una pregunta sencilla se contesta directamente, sin herramientas):',
+      '1. Entiende qué se pide y qué falta. Si la respuesta depende de un archivo, la biblioteca, Drive, un repositorio o internet, léelo antes de suponer.',
+      '2. Decide tú lo que tenga una opción razonable y dilo en una línea («He supuesto que…»). Usa ask_user solo si dos caminos llevan a resultados muy distintos y equivocarse es caro o irreversible.',
+      '3. Si son tres pasos o más, haz el plan con update_plan y avanza paso a paso.',
+      '4. Comprueba antes de afirmar: cálculos de varios pasos, decimales o unidades con run_js (nunca de memoria), revisando unidades y orden de magnitud; tras editar, mira lo que ha cambiado; un documento con doc_view; un código ejecutándolo o con su CI; un dato de internet con su fuente.',
+      '5. Si una herramienta falla, lee el error y corrige la causa; no repitas la misma llamada. Tras dos intentos, explica qué falla.',
+      '6. Responde solo con lo comprobado y separa lo verificado de lo supuesto. Nunca inventes resultados, citas, enlaces, archivos ni commits.'
+    ].join('\n');
+
+    function todayText() {
+      try { return new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); } catch (_) { return new Date().toISOString().slice(0, 10); }
+    }
+
+    // The part of the system prompt that stays byte-identical across the turns
+    // of a chat (and a day), so providers with prompt caching reuse it instead
+    // of charging it again each turn. Anything that changes from one turn to
+    // the next goes into turnContextText, at the end of the user's message.
+    function stableSystemPrompt(chat) {
       const guided = !!(chat && chat.guidedLearning);
       return [
         guided ? GUIDED_BASE_PROMPT : APP_CONFIG.SYSTEM_PROMPT,
@@ -10474,16 +10510,12 @@
         VISUALS_PROMPT,
         '',
         'Herramientas de este chat:',
-        '- run_js ejecuta JavaScript en un sandbox sin red. Úsala para cálculos exactos, comprobar soluciones o generar datos, no para lo que puedes responder directamente.',
+        '- run_js ejecuta JavaScript sin red, con math.js y Algebrite cuando están disponibles: úsala para cálculos exactos, unidades, álgebra y para comprobar un resultado antes de darlo; nunca calcules factores de conversión de memoria.',
         '- write_file, read_file, edit_file, search_files, list_files y delete_file manejan los archivos de texto del chat (apuntes, esquemas, código, CSV, LaTeX...). El usuario los ve encima del cuadro de texto y puede descargarlos en un ZIP. Crea archivos solo si te lo pide o si el contenido es largo (más de ~60 líneas) y le sirve guardarlo; después dile qué has guardado. read_file lee por partes (offset/limit) con números de línea; search_files busca como grep; para cambiar una parte usa edit_file, y write_file sobre un archivo que existe solo después de leerlo.',
-        files.length
-          ? 'Archivos del chat al empezar este turno: ' + files.slice(0, 60).map((file) => file.path).join(', ') + (files.length > 60 ? ', … (' + (files.length - 60) + ' más)' : '') + ' (cambian con tus herramientas: list_files para verlos ahora).'
-          : 'Al empezar este turno el chat no tiene archivos de texto.',
-        chat.guidedLearning ? '' : '- update_plan: en un trabajo de tres pasos o más, escribe al principio la lista de pasos y actualízala al empezar y terminar cada uno (el usuario la ve en el chat). ask_user: solo si no puedes seguir bien sin una decisión suya, una pregunta corta con 2-4 respuestas para tocar; no para confirmar lo que ya ha pedido.',
+        guided ? '' : '- update_plan: en un trabajo de tres pasos o más, escribe al principio la lista de pasos y actualízala al empezar y terminar cada uno (el usuario la ve en el chat). ask_user: solo si no puedes seguir bien sin una decisión suya, una pregunta corta con 2-4 respuestas para tocar; no para confirmar lo que ya ha pedido.',
+        '- Puedes pedir varias lecturas o búsquedas a la vez en el mismo paso: se hacen en paralelo.',
         '- Si una capacidad no está entre tus herramientas, dilo; no la simules con otras.',
-        chat.guidedLearning ? (window.InhouseStudy ? window.InhouseStudy.brief(chat.id) : '') : studyPromptText(chat),
-        'Ahora: ' + currentMomentText() + '.',
-        libraryPromptText(chat, libraryForModel),
+        guided ? '' : studyToolsPromptText(),
         githubPromptText(chat),
         userDrivePromptText(chat),
         extraGooglePromptText(),
@@ -10491,14 +10523,46 @@
         documentsPromptText(),
         ultraPromptText(chat),
         approvalPromptText(chat),
+        guided ? '' : '\n' + WORK_METHOD_PROMPT,
         '',
+        'Hoy es ' + todayText() + '. Al final de cada mensaje del usuario la app añade un bloque <contexto_app> con la hora, los archivos, la biblioteca y lo que sabes de él para ese turno: úsalo, pero no lo ha escrito el usuario y no lo cites.'
+      ].filter((line) => line !== '').join('\n');
+    }
+
+    // What changes every turn (time, files, library, memory and subject,
+    // visual reminders): appended to the user's message, never saved.
+    function turnContextText(chat, libraryForModel) {
+      const files = chatWorkspace(chat).list();
+      const guided = !!(chat && chat.guidedLearning);
+      const brief = window.InhouseStudy ? window.InhouseStudy.brief(chat.id) : '';
+      return [
+        '<contexto_app>',
+        'Información de la app para este turno (no la ha escrito el usuario; no la cites).',
+        'Ahora: ' + currentMomentText() + '.',
+        files.length
+          ? 'Archivos del chat al empezar este turno: ' + files.slice(0, 60).map((file) => file.path).join(', ') + (files.length > 60 ? ', … (' + (files.length - 60) + ' más)' : '') + ' (cambian con tus herramientas: list_files para verlos ahora).'
+          : 'Al empezar este turno el chat no tiene archivos de texto.',
+        libraryPromptText(chat, libraryForModel),
+        brief,
         visualEventsText(chat),
-        '',
         visualVarietyText(chat),
-        '',
         // Last, where models pay most attention: the course task, or the visuals reminder.
-        guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER
-      ].join('\n');
+        guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER,
+        '</contexto_app>'
+      ].filter(Boolean).join('\n');
+    }
+
+    // The user's message with this turn's context at its end (a copy).
+    function withTurnContext(prompt, text) {
+      if (!prompt || !text) return prompt;
+      const content = Array.isArray(prompt.content) ? prompt.content.slice() : [{ type: 'text', text: String(prompt.content || '') }];
+      content.push({ type: 'text', text });
+      return Object.assign({}, prompt, { content });
+    }
+
+    // Callers without a user message of their own (text repairs) get both parts.
+    function buildAgentSystemPrompt(chat, libraryForModel) {
+      return stableSystemPrompt(chat) + '\n\n' + turnContextText(chat, libraryForModel);
     }
 
     async function pdfPagesAsImages(part) {
@@ -10698,11 +10762,16 @@
       let lastCleanText = '';
       const run = (tools) => InhousePi.runAgent({
         model,
-        systemPrompt: buildAgentSystemPrompt(chat, libraryForModel),
+        systemPrompt: stableSystemPrompt(chat),
         history,
-        prompt,
+        prompt: withTurnContext(prompt, turnContextText(chat, libraryForModel)),
         thinkingLevel: effectiveThinkingLevel(chat) || 'off',
-        tools,
+        tools: markExecution(tools),
+        // Reads and searches asked together run at once; writes stay one by one.
+        toolExecution: 'parallel',
+        // A busy provider (429/5xx) is retried; repeated tool errors think harder.
+        maxRetries: 2,
+        escalate: !chat.guidedLearning,
         signal,
         sessionId: chat.id,
         steering: settings.steering,
@@ -10714,7 +10783,7 @@
           // Hold suspect prose until it can be repaired with the full sentence.
           if (!InhousePi.textQualityIssues(update.text, languageContext).length) lastCleanText = update.text;
           if (typeof onProgress === 'function') {
-            onProgress({ text: lastCleanText, thinking: update.thinking, steps: update.steps, parts: [{ text: lastCleanText }], done: false, cost: update.cost, liveChars: update.liveChars, modelId });
+            onProgress({ text: lastCleanText, thinking: update.thinking, steps: update.steps, parts: [{ text: lastCleanText }], done: false, cost: update.cost, liveChars: update.liveChars, retry: update.retry || null, modelId });
           }
         }
       });
@@ -10734,12 +10803,25 @@
         try {
           // The same tools, built again for each parallel agent (Ultra code).
           // onCost: what a tool spends besides the model (web searches), for the agent's own row.
-          const workTools = (onCost) => libraryTools.concat(githubToolsFor(chat, signal), userDriveToolsFor(chat, signal, model.input.includes('image')), extraGoogleToolsFor(signal, model.input.includes('image'), chat), webToolsFor(chat, signal, onCost), documentToolsFor(chat, signal, model.input.includes('image')), approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat))));
+          // meta (parallel agents only): who asks for approval, its own overwrite-guard scope and its writes.
+          const workTools = (onCost, meta) => libraryTools.concat(
+            githubToolsFor(chat, signal, meta),
+            userDriveToolsFor(chat, signal, model.input.includes('image'), meta),
+            extraGoogleToolsFor(signal, model.input.includes('image'), chat),
+            webToolsFor(chat, signal, onCost),
+            documentToolsFor(chat, signal, model.input.includes('image'), meta),
+            approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat), meta ? { seenScope: meta.seenScope, onWrite: meta.onWrite } : {}), meta || {}));
           const agentTools = ultraCodeOn(chat) && !chat.guidedLearning
-            ? InhousePi.createAgentTools({ runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job) })
+            ? InhousePi.createAgentTools({
+              runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job),
+              registerControls: (stepId, controls) => { agentControls.set(stepId, controls); refreshLiveSteps(); },
+              unregisterControls: (stepId) => { agentControls.delete(stepId); refreshLiveSteps(); }
+            })
             : [];
           // Asking with options and the step list: the main agent only (a parallel agent never stops to ask).
-          const interactTools = chat.guidedLearning ? [] : InhousePi.createInteractTools({ ask: (question, askSignal) => dockAsk(question, askSignal || signal) }).concat(studyToolsFor(chat));
+          // think: a private scratchpad for models that reason little or not at all.
+          const lowReasoning = !model.reasoning || ['', 'off', 'minimal', 'low'].includes(effectiveThinkingLevel(chat) || '');
+          const interactTools = chat.guidedLearning ? [] : InhousePi.createInteractTools({ ask: (question, askSignal) => dockAsk(question, askSignal || signal), think: lowReasoning }).concat(studyToolsFor(chat));
           result = await run(guidedTools.concat(workTools(), interactTools, agentTools));
         } catch (error) {
           // Algunos modelos de OpenRouter no aceptan herramientas: se repite sin ellas.
@@ -10764,8 +10846,10 @@
       recordModelUsage(modelId, {
         prompt_tokens: result.usage.input,
         completion_tokens: result.usage.output,
+        cache_read: result.usage.cacheRead || 0,
         cost: result.usage.cost
       }, { allocated: usageCostSteered });
+      if (settings.message) settings.message.usage = { input: result.usage.input || 0, cacheRead: result.usage.cacheRead || 0, cacheWrite: result.usage.cacheWrite || 0, output: result.usage.output || 0 };
       for (const message of result.messages) {
         if (message.role !== 'assistant') continue;
         for (const block of message.content) {
@@ -11164,6 +11248,12 @@
         }
         if (typeof chunk.thinking === 'string' && chunk.thinking) message.thinking = chunk.thinking;
         if (Array.isArray(chunk.steps)) message.toolSteps = chunk.steps;
+        // A busy provider being retried: the live activity says so (composer-dock.js).
+        const retry = chunk.retry && chunk.retry.attempt ? { attempt: chunk.retry.attempt, max: chunk.retry.max } : null;
+        if (JSON.stringify(retry) !== JSON.stringify(message.liveRetry || null)) {
+          if (retry) message.liveRetry = retry; else delete message.liveRetry;
+          if (typeof refreshLiveSteps === 'function') refreshLiveSteps();
+        }
         if (typeof chunk.cost === 'number') {
           costSeen = chunk.cost;
           setLiveCost(message, (message.cost || 0) + chunk.cost - costBase + liveRequestCost(chunk.modelId, chunk.liveChars));
@@ -11328,6 +11418,11 @@
           setComposerStatus('Hubo un error: ' + error.message);
         }
       } finally {
+        // Nothing of this turn stays waiting: queued approvals are answered «no»,
+        // and no agent lane is left «running» (stop, error, cut or loop).
+        if (typeof dockApprovalClear === 'function') dockApprovalClear();
+        settleAgentSteps(turn.message, outcome === 'aborted' ? 'Detenido' : outcome === 'error' ? 'No terminó' : 'Detenido');
+        delete turn.message.liveRetry;
         appState.busy = false;
         appState.activeController = null;
         appState.activeTurn = null;
@@ -11357,6 +11452,27 @@
     // spawn_agents of its own, no history: only its self-contained task. What
     // it spends goes into the answer's cost (usageCostTarget is the message)
     // and, while it runs, into the live counter.
+    // One stable system prompt for every parallel agent of a chat (no agent
+    // name in it): providers with prompt caching reuse it across agents.
+    function subAgentSystemPrompt(chat) {
+      return [
+        'Eres uno de varios agentes que trabajan a la vez para un asistente principal (Ultra code). No puedes hablar con el usuario: si te falta algo, decide lo razonable y anótalo en «Dudas». Haz solo tu tarea, entera. Primero lee lo que necesitas; no supongas el contenido de archivos. No toques archivos fuera de tu tarea; si otro agente debería cambiar algo, dilo en tu informe. Antes de terminar, comprueba tu trabajo (relee el archivo, run_js o los tests).',
+        'Al acabar llama una vez a submit_result (si existe) y termina tu respuesta SIEMPRE con estas secciones:\n## Resultado\n## Cambios hechos («Ninguno» si nada)\n## Cómo lo he comprobado («Sin comprobar» si no)\n## Dudas o pendientes',
+        InhousePi.TEXT_QUALITY_PROMPT,
+        WORK_METHOD_PROMPT,
+        'Hoy es ' + todayText() + '.',
+        webPromptText(),
+        documentsPromptText(),
+        githubPromptText(chat),
+        userDrivePromptText(chat),
+        approvalPromptText(chat)
+      ].filter(Boolean).join('\n\n');
+    }
+
+    const ROLE_LABEL = { explore: 'explora', build: 'construye', verify: 'verifica', review: 'revisa' };
+
+    // One parallel agent of Ultra code (engine/src/agents.js decides the plan,
+    // waves, budgets and retries; this runs one agent with the chat's tools).
     async function runSubAgent(chat, model, modelId, workTools, job) {
       const parent = appState.activeTurn && appState.activeTurn.turn ? appState.activeTurn.turn.message : null;
       let shown = 0;
@@ -11366,50 +11482,117 @@
       let lastModelCost = 0;
       let lastDoing = 'Pensando';
       let lastSteps = 0;
+      let wrote = false;
+      let calls = 0;
+      const maxSteps = Math.max(5, Number(job.maxSteps) || 40);
+      const role = job.role || 'build';
+      const readOnly = !!job.readOnly || role === 'explore' || role === 'verify' || role === 'review';
+      const owned = Array.isArray(job.ownedFiles) && job.ownedFiles.length && InhousePi.globToRegExp ? job.ownedFiles.map((glob) => InhousePi.globToRegExp(glob)) : null;
+      const update = (fields) => { if (typeof job.onUpdate === 'function') job.onUpdate(fields); };
       const live = (value) => {
         if (!parent || !(value > shown)) return;
         setLiveCost(parent, (Number(parent.liveCost) || Number(parent.cost) || 0) + (value - shown));
         shown = value;
       };
+      const meta = {
+        agent: job.name,
+        agentHue: job.hue,
+        onWait: (waiting) => update({ waiting, doing: waiting ? 'Esperando tu aprobación' : lastDoing })
+      };
+      // The chat's tools for this agent: read-only roles keep only reads, owned
+      // files are enforced, and the step budget warns, then refuses.
+      const tools = workTools((spent) => {
+        toolsCost += spent;
+        update({ doing: lastDoing, cost: lastModelCost + toolsCost, steps: lastSteps });
+      }, Object.assign({ seenScope: 'chat:' + chat.id + ':agent:' + (job.id || job.name), onWrite: job.onWrite }, meta))
+        .filter((tool) => !readOnly || READ_ONLY_TOOL.test(tool.name))
+        .map((tool) => Object.assign({}, tool, {
+          execute: async (id, params, ...rest) => {
+            calls++;
+            if (readOnly && tool.name === 'run_js' && /\bwriteFile\s*\(/.test(String((params && params.code) || ''))) throw new Error('Solo puedes leer: run_js no puede guardar archivos en tu rol.');
+            if (calls > maxSteps) throw new Error('Has llegado al límite de ' + maxSteps + ' pasos: termina ya y responde con tu informe.');
+            if (owned && /^(write_file|edit_file|delete_file)$/.test(tool.name)) {
+              const path = String((params && params.path) || '').replace(/^\.?\//, '');
+              if (!owned.some((re) => re.test(path))) throw new Error('Este archivo es de otro agente (o de nadie): no lo cambies; devuelve el cambio en tu informe.');
+            }
+            const result = await tool.execute(id, params, ...rest);
+            if (!READ_ONLY_TOOL.test(tool.name)) { wrote = true; update({ wrote: true }); }
+            if (calls >= maxSteps - 5 && result && Array.isArray(result.content)) {
+              return Object.assign({}, result, { content: result.content.concat([{ type: 'text', text: 'Te quedan ' + Math.max(0, maxSteps - calls) + ' pasos: termina y responde con tu informe.' }]) });
+            }
+            return result;
+          }
+        }));
+      if (typeof InhousePi.createSubAgentReportTool === 'function') tools.push(InhousePi.createSubAgentReportTool((report) => { if (typeof job.onReport === 'function') job.onReport(report); }));
+      const userText = 'Eres «' + job.name + '» (rol: ' + (ROLE_LABEL[role] || role) + ').' + (readOnly ? ' Solo puedes leer: no cambies nada.' : '') + '\n\nTu tarea:\n' + job.task;
       try {
         const result = await InhousePi.runAgent({
           model,
-          systemPrompt: [
-            APP_CONFIG.SYSTEM_PROMPT,
-            InhousePi.TEXT_QUALITY_PROMPT,
-            '',
-            'You are «' + job.name + '», one of several agents working in parallel for a main assistant (Ultra code). Do only your task, completely and carefully, with the tools you have; you cannot talk to the user. When you finish, answer with what you did and found (files, commits, links, results), concise and complete, for the main assistant to integrate.',
-            webPromptText(),
-            githubPromptText(chat),
-            userDrivePromptText(chat)
-          ].filter(Boolean).join('\n'),
+          systemPrompt: subAgentSystemPrompt(chat),
           history: [],
-          prompt: { role: 'user', content: [{ type: 'text', text: job.task }], timestamp: Date.now() },
+          prompt: withTurnContext({ role: 'user', content: [{ type: 'text', text: userText }], timestamp: Date.now() }, '<contexto_app>\nAhora: ' + currentMomentText() + '.\n</contexto_app>'),
           thinkingLevel: effectiveThinkingLevel(chat) || 'off',
-          tools: workTools((spent) => {
-            toolsCost += spent;
-            job.onUpdate({ doing: lastDoing, cost: lastModelCost + toolsCost, steps: lastSteps });
-          }),
+          tools: markExecution(tools),
+          toolExecution: 'parallel',
+          maxRetries: 2,
+          escalate: true,
           signal: job.signal,
-          sessionId: chat.id + ':' + job.name,
-          onUpdate: (update) => {
-            const steps = update.steps || [];
+          sessionId: chat.id + ':' + (job.id || job.name),
+          onUpdate: (info) => {
+            const steps = info.steps || [];
             const running = steps.filter((step) => step.status === 'running').pop();
-            const cost = (update.cost || 0) + liveRequestCost(modelId, update.liveChars);
+            const cost = (info.cost || 0) + liveRequestCost(modelId, info.liveChars);
             live(cost);
             lastModelCost = cost;
             lastSteps = steps.length;
-            lastDoing = running ? toolStepTitle(running) : (update.text ? 'Escribiendo el resultado' : (steps.length ? 'Pensando el siguiente paso' : 'Pensando'));
-            job.onUpdate({ doing: lastDoing, cost: cost + toolsCost, steps: lastSteps });
+            lastDoing = info.retry && info.retry.attempt ? 'Reintentando (' + info.retry.attempt + '/' + info.retry.max + ')' : running ? toolStepTitle(running) : (info.text ? 'Escribiendo el resultado' : (steps.length ? 'Pensando el siguiente paso' : 'Pensando'));
+            update({
+              doing: lastDoing,
+              cost: cost + toolsCost,
+              steps: lastSteps,
+              kind: running ? stepKind(running) : (info.text ? 'write' : 'think'),
+              trail: steps.slice(-24).map((step) => ({ t: toolStepTitle(step).slice(0, 80), s: step.status === 'error' ? 'e' : step.status === 'running' ? 'r' : 'd', k: stepKind(step), ms: step.endedAt && step.startedAt ? step.endedAt - step.startedAt : undefined }))
+            });
           }
         });
         recordModelUsage(modelId, { prompt_tokens: result.usage.input, completion_tokens: result.usage.output, cost: result.usage.cost });
-        return { text: result.text, cost: result.usage.cost + toolsCost };
+        return { text: result.text, cost: result.usage.cost + toolsCost, wrote };
       } catch (error) {
         if (error && error.usage && error.usage.cost) recordModelUsage(modelId, { prompt_tokens: error.usage.input, completion_tokens: error.usage.output, cost: error.usage.cost });
-        if (error && typeof error === 'object') error.usage = Object.assign({}, error.usage, { cost: ((error.usage && error.usage.cost) || 0) + toolsCost });
+        if (error && typeof error === 'object') {
+          error.usage = Object.assign({}, error.usage, { cost: ((error.usage && error.usage.cost) || 0) + toolsCost });
+          error.partialText = error.partial && error.partial.text;
+          error.wrote = wrote;
+        }
         throw error;
       }
+    }
+
+    // What kind of step a tool call is, for the colour of its tick in a lane.
+    function stepKind(step) {
+      const name = (step && step.name) || '';
+      return /^web_/.test(name) ? 'web' : /edit|write|push|delete|save|commit|release|organize|compile/.test(name) ? 'edit' : /grep|search|recall/.test(name) ? 'search' : 'read';
+    }
+
+    // Per-agent stop buttons while a spawn_agents step runs (ultra.js asks).
+    const agentControls = new Map();
+    window.ultraCanStop = (stepId) => agentControls.has(stepId);
+    window.ultraStopAgent = (stepId, agentId) => {
+      const controls = agentControls.get(stepId);
+      if (controls && typeof controls.stop === 'function') { controls.stop(agentId); haptic('select'); }
+    };
+
+    // A turn that ended (stopped, failed, cut) never leaves a lane «running».
+    function settleAgentSteps(message, label) {
+      (Array.isArray(message && message.toolSteps) ? message.toolSteps : []).forEach((step) => {
+        if (step.name !== 'spawn_agents' || !Array.isArray(step.agents)) return;
+        step.agents.forEach((agent) => {
+          if (!/^(running|queued|waiting)$/.test(agent.status)) return;
+          agent.status = 'stopped';
+          agent.doing = label || 'Detenido';
+          if (!agent.endedAt) agent.endedAt = Date.now();
+        });
+      });
     }
 
     // Turning Ultra code on: the label lights up in a sweep of colours with a
@@ -11424,6 +11607,8 @@
       });
       const pill = document.querySelector('.thinking-select');
       if (!pill || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+      // The refined burst (ring + sparks) lives with the agents board in ultra.js.
+      if (window.UltraAgents && typeof window.UltraAgents.burst === 'function') { window.UltraAgents.burst(pill); return; }
       const box = pill.getBoundingClientRect();
       for (let i = 0; i < 14; i++) {
         const spark = document.createElement('span');
@@ -11442,7 +11627,14 @@
 
     function ultraPromptText(chat) {
       if (!ultraCodeOn(chat) || chat.guidedLearning) return '';
-      return '- Modo Ultra code: razonas al máximo y puedes poner a trabajar varios agentes a la vez con spawn_agents. Para trabajos grandes que se dividen (varios archivos o módulos de un repositorio, varias fuentes que investigar, varios documentos), planifica, reparte partes independientes con una tarea completa y autocontenida para cada agente, y después revisa e integra lo que devuelvan. Para algo pequeño, hazlo tú.';
+      return [
+        '- Modo Ultra code: razonas al máximo y puedes poner a trabajar varios agentes a la vez con spawn_agents. Procedimiento:',
+        '  1. ¿Hay dos o más partes independientes o varias fuentes que investigar? Si no, hazlo tú.',
+        '  2. Escribe el plan con update_plan.',
+        '  3. Llama a spawn_agents UNA vez: goal, criterios de aceptación comprobables (acceptance), context común (archivos, repositorio, rama, convenciones) y una tarea autocontenida por agente que diga qué devolver; files con los archivos de cada uno; depends_on si unas partes necesitan el resultado de otras (investigar → implementar → probar). Máximo 6 a la vez y 12 en total; role "explore" para los que solo leen.',
+        '  4. Cada agente tiene límites de pasos, tiempo y gasto (budget_usd); si se para, recibes lo que llevaba hecho. Con varios agentes un verificador de solo lectura comprueba los informes contra los criterios.',
+        '  5. Lee el veredicto y el informe de archivos tocados; arregla tú lo que quede o lanza una ronda pequeña. Responde con lo hecho, enlaces y lo que no se pudo.'
+      ].join('\n');
     }
 
     // The parallel agents of a spawn_agents step: name, what it is doing and
@@ -11476,7 +11668,15 @@
     });
 
     const NETWORK_ERROR = /network|failed to fetch|load failed|fetch failed|err_|connection|terminated|socket|aborted by the browser|no se pudo conectar/i;
-    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$|update_plan$|ask_user$|study_overview$|recall$)/;
+    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$|update_plan$|ask_user$|study_overview$|recall$|think$)/;
+
+    // Reads that may run at the same time as other reads. A tool that sets its
+    // own mode keeps it; pi runs a batch in parallel only when every call in it
+    // is parallel, so a batch with any write stays in order.
+    const PARALLEL_SAFE = (name) => READ_ONLY_TOOL.test(name) && !/^(run_js|set_course_plan|quiz|final_exam|check_diagram|think|update_plan|ask_user)$/.test(name);
+    function markExecution(tools) {
+      return (tools || []).map((tool) => (tool.executionMode ? tool : Object.assign({}, tool, { executionMode: PARALLEL_SAFE(tool.name) ? 'parallel' : 'sequential' })));
+    }
 
     function cutByLeaving(error, hiddenBefore, message) {
       if (!NETWORK_ERROR.test(String(error && error.message || ''))) return false;
@@ -11630,7 +11830,42 @@
     }
 
     // Une el motor de pi con la app: key de OpenRouter y cabeceras de la app.
+    // run_js gets math.js (Apache-2.0) and Algebrite (MIT): units, fractions,
+    // matrices, derivatives and symbolic algebra. Downloaded once into the Cache
+    // API and evaluated inside the sandbox before its network is removed.
+    const SANDBOX_LIBS = [
+      'https://cdn.jsdelivr.net/npm/mathjs@13.2.0/lib/browser/math.js',
+      'https://cdn.jsdelivr.net/npm/algebrite@1.4.0/dist/algebrite.bundle-for-browser.js'
+    ];
+    let sandboxPreludePromise = null;
+    function sandboxPrelude() {
+      if (!sandboxPreludePromise) {
+        sandboxPreludePromise = (async () => {
+          const texts = await Promise.all(SANDBOX_LIBS.map(async (url) => {
+            try {
+              const cache = window.caches ? await caches.open('inhouse-sandbox-libs-v1') : null;
+              let response = cache ? await cache.match(url) : null;
+              if (!response) {
+                response = await fetch(url);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                if (cache) await cache.put(url, response.clone());
+              }
+              return await response.text();
+            } catch (error) {
+              console.warn('run_js: no se pudo cargar', url, error);
+              return '';
+            }
+          }));
+          // Without them run_js still works (nsolve, integrate and table are built in).
+          if (texts.some((text) => !text)) sandboxPreludePromise = null;
+          return texts.filter(Boolean).join('\n;\n');
+        })();
+      }
+      return sandboxPreludePromise;
+    }
+
     function configureEngine() {
+      if (typeof InhousePi.configureSandbox === 'function') InhousePi.configureSandbox({ sandboxPrelude });
       InhousePi.configure({
         getOpenRouterKey: () => getApiSettings().apiKey,
         openRouterHeaders: {

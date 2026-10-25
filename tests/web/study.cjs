@@ -21,7 +21,7 @@ const inDays = (n) => { const d = new Date(Date.now() + n * 86400000); return d.
   await page.evaluate(() => {
     const orig = window.fetch;
     window.fetch = (input, init) => {
-      try { const body = JSON.parse((init && init.body) || '{}'); if (body.messages && body.messages[0] && body.messages[0].role === 'system') window.__seenPrompt(String(body.messages[0].content)); } catch (_) {}
+      try { const body = JSON.parse((init && init.body) || '{}'); if (body.messages && body.messages[0] && body.messages[0].role === 'system') { const last = body.messages.filter((m) => m.role === 'user').pop(); window.__seenPrompt(String(body.messages[0].content) + '\n' + (last ? JSON.stringify(last.content) : '')); } } catch (_) {}
       return orig(input, init);
     };
     InhouseStudy._reset();

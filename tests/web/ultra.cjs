@@ -59,7 +59,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     };
   });
   check('when they finish the card says so, both ✓', /2 agentes en paralelo/.test(after.title) && after.done.join() === 'done,done', after);
-  check('the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents', after.mainTools.includes('spawn_agents') && /Modo Ultra code/.test(after.mainSystem) && !after.subTools.includes('spawn_agents') && after.subTools.includes('web_search') && /one of several agents/.test(after.subSystem), { main: after.mainTools, sub: after.subTools });
+  check('the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents', after.mainTools.includes('spawn_agents') && /Modo Ultra code/.test(after.mainSystem) && !after.subTools.includes('spawn_agents') && after.subTools.includes('web_search') && /varios agentes que trabajan a la vez/.test(after.subSystem), { main: after.mainTools, sub: after.subTools });
   check('the main model gets both results to integrate', /## Fuentes/.test(after.final) && /## Esquema/.test(after.final) && after.content === 'He juntado lo de los dos agentes.', after.final.slice(0, 300));
   check('the agents\' cost is part of the answer\'s cost (4 requests)', Math.abs(after.cost - 0.002) < 1e-9, after.cost);
 

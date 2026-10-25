@@ -16,7 +16,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await page.evaluate(() => {
     const orig = window.fetch;
     window.fetch = (input, init) => {
-      try { const body = JSON.parse((init && init.body) || '{}'); if (body.messages && body.messages[0] && body.messages[0].role === 'system') window.__seenPrompt(String(body.messages[0].content)); } catch (_) {}
+      try { const body = JSON.parse((init && init.body) || '{}'); if (body.messages && body.messages[0] && body.messages[0].role === 'system') { const last = body.messages.filter((m) => m.role === 'user').pop(); window.__seenPrompt(String(body.messages[0].content) + '\n' + (last ? JSON.stringify(last.content) : '')); } } catch (_) {}
       return orig(input, init);
     };
     getActiveChat().approvalMode = 'auto';
