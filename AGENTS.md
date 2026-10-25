@@ -247,7 +247,7 @@ Mandatory guidance for every AI and developer working in this repository.
   course title is never touched. Renaming by hand saves it as `customTitle` and plays the same typing animation
    (`startTitleAnimation`): the open chat's name in the top bar is tapped (or Enter) and written over itself with NO box,
    border or underline: the `<b>` becomes `contenteditable="plaintext-only"` while editing (`startRenameChat`, `renaming`),
-    so only the native caret blinks (it starts at the END of the name with nothing selected, `caretToTitleEnd`, so the arrow keys move it letter by letter), there is never a hover underline and the text never shifts, and it still works after the list
+    so nothing can be selected (no `selectstart`, `dblclick`, Shift+arrows or Ctrl/Cmd+A) and only a caret blinks: the native caret is off and `.title-caret-live` draws the animation's own caret (1.5px, `currentColor`, `title-caret` 0.9s) at the caret position (`drawTitleCaret`, on `selectionchange`). It starts at the END of the name (`caretToTitleEnd`) and a tap puts it where touched (`placeTitleCaret`), so the arrow keys move it letter by letter; there is never a hover underline and the text never shifts, and it still works after the list
    itself closed. It also starts from «Renombrar chat» in the + menu and «Renombrar» in the row's menu (a chat that is not
     open is opened first). Escape discards the edit and an empty name is
    ignored. Before that, the provisional name from the first message follows the same

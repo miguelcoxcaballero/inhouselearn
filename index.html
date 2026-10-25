@@ -1515,10 +1515,19 @@
     .chats-btn:focus-visible, .sidebar-close:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
     .top-title { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: min(520px, 46vw); text-align: center; line-height: 1.2; }
      /* El nombre del chat abierto se escribe sobre él mismo: sin caja, sin
-        borde y sin subrayado, solo el cursor parpadeando (en naranja). */
+        borde y sin subrayado, solo el cursor de la animación, parpadeando. */
      .top-title b.editable, .top-title b.editable:hover { cursor: text; text-decoration: none; }
       .top-title b.editable:focus, .top-title b.editable:focus-visible { outline: none; }
-     .top-title b.renaming, .top-title b.renaming:hover { outline: none; text-decoration: none; caret-color: var(--orange); }
+      /* El cursor es el mismo de la animación automática (.title-typing::after):
+         una barra fina del color del texto que parpadea, dibujada encima del
+         nombre en la posición del cursor. */
+      .title-caret-live {
+        position: fixed; z-index: 320; width: 1.5px; height: 1em; margin-left: -0.75px;
+        background: currentColor; pointer-events: none;
+        animation: title-caret 0.9s steps(1) infinite;
+      }
+      @media (prefers-reduced-motion: reduce) { .title-caret-live { animation: none; } }
+     .top-title b.renaming, .top-title b.renaming:hover { outline: none; text-decoration: none; caret-color: transparent; }
     .top-title b {
       max-width: 100%; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-weight: 500; font-size: 1.18rem;
       letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -9071,7 +9080,9 @@
       el.textContent = (chat.customTitle || chat.title || '').slice(0, 60);
       renaming = { chatId: chat.id, el, start: chat.title || '' };
       el.focus({ preventScroll: true });
+      bindTitleCaret();
       caretToTitleEnd(el);
+      drawTitleCaret();
     }
 
     function finishRename(save) {
@@ -9085,6 +9096,7 @@
       el.removeAttribute('spellcheck');
       el.removeAttribute('aria-label');
       const chat = appState.chats.find((item) => item.id === state.chatId);
+      clearTitleCaret();
       if (save && chat && applyChatRename(chat, typed)) return; // la animación pone el nombre
       // Sin cambios (o Escape): se queda el nombre que había.
       updateTopTitle(chat);
@@ -9120,9 +9132,23 @@
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); startRenameChat(appState.activeChatId); }
           return;
         }
+        // Nada de seleccionar: ni Mayús+flechas ni Ctrl/Cmd+A.
+        if (event.shiftKey || ((event.ctrlKey || event.metaKey) && (event.key === 'a' || event.key === 'A'))) { event.preventDefault(); return; }
         if (event.key === 'Enter') { event.preventDefault(); finishRename(true); }
         else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finishRename(false); }
+        else drawTitleCaret();
       });
+      // Solo se coloca el cursor: ni una letra se puede seleccionar.
+      ['selectstart', 'dragstart', 'dblclick'].forEach((type) => {
+        title.addEventListener(type, (event) => { if (renaming) event.preventDefault(); });
+      });
+      title.addEventListener('mousedown', (event) => {
+        if (!renaming) return;
+        event.preventDefault();
+        renaming.el.focus({ preventScroll: true });
+        placeTitleCaret(event.clientX, event.clientY);
+      });
+      title.addEventListener('input', () => { if (renaming) drawTitleCaret(); });
       // Al tocar fuera se guarda (como antes con el campo).
       title.addEventListener('blur', () => { if (renaming) finishRename(true); });
       // Pegar sin arrastrar formato.
@@ -9137,6 +9163,75 @@
     // El cursor al final del nombre y nada seleccionado: al empezar a editar
     // solo se ve el cursor parpadeando (como en la animación) y las flechas lo
     // mueven letra a letra.
+    // El cursor del sistema se apaga y se dibuja el de la animación automática
+    // (una barra fina del color del texto que parpadea), en la posición exacta
+    // del cursor dentro del nombre. No se puede seleccionar nada: solo se
+    // coloca el cursor.
+    let titleCaretSpan = null;
+    let titleCaretBound = false;
+
+    function drawTitleCaret() {
+      const state = renaming;
+      if (!state) { clearTitleCaret(); return; }
+      const el = state.el;
+      if (!titleCaretSpan || !titleCaretSpan.isConnected) {
+        titleCaretSpan = document.createElement('span');
+        titleCaretSpan.className = 'title-caret-live';
+        titleCaretSpan.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(titleCaretSpan);
+      }
+      const style = getComputedStyle(el);
+      const size = parseFloat(style.fontSize) || 18;
+      const box = el.getBoundingClientRect();
+      const selection = window.getSelection();
+      let rect = null;
+      if (selection && selection.rangeCount && selection.isCollapsed) {
+        const range = selection.getRangeAt(0).cloneRange();
+        range.collapse(true);
+        if (el.contains(range.startContainer)) rect = range.getClientRects()[0] || null;
+      }
+      const top = rect ? rect.top : box.top;
+      const height = rect && rect.height ? rect.height : box.height;
+      const left = rect ? rect.left : (el.textContent ? box.right : box.left);
+      titleCaretSpan.style.color = style.color;
+      titleCaretSpan.style.fontSize = size + 'px';
+      titleCaretSpan.style.left = Math.round(left - 0.75) + 'px';
+      titleCaretSpan.style.top = Math.round(top + (height - size) / 2) + 'px';
+      titleCaretSpan.style.display = '';
+    }
+
+    function clearTitleCaret() {
+      if (titleCaretSpan) { titleCaretSpan.remove(); titleCaretSpan = null; }
+    }
+
+    function bindTitleCaret() {
+      if (titleCaretBound) return;
+      titleCaretBound = true;
+      document.addEventListener('selectionchange', () => { if (renaming) drawTitleCaret(); });
+      window.addEventListener('resize', () => { if (renaming) drawTitleCaret(); });
+      window.addEventListener('scroll', () => { if (renaming) drawTitleCaret(); }, true);
+    }
+
+    // El cursor va donde se toca, sin seleccionar nada.
+    function placeTitleCaret(x, y) {
+      const state = renaming;
+      if (!state) return;
+      const el = state.el;
+      let range = null;
+      if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(x, y);
+      else if (document.caretPositionFromPoint) {
+        const point = document.caretPositionFromPoint(x, y);
+        if (point && point.offsetNode) { range = document.createRange(); range.setStart(point.offsetNode, point.offset); }
+      }
+      if (!range || !el.contains(range.startContainer)) { caretToTitleEnd(el); drawTitleCaret(); return; }
+      range.collapse(true);
+      const selection = window.getSelection();
+      if (!selection) return;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      drawTitleCaret();
+    }
+
     function caretToTitleEnd(el) {
       const range = document.createRange();
       range.selectNodeContents(el);

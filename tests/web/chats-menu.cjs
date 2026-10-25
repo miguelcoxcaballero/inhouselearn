@@ -77,7 +77,16 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const editor = await page.evaluate(() => {
     const el = document.querySelector('#top-title-main.renaming');
     const sel = window.getSelection();
-    return el ? { value: el.textContent, focused: document.activeElement === el, editable: el.getAttribute('contenteditable'), field: !!document.querySelector('input, textarea'), collapsed: sel ? sel.isCollapsed : null, caret: sel && sel.rangeCount ? sel.getRangeAt(0).startOffset : -1 } : null;
+    return el ? { value: el.textContent, focused: document.activeElement === el, editable: el.getAttribute('contenteditable'), field: !!document.querySelector('input, textarea'), collapsed: sel ? sel.isCollapsed : null, caret: sel && sel.rangeCount ? sel.getRangeAt(0).startOffset : -1, mark: !!document.querySelector('.title-caret-live') } : null;
+  });
+  // Ni seleccionar: el navegador no puede empezar una selección sobre el nombre.
+  const noSelect = await page.evaluate(() => {
+    const el = document.getElementById('top-title-main');
+    const start = new Event('selectstart', { bubbles: true, cancelable: true });
+    const dbl = new MouseEvent('dblclick', { bubbles: true, cancelable: true });
+    el.dispatchEvent(start); el.dispatchEvent(dbl);
+    const sel = window.getSelection();
+    return { start: start.defaultPrevented, dbl: dbl.defaultPrevented, collapsed: sel ? sel.isCollapsed : null };
   });
   await page.evaluate(() => { const el = document.getElementById('top-title-main'); const range = document.createRange(); range.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); });
   await page.keyboard.type('Historia moderna');
@@ -92,7 +101,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const partial = typed.filter((f) => f.startsWith('|'));
   check('double click renames the chat with no box at all, and the name is typed out like the automatic ones',
     editor && editor.value === 'Revolución francesa causas' && editor.focused && editor.editable === 'plaintext-only' && !editor.field &&
-    editor.collapsed && editor.caret === 'Revolución francesa causas'.length &&
+    editor.collapsed && editor.caret === 'Revolución francesa causas'.length && editor.mark &&
+    noSelect.start && noSelect.dbl && noSelect.collapsed &&
     renamed.custom === 'Historia moderna' && renamed.title === 'Historia moderna' &&
     partial.length >= 3 && partial.some((f) => f.length > 1 && f.length < 22) && typed[typed.length - 1] === 'Historia moderna',
     { renamed, editor, partial: partial.slice(0, 10) });
