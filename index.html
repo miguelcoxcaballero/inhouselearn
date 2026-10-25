@@ -1746,11 +1746,12 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261026-restore">
+  <link rel="stylesheet" href="composer-dock.css?v=20261026-ultra">
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261026-restore">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="theme.css?v=20261026-restore">
+  <link rel="stylesheet" href="ultra.css?v=20261026-ultra">
+  <link rel="stylesheet" href="theme.css?v=20261026-ultra">
 </head>
 <body>
 
@@ -2066,12 +2067,12 @@
   <script src="documents.js?v=20261026-restore"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261026-restore"></script>
+  <script src="vendor/pi-engine.js?v=20261026-ultra"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
   <script type="module" src="read-aloud.js?v=20261021-voice-ui2"></script>
-  <script src="stream.js?v=20261024-visual1"></script>
+  <script src="stream.js?v=20261026-ultra"></script>
   <script src="visuals.js?v=20261024-controls1"></script>
   <script src="scene.js?v=20261024-controls1"></script>
   <script src="explain.js?v=20261024-controls1"></script>
@@ -2080,8 +2081,9 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261024-copy"></script>
-  <script src="composer-dock.js?v=20261026-restore"></script>
+  <script src="approval.js?v=20261026-ultra"></script>
+  <script src="composer-dock.js?v=20261026-ultra"></script>
+  <script src="ultra.js?v=20261026-ultra"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -5016,12 +5018,12 @@
 
     function githubToolsFor(chat, signal, meta) {
       if (!chat.github || !githubToken()) return [];
-      return InhousePi.createGithubTools(githubContext(chat, signal));
+      return InhousePi.createGithubTools(githubContext(chat, signal, meta));
     }
 
     // Prepared (not yet uploaded) changes live with the chat in this browser
     // (githubStageStore, composer-dock.js) and show above the composer.
-    function githubContext(chat, signal) {
+    function githubContext(chat, signal, meta) {
       return {
         token: githubToken,
         signal,
@@ -5304,13 +5306,13 @@
           refreshLibraryCount();
           return Object.assign(outcome, { saved });
         },
-        latex: window.InhouseTex ? (main, engine, runSignal, onProgress) => compileLatexForChat(chat, library, main, engine, runSignal || signal, onProgress) : null
+        latex: window.InhouseTex ? (main, engine, runSignal, onProgress) => compileLatexForChat(chat, library, main, engine, runSignal || signal, onProgress, meta) : null
       });
     }
 
     // LaTeX: every text file of the chat goes to the compiler, plus the library's
     // originals (PDFs, images) under their names for \includegraphics.
-    async function compileLatexForChat(chat, library, main, engine, signal, onProgress) {
+    async function compileLatexForChat(chat, library, main, engine, signal, onProgress, meta) {
       const workspace = chatWorkspace(chat);
       const path = String(main || '').trim().replace(/^\/+/, '');
       if (workspace.read(path) == null) throw new Error('No existe ' + path + ' en los archivos del chat: créalo antes con write_file.');

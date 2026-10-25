@@ -332,6 +332,21 @@ function deeperLevel(model, level) {
  * último segmento) o lanza con el error del modelo. usage: { input (total,
  * caché incluida), output, cacheRead, cacheWrite, cost }.
  */
+// What the Ultra code board (ultra.js) draws: the agents and the run's waves,
+// budget, verification and touched files, copied from the tool's details.
+function copyBoard(step, details) {
+  step.agents = details.agents;
+  ['waves', 'budget', 'verify', 'files', 'warnings'].forEach((key) => { if (details[key] !== undefined) step[key] = details[key]; });
+}
+
+// Coach notes help the model inside the turn; saved history never keeps them
+// (a later turn would read «Llevas N errores en este turno» out of context).
+function withoutCoachNotes(list) {
+  return list.map((message) => (message && message.role === 'toolResult' && Array.isArray(message.content) && message.content.some((block) => block.type === 'text' && String(block.text || '').startsWith(NOTE_MARK))
+    ? Object.assign({}, message, { content: message.content.filter((block) => !(block.type === 'text' && String(block.text || '').startsWith(NOTE_MARK))) })
+    : message));
+}
+
 export async function runAgent(options) {
   const model = options.model;
   const maxRetries = Number.isFinite(Number(options.maxRetries)) ? Math.max(0, Math.floor(Number(options.maxRetries))) : 2;
@@ -416,7 +431,7 @@ export async function runAgent(options) {
   agent.subscribe((event) => {
     if (event.type === 'message_end' && event.message.role === 'user' && steered.has(event.message)) {
       steered.delete(event.message);
-      const segment = { text: join(doneTexts, ''), thinking: join(doneThinking, ''), steps, messages };
+      const segment = { text: join(doneTexts, ''), thinking: join(doneThinking, ''), steps, messages: withoutCoachNotes(messages) };
       doneTexts = [];
       doneThinking = [];
       steps = [];
@@ -478,7 +493,7 @@ export async function runAgent(options) {
         step.output = output.length > MAX_STEP_OUTPUT ? output.slice(-MAX_STEP_OUTPUT) : output;
         step.progress = output.split('\n').filter(Boolean).pop() || '';
         // Ultra code: what each parallel agent is doing and spending.
-        if (event.partialResult && event.partialResult.details && Array.isArray(event.partialResult.details.agents)) step.agents = event.partialResult.details.agents;
+        if (event.partialResult && event.partialResult.details && Array.isArray(event.partialResult.details.agents)) copyBoard(step, event.partialResult.details);
         emit();
       }
     } else if (event.type === 'tool_execution_end') {
@@ -500,7 +515,7 @@ export async function runAgent(options) {
         const details = event.result && event.result.details;
         // Web pages a tool found or read: the app lists them as the answer's sources.
         if (details && Array.isArray(details.sources)) step.sources = details.sources.slice(0, 12);
-        if (details && Array.isArray(details.agents)) step.agents = details.agents;
+        if (details && Array.isArray(details.agents)) copyBoard(step, details);
         if (details && Array.isArray(details.plan)) step.plan = details.plan;
         // Documents a tool created or edited: the app shows them under the answer.
         if (details && Array.isArray(details.documents) && details.documents.length) step.documents = details.documents.slice(0, 12);
@@ -592,7 +607,7 @@ export async function runAgent(options) {
     text: join(doneTexts, ''),
     thinking: join(doneThinking, ''),
     steps,
-    messages,
+    messages: withoutCoachNotes(messages),
     usage,
     retries,
     escalated
