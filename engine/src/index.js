@@ -20,6 +20,7 @@ export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
 export { createAgentTools } from './agents.js';
 export { createDocumentTools } from './documents.js';
+export { createInteractTools } from './interact.js';
 export { textQualityIssues, protectedTextSpans, TEXT_QUALITY_PROMPT } from './text-quality.js';
 
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

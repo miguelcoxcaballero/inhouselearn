@@ -253,6 +253,19 @@ Mandatory guidance for every AI and developer working in this repository.
   agent, what it is doing and its live cost, its web searches included (`step.agents`, `onCost` of
   `webToolsFor`); their cost goes into the answer's.
   Turning it on plays a rainbow burst with sparks (`playUltraCodeBurst`). Test: `tests/web/ultra.cjs`.
+- **The model's working tools** (`engine/src/tools.js`, `interact.js`): `read_file` returns numbered lines
+  (`  12→text`) by ranges (`offset`/`limit`, ≤ 2000 lines or 20 000 characters, and says the next offset);
+  `search_files` greps the chat files (plain text or regex, glob `path`, context lines); `write_file` refuses
+  to replace a file the model has not seen as it is now (content hash per chat, `seenByWorkspace`) unless
+  `overwrite: true`; `edit_file` has `replace_all`; `run_js` reports refused paths without losing its console.
+  The library tools are always there (also empty: `doc_edit`/`latex_compile` fill it mid-turn), plus
+  `delete_library` (through `approveChange`). `docx` loads in `doc_edit` for any use of the global, also
+  destructured. `update_plan` draws the model's checklist in the thread (`renderStepPlanCard`, latest version) and
+  `ask_user` asks one question with 2–4 answers to tap above the composer (`dockAsk`, own words allowed,
+  «Omitir» → no answer); both only for the main agent, not in Guided Learning. The system prompt says the
+  date and time (`currentMomentText`). `web_fetch` asks Jina to drop menus, language lists and pictures
+  (`WEB_FETCH_NOISE`), and the prompt forbids putting the user's data in URLs. `spawn_agents` takes a
+  shared `context`. Test: `tests/web/harness.cjs`.
 - **Logos in the dark theme:** single-colour company logos (`MONO_LOGOS`, drawn with `currentColor`,
   black inside an `<img>`) are inverted to white by `theme.css`. Add new ones there.
 - **Code blocks:** every `pre > code` in an answer gets a «Copiar» button in its top right corner

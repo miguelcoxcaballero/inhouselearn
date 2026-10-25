@@ -16,7 +16,7 @@ function describe(doc) {
 
 // library: { list(), search(query, {limit, doc}), read(ref, pages), image(ref), acceptsImages }
 export function createLibraryTools(library) {
-  return [
+  const tools = [
     {
       name: 'search_library',
       label: 'Buscar en la biblioteca',
@@ -85,4 +85,22 @@ export function createLibraryTools(library) {
       }
     }
   ];
+  if (typeof library.remove === 'function') {
+    tools.push({
+      name: 'delete_library',
+      label: 'Borrar de la biblioteca',
+      description: 'Delete a document of this chat\'s library (one you generated and no longer need, or one the user asks you to remove). ref is the document, e.g. "D3". Never delete what the user uploaded unless they ask.',
+      parameters: Type.Object({
+        ref: Type.String({ description: 'Document reference, e.g. "D3".' })
+      }),
+      executionMode: 'sequential',
+      execute: async (toolCallId, params) => {
+        const result = await library.remove(String(params.ref || '').trim());
+        if (!result) throw new Error('No existe ' + params.ref + ' en la biblioteca. Usa list_library.');
+        if (result.declined) return { content: [{ type: 'text', text: 'El usuario no ha aprobado borrar ' + result.ref + '. No lo repitas sin preguntarle.' }], details: {}, isError: true };
+        return textResult('Borrado ' + result.ref + ' · ' + result.path + ' de la biblioteca.', { ref: result.ref });
+      }
+    });
+  }
+  return tools;
 }

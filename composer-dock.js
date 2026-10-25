@@ -66,6 +66,9 @@ function onDockClick(event) {
   else if (action === 'edit') queueEdit(id);
   else if (action === 'resume') queueResume();
   else if (action === 'approve' || action === 'reject') dockApprovalAnswer(action === 'approve');
+  else if (action === 'ask-pick') dockAskPick(Number(button.dataset.i));
+  else if (action === 'ask-send') dockAskSend();
+  else if (action === 'ask-skip') dockAskFinish(null);
   else if (action === 'push') stagePush(button.dataset.repo, button.dataset.branch);
   else if (action === 'discard') stageDiscard(button.dataset.repo, button.dataset.branch);
 }
@@ -294,6 +297,66 @@ function dockApprove(request) {
 
 function dockApprovalAnswer(value) {
   if (dockApproval.pending) dockApproval.pending.resolve(value);
+}
+
+/* ─── Una pregunta del modelo con respuestas para tocar (ask_user) ──── */
+
+const dockAsking = { pending: null };
+
+// { question, options: [labels], multiple } → Promise<{ answer } | null>
+function dockAsk(request, signal) {
+  const slot = composerDockEl() && document.getElementById('dock-approval');
+  if (dockAsking.pending) dockAskFinish(null);
+  if (!slot) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const onAbort = () => dockAskFinish(null);
+    dockAsking.pending = { request, resolve, chosen: new Set(), signal, onAbort, slot };
+    if (signal) signal.addEventListener('abort', onAbort);
+    const options = request.options || [];
+    slot.innerHTML = '<div class="dock-card dock-ask" role="dialog" aria-live="assertive" aria-label="Pregunta">' +
+      '<div class="dock-approve-head"><b>' + escapeHtml(request.question) + '</b></div>' +
+      '<div class="dock-ask-options">' + options.map((option, index) => '<button type="button" class="dock-ask-option" data-dock="ask-pick" data-i="' + index + '" aria-pressed="false">' +
+        (request.multiple ? '<span class="dock-ask-box" aria-hidden="true"></span>' : '') + '<span>' + escapeHtml(option) + '</span></button>').join('') + '</div>' +
+      '<div class="dock-ask-other"><input type="text" class="dock-ask-input" placeholder="Otra respuesta…" aria-label="Otra respuesta" maxlength="500">' +
+      '<button type="button" class="dock-btn" data-dock="ask-skip">Omitir</button>' +
+      '<button type="button" class="dock-btn primary" data-dock="ask-send"' + (request.multiple ? '' : ' hidden') + '>Enviar</button></div></div>';
+    const input = slot.querySelector('.dock-ask-input');
+    input.addEventListener('input', () => { const send = slot.querySelector('[data-dock="ask-send"]'); if (send) send.hidden = !request.multiple && !input.value.trim(); });
+    input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); dockAskSend(); } });
+    haptic('select');
+    refreshLiveSteps();
+  });
+}
+
+function dockAskPick(index) {
+  const state = dockAsking.pending;
+  if (!state) return;
+  const option = (state.request.options || [])[index];
+  if (option == null) return;
+  if (!state.request.multiple) return dockAskFinish({ answer: option });
+  if (state.chosen.has(index)) state.chosen.delete(index); else state.chosen.add(index);
+  state.slot.querySelectorAll('.dock-ask-option').forEach((el) => el.setAttribute('aria-pressed', state.chosen.has(Number(el.dataset.i)) ? 'true' : 'false'));
+  haptic('select');
+}
+
+function dockAskSend() {
+  const state = dockAsking.pending;
+  if (!state) return;
+  const chosen = Array.from(state.chosen).sort().map((index) => state.request.options[index]);
+  const other = (state.slot.querySelector('.dock-ask-input') || {}).value || '';
+  const answer = chosen.concat(other.trim() ? [other.trim()] : []).join('; ');
+  if (!answer) return;
+  dockAskFinish({ answer });
+}
+
+function dockAskFinish(value) {
+  const state = dockAsking.pending;
+  if (!state) return;
+  dockAsking.pending = null;
+  if (state.signal) state.signal.removeEventListener('abort', state.onAbort);
+  if (!dockApproval.pending) state.slot.innerHTML = '';
+  refreshLiveSteps();
+  state.resolve(value);
 }
 
 /* ─── Cambios de GitHub preparados ──────────────────────────────────── */
@@ -619,7 +682,8 @@ function renderLiveSteps(message, steps) {
   const list = steps || [];
   const running = list.filter((step) => step.status === 'running').pop() || null;
   const done = list.filter((step) => step.status !== 'running');
-  const waiting = !!dockApproval.pending;
+  const asking = !!dockAsking.pending;
+  const waiting = !!dockApproval.pending || asking;
   const lead = running ? describeToolStep(running) : null;
   const writing = !running && !!String(message.content || '').trim();
   const leadTitle = running ? (lead ? lead.verb : (TOOL_LABELS[running.name] || running.name)) : (writing ? 'Escribiendo la respuesta' : 'Pensando el siguiente paso');
@@ -643,7 +707,7 @@ function renderLiveSteps(message, steps) {
   return '<div class="live-steps" data-live-steps="' + escapeHtml(message.id) + '">' +
     // On the internet: a turning globe instead of the spinner, unmistakable.
     '<div class="live-now' + (waiting ? ' waiting' : '') + (!waiting && isWebStep(running) ? ' web' : '') + '">' + (!waiting && isWebStep(running) ? '<span class="live-globe" title="En internet">' + GLOBE + '</span>' : '<span class="live-spin" aria-hidden="true"></span>') +
-    '<span class="live-now-text"><b>' + escapeHtml(waiting ? 'Esperando tu aprobación' : leadTitle) + '</b>' +
+    '<span class="live-now-text"><b>' + escapeHtml(asking ? 'Esperando tu respuesta' : waiting ? 'Esperando tu aprobación' : leadTitle) + '</b>' +
     (!waiting && lead && lead.target ? ' <span class="live-target">' + escapeHtml(lead.target) + '</span>' : '') +
     (!waiting && lead && lead.where ? '<span class="live-where"> · ' + escapeHtml(lead.where) + '</span>' : '') +
     (waiting ? '<span class="live-where"> · encima del cuadro de texto</span>' : '') + '</span>' +

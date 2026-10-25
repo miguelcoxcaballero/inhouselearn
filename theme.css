@@ -408,3 +408,6 @@ html[data-theme="dark"] .chat-menu button.danger svg { color: #ff8a7a; }
 @media (max-width: 768px) {
   .top-title { max-width: calc(100vw - 200px); }
 }
+
+/* Plan del modelo: el verde de «hecho» en oscuro */
+html[data-theme="dark"] .plan-list li.done .plan-mark { background: #22c55e; border-color: #22c55e; }

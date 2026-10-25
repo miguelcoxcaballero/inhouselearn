@@ -18,7 +18,8 @@
   const CDN = 'https://cdn.jsdelivr.net/npm/';
   const WORKER_LIBS = [
     { key: 'pdflib', url: 'pdf-lib@1.17.1/dist/pdf-lib.min.js', test: /\bPDFLib\b/ },
-    { key: 'docx', url: 'docx@9.5.1/dist/index.umd.cjs', test: /\bdocx\s*\./ },
+    // Any use of the global (docx.Document, const { Document } = docx…), not a file name like informe.docx.
+    { key: 'docx', url: 'docx@9.5.1/dist/index.umd.cjs', test: /(^|[^.\w-])docx\b(?!\s*['"`])/ },
     { key: 'pptx', url: 'pptxgenjs@3.12.0/dist/pptxgen.bundle.js', test: /\bPptxGenJS\b/ },
     { key: 'jszip', url: 'jszip@3.10.1/dist/jszip.min.js', test: /./ },
     { key: 'xlsx', url: 'xlsx@0.18.5/dist/xlsx.full.min.js', test: /\bXLSX\b/ }

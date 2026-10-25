@@ -90,7 +90,7 @@ function makePng(w, h) {
     const user = reqs[0].messages.filter((m) => m.role === 'user').map((m) => JSON.stringify(m.content)).join(' ');
     return { tools: toolNames.filter((n) => /library/.test(n)), sysHasLibrary: /Biblioteca del chat: el usuario ha subido 43 archivos/.test(sys), userSize: user.length, results, answer: getActiveChat().messages.slice(-1)[0].content };
   });
-  check('model gets the library tools and a short manifest, not the files', flow.tools.length === 4 && flow.sysHasLibrary && flow.userSize < 9000, { tools: flow.tools, userSize: flow.userSize });
+  check('model gets the library tools and a short manifest, not the files', flow.tools.length === 5 && flow.tools.includes('delete_library') && flow.sysHasLibrary && flow.userSize < 9000, { tools: flow.tools, userSize: flow.userSize });
   check('search_library, read_library and view_library_image return the right content', /D1:p2 · Biologia\/tema1\.pdf · pág\. 2/.test(flow.results[0] || '') && /Página 2\][\s\S]*cloroplastos[\s\S]*Página 3\][\s\S]*Calvin/.test(flow.results[1] || '') && /mitocondria es la central/.test(flow.results[2] || ''), flow.results);
   check('answer cites the source', /D1, pág\. 2/.test(flow.answer), flow.answer);
 

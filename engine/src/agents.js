@@ -18,8 +18,9 @@ export function createAgentTools(ctx) {
     {
       name: 'spawn_agents',
       label: 'Agentes en paralelo',
-      description: 'Ultra code: split a big job into independent parts and run them at the same time, one agent each (up to ' + MAX_AGENTS + '). Every agent starts from zero: give it a self-contained task with all the context it needs (files, repository, branch, what to return). Agents have the same tools as you except this one. Use it for work that really splits (several files or modules, several sources to research, several documents); then check and integrate what they return. Do not use it for a single small task.',
+      description: 'Ultra code: split a big job into independent parts and run them at the same time, one agent each (up to ' + MAX_AGENTS + '). Every agent starts from zero and does not see this conversation: put what they all need (the goal of the user, decisions taken, files, repository, branch, conventions) in context once, and give each a self-contained task that says what to return. Agents have the same tools as you except this one. Use it for work that really splits (several files or modules, several sources to research, several documents); then check and integrate what they return. Do not use it for a single small task.',
       parameters: Type.Object({
+        context: Type.Optional(Type.String({ description: 'Shared brief every agent receives before its task: the goal, what was decided, where things are.' })),
         agents: Type.Array(Type.Object({
           name: Type.String({ description: 'Short name for the agent, e.g. "Tests", "Investigación precios".' }),
           task: Type.String({ description: 'The complete, self-contained task for this agent and what it must return.' })
@@ -45,7 +46,7 @@ export function createAgentTools(ctx) {
           try {
             const result = await ctx.runSubAgent({
               name: own.name,
-              task: String(agent.task),
+              task: (String(params.context || '').trim() ? 'Contexto común (lo mismo para todos los agentes):\n' + String(params.context).trim() + '\n\nTu tarea:\n' : '') + String(agent.task),
               signal,
               onUpdate: (update) => {
                 if (update.doing) own.doing = String(update.doing).slice(0, 120);
