@@ -2,10 +2,13 @@
 // trabajo largo (update_plan). La app dibuja la pregunta encima del cuadro de
 // texto y el plan en el hilo; aquí solo se definen las herramientas de pi.
 //
-// ctx: { ask({ question, options, multiple }, signal) → { answer, chosen: [labels], other } | null }
+// ctx: { ask({ question, options, multiple }, signal) → { answer, chosen: [labels], other } | null,
+//        think: true to add the think tool (a private scratchpad; runAgent moves
+//        the thought into the answer's thinking and never shows it as a step) }
 import { Type } from '@earendil-works/pi-ai';
 
 const STATUSES = ['pending', 'in_progress', 'done'];
+const MAX_THOUGHT = 8000;
 
 function textResult(text, details) {
   return { content: [{ type: 'text', text }], details: details || {} };
@@ -35,6 +38,20 @@ export function createInteractTools(ctx) {
       }
     }
   ];
+  if (ctx && ctx.think) {
+    tools.push({
+      name: 'think',
+      label: 'Pensar',
+      description: 'Think step by step in private before acting: plan a multi-step task, check a tool result against what was asked, or decide between options. The user does not see it as a message. It changes nothing and fetches nothing; use it when the next step is not obvious, not for every call.',
+      parameters: Type.Object({
+        thought: Type.String({ description: 'Your reasoning.' })
+      }),
+      execute: async (id, params) => {
+        const thought = String((params && params.thought) || '').trim().slice(0, MAX_THOUGHT);
+        return textResult('Anotado.', { thought });
+      }
+    });
+  }
   if (ctx && typeof ctx.ask === 'function') {
     tools.push({
       name: 'ask_user',
