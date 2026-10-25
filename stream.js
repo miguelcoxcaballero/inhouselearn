@@ -405,7 +405,9 @@ class StreamView {
       this.stepsKey = stepsKey;
       const stepsSlot = this.article.querySelector('.slot-steps');
       if (stepsSlot) {
-        stepsSlot.innerHTML = visibleToolSteps(message).length ? renderToolStepsMarkup(message) : '';
+        // spawn_agents is not a visible row (it has its board) but its live row
+        // («Coordinando N agentes») still belongs here while the answer runs.
+        stepsSlot.innerHTML = visibleToolSteps(message).length || (message.pending && steps.some((step) => step.name === 'spawn_agents')) ? renderToolStepsMarkup(message) : '';
         bindThreadActions(stepsSlot);
       }
     }

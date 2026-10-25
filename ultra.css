@@ -66,7 +66,7 @@
 
 /* Presupuesto */
 .ua-budget { display: flex; align-items: center; gap: 8px; margin-top: 7px; font-size: 0.7rem; color: var(--muted); }
-.ua-budget[hidden] { display: none; }
+.ua-budget[hidden], .ua-budget[data-low] { display: none; }
 .ua-budget-bar { flex: 1; height: 3px; border-radius: 2px; background: var(--border); overflow: hidden; }
 .ua-budget-bar i { display: block; height: 100%; border-radius: inherit; background: var(--ua-accent); transition: width 0.4s var(--ease, ease); }
 .ua-budget[data-warn] .ua-budget-bar i { background: var(--ua-wait); }
@@ -252,7 +252,7 @@
   animation: ua-burst-ring 0.8s cubic-bezier(.2, .8, .2, 1) forwards;
 }
 @keyframes ua-burst-ring { 0% { transform: scale(0.3) rotate(0deg); opacity: 1; } 100% { transform: scale(1.7) rotate(90deg); opacity: 0; } }
-.ua-spark { box-shadow: 0 0 6px currentColor; }
+.ua-spark { box-shadow: 0 0 8px 1px currentColor; }
 
 @media (max-width: 420px) {
   .ua-card { padding: 10px 9px 9px; }

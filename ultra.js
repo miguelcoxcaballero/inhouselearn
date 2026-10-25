@@ -326,7 +326,7 @@
       '<span class="ua-clock"' + (running && start ? ' data-live-since="' + start + '"' : '') + '>' + (running && start ? esc(fmtDuration(Date.now() - start)) : '') + '</span>' +
       '<span class="ua-total">' + costMarkup(message.id + ':agents:' + step.id, total) + '</span>' +
       '</header>' +
-      '<div class="ua-budget"' + (details.budget > 0 ? '' : ' hidden') + (ratio > 0.8 ? ' data-warn="1"' : '') + '>' + (details.budget > 0 ? budgetMarkup(total, details.budget) : '') + '</div>' +
+      '<div class="ua-budget"' + (details.budget > 0 ? '' : ' hidden') + (ratio > 0.8 ? ' data-warn="1"' : '') + (details.budget > 0 && ratio < 0.25 ? ' data-low="1"' : '') + '>' + (details.budget > 0 ? budgetMarkup(total, details.budget) : '') + '</div>' +
       '<div class="ua-segs" aria-hidden="true">' + segsMarkup(layout) + '</div>' +
       constellationMarkup(step, layout) +
       '<div class="ua-board">' + body + '</div>' +
@@ -447,6 +447,8 @@
     if (budget) {
       setAttr(budget, 'hidden', details.budget > 0 ? null : '');
       setAttr(budget, 'data-warn', details.budget > 0 && total / details.budget > 0.8 ? '1' : null);
+      // The budget only shows once it matters (a quarter of it spent).
+      setAttr(budget, 'data-low', details.budget > 0 && total / details.budget < 0.25 ? '1' : null);
       if (details.budget > 0) {
         if (!budget.querySelector('.ua-budget-bar')) budget.innerHTML = budgetMarkup(total, details.budget);
         const ratio = Math.min(1, total / details.budget);
@@ -687,19 +689,26 @@
     ring.className = 'ua-burst-ring';
     ring.style.left = cx + 'px';
     ring.style.top = cy + 'px';
-    ring.style.setProperty('--ua-burst-size', Math.max(44, Math.min(140, box.width * 1.1)) + 'px');
+    ring.style.setProperty('--ua-burst-size', Math.max(44, Math.min(110, box.width * 0.8)) + 'px');
     document.body.appendChild(ring);
     window.setTimeout(() => ring.remove(), 900);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 14; i++) {
       const spark = document.createElement('span');
       spark.className = 'ultra-spark ua-spark';
-      const angle = (Math.PI * 2 * i) / 10 + (Math.random() - 0.5) * 0.35;
-      const distance = 28 + Math.random() * 26;
+      const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.35;
+      // Wide pills throw their sparks wider than tall.
+      const distance = 34 + Math.random() * 34;
+      const size = (6 + Math.random() * 4).toFixed(1) + 'px';
+      const colour = SPARK_PALETTE[i % SPARK_PALETTE.length];
       spark.style.left = cx + 'px';
       spark.style.top = cy + 'px';
-      spark.style.setProperty('--dx', (Math.cos(angle) * distance).toFixed(1) + 'px');
-      spark.style.setProperty('--dy', (Math.sin(angle) * distance).toFixed(1) + 'px');
-      spark.style.background = SPARK_PALETTE[i % SPARK_PALETTE.length];
+      spark.style.width = size;
+      spark.style.height = size;
+      spark.style.setProperty('--dx', (Math.cos(angle) * distance * 1.5).toFixed(1) + 'px');
+      spark.style.setProperty('--dy', (Math.sin(angle) * distance * 0.8).toFixed(1) + 'px');
+      spark.style.background = colour;
+      // The glow (box-shadow: currentColor) takes the spark's own colour.
+      spark.style.color = colour;
       document.body.appendChild(spark);
       window.setTimeout(() => spark.remove(), 900);
     }

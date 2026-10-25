@@ -185,7 +185,7 @@ let failed = 0;
   check('…and the activation burst draws nothing', burst === 0, burst);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const sparks = await page.evaluate(() => { window.UltraAgents.burst(document.querySelector('.ua-badge')); return { sparks: document.querySelectorAll('.ua-spark').length, ring: document.querySelectorAll('.ua-burst-ring').length }; });
-  check('the activation burst: a ring and 10 sparks', sparks.sparks === 10 && sparks.ring === 1, sparks);
+  check('the activation burst: a ring and 14 sparks', sparks.sparks === 14 && sparks.ring === 1, sparks);
 
   // Dark theme: the same tokens, AMOLED values.
   const tokens = () => page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return ['--ua-accent', '--ua-ok', '--ua-err', '--ua-wait', '--ua-lane-bg', '--ua-read', '--ua-search', '--ua-edit', '--ua-web', '--ua-accent-soft'].map((name) => cs.getPropertyValue(name).trim()); });
