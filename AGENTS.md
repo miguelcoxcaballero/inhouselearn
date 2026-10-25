@@ -256,11 +256,45 @@ Mandatory guidance for every AI and developer working in this repository.
 - **Ultra code:** an option of the reasoning dropdown in the model picker, for every model
   (`chat.ultraCode`; any other level, or «Normal» for models without levels, turns it off; it is in
   colours only once chosen). It uses the model's deepest level (`effectiveThinkingLevel`) and gives the model
-  `spawn_agents` (`engine/src/agents.js`): up to 6 pi agents at once, each with a self-contained task,
-  the same tools and approval gate but no `spawn_agents`, no history. A card in the thread shows each
-  agent, what it is doing and its live cost, its web searches included (`step.agents`, `onCost` of
-  `webToolsFor`); their cost goes into the answer's.
-  Turning it on plays a rainbow burst with sparks (`playUltraCodeBurst`). Test: `tests/web/ultra.cjs`.
+  `spawn_agents` (`engine/src/agents.js`, v2): a plan of up to 12 agents (`id`, `name`, `task`, `role`
+  explore|build, `depends_on`, `files` it owns, `returns`, `max_minutes`) run as a DAG (`planAgents`: cycles
+  and unknown ids rejected before spending; waves; ≤ 6 at once, staggered so the first warms the prompt
+  cache), a shared `context`, a `goal` and `acceptance` criteria, `budget_usd` (default 1) and caps of 40 steps
+  and N minutes per agent (a capped or user-stopped agent returns its partial work), transient errors retried
+  only before an agent has written, dependency results passed down, and — with 2+ agents — a read-only
+  «Verificación» agent that checks the reports (at most one fix round; its verdict leads the result). Agents
+  close with `submit_result` (summary, status, artifacts, open issues); the main model gets compact
+  sections, the touched files and possible conflicts. The app side (`runSubAgent` in index.html): one stable
+  `subAgentSystemPrompt` for all agents (with «Cómo trabajar»), read-only roles keep only `READ_ONLY_TOOL`
+  tools (run_js cannot write), owned files enforced, a per-agent overwrite-guard scope, approvals that name
+  the agent (`approvalMeta` → `approveChange` → the dock queue, '+N en espera') and set its lane «waiting»,
+  per-lane stop (`window.ultraStopAgent`), and `settleAgentSteps` so a stop, error, cut or reload never leaves
+  a lane running. GitHub commits from several agents: a per-branch lock, rebase on a moved branch, and a
+  stop if another agent changed the same files (also between the approval and the commit). The board is
+  `ultra.js` (`UltraAgents`) + `ultra.css`: patched in place by keyed lanes (stream.js no longer redraws it),
+  header with title, clock, cost, budget bar and status segments, a constellation, waves, a pinned verifier
+  lane, expandable lanes (task, steps, result through `renderMarkdown`, «Copiar»), a completion glow once,
+  tokens with AMOLED versions in theme.css, everything off under reduced motion. The live row says
+  «Coordinando N agentes» / «Integrando lo de N agentes». Turning Ultra code on plays the burst
+  (`UltraAgents.burst`). Tests: `tests/web/ultra.cjs`, `ultra-board.cjs`, `agents-plan.mjs`,
+  `github-concurrent.cjs`.
+- **How the model is prompted and run** (index.html, engine/src/index.js): `stableSystemPrompt` is
+  byte-identical across the turns of a chat (and a day) so providers with prompt caching reuse it;
+  `turnContextText` (time, files, library, `InhouseStudy.brief`, visual events/variety, the course task or
+  visuals reminder) is appended as a `<contexto_app>` block to the user's message and never saved.
+  `WORK_METHOD_PROMPT` («Cómo trabajar»: read before assuming, decide defaults, plan 3+ steps, verify with
+  run_js/doc_view/CI/sources, never repeat a failing call, separate verified from assumed) is in normal chats
+  and sub-agents, not in Guided Learning. `runAgent` retries transient provider errors (429/5xx, ≤ 2, backoff,
+  `agent.continue()` never re-runs tools; the live row says «Reintentando (n/m)…»), raises the reasoning one
+  level after 2 consecutive tool errors (`escalate`), ages old tool results (`engine/src/context.js`,
+  pure and deterministic, via `transformContext`, one smaller retry on a context overflow), adds coach notes
+  to tool results (`engine/src/coach.js`: repeated failing call, review with doc_view, test code; never in
+  `step.output` or saved history), runs read-only tools of one batch in parallel (`markExecution`,
+  `toolExecution: 'parallel'`), offers `think` to models that reason little, and keeps `cacheRead` (the usage
+  panel shows the share). run_js has math.js and Algebrite (`sandboxPrelude`, Cache API
+  `inhouse-sandbox-libs-v1`, evaluated before the sandbox's network is removed) plus `nsolve`, `integrate`,
+  `table`; without them it still works. Tests: `prompt-cache.cjs`, `context-aging.mjs`, `coach.mjs`,
+  `harness.cjs`. `tests/web/wiring.mjs` fails if a merge drops this wiring.
 - **The model's working tools** (`engine/src/tools.js`, `interact.js`): `read_file` returns numbered lines
   (`  12→text`) by ranges (`offset`/`limit`, ≤ 2000 lines or 20 000 characters, and says the next offset);
   `search_files` greps the chat files (plain text or regex, glob `path`, context lines); `write_file` refuses
