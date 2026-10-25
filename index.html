@@ -1516,7 +1516,8 @@
     .top-title { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: min(520px, 46vw); text-align: center; line-height: 1.2; }
      /* El nombre del chat abierto se escribe sobre él mismo: sin caja, sin
         borde y sin subrayado, solo el cursor parpadeando (en naranja). */
-     .top-title b.editable { cursor: text; }
+     .top-title b.editable, .top-title b.editable:hover { cursor: text; text-decoration: none; }
+      .top-title b.editable:focus, .top-title b.editable:focus-visible { outline: none; }
      .top-title b.renaming, .top-title b.renaming:hover { outline: none; text-decoration: none; caret-color: var(--orange); }
     .top-title b {
       max-width: 100%; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-weight: 500; font-size: 1.18rem;
@@ -9070,7 +9071,7 @@
       el.textContent = (chat.customTitle || chat.title || '').slice(0, 60);
       renaming = { chatId: chat.id, el, start: chat.title || '' };
       el.focus({ preventScroll: true });
-      selectTitleText(el);
+      caretToTitleEnd(el);
     }
 
     function finishRename(save) {
@@ -9133,10 +9134,13 @@
       });
     }
 
-    // El nombre entero seleccionado: escribir lo sustituye de una vez.
-    function selectTitleText(el) {
+    // El cursor al final del nombre y nada seleccionado: al empezar a editar
+    // solo se ve el cursor parpadeando (como en la animación) y las flechas lo
+    // mueven letra a letra.
+    function caretToTitleEnd(el) {
       const range = document.createRange();
       range.selectNodeContents(el);
+      range.collapse(false);
       const selection = window.getSelection();
       if (!selection) return;
       selection.removeAllRanges();

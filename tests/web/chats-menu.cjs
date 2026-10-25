@@ -76,8 +76,10 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   // No box at all: the name itself is the field, and the keys go to it.
   const editor = await page.evaluate(() => {
     const el = document.querySelector('#top-title-main.renaming');
-    return el ? { value: el.textContent, focused: document.activeElement === el, editable: el.getAttribute('contenteditable'), field: !!document.querySelector('input, textarea') } : null;
+    const sel = window.getSelection();
+    return el ? { value: el.textContent, focused: document.activeElement === el, editable: el.getAttribute('contenteditable'), field: !!document.querySelector('input, textarea'), collapsed: sel ? sel.isCollapsed : null, caret: sel && sel.rangeCount ? sel.getRangeAt(0).startOffset : -1 } : null;
   });
+  await page.evaluate(() => { const el = document.getElementById('top-title-main'); const range = document.createRange(); range.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); });
   await page.keyboard.type('Historia moderna');
   await page.keyboard.press('Enter');
   const typed = [];
@@ -90,6 +92,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const partial = typed.filter((f) => f.startsWith('|'));
   check('double click renames the chat with no box at all, and the name is typed out like the automatic ones',
     editor && editor.value === 'Revolución francesa causas' && editor.focused && editor.editable === 'plaintext-only' && !editor.field &&
+    editor.collapsed && editor.caret === 'Revolución francesa causas'.length &&
     renamed.custom === 'Historia moderna' && renamed.title === 'Historia moderna' &&
     partial.length >= 3 && partial.some((f) => f.length > 1 && f.length < 22) && typed[typed.length - 1] === 'Historia moderna',
     { renamed, editor, partial: partial.slice(0, 10) });
@@ -114,6 +117,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await page.evaluate((id) => { appState.activeChatId = id; setChatsDrawer(false); renderHistory(); renderThread(); }, renameId);
   await page.click('#top-title-main');
   const topEditor = await page.evaluate(() => { const el = document.getElementById('top-title-main'); return el.classList.contains('renaming') && !document.querySelector('input, textarea') ? { value: el.textContent, focused: document.activeElement === el } : null; });
+  await page.evaluate(() => { const el = document.getElementById('top-title-main'); const range = document.createRange(); range.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); });
   await page.keyboard.type('Historia contemporánea');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => getActiveChat().title === 'Historia contemporánea' && !document.querySelector('.title-typing'), null, { timeout: 10000 });
