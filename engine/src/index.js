@@ -7,7 +7,10 @@
 import { createModels, createProvider, getSupportedThinkingLevels } from '@earendil-works/pi-ai';
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy';
 import { openRouterCost } from '@earendil-works/pi-ai/providers/openrouter-api';
+import { anthropicMessagesApi } from '@earendil-works/pi-ai/api/anthropic-messages.lazy';
+import { ANTHROPIC_MODELS } from '@earendil-works/pi-ai/providers/anthropic.models';
 import { Agent } from '@earendil-works/pi-agent-core';
+import Anthropic from '@anthropic-ai/sdk';
 import JSZip from 'jszip';
 import { createWorkspaceTools, normalizePath, runInSandbox, configureSandbox, globToRegExp } from './tools.js';
 import { createGuidedTools } from './guided.js';
@@ -41,6 +44,7 @@ const LEVEL_FOR_EFFORT = Object.fromEntries(Object.entries(EFFORT_FOR_LEVEL).map
 // Lo que pone la app: key de OpenRouter y cabeceras propias.
 const hooks = {
   getOpenRouterKey: () => '',
+  getAnthropicKey: () => '',
   openRouterHeaders: {}
 };
 
@@ -64,6 +68,26 @@ models.setProvider(createProvider({
   },
   models: [],
   api: openAICompletionsApi()
+}));
+
+// Claude directly with the user's own Anthropic API key (the API credit of a
+// Claude plan, for instance): the official SDK, called from the browser, with
+// prompt caching, adaptive thinking and effort handled by pi.
+models.setProvider(createProvider({
+  id: 'anthropic',
+  name: 'Anthropic',
+  baseUrl: 'https://api.anthropic.com',
+  auth: {
+    apiKey: {
+      name: 'Anthropic API key',
+      resolve: async () => {
+        const key = hooks.getAnthropicKey();
+        return key ? { auth: { apiKey: key } } : undefined;
+      }
+    }
+  },
+  models: [],
+  api: anthropicMessagesApi()
 }));
 
 // ─── Modelos ─────────────────────────────────────────
@@ -172,6 +196,118 @@ export async function fetchOpenRouterModels(options = {}) {
   return summaries;
 }
 
+// ─── Claude con la API de Anthropic ──────────────────
+// App ids carry this prefix so they never collide with OpenRouter's
+// «anthropic/…» models; the request uses the bare Anthropic id.
+export const CLAUDE_API_PREFIX = 'claude-api/';
+const CLAUDE_API_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1'];
+// Anthropic bills what is used, not what max_tokens reserves.
+const CLAUDE_MAX_OUTPUT = 64000;
+
+export function isClaudeApiModel(id) {
+  return String(id || '').startsWith(CLAUDE_API_PREFIX);
+}
+
+/** The current Claude models as catalog entries (same shape as OpenRouter's), registered in pi. */
+export function claudeApiModels() {
+  return CLAUDE_API_MODELS.filter((id) => ANTHROPIC_MODELS[id]).map((id, index) => {
+    const base = ANTHROPIC_MODELS[id];
+    const levels = Object.entries(base.thinkingLevelMap || {}).filter(([, effort]) => effort).map(([, effort]) => effort);
+    const summary = {
+      id: CLAUDE_API_PREFIX + id,
+      name: String(base.name || id).replace(/^Claude\s+/, ''),
+      company: 'Claude · tu API',
+      companyId: 'anthropic',
+      provider: 'anthropic',
+      rank: -100 + index,
+      created: 0,
+      pricing: { prompt: String(base.cost.input / 1e6), completion: String(base.cost.output / 1e6), input_cache_read: String((base.cost.cacheRead || 0) / 1e6), input_cache_write: String((base.cost.cacheWrite || 0) / 1e6) },
+      price: { input: base.cost.input, output: base.cost.output },
+      context: base.contextWindow,
+      maxOutput: base.maxTokens,
+      images: (base.input || []).includes('image'),
+      audio: false,
+      video: false,
+      files: false,
+      tools: true,
+      reasoning: base.reasoning ? {
+        efforts: levels,
+        // Haiku answers fast at medium; the others give their best at high.
+        defaultEffort: /haiku/.test(id) ? 'medium' : 'high',
+        defaultEnabled: true,
+        mandatory: !(base.thinkingLevelMap && base.thinkingLevelMap.off !== null)
+      } : null,
+      intelligence: null,
+      coding: null,
+      agentic: null
+    };
+    registered.set(summary.id, { summary, model: Object.assign({}, base, { maxTokens: Math.min(base.maxTokens || CLAUDE_MAX_OUTPUT, CLAUDE_MAX_OUTPUT) }) });
+    return summary;
+  });
+}
+
+/**
+ * One short request without tools (a chat's title, for instance) with any
+ * registered model: { text, cost, usage: { input, output } }.
+ */
+export async function quickComplete(id, systemPrompt, userText, options = {}) {
+  const model = getModel(id);
+  const result = await models.completeSimple(model, {
+    systemPrompt,
+    messages: [{ role: 'user', content: [{ type: 'text', text: userText }], timestamp: Date.now() }]
+  }, { maxTokens: options.maxTokens || 1024, reasoning: model.reasoning ? 'low' : undefined, signal: options.signal });
+  if (result.stopReason === 'error' || result.errorMessage) throw new Error(result.errorMessage || 'Sin respuesta');
+  const usage = result.usage || {};
+  return { text: textOf(result, 'text'), cost: (usage.cost && usage.cost.total) || 0, usage: { input: (usage.input || 0) + (usage.cacheRead || 0) + (usage.cacheWrite || 0), output: usage.output || 0 } };
+}
+
+// What a web search costs on Anthropic's side ($10 per 1000), on top of tokens.
+const CLAUDE_SEARCH_USD = 0.01;
+
+/**
+ * web_search for a Claude chat: Anthropic's own server-side search tool with
+ * the chat's model and the user's key (OpenRouter is not involved).
+ * Returns { results: [{ title, url, snippet }], digest, cost, usage }.
+ */
+export async function claudeWebSearch(id, query, options = {}) {
+  const key = hooks.getAnthropicKey();
+  if (!key) throw new Error('Para buscar en internet con Claude hace falta su API key.');
+  const model = getModel(id);
+  const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 2 });
+  const dynamic = !/haiku/.test(model.id);
+  const message = await client.messages.create({
+    model: model.id,
+    max_tokens: 4000,
+    system: 'You are a web search engine. Search once for the query, then list what each relevant result says in 1-2 short sentences each, with its URL. Same language as the query. No introduction.',
+    messages: [{ role: 'user', content: query }],
+    tools: [{ type: dynamic ? 'web_search_20260209' : 'web_search_20250305', name: 'web_search', max_uses: 1 }],
+    output_config: { effort: 'low' }
+  }, { signal: options.signal });
+  const seen = new Set();
+  const results = [];
+  const add = (url, title, snippet) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    results.push({ title: title || '', url, snippet: snippet || '' });
+  };
+  const blocks = Array.isArray(message.content) ? message.content : [];
+  // Cited results first, with the sentence each one backs.
+  blocks.forEach((block) => {
+    if (block.type === 'text' && Array.isArray(block.citations)) block.citations.forEach((cite) => add(cite.url, cite.title, cite.cited_text));
+  });
+  blocks.forEach((block) => {
+    if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
+      block.content.slice(0, options.maxResults || 8).forEach((item) => add(item.url, item.title, ''));
+    }
+  });
+  const digest = blocks.filter((block) => block.type === 'text').map((block) => block.text).join('').trim().slice(0, 4000);
+  const usage = message.usage || {};
+  const searches = (usage.server_tool_use && usage.server_tool_use.web_search_requests) || 0;
+  const cost = ((usage.input_tokens || 0) * model.cost.input + (usage.output_tokens || 0) * model.cost.output +
+    (usage.cache_read_input_tokens || 0) * (model.cost.cacheRead || 0) + (usage.cache_creation_input_tokens || 0) * (model.cost.cacheWrite || 0)) / 1e6 + searches * CLAUDE_SEARCH_USD;
+  return { results, digest, cost, usage: { input: (usage.input_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0), output: usage.output_tokens || 0 } };
+}
+
 // ID que no está en el listado (escrito a mano): se trata como modelo genérico.
 function fallbackModel(id) {
   return piModelFrom({ id, name: id, pricing: {}, images: true, reasoning: { efforts: [], defaultEnabled: true, mandatory: false }, context: 0, maxOutput: 0 });
@@ -179,7 +315,13 @@ function fallbackModel(id) {
 
 export function getModel(id) {
   const entry = registered.get(id);
-  return entry ? entry.model : fallbackModel(id);
+  if (entry) return entry.model;
+  if (isClaudeApiModel(id)) {
+    claudeApiModels();
+    const claude = registered.get(id);
+    if (claude) return claude.model;
+  }
+  return fallbackModel(id);
 }
 
 /** Niveles de razonamiento que la UI puede ofrecer para un modelo (vacío si no razona). */

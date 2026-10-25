@@ -193,6 +193,17 @@ Mandatory guidance for every AI and developer working in this repository.
   writes the running estimate (`saveRunningCost`) and a reload counts it (`restoreState`); a Drive
   copy saved by an older page without costs never wipes the ones this browser knows
   (`keepKnownCosts`). Tests: `tests/web/extra-account.cjs`, `tests/web/cost-history.cjs`, `tests/web/live-sync.cjs`.
+- **Claude with the user's own API key** (e.g. the monthly API credit of a Claude plan): model picker → «API key de
+  Claude» (`anthropicKey` in the same settings as OpenRouter's key: this browser + the Drive settings snapshot; an older
+  copy without it never wipes it). Saving checks it with the free `GET /v1/models` (`checkClaudeKey`, «conectada» /
+  «Anthropic la rechaza»). With a key, `InhousePi.claudeApiModels()` puts Opus 5.5, Sonnet 5.5, Haiku 5.5 and Fable 5.1
+  first in the catalog as `claude-api/<id>` (never colliding with OpenRouter's `anthropic/…`; `companyIdOf` → anthropic
+  logo), and an empty chat moves to the first one. Requests go straight from the browser to api.anthropic.com through
+  pi's `anthropic-messages` provider (official SDK, `dangerouslyAllowBrowser`): bare model id, adaptive thinking with the
+  chosen effort (default high, Haiku medium), prompt caching, Anthropic's prices for the cost. A Claude chat names itself
+  with `quickComplete` and searches with Anthropic's server-side `web_search` (`claudeWebSearch`, $0.01 a search
+  counted in the answer). A Claude key alone is enough for Claude chats (`hasKeyFor`); OpenRouter's models still need
+  OpenRouter's key. Errors read in Spanish (`describeClaudeError`). Test: `tests/web/claude-api.cjs`.
 - **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
   cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with
   the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007

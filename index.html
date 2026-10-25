@@ -1411,6 +1411,9 @@
       color: var(--muted);
     }
     .api-key-hint a { color: inherit; text-decoration: underline; }
+    .claude-key-section { padding-top: 8px; }
+    .claude-key-state { margin-left: 4px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #16a34a; }
+    .claude-key-state.error { color: #dc2626; }
     .google-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 30px; }
     .google-account-copy { font-size: 0.8rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
     .google-account-row .btn { flex: 0 0 auto; }
@@ -1742,7 +1745,7 @@
   <link rel="stylesheet" href="guided.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-wait.css?v=20261024-wait1">
-  <link rel="stylesheet" href="model-picker.css?v=20261024-iq">
+  <link rel="stylesheet" href="model-picker.css?v=20261025-claude">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
@@ -1751,7 +1754,7 @@
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261026-ultra">
+  <link rel="stylesheet" href="theme.css?v=20261025-claude">
 </head>
 <body>
 
@@ -1998,12 +2001,21 @@
                     </div>
 
                     <div class="model-popover-section api-key-section" id="api-key-section">
-                      <div class="model-popover-section-label">API key de OpenRouter</div>
+                      <div class="model-popover-section-label"><span class="key-long">API key de </span>OpenRouter</div>
                       <div class="api-key-row">
                         <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
                         <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
                       </div>
                       <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
+                    </div>
+
+                    <div class="model-popover-section api-key-section claude-key-section" id="claude-key-section">
+                      <div class="model-popover-section-label"><span class="key-long">API key de </span>Claude <span class="claude-key-state" id="claude-key-state"></span></div>
+                      <div class="api-key-row">
+                        <input class="api-input" id="claude-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" aria-label="API key de Claude">
+                        <button class="btn btn-primary btn-sm" id="claude-key-btn" type="button">Guardar</button>
+                      </div>
+                      <div class="api-key-hint" id="claude-key-hint">Opcional. Con ella salen arriba Opus, Sonnet, Haiku y Fable y se pagan con el cr&eacute;dito API de tu plan de Claude, directo a Anthropic. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
                     </div>
 
                   </div>
@@ -2068,7 +2080,7 @@
   <script src="documents.js?v=20261026-review2"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261026-review2"></script>
+  <script src="vendor/pi-engine.js?v=20261025-claude"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2560,6 +2572,9 @@
       thinkingSection: document.getElementById('thinking-section'),
       apiKeyInput: document.getElementById('api-key-input'),
       loginBtn: document.getElementById('login-btn'),
+      claudeKeyInput: document.getElementById('claude-key-input'),
+      claudeKeyBtn: document.getElementById('claude-key-btn'),
+      claudeKeyState: document.getElementById('claude-key-state'),
       profileBtn: document.getElementById('profile-btn'),
       profilePopup: document.getElementById('profile-popup'),
       logoutMenuBtn: document.getElementById('logout-menu-btn'),
@@ -2723,14 +2738,38 @@
       return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     }
 
-    function setModelCatalog(entries, fetchedAt) {
+    // With a Claude key, its models go first (they are paid with that credit).
+    function claudeCatalogEntries() {
+      return getApiSettings().anthropicKey && InhousePi.claudeApiModels ? InhousePi.claudeApiModels() : [];
+    }
+
+    function setModelCatalog(openRouterEntries, fetchedAt) {
+      modelCatalog.openRouter = openRouterEntries;
+      const entries = claudeCatalogEntries().concat(openRouterEntries);
       modelCatalog.entries = entries;
       modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
       modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
       modelCatalog.fetchedAt = fetchedAt || 0;
       const best = entries.reduce((max, entry) => typeof entry.intelligence === 'number' ? Math.max(max, entry.intelligence) : max, 0);
       modelCatalog.scoreScale = Math.max(10, Math.ceil(best / 10) * 10);
-      InhousePi.registerOpenRouterModels(entries);
+      InhousePi.registerOpenRouterModels(openRouterEntries);
+    }
+
+    // The Claude key changed: the catalog gains or loses Claude's models, and
+    // empty chats move to the new first model.
+    function applyClaudeModels() {
+      const before = defaultModelId();
+      setModelCatalog(modelCatalog.openRouter || [], modelCatalog.fetchedAt);
+      const after = defaultModelId();
+      appState.chats.forEach((chat) => {
+        if (chat.messages.length) return;
+        if (chat.model === before || chat.model === FALLBACK_MODEL_ID || (InhousePi.isClaudeApiModel && InhousePi.isClaudeApiModel(chat.model) && !getApiSettings().anthropicKey)) {
+          chat.model = after;
+          chat.thinkingLevel = defaultThinkingLevelForModel(after);
+        }
+      });
+      updateConfigUi();
+      renderHistory();
     }
 
     function loadModelCatalogFromCache() {
@@ -2786,6 +2825,7 @@
 
     function companyIdOf(modelId) {
       const id = String(modelId || '');
+      if (id.startsWith('claude-api/')) return 'anthropic';
       return id.indexOf('/') > 0 ? id.split('/')[0] : 'openrouter';
     }
 
@@ -3096,7 +3136,7 @@
     // Android app gets the OpenRouter key back after signing in with Google.
     function buildSyncedSettings() {
       const api = getApiSettings();
-      return { openRouter: { apiKey: api.apiKey, managementKey: api.managementKey, updatedAt: api.updatedAt || '' } };
+      return { openRouter: { apiKey: api.apiKey, managementKey: api.managementKey, anthropicKey: api.anthropicKey || '', updatedAt: api.updatedAt || '' } };
     }
 
     function normalizeSyncedSettings(settings) {
@@ -3106,6 +3146,7 @@
         openRouter: {
           apiKey: typeof source.apiKey === 'string' ? source.apiKey : '',
           managementKey: typeof source.managementKey === 'string' ? source.managementKey : '',
+          anthropicKey: typeof source.anthropicKey === 'string' ? source.anthropicKey : '',
           updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : ''
         }
       };
@@ -3117,18 +3158,22 @@
       if (!remote || !remote.updatedAt) return false;
       const local = getApiSettings();
       if ((local.updatedAt || '') >= remote.updatedAt) return false;
-      if (remote.apiKey === local.apiKey && remote.managementKey === local.managementKey) {
+      // A copy saved by an older page has no anthropicKey: it keeps this browser's.
+      const remoteClaude = typeof remote.anthropicKey === 'string' ? remote.anthropicKey : local.anthropicKey;
+      if (remote.apiKey === local.apiKey && remote.managementKey === local.managementKey && remoteClaude === local.anthropicKey) {
         saveApiSettings({ updatedAt: remote.updatedAt }, { fromDrive: true });
         return false;
       }
       const hadKey = !!local.apiKey;
-      saveApiSettings({ apiKey: remote.apiKey, managementKey: remote.managementKey, updatedAt: remote.updatedAt }, { fromDrive: true });
+      const claudeChanged = remoteClaude !== local.anthropicKey;
+      saveApiSettings({ apiKey: remote.apiKey, managementKey: remote.managementKey, anthropicKey: remoteClaude, updatedAt: remote.updatedAt }, { fromDrive: true });
+      if (claudeChanged) applyClaudeModels();
       appState.openRouterCredits = null;
       if (elements.apiKeyInput) elements.apiKeyInput.value = '';
       updateConfigUi();
       renderUsageDonut();
       refreshOpenRouterCredits();
-      if (remote.apiKey && !hadKey) {
+      if ((remote.apiKey || remoteClaude) && !hadKey) {
         closeModelMenu();
       }
       return true;
@@ -4401,7 +4446,9 @@
 
     function createChat(title) {
       const recent = appState.chats[0];
-      const model = recent ? normalizeModelId(recent.model) : defaultModelId();
+      // A Claude model without its key (removed since) is not inherited.
+      const inherited = recent && !(isClaudeModelId(recent.model) && !getApiSettings().anthropicKey) ? recent : null;
+      const model = inherited ? normalizeModelId(inherited.model) : defaultModelId();
       return {
         id: uid('chat'),
         title: title || 'Nuevo chat',
@@ -4410,7 +4457,7 @@
         messages: [],
         provider: 'openrouter',
         model,
-        thinkingLevel: normalizeThinkingLevelForModel(model, recent ? recent.thinkingLevel : ''),
+        thinkingLevel: normalizeThinkingLevelForModel(model, inherited ? inherited.thinkingLevel : ''),
         // A new chat always starts as a normal chat; Guided Learning is turned on per chat.
         guidedLearning: false,
         course: null
@@ -5238,8 +5285,15 @@
     // CORS enabled). Both costs count in the answer's cost.
     async function webSearchRequest(chat, query, options) {
       const apiKey = getApiSettings().apiKey;
-      if (!apiKey) throw new Error('Para buscar en internet hace falta la API key de OpenRouter.');
       const model = resolveRequestModelId(chat);
+      // A Claude chat searches with Anthropic's own web search (its key, its credit).
+      if (isClaudeModelId(model) && InhousePi.claudeWebSearch) {
+        const found = await InhousePi.claudeWebSearch(model, query, { signal: options && options.signal, maxResults: (options && options.maxResults) || 6 });
+        recordModelUsage(model, { prompt_tokens: found.usage.input, completion_tokens: found.usage.output, cost: found.cost });
+        if (options && typeof options.onCost === 'function') options.onCost(found.cost);
+        return { results: found.results, digest: found.digest };
+      }
+      if (!apiKey) throw new Error('Para buscar en internet hace falta la API key de OpenRouter.');
       const response = await fetch(InhousePi.OPENROUTER_BASE_URL + '/chat/completions', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'X-Title': 'inhouse learn' },
@@ -5896,16 +5950,35 @@
       if (elements.loginBtn) {
         elements.loginBtn.textContent = apiSettings.apiKey ? 'Actualizar' : 'Guardar';
       }
+      if (elements.claudeKeyInput && document.activeElement !== elements.claudeKeyInput) {
+        elements.claudeKeyInput.value = apiSettings.anthropicKey || '';
+      }
+      if (elements.claudeKeyBtn) elements.claudeKeyBtn.textContent = apiSettings.anthropicKey ? 'Actualizar' : 'Guardar';
+      if (elements.claudeKeyState) {
+        const check = appState.claudeKeyCheck;
+        elements.claudeKeyState.textContent = !apiSettings.anthropicKey ? ''
+          : check === 'checking' ? '· comprobando…'
+          : check === 'rejected' ? '· Anthropic la rechaza'
+          : '· conectada';
+        elements.claudeKeyState.classList.toggle('error', !!apiSettings.anthropicKey && check === 'rejected');
+        elements.claudeKeyState.dataset.state = !apiSettings.anthropicKey ? '' : check === 'rejected' ? 'error' : check === 'checking' ? 'checking' : 'ok';
+      }
       if (elements.modelMenuStatus) {
         let statusCopy;
-        if (!apiSettings.apiKey) {
+        if (!apiSettings.apiKey && apiSettings.anthropicKey) {
+          statusCopy = 'Modelos de Claude con tu API. Para los demás, pega abajo una key de OpenRouter.';
+        } else if (!apiSettings.apiKey) {
           statusCopy = 'Pega tu API key de OpenRouter abajo para empezar.';
         } else if (!modelCatalog.entries.length && modelCatalog.error) {
           statusCopy = 'No se pudo cargar la lista de modelos: ' + modelCatalog.error;
         } else if (!modelCatalog.entries.length) {
           statusCopy = 'Cargando los modelos de OpenRouter…';
         } else {
-          statusCopy = modelCatalog.entries.length + ' modelos en OpenRouter. Pagas por tokens con tu saldo.';
+          const claudeCount = modelCatalog.entries.filter((entry) => isClaudeModelId(entry.id)).length;
+          const routerCount = modelCatalog.entries.length - claudeCount;
+          statusCopy = claudeCount
+            ? claudeCount + ' de Claude con tu API' + (apiSettings.apiKey ? ' · ' + routerCount + ' en OpenRouter.' : '.')
+            : routerCount + ' modelos en OpenRouter. Pagas por tokens con tu saldo.';
         }
         elements.modelMenuStatus.textContent = statusCopy;
         elements.modelMenuStatus.classList.toggle('error', !!apiSettings.apiKey && !modelCatalog.entries.length && !!modelCatalog.error);
@@ -10097,6 +10170,15 @@
       elements.loginBtn.addEventListener('click', () => {
         saveApiKeyFromInput();
       });
+      if (elements.claudeKeyBtn) elements.claudeKeyBtn.addEventListener('click', () => { saveClaudeKeyFromInput(); });
+      if (elements.claudeKeyInput) {
+        elements.claudeKeyInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            saveClaudeKeyFromInput();
+          }
+        });
+      }
       elements.logoutMenuBtn.addEventListener('click', () => {
         closeProfileMenu();
         logoutGoogle();
@@ -10161,7 +10243,7 @@
 
 
     function updateConfigUi() {
-      const hasKey = !!getApiSettings().apiKey;
+      const hasKey = hasAnyKey();
       if (elements.transportLabel) {
         elements.transportLabel.textContent = hasKey ? 'OpenRouter' : 'Falta API key';
       }
@@ -10302,6 +10384,8 @@
           customModel: String(stored.customModel || ''),
           // Optional: only used to read the account balance (GET /credits).
           managementKey: String(stored.managementKey || ''),
+          // Optional: Claude straight from Anthropic (the API credit of a Claude plan).
+          anthropicKey: String(stored.anthropicKey || ''),
           // When apiKey or managementKey last changed; decides which copy wins against Drive.
           updatedAt: String(stored.updatedAt || '')
         };
@@ -10313,7 +10397,7 @@
       const previous = getApiSettings();
       const next = Object.assign({}, previous, patch || {});
       const fromDrive = !!(options && options.fromDrive);
-      const keysChanged = next.apiKey !== previous.apiKey || next.managementKey !== previous.managementKey;
+      const keysChanged = next.apiKey !== previous.apiKey || next.managementKey !== previous.managementKey || next.anthropicKey !== previous.anthropicKey;
       if (keysChanged && !fromDrive) next.updatedAt = nowIso();
       apiSettingsCache = next;
       try {
@@ -10330,8 +10414,28 @@
       return activeModelName(chatLike);
     }
 
-    function ensureProviderReady() {
-      if (getApiSettings().apiKey) return true;
+    function isClaudeModelId(modelId) {
+      return String(modelId || '').startsWith('claude-api/');
+    }
+
+    // The chat's model has its key: OpenRouter's, or Claude's for a Claude model.
+    function hasKeyFor(chatLike) {
+      const api = getApiSettings();
+      return isClaudeModelId(resolveRequestModelId(chatLike)) ? !!api.anthropicKey : !!api.apiKey;
+    }
+
+    function hasAnyKey() {
+      const api = getApiSettings();
+      return !!(api.apiKey || api.anthropicKey);
+    }
+
+    function ensureProviderReady(chat) {
+      if (hasKeyFor(chat || getActiveChat())) return true;
+      if (isClaudeModelId(resolveRequestModelId(chat || getActiveChat()))) {
+        showToast('Claude', 'Pega tu API key de Claude para usar este modelo.');
+        openModelMenuForKey(elements.claudeKeyInput);
+        return false;
+      }
       showToast('OpenRouter', 'Pega tu API key de OpenRouter para empezar.');
       openModelMenuForKey();
       return false;
@@ -10346,6 +10450,43 @@
         const target = focusTarget || elements.apiKeyInput;
         if (target) target.focus();
       }, 0);
+    }
+
+    async function saveClaudeKeyFromInput() {
+      const value = String(elements.claudeKeyInput && elements.claudeKeyInput.value || '').trim();
+      saveApiSettings({ anthropicKey: value });
+      appState.claudeKeyCheck = null;
+      applyClaudeModels();
+      if (!value) return;
+      appState.claudeKeyCheck = 'checking';
+      updateConfigUi();
+      const check = await checkClaudeKey(value);
+      if (getApiSettings().anthropicKey !== value) return;
+      appState.claudeKeyCheck = check;
+      updateConfigUi();
+      if (check === 'ok') {
+        const chat = getActiveChat();
+        if (chat && !chat.messages.length) {
+          chat.model = defaultModelId();
+          chat.thinkingLevel = defaultThinkingLevelForModel(chat.model);
+          updateConfigUi();
+        }
+        closeModelMenu();
+        elements.composer.focus();
+      }
+    }
+
+    // GET /v1/models costs nothing: it tells whether Anthropic accepts the key.
+    async function checkClaudeKey(key) {
+      try {
+        const response = await fetch('https://api.anthropic.com/v1/models?limit=1', {
+          headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }
+        });
+        if (response.ok) return 'ok';
+        return response.status === 401 || response.status === 403 ? 'rejected' : 'unknown';
+      } catch (_) {
+        return 'unknown';
+      }
     }
 
     async function saveApiKeyFromInput() {
@@ -10385,8 +10526,20 @@
     }
 
     // pi formatea los errores HTTP como "401: {json}".
+    // Anthropic's errors (Claude with the user's own key) name their type.
+    function describeClaudeError(text) {
+      if (/authentication_error|invalid x-api-key|permission_error/i.test(text)) return 'Anthropic rechaza la API key de Claude. Revísala en el selector de modelo.';
+      if (/credit balance is too low|billing/i.test(text)) return 'No te queda crédito en la API de Claude. Míralo en console.anthropic.com → Billing.';
+      if (/overloaded_error|\b529\b/i.test(text)) return 'Claude está saturado ahora mismo; prueba en un momento.';
+      if (/rate_limit_error/i.test(text)) return 'Has llegado al límite de peticiones de tu API de Claude; espera un momento.';
+      if (/not_found_error/i.test(text)) return 'Este modelo de Claude no está disponible con tu key.';
+      return '';
+    }
+
     function describeAgentError(message) {
       const text = String(message || '');
+      const claude = /"type"\s*:\s*"error"|_error"|x-api-key/.test(text) ? describeClaudeError(text) : '';
+      if (claude) return claude;
       const match = text.match(/^(\d{3}):\s*([\s\S]*)$/);
       if (!match) return text;
       let payload = null;
@@ -11814,10 +11967,21 @@
     // JSON {title, changed}. Kept apart so it can be replaced in tests.
     async function requestChatTitle(chat, current) {
       const apiKey = getApiSettings().apiKey;
-      if (!apiKey) return null;
       const model = resolveRequestModelId(chat);
       const recent = chat.messages.filter((message) => !message.hidden && (message.role === 'user' || message.role === 'assistant') && String(message.content || '').trim())
         .slice(-8).map((message) => (message.role === 'user' ? 'Usuario: ' : 'Asistente: ') + String(message.content).replace(/\s+/g, ' ').slice(0, 500)).join('\n');
+      const titleSystem = 'You name chat conversations. Answer ONLY with JSON: {"title": "...", "changed": true|false}. The title is EXACTLY three words, very descriptive of the main topic right now, in the language of the conversation, no punctuation. ' + (current ? 'The chat is called "' + current + '". Set changed=true and give a new title only if the topic has changed a lot; otherwise changed=false and repeat the current title.' : 'Set changed=true.');
+      // A Claude chat names itself with Claude (its own key), through pi.
+      if (isClaudeModelId(model)) {
+        if (!getApiSettings().anthropicKey || !InhousePi.quickComplete) return null;
+        const answer = await InhousePi.quickComplete(model, titleSystem, recent, { maxTokens: 1500 }).catch(() => null);
+        if (!answer) return null;
+        const found = /\{[\s\S]*\}/.exec(answer.text);
+        let json = null;
+        try { json = found ? JSON.parse(found[0]) : null; } catch (_) {}
+        return { title: json && json.title, changed: !!(json && json.changed), cost: answer.cost, usage: { prompt_tokens: answer.usage.input, completion_tokens: answer.usage.output, cost: answer.cost }, model };
+      }
+      if (!apiKey) return null;
       const response = await fetch(InhousePi.OPENROUTER_BASE_URL + '/chat/completions', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'X-Title': 'inhouse learn' },
@@ -11827,7 +11991,7 @@
           max_tokens: 300,
           usage: { include: true },
           messages: [
-            { role: 'system', content: 'You name chat conversations. Answer ONLY with JSON: {"title": "...", "changed": true|false}. The title is EXACTLY three words, very descriptive of the main topic right now, in the language of the conversation, no punctuation. ' + (current ? 'The chat is called "' + current + '". Set changed=true and give a new title only if the topic has changed a lot; otherwise changed=false and repeat the current title.' : 'Set changed=true.') },
+            { role: 'system', content: titleSystem },
             { role: 'user', content: recent }
           ]
         })
@@ -11967,6 +12131,7 @@
       if (typeof InhousePi.configureSandbox === 'function') InhousePi.configureSandbox({ sandboxPrelude });
       InhousePi.configure({
         getOpenRouterKey: () => getApiSettings().apiKey,
+        getAnthropicKey: () => getApiSettings().anthropicKey,
         openRouterHeaders: {
           'HTTP-Referer': location.origin && location.origin !== 'null' ? location.origin : 'https://github.com/miguelcoxcaballero/inhouselearn',
           'X-Title': 'inhouse learn'
@@ -12015,7 +12180,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.10.25.2';
+    const APP_VERSION = '2026.10.25.3';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');
@@ -12066,7 +12231,7 @@
 
       refreshOpenRouterCredits();
       refreshModelCatalog(false);
-      if (!getApiSettings().apiKey) {
+      if (!hasAnyKey()) {
         openModelMenuForKey();
       }
       window.setTimeout(() => {

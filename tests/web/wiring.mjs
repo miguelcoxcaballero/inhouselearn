@@ -31,13 +31,19 @@ const NEEDED = {
   'src="ultra.js': 'the Ultra code board',
   'createSubAgentReportTool': 'submit_result for the parallel agents',
   'githubTurnText(': 'GitHub state in the per-turn block (not the cached prompt)',
-  'agentGithubStage(': 'a GitHub stage per parallel agent'
+  'agentGithubStage(': 'a GitHub stage per parallel agent',
+  'saveClaudeKeyFromInput(': 'the Claude API key field',
+  'InhousePi.claudeWebSearch': 'web search for Claude chats',
+  'hasKeyFor(': 'a Claude key alone is enough for Claude chats'
 };
 
 test('the engine bundle exports what index.html feature-checks', () => {
   const engine = readFileSync(new URL('../../engine/src/index.js', import.meta.url), 'utf8');
   for (const name of ['createSubAgentReportTool', 'planAgents', 'ownsPath', 'configureSandbox', 'globToRegExp', 'createInteractTools', 'createStudyTools']) {
     assert.ok(new RegExp('export \\{[^}]*\\b' + name + '\\b').test(engine), 'engine/src/index.js does not export ' + name + ' (index.html checks it and silently goes without).');
+  }
+  for (const name of ['claudeApiModels', 'claudeWebSearch', 'quickComplete', 'isClaudeApiModel']) {
+    assert.ok(new RegExp('export (async )?function ' + name + '\\b').test(engine), 'engine/src/index.js does not export ' + name + ' (the Claude API key feature needs it).');
   }
 });
 

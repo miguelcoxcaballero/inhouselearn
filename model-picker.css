@@ -50,7 +50,12 @@
   :root #thinking-section, :root .api-key-section { padding: 10px 16px; gap: 10px; flex-wrap: nowrap; }
   :root .api-key-section { padding-bottom: 14px; }
   :root .model-popover-section-label { font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; }
-  :root .api-key-section .model-popover-section-label { display: none; }
+  /* Just the provider's name, so the two keys can be told apart. */
+  :root .api-key-section .model-popover-section-label .key-long { display: none; }
+  /* The key's state as a dot next to «Claude». */
+  :root .claude-key-state { font-size: 0; margin-left: 3px; }
+  :root .claude-key-state[data-state="ok"]::before, :root .claude-key-state[data-state="error"]::before { content: '●'; font-size: 0.55rem; vertical-align: 2px; }
+  :root .api-key-section .model-popover-section-label { flex: 0 0 74px; overflow: hidden; text-overflow: ellipsis; }
   :root .api-key-row { min-width: 0; }
   :root .plus-menu { width: auto; }
 }
