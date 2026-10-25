@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Propuestas · compositor</title>
+<style>
+  :root {
+    --bg:#0b0b0b; --surface:#141414; --surface-2:#1b1b1b; --border:#2a2a2a; --border-2:#3a3a3a;
+    --text:#f3f1ec; --muted:#8d8a84; --faint:#66635e; --accent:#e8a33d; --accent-ink:#1a1408;
+    --green:#7ddc9b; --shadow:0 18px 40px rgba(0,0,0,.55);
+  }
+  html[data-theme="light"] {
+    --bg:#f7f6f3; --surface:#ffffff; --surface-2:#f2f0eb; --border:#e4e1da; --border-2:#d6d2c9;
+    --text:#1c1b19; --muted:#6f6b64; --faint:#918d85; --accent:#b8790a; --accent-ink:#fffaf0;
+    --green:#15803d; --shadow:0 16px 34px rgba(28,27,25,.10);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;
+    font:15px/1.45 -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; }
+  .stage { max-width:780px; margin:0 auto; padding:22px 18px 34px; }
+  .cap { display:flex; align-items:baseline; gap:9px; margin:0 0 4px; }
+  .cap b { font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; }
+  .cap span { font-size:.78rem; color:var(--muted); }
+  .hint { margin:0 0 14px; font-size:.8rem; color:var(--faint); }
+  .thread { display:flex; flex-direction:column; gap:9px; margin:0 0 16px; opacity:.55; }
+  .bubble { max-width:78%; padding:10px 14px; border-radius:16px; background:var(--surface-2); font-size:.9rem; }
+  .bubble.me { align-self:flex-end; background:var(--surface); border:1px solid var(--border); }
+
+  /* piezas comunes */
+  .ico { width:38px; height:38px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid transparent; border-radius:50%; background:none; color:var(--muted); cursor:pointer; padding:0; }
+  .ico svg { width:19px; height:19px; }
+  .ico.ring { border-color:var(--border); color:var(--text); }
+  .mdl { display:inline-flex; align-items:center; gap:7px; height:34px; padding:0 11px 0 8px; border-radius:17px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text); font:inherit; font-size:.82rem; cursor:pointer; }
+  .logo { width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    background:linear-gradient(140deg,#4c6ef5,#7a4cf5); color:#fff; font-size:9px; font-weight:700; }
+  .lvl { font-size:.66rem; letter-spacing:.03em; padding:2px 6px; border-radius:8px; background:rgba(232,163,61,.16); color:var(--accent); }
+  .car { color:var(--muted); font-size:.62rem; }
+  .cost { font-size:.66rem; letter-spacing:.02em; color:var(--green); font-variant-numeric:tabular-nums; }
+  .cost i { color:var(--faint); font-style:normal; }
+  .send { width:38px; height:38px; flex:0 0 auto; border:0; border-radius:50%; background:var(--accent); color:var(--accent-ink);
+    display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+  .send svg { width:17px; height:17px; }
+  .send.sm { width:32px; height:32px; }
+  .send.sm svg { width:15px; height:15px; }
+  .txt { color:var(--text); font-size:.98rem; line-height:1.42; }
+  .caret { display:inline-block; width:1.5px; height:1em; margin-left:1px; vertical-align:-.12em; background:var(--text);
+    animation:blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  .grow { flex:1 1 auto; min-width:0; }
+
+  /* 1 · Dos pisos */
+  .c1 { border:1px solid var(--border); border-radius:22px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+  .c1 .txt { padding:15px 17px 12px; min-height:74px; }
+  .c1 .bar { display:flex; align-items:center; gap:7px; padding:8px 10px 10px; border-top:1px solid var(--border); }
+
+  /* 2 · Barra única */
+  .c2 { display:flex; align-items:center; gap:8px; padding:8px 9px; border:1px solid var(--border); border-radius:19px;
+    background:var(--surface); box-shadow:var(--shadow); }
+  .c2 .txt { flex:1 1 auto; min-width:0; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 4px; }
+  .c2 .mdl-mini { width:34px; height:34px; border-radius:50%; border:1px solid var(--border); background:var(--surface-2); display:inline-flex;
+    align-items:center; justify-content:center; gap:2px; cursor:pointer; }
+  .c2 .mdl-mini .car { font-size:.55rem; }
+
+  /* 3 · Meta arriba, isla limpia */
+  .c3meta { display:flex; align-items:center; gap:8px; margin:0 0 7px; padding:0 12px; font-size:.72rem; color:var(--muted); }
+  .c3meta b { font-weight:600; color:var(--text); }
+  .c3meta .sep { width:3px; height:3px; border-radius:50%; background:var(--border-2); }
+  .c3 { border:1px solid var(--border); border-radius:20px; background:var(--surface); box-shadow:var(--shadow); }
+  .c3 .txt { padding:14px 16px 8px; min-height:64px; }
+  .c3 .bar { display:flex; align-items:center; gap:6px; padding:4px 9px 9px; }
+
+  /* 4 · Isla mínima + línea de estado */
+  .c4 { border:1px solid var(--border); border-radius:22px; background:var(--surface); box-shadow:var(--shadow); }
+  .c4 .txt { padding:15px 17px 6px; min-height:66px; }
+  .c4 .bar { display:flex; align-items:center; gap:6px; padding:0 10px 10px; }
+  .c4 .estado { display:flex; align-items:center; gap:7px; margin:8px 2px 0; font-size:.7rem; color:var(--faint); }
+  .c4 .estado .dot { width:3px; height:3px; border-radius:50%; background:var(--border-2); }
+  .c4 .estado .cost { color:var(--muted); }
+
+  .frame { margin:0 0 30px; }
+  @media (max-width:560px) { .stage { padding:16px 14px 26px; } .frame { margin-bottom:22px; } }
+  .only { display:none; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 1 · Dos pisos -->
+  <section class="frame only" id="p1">
+    <p class="cap"><b>Propuesta 1</b><span>Dos pisos: escribir arriba, herramientas abajo</span></p>
+    <div class="thread"><div class="bubble">Claro, te lo reorganizo.</div></div>
+    <div class="c1">
+      <div class="txt">quiero que reestructures ahora la parte donde escribo el prompt para que se vea menos sobrecargado y más ordenado<span class="caret"></span></div>
+      <div class="bar">
+        <button class="ico ring" aria-label="Más"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="mdl"><span class="logo">D</span><span>DeepSeek V4.1 Flash</span><span class="lvl">Alto</span><span class="car">▾</span></button>
+        <span class="grow"></span>
+        <span class="cost">$2.<i>63</i>82</span>
+        <button class="ico" aria-label="Voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg></button>
+        <button class="send" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Barra única -->
+  <section class="frame only" id="p2">
+    <p class="cap"><b>Propuesta 2</b><span>Una sola barra: el modelo se queda en su logo</span></p>
+    <div class="thread"><div class="bubble">Claro, te lo reorganizo.</div></div>
+    <div class="c2">
+      <button class="ico" aria-label="Más"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="mdl-mini" aria-label="Modelo"><span class="logo">D</span><span class="car">▾</span></button>
+      <div class="txt">Escribe lo que quieras<span class="caret"></span></div>
+      <span class="cost">$2.<i>63</i>82</span>
+      <button class="send sm" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg></button>
+    </div>
+  </section>
+
+  <!-- 3 · Meta arriba -->
+  <section class="frame only" id="p3">
+    <p class="cap"><b>Propuesta 3</b><span>La información fuera: modelo y gasto en una línea pequeña</span></p>
+    <div class="thread"><div class="bubble">Claro, te lo reorganizo.</div></div>
+    <div class="c3meta"><b>DeepSeek V4.1 Flash</b><span class="sep"></span><span>Alto</span><span class="grow"></span><span class="cost">$2.<i>63</i>82</span></div>
+    <div class="c3">
+      <div class="txt">quiero que reestructures ahora la parte donde escribo el prompt para que se vea menos sobrecargado y más ordenado<span class="caret"></span></div>
+      <div class="bar">
+        <button class="ico ring" aria-label="Más"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <span class="grow"></span>
+        <button class="ico" aria-label="Voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg></button>
+        <button class="send" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Isla mínima -->
+  <section class="frame only" id="p4">
+    <p class="cap"><b>Propuesta 4</b><span>Lo mínimo dentro; el detalle, en una línea de estado debajo</span></p>
+    <div class="thread"><div class="bubble">Claro, te lo reorganizo.</div></div>
+    <div class="c4">
+      <div class="txt">quiero que reestructures ahora la parte donde escribo el prompt para que se vea menos sobrecargado y más ordenado<span class="caret"></span></div>
+      <div class="bar">
+        <button class="ico ring" aria-label="Más"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <span class="grow"></span>
+        <button class="ico" aria-label="Voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V7a3 3 0 0 1 3-3z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg></button>
+        <button class="send" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg></button>
+      </div>
+    </div>
+    <div class="estado"><span>DeepSeek V4.1 Flash · Alto</span><span class="dot"></span><span class="cost">$2.6382</span></div>
+  </section>
+
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const theme = q.get('theme');
+  if (theme) document.documentElement.dataset.theme = theme;
+  const only = q.get('only');
+  const ids = only ? only.split(',') : ['p1', 'p2', 'p3', 'p4'];
+  ids.forEach((id) => { const el = document.getElementById(id); if (el) el.classList.remove('only'); });
+  document.querySelectorAll('.thread').forEach((el) => { if (q.get('flat') === '1') el.remove(); });
+</script>
+</body>
+</html>
