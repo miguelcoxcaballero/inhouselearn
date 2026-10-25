@@ -226,7 +226,9 @@ Mandatory guidance for every AI and developer working in this repository.
   Both keys are kept the same way (this browser + Drive settings) and survive a reload (`tests/web/claude-api.cjs`).
 - **The composer card** (`composer.css`): one floating rounded card (text on top, then + · model pill with its level
   chip · mic · round send, orange in light and ink in dark); the conversation's cost is a small pill on the card's top
-  edge (`.chat-cost`, no inline position). The usage ring left the row: balances live in the popup's «Cuentas».
+  edge (`.chat-cost`, no inline position); tapping it opens the popup on «Cuentas» (`openUsageFromCost`), tapping again
+  closes it. The usage ring left the row: balances live there. «Cuentas» uses the companies' real logos
+  (`icons/companies/claude.svg`, `openrouter.svg`).
   Tests: `tests/web/extra-account.cjs`, `ultra.cjs`.
 - **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
   cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with

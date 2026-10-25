@@ -1758,8 +1758,8 @@
   <link rel="stylesheet" href="guided.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-wait.css?v=20261024-wait1">
-  <link rel="stylesheet" href="model-picker.css?v=20261025-tabs">
-  <link rel="stylesheet" href="composer.css?v=20261025-card">
+  <link rel="stylesheet" href="model-picker.css?v=20261025-logos2">
+  <link rel="stylesheet" href="composer.css?v=20261025-cost">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
@@ -1768,7 +1768,7 @@
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261025-card">
+  <link rel="stylesheet" href="theme.css?v=20261025-logos">
 </head>
 <body>
 
@@ -2027,7 +2027,7 @@
                         <div class="acc-spark-axis"><span id="acc-spark-from"></span><span id="acc-spark-today"></span></div>
                       </div>
                       <div class="acc-provider" id="acc-claude">
-                        <span class="acc-logo acc-logo-claude" aria-hidden="true"></span>
+                        <span class="acc-logo acc-logo-claude" aria-hidden="true"><img src="icons/companies/claude.svg" alt="" decoding="async"></span>
                         <div class="acc-main">
                           <div class="acc-name">Claude · tu API <span class="claude-key-state" id="claude-key-state"></span></div>
                           <div class="acc-bar"><i id="acc-claude-bar"></i></div>
@@ -2043,7 +2043,7 @@
                         <p class="acc-hint">Lo gastado fuera de estos chats (Claude Code, otras apps) se descuenta a partir de aquí.</p>
                       </form>
                       <div class="acc-provider" id="acc-openrouter">
-                        <span class="acc-logo acc-logo-openrouter" aria-hidden="true"></span>
+                        <span class="acc-logo acc-logo-openrouter" aria-hidden="true"><img src="icons/companies/openrouter.svg" alt="" decoding="async"></span>
                         <div class="acc-main">
                           <div class="acc-name">OpenRouter</div>
                           <div class="acc-bar"><i id="acc-openrouter-bar"></i></div>
@@ -2086,7 +2086,7 @@
                 </div>
               <span class="composer-spacer"></span>
               <span class="send-wrap">
-              <span class="chat-cost hidden" id="chat-cost" title="Coste total de esta conversación"></span>
+              <span class="chat-cost hidden" id="chat-cost" role="button" tabindex="0" aria-haspopup="dialog" title="Coste total de esta conversación · ver el uso"></span>
               <button class="send-btn" id="send-btn" aria-label="Enviar">
                 <span class="send-label" id="send-label">Enviar</span>
                 <svg id="send-icon" viewBox="0 0 24 24" width="16" height="16" fill="none">
@@ -10815,7 +10815,27 @@
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
+    // The conversation's cost on the composer opens the usage: «Cuentas».
+    function openUsageFromCost() {
+      const popup = elements.modelMenuPopup;
+      if (!popup) return;
+      const open = !popup.classList.contains('hidden');
+      if (open && appState.modelPopoverTab === 'accounts') { closeModelMenu(); return; }
+      if (!open) toggleModelMenu();
+      setModelPopoverTab('accounts');
+    }
+
     function bindAccounts() {
+      const cost = document.getElementById('chat-cost');
+      if (cost) {
+        // Not swallowed by the outside-click check that closes the popup.
+        cost.addEventListener('click', (event) => { event.stopPropagation(); openUsageFromCost(); });
+        cost.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          openUsageFromCost();
+        });
+      }
       document.querySelectorAll('.mp-tab').forEach((button) => button.addEventListener('click', () => setModelPopoverTab(button.dataset.mpTab)));
       const toggle = document.getElementById('acc-keys-toggle');
       if (toggle) toggle.addEventListener('click', () => setAccountKeysOpen(document.getElementById('acc-keys').hidden));
@@ -12578,7 +12598,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.10.25.6';
+    const APP_VERSION = '2026.10.25.7';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

@@ -482,3 +482,5 @@ html[data-theme="dark"] .acc-key-state[data-state="ok"] { color: #4ade80; }
 html[data-theme="dark"] .acc-key-state[data-state="error"] { color: #f87171; }
 html[data-theme="dark"] .filter-company .company-chip.active { background: rgba(224, 122, 60, 0.18); color: #fb923c; }
 html[data-theme="dark"] .model-popover-status.error { background: rgba(248, 113, 113, 0.1); color: #f87171; }
+html[data-theme="dark"] .acc-logo-claude { background: rgba(217, 119, 87, 0.16); }
+html[data-theme="dark"] .acc-logo-openrouter { background: rgba(255, 255, 255, 0.08); }

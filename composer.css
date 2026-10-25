@@ -70,3 +70,7 @@
 
 /* Usage and balance live in the model popup's «Cuentas» tab now. */
 :root .usage-btn { display: none; }
+
+/* The cost pill opens «Cuentas» (the usage). */
+:root .chat-cost { pointer-events: auto; cursor: pointer; transition: border-color 0.15s var(--ease), transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
+:root .chat-cost:hover, :root .chat-cost:focus-visible { border-color: rgba(22, 163, 74, 0.55); outline: none; }

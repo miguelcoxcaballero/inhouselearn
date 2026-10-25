@@ -231,6 +231,18 @@ function toolReply(name, input) {
   const popup = await page.evaluate(() => { closeModelMenu(); toggleUsagePopup(); return document.getElementById('usage-popup-content').textContent; });
   check('the usage popup shows Claude\'s credit first', /Claude · tu API\$80/.test(popup.replace(/\s+/g, '')) || /Claude · tu API/.test(popup) && /\$80/.test(popup), popup.slice(0, 200));
 
+  // 10b. Tapping the conversation's cost on the composer opens the usage («Cuentas»); tapping again closes it.
+  const fromCost = await page.evaluate(async () => {
+    closeModelMenu();
+    document.getElementById('chat-cost').click();
+    await new Promise((r) => setTimeout(r, 100));
+    const opened = { open: !elements.modelMenuPopup.classList.contains('hidden'), tab: appState.modelPopoverTab, pane: !document.getElementById('mp-pane-accounts').classList.contains('hidden'), cursor: getComputedStyle(document.getElementById('chat-cost')).cursor };
+    document.getElementById('chat-cost').click();
+    await new Promise((r) => setTimeout(r, 100));
+    return Object.assign(opened, { closed: elements.modelMenuPopup.classList.contains('hidden') });
+  });
+  check('tapping the cost over the composer opens «Cuentas» (the usage) and tapping again closes it', fromCost.open && fromCost.tab === 'accounts' && fromCost.pane && fromCost.cursor === 'pointer' && fromCost.closed, fromCost);
+
   // 11. The Claude key is kept like OpenRouter's: a reload still has both, and the Claude models.
   await page.evaluate(() => { saveApiSettings({ apiKey: 'sk-or-test', anthropicKey: 'sk-ant-api03-guardada' }); applyClaudeModels(); saveState({ skipDrive: true }); sessionStorage.setItem('__settings', localStorage.getItem(STORAGE_KEY + '::openrouterSettings')); });
   // The shared mock writes a fresh OpenRouter-only copy on every load; put back what this browser had saved.

@@ -104,9 +104,12 @@
 :root .acc-spark-axis { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 :root .acc-provider { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
 :root .acc-provider + .acc-provider, :root .claude-balance-form + .acc-provider { padding-top: 4px; }
-:root .acc-logo { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%; }
-:root .acc-logo-claude { background: no-repeat center/18px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg stroke='%23d97757' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4'/%3E%3C/g%3E%3C/svg%3E"); }
-:root .acc-logo-openrouter { background: #6467f2; transform: scale(0.85); }
+:root .acc-logo { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 8px; display: grid; place-items: center; }
+:root .acc-logo img { width: 18px; height: 18px; display: block; }
+/* The companies' own logos (icons/companies, as in the model list): Claude's
+   orange mark on a warm tile, OpenRouter's lime mark on its dark tile. */
+:root .acc-logo-claude { background: rgba(217, 119, 87, 0.12); }
+:root .acc-logo-openrouter { background: #111; }
 :root .acc-main { flex: 1; min-width: 0; }
 :root .acc-name { font-size: 0.86rem; font-weight: 600; display: flex; align-items: baseline; gap: 6px; }
 :root .acc-name .claude-key-state { font-size: 0.68rem; }
@@ -157,3 +160,6 @@
   :root .acc-keys .api-key-section, :root .acc-keys .claude-key-section { padding: 0; }
   :root .acc-keys .api-key-row { width: 100%; }
 }
+/* The old balance line drew its own bar under the text; the row has its bar now. */
+:root .claude-balance-text { padding-bottom: 0; position: static; }
+:root .claude-balance-text::before, :root .claude-balance-text::after { content: none; }
