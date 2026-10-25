@@ -84,12 +84,18 @@
     const date = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
     if (!days.length) {
       return '<div class="study-hero"><span class="study-kicker">' + esc(date) + '</span><h2>Organiza lo que estudias</h2>' +
-        '<p>Crea una asignatura con la fecha del examen, tus horas y sus temas: la app reparte el estudio y los repasos hasta ese día, y los chats de esa asignatura saben por dónde vas. También puedes decírselo a cualquier chat: «tengo examen de Análisis el 15 de diciembre».</p>' +
-        '<button type="button" class="study-btn primary" data-study="new-space">' + ICON.plus + 'Nueva asignatura</button></div>';
+        '<p>Dile a la app qué examen tienes y cuánto tiempo hay: ella reparte el estudio y los repasos hasta ese día. También vale decírselo a un chat: «tengo examen de Análisis el 15 de diciembre».</p>' +
+        '<button type="button" class="study-btn primary" data-study="new-space">' + ICON.plus + 'Nueva asignatura</button></div>' +
+        '<ol class="study-how">' +
+        '<li><span>1</span><div><b>Una asignatura, una fecha</b><small>Sus temas y cuánto pesa cada uno en el examen.</small></div></li>' +
+        '<li><span>2</span><div><b>Un plan que se rehace solo</b><small>Sesiones intercaladas y repasos a 1, 3, 7 y 14 días, dentro de tus horas.</small></div></li>' +
+        '<li><span>3</span><div><b>Chats que saben por dónde vas</b><small>Cada respuesta tuya cuenta; tus errores más caros salen primero.</small></div></li></ol>';
     }
+    const doneCount = all.length - pending.length;
     const costly = study.costlyMistakes('', 3);
     const head = '<div class="study-hero compact"><span class="study-kicker">' + esc(date) + '</span><h2>' +
       (pending.length ? pending.length + (pending.length === 1 ? ' cosa' : ' cosas') + ' para hoy · ' + minutes + ' min' : all.length ? 'Hoy ya está hecho' : 'Hoy no toca nada') + '</h2>' +
+      (all.length ? '<div class="study-progress" role="progressbar" aria-valuemin="0" aria-valuemax="' + all.length + '" aria-valuenow="' + doneCount + '" aria-label="Hecho hoy"><span style="width:' + Math.round(doneCount / all.length * 100) + '%"></span></div><p class="study-progress-text">' + doneCount + ' de ' + all.length + ' hecha' + (all.length === 1 ? '' : 's') + '</p>' : '') +
       (pending.length ? '<button type="button" class="study-btn primary" data-study="start" data-space="' + esc(pending[0].space.id) + '" data-topic="' + esc(pending[0].topicId) + '" data-kind="' + esc(pending[0].kind) + '">' + ICON.play + 'Empezar por ' + esc(KIND_LABEL[pending[0].kind].toLowerCase() + ' ' + pending[0].topic) + '</button>' : '') + '</div>';
     const cards = days.map((d) => {
       const sp = d.space;
@@ -98,13 +104,14 @@
         '<span class="study-today-text"><b>' + esc(KIND_LABEL[item.kind]) + '</b> ' + esc(item.topic) + '<small>' + item.minutes + ' min</small></span>' +
         (item.done ? '' : '<button type="button" class="study-btn small" data-study="start" data-space="' + esc(sp.id) + '" data-topic="' + esc(item.topicId) + '" data-kind="' + esc(item.kind) + '">Empezar</button>') + '</li>').join('') + '</ul>'
         : '<p class="study-muted">Hoy no toca nada de esta asignatura.</p>';
-      const weak = d.gaps.filter((g) => g.band !== 'sólido').slice(0, 3);
+      const todayTopics = new Set(d.items.map((item) => item.topicId));
+      const weak = d.gaps.filter((g) => g.band !== 'sólido' && !todayTopics.has(g.topic.id)).slice(0, 3);
       return '<article class="study-card" style="--sp:' + esc(sp.color) + '"><header class="study-card-head"><span class="study-dot"></span><b>' + esc(sp.name) + '</b>' +
         (d.left !== null ? '<span class="study-pill' + (d.left <= 7 ? ' soon' : '') + '">Examen ' + esc(left(d.left)) + '</span>' : '') + '</header>' + items +
-        (weak.length ? '<p class="study-muted">Lo que más rinde ahora: ' + weak.map((g) => esc(g.topic.name) + ' <span class="study-band ' + BAND_CLASS[g.band] + '">' + esc(g.band) + '</span>').join(' · ') + '</p>' : '') + '</article>';
+        (weak.length ? '<p class="study-muted">Después, lo que más rinde: ' + weak.map((g) => '<span class="study-chip">' + esc(g.topic.name) + ' <span class="study-band ' + BAND_CLASS[g.band] + '">' + esc(g.band) + '</span></span>').join(' · ') + '</p>' : '') + '</article>';
     }).join('');
     const warm = costly.length ? '<article class="study-card warm"><header class="study-card-head"><b>Tus errores más caros</b></header><ul class="study-errors">' +
-      costly.map((m) => '<li><b>' + esc(m.topic || 'Sin tema') + '</b>' + (m.cause ? ' · ' + esc(m.cause) : '') + ' <small>×' + m.count + '</small></li>').join('') + '</ul>' +
+      costly.map((m) => '<li><span class="study-err-text"><b>' + esc(m.topic || 'Sin tema') + '</b>' + (m.cause ? ' · ' + esc(m.cause) : '') + '</span><span class="study-count" title="Veces">×' + m.count + '</span></li>').join('') + '</ul>' +
       '<button type="button" class="study-btn small" data-study="warmup">' + ICON.play + 'Calentamiento de 3 min</button></article>' : '';
     return head + cards + warm;
   }
@@ -113,7 +120,7 @@
     const gaps = S().gaps(sp);
     if (!gaps.length) return '<p class="study-muted">Sin temas todavía: edítala y añádelos.</p>';
     return '<ol class="study-topics">' + gaps.map((g) => '<li><span class="study-topic-name">' + esc(g.topic.name) + '</span>' +
-      '<span class="study-bar" title="Dominio ' + Math.round(g.mastery * 100) + ' %"><span style="width:' + Math.round(g.mastery * 100) + '%"></span></span>' +
+      '<span class="study-bar' + (g.topic.seenAt ? '' : ' untouched') + '" title="Dominio ' + Math.round(g.mastery * 100) + ' %"><span style="width:' + Math.round(g.mastery * 100) + '%"></span></span>' +
       '<span class="study-band ' + BAND_CLASS[g.band] + '">' + esc(g.band) + '</span><small class="study-weight">peso ' + g.topic.weight + '</small></li>').join('') + '</ol>';
   }
 
@@ -121,7 +128,7 @@
     const p = S().plan(sp);
     const days = p.days.slice(0, 10);
     if (!days.length) return '';
-    return '<div class="study-strip" role="list" aria-label="Próximos días">' + days.map((day, index) => '<div class="study-day' + (index === 0 ? ' today' : '') + (day.exam ? ' exam' : '') + '" role="listitem">' +
+    return '<h4 class="study-label">Próximos días</h4><div class="study-strip" role="list" aria-label="Próximos días">' + days.map((day, index) => '<div class="study-day' + (index === 0 ? ' today' : '') + (day.exam ? ' exam' : '') + '" role="listitem">' +
       '<span class="study-day-date">' + esc(index === 0 ? 'Hoy' : fmtDate(day.date, { weekday: 'short', day: 'numeric' })) + '</span>' +
       (day.exam ? '<span class="study-day-item exam">Examen</span>' : day.items.length ? day.items.map((item) => '<span class="study-day-item ' + item.kind + (item.done ? ' done' : '') + '" title="' + esc(KIND_LABEL[item.kind] + ' ' + item.topic) + '">' + (item.kind === 'repaso' ? '<i aria-hidden="true">↻</i>' : '') + esc(item.kind === 'simulacro' ? 'Simulacro' : item.topic) + '</span>').join('') : '<span class="study-day-free">libre</span>') + '</div>').join('') + '</div>';
   }
@@ -179,7 +186,7 @@
     const recent = study.mistakes('').slice(0, 30);
     if (!recent.length) return '<div class="study-hero"><h2>Sin errores apuntados</h2><p>Cuando practiques en un chat de una asignatura, cada fallo se apunta con su causa. Aquí verás los que más te cuestan, para atacarlos primero.</p></div>';
     return '<article class="study-card warm"><header class="study-card-head"><b>Los que más te cuestan</b></header><ol class="study-errors">' +
-      costly.map((m) => { const sp = study.space(m.spaceId); return '<li><b>' + esc(m.topic || 'Sin tema') + '</b>' + (m.type ? ' · ' + esc(m.type) : '') + (m.cause ? ' · ' + esc(m.cause) : '') + ' <small>×' + m.count + (sp ? ' · ' + esc(sp.name) : '') + '</small></li>'; }).join('') +
+      costly.map((m) => { const sp = study.space(m.spaceId); return '<li><span class="study-err-text"><b>' + esc(m.topic || 'Sin tema') + '</b>' + (m.type ? ' · ' + esc(m.type) : '') + (m.cause ? ' · ' + esc(m.cause) : '') + (sp ? '<small>' + esc(sp.name) + '</small>' : '') + '</span><span class="study-count" title="Veces">×' + m.count + '</span></li>'; }).join('') +
       '</ol><button type="button" class="study-btn small" data-study="warmup">' + ICON.play + 'Calentamiento de 3 min</button></article>' +
       '<section class="study-mem-group"><h3>Últimos</h3><ul class="study-mem">' + recent.map((m) => '<li><span class="study-mem-text">' + esc(m.topic || '') + (m.cause ? ': ' + esc(m.cause) : '') + '<small>' + esc(fmtDate(String(m.at).slice(0, 10), { day: 'numeric', month: 'short' })) + '</small></span></li>').join('') + '</ul></section>';
   }

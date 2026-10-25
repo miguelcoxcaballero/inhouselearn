@@ -420,7 +420,7 @@
     return spaces().map((sp) => {
       const p = plan(sp, { now });
       const day = p.days.find((d) => d.date === key) || { items: [], minutes: 0 };
-      return { space: sp, left: p.left, items: day.items, minutes: day.minutes, gaps: gaps(sp, now).slice(0, 3) };
+      return { space: sp, left: p.left, items: day.items, minutes: day.minutes, gaps: gaps(sp, now).slice(0, 6) };
     });
   }
 
