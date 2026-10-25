@@ -235,7 +235,10 @@ Mandatory guidance for every AI and developer working in this repository.
   device's only (`localStorage` `inhouse-learn-unread-chats`) and clear when the chat is seen. Long
   press / right click / «⋯» opens Fijar · Renombrar · (Marcar como leído) · Eliminar; the magnifier
   filters by title; «Nuevo chat» (`#new-chat-btn`) sits bottom right. `touchChat` never changes the
-  open chat. Test: `tests/web/chats-menu.cjs`.
+  open chat. Small, right under the Google account: the version that is running (`APP_VERSION` +
+   `renderAppVersion`, `.sidebar-version`) and, inside the Android app, the APK's own version read from
+   `InhouseLearnApp/<version>` in the User-Agent. **Every push to `main` raises `APP_VERSION`** (the day's
+   date and that day's change number, e.g. `2026.10.25.1` → `2026.10.25.2`). Test: `tests/web/chats-menu.cjs`.
 - **The composer is per chat:** attachments waiting to be sent (`appState.composerAttachments` is an
   accessor for the open chat's `composerDrafts`) and the linked Google account belong to their chat;
   another chat never shows them, and they survive reloads (attachments in IndexedDB
@@ -294,11 +297,7 @@ Mandatory guidance for every AI and developer working in this repository.
   panel shows the share). run_js has math.js and Algebrite (`sandboxPrelude`, Cache API
   `inhouse-sandbox-libs-v1`, evaluated before the sandbox's network is removed) plus `nsolve`, `integrate`,
   `table`; without them it still works. Tests: `prompt-cache.cjs`, `context-aging.mjs`, `coach.mjs`,
-  `harness.cjs`, `sandbox-net.cjs`. `tests/web/wiring.mjs` fails if a merge drops this wiring or the engine stops
-  exporting what the page feature-checks. Trade-off: earlier user messages are resent without the context block
-  they had, so the cached prefix covers the system prompt and tools, not the history. GitHub's repository and
-  staged changes are per-turn (`githubTurnText`). Both sandboxes block the network on every prototype of the
-  worker's global scope; run_js waits ≤ 4 s for the maths libraries and honours Stop meanwhile.
+  `harness.cjs`. `tests/web/wiring.mjs` fails if a merge drops this wiring.
 - **The model's working tools** (`engine/src/tools.js`, `interact.js`): `read_file` returns numbered lines
   (`  12→text`) by ranges (`offset`/`limit`, ≤ 2000 lines or 20 000 characters, and says the next offset);
   `search_files` greps the chat files (plain text or regex, glob `path`, context lines); `write_file` refuses
