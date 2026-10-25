@@ -1244,7 +1244,16 @@
       background: rgba(0,0,0,0.04); border-radius: var(--r-xs); padding: 3px 6px;
       outline: none; color: var(--text);
     }
-    .chat-rename-input:focus { background: rgba(0,0,0,0.06); }
+    /* Escribir el nombre es escribir sobre el propio nombre: nada de caja ni de
+        selección. El campo solo recoge las teclas (invisible) y el cursor
+        parpadeante es el de la animación de máquina de escribir (.title-typing). */
+     .chat-rename-input {
+       position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+       border: 0; outline: none; background: transparent; font: inherit;
+       color: transparent; caret-color: transparent; opacity: 0.01; cursor: text;
+     }
+     .chat-rename-input::selection { background: transparent; color: transparent; }
+     .chat-item .t.renaming, .top-title b.renaming { position: relative; }
     .sidebar-section-label {
       font-size: 0.74rem; font-weight: 500; color: var(--muted); padding: 8px 6px 3px; flex-shrink: 0;
     }
@@ -1509,8 +1518,9 @@
      .top-title b.editable { cursor: text; }
      .top-title b.editable:hover { text-decoration: underline dotted currentColor; text-underline-offset: 3px; }
      .top-title b.editable:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 4px; }
+     .top-title b.renaming { width: 100%; text-decoration: none; }
      .top-title .chat-rename-input {
-       width: 100%; font: inherit; letter-spacing: inherit; text-align: center; color: var(--text);
+       width: 100%; min-width: 9ch; font: inherit; letter-spacing: inherit; text-align: center; color: var(--text);
        background: transparent; border: 0; border-bottom: 1.5px solid var(--orange); border-radius: 0;
        outline: none; padding: 0; text-decoration: none;
      }
@@ -8423,8 +8433,9 @@
         const el = document.querySelector('[data-title-chat-id="' + CSS.escape(state.chatId) + '"]');
         if (el) {
           state.restoring = true;
-          el.classList.add('renaming');
+          el.classList.add('renaming', 'title-typing');
           el.textContent = '';
+          el.appendChild(state.text);
           el.appendChild(state.input);
           state.el = el;
           state.restoring = false;
@@ -9044,24 +9055,35 @@
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'chat-rename-input';
-      input.maxLength = 60;
-      input.value = chat.customTitle || chat.title || '';
+      input.value = (chat.customTitle || chat.title || '').slice(0, 60);
       input.spellcheck = false;
       input.autocomplete = 'off';
       input.setAttribute('aria-label', 'Nombre del chat');
+      // El nombre nuevo se ve donde siempre, en el propio nombre, y lo único
+      // que aparece es el cursor parpadeando de la animación: el campo que
+      // recoge las teclas es invisible.
+      const text = document.createTextNode(input.value);
+      const el = anchor.el;
+      el.classList.add('renaming', 'title-typing');
+      el.textContent = '';
+      el.appendChild(text);
+      el.appendChild(input);
+      input.addEventListener('input', () => { text.nodeValue = input.value; });
       input.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') { event.preventDefault(); finishRename(true); }
         else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finishRename(false); }
       });
-      input.addEventListener('blur', () => { if (renaming && !renaming.restoring) finishRename(true); });
-      // Tocar el editor no es tocar la fila del chat.
+      // Un blur de milisegundos al abrir (el foco que vuelve del toque) no
+      // puede cerrar el editor recién abierto.
+      let ready = false;
+      setTimeout(() => { ready = true; }, 180);
+      input.addEventListener('blur', () => { if (ready && renaming && !renaming.restoring) finishRename(true); });
+      // Tocar el nombre no es tocar la fila del chat.
       ['click', 'dblclick', 'pointerdown'].forEach((type) => input.addEventListener(type, (event) => event.stopPropagation()));
-      anchor.el.classList.add('renaming');
-      anchor.el.textContent = '';
-      anchor.el.appendChild(input);
-      renaming = { chatId: chat.id, input, el: anchor.el, top: anchor.top, restoring: false };
-      input.focus();
-      input.select();
+      renaming = { chatId: chat.id, input, text, el, top: anchor.top, restoring: false, start: chat.title || '' };
+      input.focus({ preventScroll: true });
+      const end = input.value.length;
+      input.setSelectionRange(end, end);
     }
 
     function finishRename(save) {
@@ -9072,7 +9094,7 @@
       const before = chat ? (chat.title || '') : '';
       const value = state.input.value;
       if (state.input.parentNode) state.input.parentNode.removeChild(state.input);
-      state.el.classList.remove('renaming');
+      state.el.classList.remove('renaming', 'title-typing');
       if (save && chat && applyChatRename(chat, value)) return; // la animación pone el nombre
       if (state.top) updateTopTitle(chat);
       else state.el.textContent = before;
