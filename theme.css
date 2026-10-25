@@ -409,3 +409,20 @@ html[data-theme="dark"] .chat-menu button.danger svg { color: #ff8a7a; }
 
 /* Plan del modelo: el verde de «hecho» en oscuro */
 html[data-theme="dark"] .plan-list li.done .plan-mark { background: #22c55e; border-color: #22c55e; }
+
+/* Estudio (study.css): estados de los temas, avisos naranjas y botones «tinta» */
+html[data-theme="dark"] .study-band.none { background: rgba(255,255,255,0.08); }
+html[data-theme="dark"] .study-band.weak { background: rgba(248,113,113,0.14); color: #fca5a5; }
+html[data-theme="dark"] .study-band.mid { background: rgba(251,191,36,0.13); color: #fcd34d; }
+html[data-theme="dark"] .study-band.strong { background: rgba(74,222,128,0.13); color: #86efac; }
+html[data-theme="dark"] .study-pill.soon,
+html[data-theme="dark"] .study-open-btn .study-open-icon,
+html[data-theme="dark"] .study-open-btn.has-today small { color: #eda978; }
+html[data-theme="dark"] .study-day-item.simulacro,
+html[data-theme="dark"] .study-day-item.exam { border-left-color: #eda978; }
+html[data-theme="dark"] .study-btn.danger { color: #fca5a5; border-color: rgba(248,113,113,0.35); }
+@media (hover: hover) {
+  html[data-theme="dark"] .study-back:hover,
+  html[data-theme="dark"] .study-edit:hover,
+  html[data-theme="dark"] .study-icon:hover { background: rgba(255,255,255,0.06); }
+}

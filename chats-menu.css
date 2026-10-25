@@ -28,7 +28,7 @@
 
 /* «Nuevo chat», abajo a la derecha, al alcance del pulgar. */
 .sidebar { position: fixed; }
-.sidebar-new-chat { position: absolute; right: 18px; bottom: 92px; z-index: 5; padding: 0; }
+.sidebar-new-chat { position: absolute; right: 18px; bottom: 156px; z-index: 5; padding: 0; }
 .sidebar-new-chat #new-chat-btn {
   width: auto; height: 44px; padding: 0 18px 0 15px; border-radius: 22px; gap: 8px;
   border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
@@ -52,7 +52,7 @@
 .ix-empty { padding: 24px 12px; color: var(--muted); font-size: .9rem; }
 
 .chat-item.ix {
-  position: relative; display: flex; flex-direction: row; align-items: baseline; gap: 8px;
+  position: relative; display: flex; flex: none; flex-direction: row; align-items: baseline; gap: 8px;
   width: 100%; padding: 9px 12px; border-radius: 22px; background: transparent; border: 0;
   color: var(--text); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;

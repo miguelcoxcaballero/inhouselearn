@@ -266,6 +266,25 @@ Mandatory guidance for every AI and developer working in this repository.
   date and time (`currentMomentText`). `web_fetch` asks Jina to drop menus, language lists and pictures
   (`WEB_FETCH_NOISE`), and the prompt forbids putting the user's data in URLs. `spawn_agents` takes a
   shared `context`. Test: `tests/web/harness.cjs`.
+- **Estudio** (`study.js` = `InhouseStudy`, `study-view.js` + `study.css`, tools in `engine/src/study.js`): a
+  second interface for studying and planning, opened by the «Estudio» button right above the Google account
+  in the chats menu; it covers the chat as a full screen and «Chats» goes back (the chats UI is unchanged).
+  Tabs: Hoy (today's sessions in every subject, «Hecho», «Empezar» → `startStudyChat`: a new chat of that
+  subject with the task sent), Asignaturas (exam date, hours a week, weighted topics with their state
+  sin tocar / frágil / en camino / sólido, the next 10 days, Simulacro), Sobre ti («Lo que sé de ti»: the
+  memory, forgettable) and Errores (most expensive first: count × recency × topic weight). The app owns the
+  state: the model only reports (`study_result`: correct or not, cause if wrong) and the app computes mastery
+  (exponential average, fading with `exp(-days/21)`); the plan is recomputed from the state every time
+  (interleaved study sessions by gap priority, reviews 1/3/7/14/30 days later, ~20 min a day kept for reviews,
+  free days get a short review, a mock exam the day before), except today's list, frozen once a day
+  (`state.frozen`) so «Hecho» never reshuffles it. Model tools (main agent, not Guided Learning):
+  `memory_save`/`memory_forget` (ask in «Preguntar»), `study_space` (create/update a subject, links the chat),
+  `study_overview`, `study_result`, `recall` (BM25 over every message of every other chat, cited with
+  `?c=ID`). Every prompt carries `InhouseStudy.brief(chatId)` (memory, and in a subject's chat: days left,
+  topic states, today's items, rules, costliest mistakes). Stored in `localStorage` `inhouse-learn-study` and
+  `study.json` in the Drive folder (same adapter as the library), merged item by item (newer wins, `deleted`
+  tombstones); pulled before each turn and when Estudio opens. Dark mode colours in `theme.css`.
+  Test: `tests/web/study.cjs`.
 - **Logos in the dark theme:** single-colour company logos (`MONO_LOGOS`, drawn with `currentColor`,
   black inside an `<img>`) are inverted to white by `theme.css`. Add new ones there.
 - **Code blocks:** every `pre > code` in an answer gets a «Copiar» button in its top right corner
