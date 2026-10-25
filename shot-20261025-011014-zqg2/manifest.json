@@ -1,0 +1,21 @@
+{
+  "id": "shot-20261025-011014-zqg2",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-25T01:11:04.606Z",
+  "shots": [
+    {
+      "name": "escribiendo el nombre",
+      "file": null,
+      "device": "phone",
+      "theme": "light",
+      "error": "page.fill: Timeout 8000ms exceeded."
+    },
+    {
+      "name": "menu mas renombrar",
+      "file": "2-menu-mas-renombrar.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
