@@ -210,8 +210,8 @@ Mandatory guidance for every AI and developer working in this repository.
   monthly credit (`claudeCredit`, 100) − the cost of Claude answers (older versions included) in every chat since the
   last renewal (`claudePeriod`: `claudeNextRenew` from the console, first period from `claudeKeySince`) − spending
   elsewhere (`claudeOffset`: deleted chats via `keepClaudeSpendOf`, «Saldo real ahora» via `setClaudeRealBalance`).
-  Shown under the key with a thin bar and «Ajustar» (credit, next renewal, real balance), in the usage ring of a Claude
-  chat and first in the usage popup; synced with the other settings. Test: `tests/web/claude-api.cjs`.
+  Shown in the model popup's «Cuentas» tab (below) with a bar and «Ajustar» (credit, next renewal, real balance) and
+  on that tab's badge; synced with the other settings. Test: `tests/web/claude-api.cjs`.
 - **Model popup «Modelo · Cuentas»** (`#model-menu-popup`, styles at the end of `model-picker.css`, dark in `theme.css`):
   two tabs (`setModelPopoverTab`). **Modelo**: a notice only when a key is missing or the list failed
   (`#model-menu-status`, «Ir a Cuentas»), search + «Filtros» (with its count) folding capabilities, minimum
