@@ -1,0 +1,32 @@
+{
+  "id": "shot-20261025-175050-pn77",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/compositor-capsula",
+  "at": "2026-10-25T17:53:00.969Z",
+  "shots": [
+    {
+      "name": "movil oscuro escribiendo",
+      "file": "1-movil-oscuro-escribiendo.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "escritorio claro escribiendo",
+      "file": "2-escritorio-claro-escribiendo.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "movil claro vacio",
+      "file": "3-movil-claro-vacio.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "escritorio oscuro vacio",
+      "file": "4-escritorio-oscuro-vacio.png",
+      "device": "desktop",
+      "theme": "dark"
+    }
+  ]
+}
