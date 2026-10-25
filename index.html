@@ -1509,8 +1509,9 @@
      .top-title b.editable { cursor: text; }
      .top-title b.editable:hover { text-decoration: underline dotted currentColor; text-underline-offset: 3px; }
      .top-title b.editable:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 4px; }
+     .top-title b.renaming { width: 100%; text-decoration: none; }
      .top-title .chat-rename-input {
-       width: 100%; font: inherit; letter-spacing: inherit; text-align: center; color: var(--text);
+       width: 100%; min-width: 9ch; font: inherit; letter-spacing: inherit; text-align: center; color: var(--text);
        background: transparent; border: 0; border-bottom: 1.5px solid var(--orange); border-radius: 0;
        outline: none; padding: 0; text-decoration: none;
      }
@@ -9022,7 +9023,11 @@
         if (event.key === 'Enter') { event.preventDefault(); finishRename(true); }
         else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finishRename(false); }
       });
-      input.addEventListener('blur', () => { if (renaming && !renaming.restoring) finishRename(true); });
+      // Un blur de milisegundos al abrir (el foco que vuelve del toque) no
+      // puede cerrar el editor recién abierto.
+      let ready = false;
+      setTimeout(() => { ready = true; }, 180);
+      input.addEventListener('blur', () => { if (ready && renaming && !renaming.restoring) finishRename(true); });
       // Tocar el editor no es tocar la fila del chat.
       ['click', 'dblclick', 'pointerdown'].forEach((type) => input.addEventListener(type, (event) => event.stopPropagation()));
       anchor.el.classList.add('renaming');
