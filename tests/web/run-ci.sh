@@ -10,7 +10,7 @@ trap 'kill $SERVER 2>/dev/null' EXIT
 for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html && break; sleep 0.2; done
 export OUT="${RUNNER_TEMP:-/tmp}"
 status=0
-node --test tests/web/text-quality.mjs tests/web/learning.mjs || { echo "::error::unit tests failed"; status=1; }
+node --test tests/web/wiring.mjs tests/web/text-quality.mjs tests/web/learning.mjs || { echo "::error::unit tests failed"; status=1; }
 for test in latex practice text-quality motion guided-learning guided-screens guided-wait theme photos visuals visual-controls library github github-stage release gdrive drive-templates extra-account websearch chat-url state-reload chat-title cut-retry android-working android-pkce steer-now cost-history harness study ultra documents chats-menu chat-composer reasoning queue live-sync sync-recovery live-stream; do
   echo "::group::$test"
   log="$OUT/web-$test.log"
