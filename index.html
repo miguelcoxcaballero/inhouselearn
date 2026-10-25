@@ -1750,7 +1750,7 @@
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261026-restore">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="ultra.css?v=20261026-ultra">
+  <link rel="stylesheet" href="ultra.css?v=20261026-ultra2">
   <link rel="stylesheet" href="theme.css?v=20261026-ultra">
 </head>
 <body>
@@ -2067,7 +2067,7 @@
   <script src="documents.js?v=20261026-restore"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261026-ultra"></script>
+  <script src="vendor/pi-engine.js?v=20261026-ultra2"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2082,8 +2082,8 @@
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261026-ultra"></script>
-  <script src="composer-dock.js?v=20261026-ultra"></script>
-  <script src="ultra.js?v=20261026-ultra"></script>
+  <script src="composer-dock.js?v=20261026-ultra2"></script>
+  <script src="ultra.js?v=20261026-ultra2"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -6945,7 +6945,8 @@
 
     // The course tools (plan, quiz, exam) show up as cards, not as steps.
     function visibleToolSteps(message) {
-      return (Array.isArray(message.toolSteps) ? message.toolSteps : []).filter((step) => !GUIDED_TOOL_NAMES.has(step.name) && step.name !== 'update_plan');
+      // update_plan has its card and spawn_agents its board (ultra.js): not again as rows.
+      return (Array.isArray(message.toolSteps) ? message.toolSteps : []).filter((step) => !GUIDED_TOOL_NAMES.has(step.name) && step.name !== 'update_plan' && !(window.UltraAgents && step.name === 'spawn_agents'));
     }
 
     // The model's checklist (update_plan): its latest version, above the steps.

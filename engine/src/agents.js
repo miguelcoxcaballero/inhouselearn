@@ -30,7 +30,8 @@ const DEFAULT_BUDGET = 1;
 const STAGGER_MS = 300;
 const MAX_TRIES = 3;
 const TRANSIENT = /429|rate.?limit|overloaded|\b5\d\d\b|network|failed to fetch|timeout|ECONNRESET/i;
-const VAGUE = /\b(arriba|antes|esta conversaci[oó]n|lo que te pas[eé]|above|previous)\b/i;
+// No \b after an accented letter (it is not a \w in JS regexps): an explicit end instead.
+const VAGUE = /(?:^|[^\wáéíóúñ])(arriba|antes|esta conversaci[oó]n|lo que te pas[eé]|above|previous)(?![\wáéíóúñ])/i;
 // File paths named in a task (a known extension, so "e.g." or "v1.2" are not paths).
 const PATH_IN_TEXT = /(?:^|[\s`'"(«])((?:[\w.-]+\/)*[\w-][\w.-]*\.(?:m?js|cjs|jsx|tsx?|css|scss|html?|md|json|ya?ml|toml|txt|py|rb|go|rs|java|kts?|swift|c|cc|cpp|h|hpp|cs|php|sh|sql|vue|svelte|xml|svg|csv|tex|bib|gradle|docx|xlsx|pptx|pdf))(?=$|[\s`'")»,:;!?]|\.(?:\s|$))/g;
 const FAILED = new Set(['error', 'stopped', 'skipped']);
@@ -313,6 +314,7 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
   // Per agent, what is not in the compact row: full text, report, controller.
   const inner = new Map(allRows.map((row) => [row.id, { text: '', report: null, controller: null, stopReason: '', wrote: false, fullTask: '' }]));
   const touched = new Map(); // path → [agent names], fed by job.onWrite
+  const touchedIds = new Map(); // path → [agent ids]
   let verify = null;
   let budgetOut = false;
   let finished = false;
@@ -424,7 +426,7 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
         if (update.kind) row.kind = String(update.kind).slice(0, 20);
         if (Number.isFinite(update.steps)) {
           row.steps = update.steps;
-          if (update.steps > job.maxSteps && !own.stopReason) { own.stopReason = 'Parado: límite de ' + job.maxSteps + ' pasos'; controller.abort(); }
+          if (update.steps >= job.maxSteps && !own.stopReason) { own.stopReason = 'Parado: límite de ' + job.maxSteps + ' pasos'; controller.abort(); }
         }
         if (Array.isArray(update.trail)) row.trail = update.trail.slice(-24);
         if (update.wrote) own.wrote = true;
@@ -447,10 +449,12 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
           const key = String(path || '').replace(/^\/+/, '');
           if (!key) return undefined;
           if (!row.files.includes(key) && row.files.length < 20) row.files.push(key);
-          const names = touched.get(key) || [];
-          const others = names.filter((name) => name !== row.name);
-          if (!names.includes(row.name)) names.push(row.name);
-          touched.set(key, names);
+          // Keyed by agent id (two agents may share a name); names are for reading.
+          const ids = touchedIds.get(key) || [];
+          const others = ids.filter((other) => other !== row.id).map((other) => (rowById.get(other) || {}).name || other);
+          if (!ids.includes(row.id)) ids.push(row.id);
+          touchedIds.set(key, ids);
+          touched.set(key, ids.map((other) => (rowById.get(other) || {}).name || other));
           push(false);
           if (others.length) return 'Aviso: «' + others.join('», «') + '» ya cambió ' + key + ' en esta ejecución; vuelve a leerlo con read_file e integra sus cambios en vez de sustituirlos.';
           const owner = nodes.find((node) => node.id !== row.id && ownsPath(node.files, key));
@@ -666,9 +670,19 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
             const node = nodeById.get(id);
             const own = inner.get(id);
             const previous = sectionOf(row);
+            const kept = { report: own.report, text: own.text, result: row.result, status: row.status };
             own.report = null;
             const task = (own.fullTask || taskFor(node)) + '\n\nTu informe anterior:\n' + clip(previous, 4000) + '\n\nEl verificador encontró: ' + byOwner.get(id).join(' ') + ' Corrige solo eso.';
             await runRow(row, jobFor(node, task), 'Corrigiendo');
+            // A fix that fails never erases the work that was already done.
+            if (row.status !== 'done' && kept.status === 'done' && !(signal && signal.aborted)) {
+              own.report = kept.report;
+              own.text = kept.text;
+              row.result = kept.result;
+              row.status = 'done';
+              row.doing = 'La corrección no terminó: queda su informe anterior';
+              push(true);
+            }
           }));
           if (!(signal && signal.aborted) && !budgetOut) {
             inner.get('verify').report = null;

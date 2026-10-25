@@ -265,3 +265,11 @@
 @media (prefers-reduced-motion: reduce) {
   .ua-card, .ua-card::before, .ua-card *, .ua-burst-ring, .ua-spark { animation: none !important; transition: none !important; }
 }
+
+/* Finished lanes read as a preview of their result; headings of a result stay small. */
+.ua-lane[data-status="done"] .ua-doing-text { color: var(--text-secondary, var(--muted)); }
+.ua-result h1, .ua-result h2, .ua-result h3, .ua-result h4 { font-size: 0.86rem; font-weight: 650; margin: 0.9em 0 0.25em; letter-spacing: 0; }
+.ua-result p { margin: 0.2em 0 0.5em; }
+/* Stop: a quiet control, red only when pointed at. */
+.ua-stop { color: var(--muted); }
+@media (hover: hover) { .ua-stop:hover { color: var(--ua-err); } }

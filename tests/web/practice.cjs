@@ -70,7 +70,8 @@ const SPECS = {
   await page.evaluate(() => window.__replies.push({ text: 'ok' }));
   await send(page, 'Más');
   await idle(page);
-  const sys = await page.evaluate(() => window.__requests[window.__requests.length - 1].messages[0].content);
+  // The system prompt plus this turn's <contexto_app> block (end of the user's message).
+  const sys = await page.evaluate(() => { const r = window.__requests[window.__requests.length - 1]; const last = r.messages.filter((m) => m.role === 'user').pop(); return r.messages[0].content + '\n' + (last ? (Array.isArray(last.content) ? last.content.map((b) => b.text || '').join('\n') : String(last.content)) : ''); });
   check('next request tells the model which types it already used', /already used in this chat \(oldest first\): .*categorize.*truefalse/.test(sys), (sys.match(/Visual types you already used[^\n]*/) || [''])[0].slice(0, 160));
   // Guided quiz: a model that always writes the right answer first and longest.
   await page.click('#hamburger-btn');

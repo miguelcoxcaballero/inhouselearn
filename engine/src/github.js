@@ -289,8 +289,19 @@ export function createGithubTools(ctx) {
     }
     // Everything after the approval runs alone on this branch (another agent
     // may be committing to it), on the head as it is now.
+    const seen = head; // the head the approved diff was computed on
     const done = await withBranchLock(repo + '@' + branch, async () => {
       head = await branchSha(repo, branch);
+      // While the user was deciding, another agent may have committed here.
+      // If it touched the same files, the approved content would overwrite
+      // changes nobody saw: stop instead.
+      if (seen && head && head !== seen) {
+        const compare = await gh('GET', '/repos/' + repo + '/compare/' + seen + '...' + head);
+        const theirs = new Set();
+        (compare.files || []).forEach((file) => { theirs.add(file.filename); if (file.previous_filename) theirs.add(file.previous_filename); });
+        const overlap = files.map((file) => file.path).concat(deletes).filter((path) => theirs.has(path));
+        if (overlap.length) throw new Error('Otro agente cambió ' + overlap.join(', ') + ' en ' + branch + ' mientras tanto; lee la versión nueva y repite el cambio.');
+      }
       let created = false;
       if (!head) {
         const baseSha = await branchSha(repo, base);

@@ -308,7 +308,9 @@ function dockApprovalShow(entry) {
   const slot = composerDockEl() && document.getElementById('dock-approval');
   if (!slot) { dockApprovalSettle(entry, false); return; }
   dockApproval.pending = entry;
-  slot.innerHTML = dockApprovalCardHtml(entry.request);
+  // A question of the model is on screen: the approval waits under it and
+  // dockAskFinish draws it when the question is answered.
+  if (!dockAsking.pending) slot.innerHTML = dockApprovalCardHtml(entry.request);
   haptic('select');
   refreshLiveSteps();
 }
@@ -318,6 +320,7 @@ function dockApprovalSettle(entry, value) {
   if (!entry || entry.settled) return;
   entry.settled = true;
   if (entry.signal) entry.signal.removeEventListener('abort', entry.onAbort);
+  if (entry.turnSignal) entry.turnSignal.removeEventListener('abort', entry.onAbort);
   const wasShown = dockApproval.pending === entry;
   if (wasShown) dockApproval.pending = null;
   else dockApproval.queue = dockApproval.queue.filter((item) => item !== entry);
@@ -338,11 +341,17 @@ function dockApprove(request) {
   return new Promise((resolve) => {
     // A request waiting in line is answered «no» as soon as its turn (or its
     // agent) is stopped, without ever being shown.
-    const signal = (request && request.signal) || (appState.activeController && appState.activeController.signal) || null;
-    if (signal && signal.aborted) { resolve(false); return; }
-    const entry = { request: request || {}, resolve, signal, settled: false, onAbort: null };
+    // Its agent's signal and the turn's: stopping either answers «no».
+    const own = request && request.signal;
+    const turnSignal = appState.activeController && appState.activeController.signal;
+    if ((own && own.aborted) || (turnSignal && turnSignal.aborted)) { resolve(false); return; }
+    const entry = { request: request || {}, resolve, signal: own || turnSignal || null, settled: false, onAbort: null };
     entry.onAbort = () => dockApprovalSettle(entry, false);
-    if (signal) signal.addEventListener('abort', entry.onAbort);
+    if (own) own.addEventListener('abort', entry.onAbort);
+    if (turnSignal && turnSignal !== own) {
+      turnSignal.addEventListener('abort', entry.onAbort);
+      entry.turnSignal = turnSignal;
+    }
     if (dockApproval.pending) {
       dockApproval.queue.push(entry);
       dockApprovalSyncQueue();

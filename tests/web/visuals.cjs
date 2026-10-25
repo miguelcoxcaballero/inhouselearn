@@ -59,7 +59,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await page.evaluate(() => window.__replies.push({ text: 'Vale.' }));
   await send(page, '¿Qué ha pasado?');
   await idle(page);
-  const sys = await page.evaluate(() => window.__requests[window.__requests.length - 1].messages[0].content);
+  // The system prompt plus this turn's <contexto_app> block (end of the user's message).
+  const sys = await page.evaluate(() => { const r = window.__requests[window.__requests.length - 1]; const last = r.messages.filter((m) => m.role === 'user').pop(); return r.messages[0].content + '\n' + (last ? (Array.isArray(last.content) ? last.content.map((b) => b.text || '').join('\n') : String(last.content)) : ''); });
   check('student actions reach the tutor next turn, then are cleared', /What the student did/.test(sys) && /Apertura del grifo = 1,9/.test(sys) && /4 m\/s/.test(sys), (sys.match(/- \(Visual[^\n]*/g) || []).slice(0, 3).join(' | '));
   // Security: a malicious sandbox.
   const evil = { type: 'sandbox', title: 'Malicioso', html: '<script>var r=[];try{fetch("https://example.com/f").then(function(){r.push("fetch ok")}).catch(function(){})}catch(e){r.push("fetch blocked")}try{var x=new XMLHttpRequest()}catch(e){r.push("xhr blocked")}try{parent.document.body.innerHTML="HACKED"}catch(e){r.push("parent blocked")}try{top.location="https://evil.example.com"}catch(e){r.push("nav blocked")}try{localStorage.setItem("a","b")}catch(e){r.push("storage blocked")}try{document.cookie="a=b"}catch(e){r.push("cookie blocked")}var i=new Image();i.src="https://example.com/x.png";parent.postMessage({v:1,type:"emit",id:"sbx-other",payload:{name:"x"}},"*");parent.postMessage({v:1,type:"emit",id:"nope",payload:{name:"pwn"}},"*");document.body.textContent=r.join(", ");</script>', emit: ['done'] };

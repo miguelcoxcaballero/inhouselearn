@@ -32,6 +32,9 @@
   const SPARK_PALETTE = ['#a78bfa', '#f472b6', '#38bdf8', '#c4b5fd', '#f9a8d4', '#7dd3fc'];
   // Cards whose completion moment already played (once per step id).
   const celebrated = new Set();
+  // Steps this page saw running: if a full redraw shows them finished before
+  // the last patch did, the completion moment still plays once.
+  const seenRunning = new Set();
   // The latest data each card was drawn with: the click handlers need it for
   // the lazy bodies and «Copiar» (never kept in the DOM, it can be large).
   const cardData = new WeakMap();
@@ -161,14 +164,30 @@
     return { text: end > start ? fmtDuration(end - start) : '', since: 0 };
   }
 
+  // What a finished lane says: the start of its result (its summary when it
+  // reported one), not a bare «Terminado».
+  function resultPreview(agent) {
+    const summary = agent.report && typeof agent.report === 'object' && agent.report.summary;
+    let raw = String(summary || agent.result || '');
+    // Only the «Resultado» section of the closing report, not the ones after it.
+    const section = /^#+\s*(?:Resultado|Result)\s*\n([\s\S]*?)(?=^#+\s|$(?![\s\S]))/im.exec(raw);
+    if (!summary && section && section[1].trim()) raw = section[1];
+    const text = raw.replace(/[#*_`>]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return text ? text.slice(0, 140) + (text.length > 140 ? '…' : '') : '';
+  }
+
   function doingText(agent) {
+    if (agent.status === 'done') {
+      const preview = resultPreview(agent);
+      if (preview) return preview;
+    }
     const doing = String(agent.doing || '').trim();
     if (doing) return doing.slice(0, 160);
     return STATUS_LABEL[agent.status] || '';
   }
 
   function canStop(step, agent) {
-    return LIVE.test(agent.status) && typeof window.ultraCanStop === 'function' && typeof window.ultraStopAgent === 'function' && !!window.ultraCanStop(step.id);
+    return /^(running|waiting)$/.test(agent.status) && typeof window.ultraCanStop === 'function' && typeof window.ultraStopAgent === 'function' && !!window.ultraCanStop(step.id);
   }
 
   /* ─── Markup ───────────────────────────────────────────────────────── */
@@ -402,6 +421,7 @@
   }
 
   function patchCard(card, message, step) {
+    if (stepRunning(step)) seenRunning.add(step.id);
     const details = detailsOf(step);
     const layout = layoutOf(step);
     const running = stepRunning(step);
@@ -482,7 +502,17 @@
   function markupAll(message) {
     const steps = agentSteps(message);
     // A finished card drawn now (reload, redraw) must not celebrate later.
-    steps.forEach((step) => { if (!stepRunning(step)) celebrated.add(step.id); });
+    steps.forEach((step) => {
+      if (stepRunning(step)) { seenRunning.add(step.id); return; }
+      if (seenRunning.has(step.id) && !celebrated.has(step.id)) {
+        window.setTimeout(() => {
+          const card = document.querySelector('.ua-card[data-step="' + cssEscape(String(step.id)) + '"]');
+          if (card) celebrate(card, step.id);
+        }, 60);
+      } else {
+        celebrated.add(step.id);
+      }
+    });
     return steps.map((step) => cardMarkup(message, step)).join('');
   }
 
@@ -559,9 +589,25 @@
     }
   }
 
+  // A card drawn from saved history (reload, redraw) was never patched: find
+  // its message in the open chat so its lanes still open and copy.
+  function dataOf(card) {
+    if (!card) return null;
+    let data = cardData.get(card);
+    if (data) return data;
+    const article = card.closest('[data-msg-id]');
+    const chat = typeof getActiveChat === 'function' ? getActiveChat() : null;
+    const message = article && chat && chat.messages.find((item) => item.id === article.getAttribute('data-msg-id'));
+    const step = message && agentSteps(message).find((item) => String(item.id) === card.dataset.step);
+    if (!step) return null;
+    data = { message, step };
+    cardData.set(card, data);
+    return data;
+  }
+
   function laneContext(lane) {
     const card = lane && lane.closest('.ua-card');
-    const data = card && cardData.get(card);
+    const data = dataOf(card);
     if (!data) return null;
     const layout = layoutOf(data.step);
     const entry = layout.order.find((item) => agentKey(data.step, item) === lane.dataset.key);
@@ -590,7 +636,7 @@
       const card = stop.closest('.ua-card');
       if (card && typeof window.ultraStopAgent === 'function') {
         const raw = stop.getAttribute('data-ua-stop');
-        const data = cardData.get(card);
+        const data = dataOf(card);
         const agent = data && data.step.agents.find((item, index) => String(item.id != null ? item.id : index) === raw);
         window.ultraStopAgent(card.dataset.step, agent && agent.id != null ? agent.id : raw);
         stop.disabled = true;
