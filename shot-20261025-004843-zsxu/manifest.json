@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261025-004843-zsxu",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-25T00:50:02.645Z",
+  "shots": [
+    {
+      "name": "estado coste",
+      "file": "1-estado-coste.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
