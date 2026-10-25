@@ -76,6 +76,40 @@ function isTextPath(path, size) {
 // Content-addressed: a blob sha always has the same text, so this cache is safe.
 const blobCache = new Map();
 
+// Ultra code runs several agents at once, each with its own tools, against the
+// same repositories. Both guards are module-level so every instance shares them:
+// - a lock per repo@branch around a commit (after the user approved it), so two
+//   agents never build on the same head at the same time;
+// - at most MAX_FETCHES requests to GitHub in flight, so a burst of agents does
+//   not trip GitHub's secondary rate limits.
+const MAX_FETCHES = 4;
+const MAX_COMMIT_TRIES = 3;
+const branchLocks = new Map();
+
+function withBranchLock(key, fn) {
+  const previous = branchLocks.get(key) || Promise.resolve();
+  const run = previous.then(fn);
+  const tail = run.catch(() => {});
+  branchLocks.set(key, tail);
+  tail.then(() => { if (branchLocks.get(key) === tail) branchLocks.delete(key); });
+  return run;
+}
+
+let activeFetches = 0;
+const fetchQueue = [];
+// A finished request hands its slot straight to the next one waiting, so the
+// count never goes over MAX_FETCHES between a release and the next start.
+async function withFetchSlot(fn) {
+  if (activeFetches >= MAX_FETCHES) await new Promise((resolve) => fetchQueue.push(resolve));
+  else activeFetches++;
+  try {
+    return await fn();
+  } finally {
+    const next = fetchQueue.shift();
+    if (next) next(); else activeFetches--;
+  }
+}
+
 // In-memory stage when the app gives none (tests, other hosts).
 function memoryStage() {
   const map = new Map();
@@ -102,6 +136,25 @@ export function createGithubTools(ctx) {
   async function gh(method, path, body, extraHeaders) {
     const token = ctx.token();
     if (!token) throw new Error('GitHub no está conectado: pide al usuario que lo conecte en el menú + → GitHub.');
+    const { response, text } = await withFetchSlot(() => request(method, path, body, token, extraHeaders));
+    if (response.status === 204) return null;
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) {}
+    if (!response.ok) {
+      const message = (data && data.message) || text.slice(0, 200) || 'error';
+      const hint = response.status === 401 ? ' (el token no es válido o caducó)'
+        : response.status === 403 ? ' (el token no tiene permiso para esto: hace falta Contents y Pull requests de lectura y escritura en ese repositorio, Actions de lectura para ver la CI y Actions de lectura y escritura para lanzar workflows, como la publicación de la APK)'
+          : response.status === 404 ? ' (no existe, o el token no tiene acceso a ese repositorio)' : '';
+      const error = new Error('GitHub ' + response.status + ': ' + message + hint);
+      error.status = response.status;
+      error.githubMessage = message;
+      throw error;
+    }
+    return data;
+  }
+
+  // One HTTP request (inside a fetch slot): the response and its body text.
+  async function request(method, path, body, token, extraHeaders) {
     let response;
     try {
       response = await fetch(API + path, {
@@ -124,20 +177,8 @@ export function createGithubTools(ctx) {
       wrapped.status = 0;
       throw wrapped;
     }
-    if (response.status === 204) return null;
-    const text = await response.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch (_) {}
-    if (!response.ok) {
-      const message = (data && data.message) || text.slice(0, 200) || 'error';
-      const hint = response.status === 401 ? ' (el token no es válido o caducó)'
-        : response.status === 403 ? ' (el token no tiene permiso para esto: hace falta Contents y Pull requests de lectura y escritura en ese repositorio, Actions de lectura para ver la CI y Actions de lectura y escritura para lanzar workflows, como la publicación de la APK)'
-          : response.status === 404 ? ' (no existe, o el token no tiene acceso a ese repositorio)' : '';
-      const error = new Error('GitHub ' + response.status + ': ' + message + hint);
-      error.status = response.status;
-      throw error;
-    }
-    return data;
+    const text = response.status === 204 ? '' : await response.text();
+    return { response, text };
   }
 
   const repoInfo = new Map();
@@ -246,25 +287,61 @@ export function createGithubTools(ctx) {
         mainBranch: branch === main
       });
     }
-    if (creating) {
-      const baseSha = await branchSha(repo, base);
-      if (!baseSha) throw new Error('No existe la rama base ' + base + '.');
-      await gh('POST', '/repos/' + repo + '/git/refs', { ref: 'refs/heads/' + branch, sha: baseSha });
-      head = baseSha;
-    }
-    const parent = await gh('GET', '/repos/' + repo + '/git/commits/' + head);
-    const tree = [];
-    for (const file of files) {
-      const blob = await gh('POST', '/repos/' + repo + '/git/blobs', { content: file.content, encoding: 'utf-8' });
-      tree.push({ path: file.path, mode: '100644', type: 'blob', sha: blob.sha });
-    }
-    deletes.forEach((path) => tree.push({ path, mode: '100644', type: 'blob', sha: null }));
-    const newTree = await gh('POST', '/repos/' + repo + '/git/trees', { base_tree: parent.tree.sha, tree });
-    const commit = await gh('POST', '/repos/' + repo + '/git/commits', { message: String(params.message || 'Update'), tree: newTree.sha, parents: [head] });
-    await gh('PATCH', '/repos/' + repo + '/git/refs/heads/' + enc(branch), { sha: commit.sha });
+    // Everything after the approval runs alone on this branch (another agent
+    // may be committing to it), on the head as it is now.
+    const done = await withBranchLock(repo + '@' + branch, async () => {
+      head = await branchSha(repo, branch);
+      let created = false;
+      if (!head) {
+        const baseSha = await branchSha(repo, base);
+        if (!baseSha) throw new Error('No existe la rama base ' + base + '.');
+        try {
+          await gh('POST', '/repos/' + repo + '/git/refs', { ref: 'refs/heads/' + branch, sha: baseSha });
+          head = baseSha;
+          created = true;
+        } catch (error) {
+          // Someone created it meanwhile (another agent, tab or device): commit on top of it.
+          if (error.status !== 422 || !/already exists/i.test(error.githubMessage || error.message)) throw error;
+          head = await branchSha(repo, branch);
+          if (!head) throw error;
+        }
+      }
+      const ours = files.map((file) => file.path).concat(deletes);
+      const blobs = new Map(); // path -> blob sha, kept across tries
+      for (let attempt = 1; ; attempt++) {
+        const parent = await gh('GET', '/repos/' + repo + '/git/commits/' + head);
+        const tree = [];
+        for (const file of files) {
+          if (!blobs.has(file.path)) blobs.set(file.path, (await gh('POST', '/repos/' + repo + '/git/blobs', { content: file.content, encoding: 'utf-8' })).sha);
+          tree.push({ path: file.path, mode: '100644', type: 'blob', sha: blobs.get(file.path) });
+        }
+        deletes.forEach((path) => tree.push({ path, mode: '100644', type: 'blob', sha: null }));
+        const newTree = await gh('POST', '/repos/' + repo + '/git/trees', { base_tree: parent.tree.sha, tree });
+        const made = await gh('POST', '/repos/' + repo + '/git/commits', { message: String(params.message || 'Update'), tree: newTree.sha, parents: [head] });
+        try {
+          await gh('PATCH', '/repos/' + repo + '/git/refs/heads/' + enc(branch), { sha: made.sha });
+          return { commit: made, created };
+        } catch (error) {
+          // The branch moved under us (a commit from outside this lock, or a
+          // stale read). Other files: redo the tree on the new head; the same
+          // files: never overwrite them blindly.
+          if (error.status !== 422 || !/fast.?forward/i.test(error.githubMessage || error.message) || attempt >= MAX_COMMIT_TRIES) throw error;
+          const fresh = await branchSha(repo, branch);
+          if (!fresh || fresh === head) throw error;
+          const compare = await gh('GET', '/repos/' + repo + '/compare/' + head + '...' + fresh);
+          const theirs = new Set();
+          (compare.files || []).forEach((file) => { theirs.add(file.filename); if (file.previous_filename) theirs.add(file.previous_filename); });
+          const overlap = ours.filter((path) => theirs.has(path));
+          if (overlap.length) throw new Error('Otro agente cambió ' + overlap.join(', ') + ' en ' + branch + ' mientras tanto; lee la versión nueva y repite el cambio.');
+          head = fresh;
+        }
+      }
+    });
+    const commit = done.commit;
+    const createdNow = done.created;
     return {
-      sha: commit.sha, repo, branch, base, creating, items,
-      text: 'Commit ' + commit.sha.slice(0, 7) + ' en ' + repo + '@' + branch + (creating ? ' (rama creada desde ' + base + ')' : '') + ': ' +
+      sha: commit.sha, repo, branch, base, creating: createdNow, items,
+      text: 'Commit ' + commit.sha.slice(0, 7) + ' en ' + repo + '@' + branch + (createdNow ? ' (rama creada desde ' + base + ')' : '') + ': ' +
         items.map((item) => item.path + ' (' + item.status + ', +' + item.added + ' −' + item.removed + ')').join(', ') + '\nhttps://github.com/' + repo + '/commit/' + commit.sha
     };
   }
