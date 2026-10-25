@@ -1,0 +1,26 @@
+{
+  "id": "shot-20261025-004727-ml8q",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-25T00:48:15.045Z",
+  "shots": [
+    {
+      "name": "coste tras respuesta",
+      "file": "1-coste-tras-respuesta.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "coste en chat nuevo",
+      "file": "2-coste-en-chat-nuevo.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "doble clic en el titulo",
+      "file": "3-doble-clic-en-el-titulo.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
