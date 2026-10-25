@@ -5016,12 +5016,12 @@
 
     function githubToolsFor(chat, signal, meta) {
       if (!chat.github || !githubToken()) return [];
-      return InhousePi.createGithubTools(githubContext(chat, signal));
+      return InhousePi.createGithubTools(githubContext(chat, signal, meta));
     }
 
     // Prepared (not yet uploaded) changes live with the chat in this browser
     // (githubStageStore, composer-dock.js) and show above the composer.
-    function githubContext(chat, signal) {
+    function githubContext(chat, signal, meta) {
       return {
         token: githubToken,
         signal,
@@ -5304,13 +5304,13 @@
           refreshLibraryCount();
           return Object.assign(outcome, { saved });
         },
-        latex: window.InhouseTex ? (main, engine, runSignal, onProgress) => compileLatexForChat(chat, library, main, engine, runSignal || signal, onProgress) : null
+        latex: window.InhouseTex ? (main, engine, runSignal, onProgress) => compileLatexForChat(chat, library, main, engine, runSignal || signal, onProgress, meta) : null
       });
     }
 
     // LaTeX: every text file of the chat goes to the compiler, plus the library's
     // originals (PDFs, images) under their names for \includegraphics.
-    async function compileLatexForChat(chat, library, main, engine, signal, onProgress) {
+    async function compileLatexForChat(chat, library, main, engine, signal, onProgress, meta) {
       const workspace = chatWorkspace(chat);
       const path = String(main || '').trim().replace(/^\/+/, '');
       if (workspace.read(path) == null) throw new Error('No existe ' + path + ' en los archivos del chat: créalo antes con write_file.');
