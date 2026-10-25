@@ -1,0 +1,14 @@
+{
+  "id": "shot-20261025-132847-8n81",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-25T13:29:24.646Z",
+  "shots": [
+    {
+      "name": "nombre en edicion",
+      "file": "1-nombre-en-edicion.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
