@@ -152,6 +152,9 @@
 
 </div>
 <script>
+  // El fotógrafo del repositorio espera esta función para dar la página por
+  // cargada; aquí no hay app, solo maquetas.
+  window.runAssistantTurn = window.runAssistantTurn || function () {};
   const q = new URLSearchParams(location.search);
   const theme = q.get('theme');
   if (theme) document.documentElement.dataset.theme = theme;
