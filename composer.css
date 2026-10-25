@@ -74,3 +74,14 @@
 /* The cost pill opens «Cuentas» (the usage). */
 :root .chat-cost { pointer-events: auto; cursor: pointer; transition: border-color 0.15s var(--ease), transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
 :root .chat-cost:hover, :root .chat-cost:focus-visible { border-color: rgba(22, 163, 74, 0.55); outline: none; }
+
+/* The files strip above the composer: a soft fade where more files hide, and a
+   grab cursor (it scrolls with the wheel and by dragging, bindHorizontalScroll). */
+:root .workspace-files { cursor: grab; scroll-behavior: auto; }
+:root .workspace-files.dragging { cursor: grabbing; user-select: none; }
+:root .workspace-files.dragging .workspace-file { pointer-events: none; }
+:root .workspace-files.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+:root .workspace-files.more-left { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
+:root .workspace-files.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+/* Ultra code on the model pill: no orange tint behind the rainbow word. */
+:root .model-trigger-chip.is-ultra { background: transparent; padding-left: 2px; padding-right: 2px; }

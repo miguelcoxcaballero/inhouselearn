@@ -228,8 +228,15 @@ Mandatory guidance for every AI and developer working in this repository.
   chip · mic · round send, orange in light and ink in dark); the conversation's cost is a small pill on the card's top
   edge (`.chat-cost`, no inline position); tapping it opens the popup on «Cuentas» (`openUsageFromCost`), tapping again
   closes it. The usage ring left the row: balances live there. «Cuentas» uses the companies' real logos
-  (`icons/companies/claude.svg`, `openrouter.svg`).
-  Tests: `tests/web/extra-account.cjs`, `ultra.cjs`.
+  (`icons/companies/claude.svg`, `openrouter.svg`). The files strip above it scrolls sideways with the wheel and a
+  mouse drag (`bindHorizontalScroll`, fades where files hide; a drag never opens a file). The level chip draws
+  «Ultra code» as an inner `.ultra-text` span (on the chip itself its background hid the rainbow word).
+  Tests: `tests/web/extra-account.cjs`, `ultra.cjs`, `composer-fixes.cjs`.
+- **Empty answers:** `runAgent` throws «El modelo ha terminado sin escribir ninguna respuesta» (or «se ha quedado sin
+  espacio de salida mientras pensaba» on `length`) when a turn ends with no text and no tools, instead of a blank answer
+  under «Razonamiento». Claude's text is never split for `<think>` tags (its reasoning comes in its own blocks), and
+  `splitReasoning(raw, { finished: true })` keeps a finished text whose tag was opened but never closed. Test:
+  `composer-fixes.cjs`.
 - **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
   cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with
   the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007

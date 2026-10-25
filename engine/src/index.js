@@ -365,8 +365,13 @@ const textOf = (message, type) => (message && Array.isArray(message.content) ? m
 // middle of the chat: move it to the thinking section.
 const THINK_BLOCK = /<(think|thinking|reasoning)>([\s\S]*?)(?:<\/\1>|$)/gi;
 const THINK_CLOSE_ONLY = /^([\s\S]*?)<\/(think|thinking|reasoning)>/i;
-export function splitReasoning(raw) {
+// options.finished: the message is complete. A tag still open then held no
+// reasoning (the answer itself mentioned «<thinking>»), so nothing is moved.
+export function splitReasoning(raw, options) {
   let text = String(raw || '');
+  if (options && options.finished && /<(think|thinking|reasoning)>/i.test(text) && !/<\/(think|thinking|reasoning)>/i.test(text)) {
+    return { text, thinking: '' };
+  }
   const thoughts = [];
   if (!/<(think|thinking|reasoning)>/i.test(text)) {
     const closing = THINK_CLOSE_ONLY.exec(text);
@@ -379,8 +384,11 @@ export function splitReasoning(raw) {
   return { text: thoughts.length ? text.replace(/^\s+/, '') : text, thinking: thoughts.filter(Boolean).join('\n\n') };
 }
 
-const answerOf = (message) => {
-  const split = splitReasoning(textOf(message, 'text'));
+// Claude (Anthropic's API) sends its reasoning in its own blocks: its text is
+// all answer, even when it mentions a <thinking> tag.
+const answerOf = (message, finished) => {
+  const raw = textOf(message, 'text');
+  const split = message && message.provider === 'anthropic' ? { text: raw, thinking: '' } : splitReasoning(raw, { finished });
   const thinking = [textOf(message, 'thinking'), split.thinking].filter((part) => part && part.trim()).join('\n\n');
   return { text: split.text, thinking };
 };
@@ -600,7 +608,7 @@ export async function runAgent(options) {
         liveText = '';
         liveThinking = '';
         liveTools = 0;
-        const answer = answerOf(message);
+        const answer = answerOf(message, true);
         doneTexts.push(answer.text);
         doneThinking.push(answer.thinking);
         if (message.usage) {
@@ -745,6 +753,19 @@ export async function runAgent(options) {
     error.partial = { text: join(doneTexts, ''), steps };
     error.usage = usage;
     error.retries = retries;
+    throw error;
+  }
+  // A turn that ends with no words and no tools would leave a blank answer
+  // under «Razonamiento»: say what happened instead (what it cost is kept).
+  if (!join(doneTexts, '').trim() && !steps.length) {
+    const last = messages.filter((message) => message && message.role === 'assistant').pop();
+    const error = new Error(last && last.stopReason === 'length'
+      ? 'El modelo se ha quedado sin espacio de salida mientras pensaba y no ha llegado a escribir la respuesta. Prueba con menos razonamiento o vuelve a intentarlo.'
+      : 'El modelo ha terminado sin escribir ninguna respuesta. Vuelve a intentarlo.');
+    error.partial = { text: '', steps, thinking: join(doneThinking, '') };
+    error.usage = usage;
+    error.retries = retries;
+    error.emptyAnswer = true;
     throw error;
   }
   return {

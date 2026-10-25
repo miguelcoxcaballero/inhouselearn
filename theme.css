@@ -484,3 +484,4 @@ html[data-theme="dark"] .filter-company .company-chip.active { background: rgba(
 html[data-theme="dark"] .model-popover-status.error { background: rgba(248, 113, 113, 0.1); color: #f87171; }
 html[data-theme="dark"] .acc-logo-claude { background: rgba(217, 119, 87, 0.16); }
 html[data-theme="dark"] .acc-logo-openrouter { background: rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .model-trigger-chip.is-ultra { background: transparent; }

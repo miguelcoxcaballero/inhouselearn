@@ -1759,7 +1759,7 @@
   <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-wait.css?v=20261024-wait1">
   <link rel="stylesheet" href="model-picker.css?v=20261025-logos2">
-  <link rel="stylesheet" href="composer.css?v=20261025-cost">
+  <link rel="stylesheet" href="composer.css?v=20261025-fixes">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
@@ -1768,7 +1768,7 @@
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261025-logos">
+  <link rel="stylesheet" href="theme.css?v=20261025-fixes">
 </head>
 <body>
 
@@ -2144,7 +2144,7 @@
   <script src="documents.js?v=20261026-review2"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261025-claude"></script>
+  <script src="vendor/pi-engine.js?v=20261025-empty"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -6046,8 +6046,12 @@
       }
       if (elements.modelTriggerMeta) {
         const showLevel = ultra || (levels.length > 1 && !!thinkingLevel && thinkingLevel !== 'off');
-        elements.modelTriggerMeta.textContent = ultra ? 'Ultra code' : showLevel ? thinkingLabel(thinkingLevel) : '';
-        elements.modelTriggerMeta.classList.toggle('ultra-text', ultra);
+        // The rainbow is painted through the text (background-clip): on the chip itself
+        // its own background replaced the gradient and the word went invisible.
+        const chipHtml = ultra ? '<span class="ultra-text">Ultra code</span>' : escapeHtml(showLevel ? thinkingLabel(thinkingLevel) : '');
+        if (elements.modelTriggerMeta.innerHTML !== chipHtml) elements.modelTriggerMeta.innerHTML = chipHtml;
+        elements.modelTriggerMeta.classList.remove('ultra-text');
+        elements.modelTriggerMeta.classList.toggle('is-ultra', ultra);
         elements.modelTriggerMeta.classList.toggle('hidden', !showLevel);
       }
       if (elements.apiKeyInput && document.activeElement !== elements.apiKeyInput) {
@@ -9291,6 +9295,48 @@
       overlay.classList.remove('hidden');
     }
 
+    // A strip that scrolls sideways with no visible scrollbar: the mouse wheel
+    // scrolls it sideways too, and a mouse can drag it (a drag never opens a file).
+    function bindHorizontalScroll(strip) {
+      if (!strip || strip.dataset.hscroll) return;
+      strip.dataset.hscroll = '1';
+      const edges = () => {
+        strip.classList.toggle('more-left', strip.scrollLeft > 2);
+        strip.classList.toggle('more-right', strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 2);
+      };
+      strip.addEventListener('wheel', (event) => {
+        if (strip.scrollWidth <= strip.clientWidth) return;
+        const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+        if (!delta) return;
+        event.preventDefault();
+        strip.scrollLeft += delta;
+      }, { passive: false });
+      let drag = null;
+      strip.addEventListener('pointerdown', (event) => {
+        if (event.pointerType !== 'mouse' || event.button !== 0) return;
+        drag = { x: event.clientX, left: strip.scrollLeft, moved: false, id: event.pointerId };
+      });
+      strip.addEventListener('pointermove', (event) => {
+        if (!drag || event.pointerId !== drag.id) return;
+        const dx = event.clientX - drag.x;
+        if (!drag.moved && Math.abs(dx) < 4) return;
+        if (!drag.moved) { drag.moved = true; strip.setPointerCapture(event.pointerId); strip.classList.add('dragging'); }
+        strip.scrollLeft = drag.left - dx;
+      });
+      const end = () => {
+        if (!drag) return;
+        const moved = drag.moved;
+        drag = null;
+        strip.classList.remove('dragging');
+        // The click that ends a drag does not open the file under the pointer.
+        if (moved) strip.addEventListener('click', (event) => { event.stopPropagation(); event.preventDefault(); }, { capture: true, once: true });
+      };
+      strip.addEventListener('pointerup', end);
+      strip.addEventListener('pointercancel', end);
+      strip.addEventListener('scroll', edges, { passive: true });
+      requestAnimationFrame(edges);
+    }
+
     function renderWorkspaceBar() {
       const bar = document.getElementById('workspace-bar');
       if (!bar) return;
@@ -9318,6 +9364,7 @@
       bar.querySelectorAll('[data-workspace-file]').forEach((button) => {
         button.addEventListener('click', () => openWorkspaceFile(button.dataset.workspaceFile));
       });
+      bindHorizontalScroll(bar.querySelector('.workspace-files'));
       const zip = document.getElementById('workspace-zip-btn');
       if (zip) zip.addEventListener('click', downloadWorkspaceZip);
       const libraryBtn = document.getElementById('workspace-library-btn');
@@ -11376,7 +11423,7 @@
         for (const block of message.content) {
           // Reasoning written inside the answer (<think>…) is not part of it: the
           // engine already moved it to the thinking section.
-          if (block.type === 'text') block.text = await repairTutorText(chat, InhousePi.splitReasoning(block.text).text, signal);
+          if (block.type === 'text') block.text = await repairTutorText(chat, InhousePi.splitReasoning(block.text, { finished: true }).text, signal);
         }
       }
       return { messages, text: tutorMessagesText(messages) };
@@ -12598,7 +12645,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.10.25.7';
+    const APP_VERSION = '2026.10.25.8';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');
