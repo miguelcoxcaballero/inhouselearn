@@ -1,0 +1,113 @@
+/* ─── Compositor «Cápsula» ────────────────────────────────────────────
+   Una tarjeta flotante sobre el fondo: arriba se escribe, abajo una sola
+   fila (+ · modelo · uso · micro · enviar) y el gasto de la conversación
+   cuelga del borde superior como una pestaña. Solo CSS: no cambia ningún
+   id, evento ni orden del DOM (el orden de la fila se arregla con `order`).
+   Carga antes de theme.css, que sigue siendo la última hoja. */
+
+.composer-area {
+  background: var(--bg); border-top: 0;
+  padding: 10px 18px max(16px, env(safe-area-inset-bottom, 0px));
+}
+
+/* La tarjeta. El margen de arriba deja sitio a la pestaña del gasto. */
+.composer-area .composer-shell,
+.composer-area .composer-shell:focus-within {
+  max-width: none; margin-top: 12px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 28px;
+  padding: 16px 14px 12px 20px; box-shadow: var(--shadow-lg);
+}
+.composer-area .composer-shell:focus-within {
+  border-color: var(--orange-border);
+  box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow-lg);
+}
+.composer-area .composer-shell.drag-active {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow-lg);
+}
+
+/* Donde se escribe: sin relleno propio, la tarjeta ya da el aire. */
+.composer-area .composer {
+  min-height: 34px; padding: 0 6px 0 0; font-size: 1rem; line-height: 1.5;
+}
+.composer-area .composer::placeholder {
+  font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-style: italic;
+  font-size: 1.06rem; color: var(--muted); opacity: 1;
+}
+.composer-area .composer-attachments { padding: 0 0 10px; }
+
+/* La fila de abajo, de izquierda a derecha: + · modelo · uso ····· micro · enviar */
+.composer-area .composer-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 0;
+}
+.composer-area .plus-wrap { order: 0; }
+.composer-area .model-menu-wrap { order: 1; flex: 0 1 auto; min-width: 0; max-width: none; }
+.composer-area .usage-btn { order: 2; }
+.composer-area .composer-spacer { order: 3; flex: 1 1 0; min-width: 0; }
+/* El envoltorio de «Enviar» deja de ser una caja: el micro y enviar son hijos de la fila. */
+.composer-area .send-wrap { display: contents; }
+.composer-area .dictation-btn { order: 4; }
+.composer-area .send-btn { order: 5; }
+
+.composer-area .plus-btn { width: 38px; height: 38px; }
+
+/* El modelo: un botón fino, sin relleno, con su nivel de razonamiento al lado. */
+.composer-area .model-trigger {
+  width: auto; max-width: 100%; height: 36px; padding: 0 11px 0 6px; gap: 8px;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: transparent;
+}
+.composer-area .model-trigger:hover,
+.composer-area .model-trigger[aria-expanded="true"] { background: var(--surface-hover); border-color: var(--orange-border); }
+.composer-area .model-trigger-brand { width: 24px; height: 24px; padding: 4px; }
+.composer-area .model-trigger-copy { min-width: 0; }
+.composer-area .model-trigger-main { font-size: 0.8rem; font-weight: 600; }
+.composer-area .model-trigger-chip:not(.hidden) {
+  display: inline-flex; padding: 3px 9px; border: 1px solid var(--orange-border); border-radius: 999px;
+  background: var(--orange-soft); font-size: 0.7rem; font-weight: 600; line-height: 1.2;
+}
+
+/* El anillo de uso, pequeño y sin marco. */
+.composer-area .usage-btn { width: 30px; height: 30px; flex: 0 0 auto; }
+.composer-area .usage-btn svg { width: 22px; height: 22px; }
+
+/* El micro, sin borde: solo aparece su círculo al pasar por encima o al grabar. */
+.composer-area .dictation-btn { width: 38px; height: 38px; border-color: transparent; }
+.composer-area .dictation-btn:not(.is-recording) { color: var(--text-secondary); }
+.composer-area .dictation-btn:hover { background: var(--surface-hover); }
+
+/* Enviar: un círculo con la flecha (el texto «Enviar» / «Parar» queda para lectores de pantalla). */
+.composer-area .send-btn {
+  width: 42px; height: 42px; padding: 0; gap: 0; justify-content: center; border-radius: 50%;
+}
+.composer-area .send-label { display: none; }
+.composer-area #send-icon { width: 18px; height: 18px; }
+html:not([data-theme="dark"]) .composer-area .send-btn:not(.busy) { background: var(--orange); color: #fff; }
+html:not([data-theme="dark"]) .composer-area .send-btn:not(.busy):hover:not([disabled]) { background: #d06a30; }
+html:not([data-theme="dark"]) .composer-area .send-btn[disabled]:not(.busy) { background: var(--orange); opacity: 0.35; }
+
+/* El gasto de la conversación: una pestaña en el borde de arriba, alineada con «Enviar».
+   (index.html le pone `right` en línea según el botón; aquí manda la pestaña.) */
+.composer-area .chat-cost {
+  top: -12px !important; bottom: auto !important; right: 14px !important; left: auto !important;
+  display: inline-flex; align-items: center; height: 23px; padding: 0 10px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border-strong);
+  font-size: 0.68rem; line-height: 1;
+}
+.composer-area .chat-cost.hidden { display: none; }
+
+@media (max-width: 768px) {
+  .composer-area { padding: 8px 12px max(12px, env(safe-area-inset-bottom, 0px)); }
+  .composer-area .composer-shell,
+  .composer-area .composer-shell:focus-within { padding: 14px 10px 10px 16px; border-radius: 26px; }
+  .composer-area .composer-row { gap: 6px; }
+  .composer-area .plus-btn,
+  .composer-area .dictation-btn { width: 36px; height: 36px; }
+  .composer-area .usage-btn { width: 28px; height: 28px; }
+  .composer-area .usage-btn svg { width: 20px; height: 20px; }
+  .composer-area .send-btn { width: 40px; height: 40px; }
+  .composer-area .model-menu-wrap { flex: 0 1 auto; max-width: none; }
+  .composer-area .model-trigger { width: auto; height: 36px; padding: 0 9px 0 5px; gap: 6px; }
+  .composer-area .model-trigger-caret { display: none; }
+  .composer-area .model-trigger-main { font-size: 0.76rem; }
+  .composer-area .chat-cost { right: 10px !important; }
+}

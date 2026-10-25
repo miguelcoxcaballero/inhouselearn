@@ -83,6 +83,13 @@ Mandatory guidance for every AI and developer working in this repository.
   Ctrl/Cmd+Enter: pi's `agent.steer`, the message enters the running turn after the current
   tool, and the answer is split there into two messages). It also draws the live tool activity
   in the thread (`renderLiveSteps`).
+- **Composer «Cápsula»:** `composer-capsule.css` (loaded just before `theme.css`) restyles the writing
+  area without touching the DOM: a floating card (`--shadow-lg`, orange focus halo) where you write on top, and
+  one row below — `+` · model (logo, name, reasoning chip) · usage ring · spacer · mic · send (a circle, orange in
+  light, cream in dark). The `.send-wrap` becomes `display: contents` and the row is ordered with `order`, so ids,
+  `dictation.js` (`sendButton.after(mic)`) and `updateSendUi` keep working. The conversation's cost
+  (`#chat-cost`) hangs from the card's top edge as a tab aligned with the send button (its inline `right` from
+  `updateChatCost` is overridden with `!important`). Keep new controls inside that row and use the tokens.
 - **Modo noche:** `theme.js` (en el `<head>`, antes del CSS) y `theme.css` (la
   última hoja) dan el tema oscuro a toda la app, y el oscuro es **AMOLED**:
   `--bg` es `#000` y las superficies son solo un pelín más claras, así que al
