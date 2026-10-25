@@ -34,6 +34,26 @@ const KIND = {
 const TEXT_MIME = /^(text\/|application\/(json|xml|javascript|x-javascript|x-sh|x-yaml|yaml|x-tex|sql|ld\+json|xhtml\+xml|csv))/;
 const TEXT_NAME = /\.(txt|md|markdown|csv|tsv|json|xml|ya?ml|html?|css|m?js|cjs|ts|tsx|jsx|py|java|kt|c|cc|cpp|h|cs|go|rs|rb|php|sh|sql|tex|ini|cfg|toml|log|srt|vtt)$/i;
 
+// At most 4 Drive requests at once across every tool set of the page: with
+// parallel tools and several agents, a burst of reads hit Google's per-user
+// rate limit (403/429 userRateLimitExceeded). Module level on purpose.
+const MAX_CONCURRENT = 4;
+let active = 0;
+const waiting = [];
+async function limited(run) {
+  // A finished request hands its slot straight to the next waiting one, so a
+  // new caller can never slip in between and make it five.
+  if (active >= MAX_CONCURRENT) await new Promise((resolve) => waiting.push(resolve));
+  else active++;
+  try {
+    return await run();
+  } finally {
+    const next = waiting.shift();
+    if (next) next();
+    else active--;
+  }
+}
+
 function textResult(text, details) {
   return { content: [{ type: 'text', text }], details: details || {} };
 }
@@ -98,7 +118,7 @@ function bytesToBase64(buffer) {
 export function createDriveTools(ctx) {
   async function call(url, options, what) {
     for (let attempt = 0; ; attempt++) {
-      const response = await ctx.fetch(url, Object.assign({ signal: ctx.signal }, options || {}));
+      const response = await limited(() => ctx.fetch(url, Object.assign({ signal: ctx.signal }, options || {})));
       if (response.ok) return response;
       let data = null;
       try { data = await response.json(); } catch (_) {}

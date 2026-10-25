@@ -9,12 +9,15 @@ import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completio
 import { openRouterCost } from '@earendil-works/pi-ai/providers/openrouter-api';
 import { Agent } from '@earendil-works/pi-agent-core';
 import JSZip from 'jszip';
-import { createWorkspaceTools, normalizePath, runInSandbox } from './tools.js';
+import { createWorkspaceTools, normalizePath, runInSandbox, configureSandbox, globToRegExp } from './tools.js';
 import { createGuidedTools } from './guided.js';
 import { createLibraryTools } from './library.js';
 import { createGithubTools, githubWhoAmI, githubPushStaged } from './github.js';
+import { createToolCoach, NOTE_MARK } from './coach.js';
+import { ageToolResults, estimateContextChars } from './context.js';
 
-export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, githubPushStaged, normalizePath, runInSandbox };
+export { createWorkspaceTools, createGuidedTools, createLibraryTools, createGithubTools, githubWhoAmI, githubPushStaged, normalizePath, runInSandbox, configureSandbox, globToRegExp };
+export { createToolCoach, NOTE_MARK, ageToolResults, estimateContextChars };
 export { createDriveTools } from './gdrive.js';
 export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
@@ -240,8 +243,9 @@ const answerOf = (message) => {
   return { text: split.text, thinking };
 };
 
+// The coach's notes are for the model only: step.output (what the user sees) skips them.
 const resultText = (result) => (result && Array.isArray(result.content) ? result.content : [])
-  .filter((block) => block.type === 'text')
+  .filter((block) => block.type === 'text' && !String(block.text || '').startsWith(NOTE_MARK))
   .map((block) => block.text)
   .join('\n');
 
@@ -251,23 +255,113 @@ function abortError() {
   return error;
 }
 
+// Failures worth repeating the same request for: the provider was busy, rate
+// limited or the connection dropped. A bad request, a bad key or no credit
+// (400/401/402) would only fail again.
+const TRANSIENT_ERROR = /\b(408|425|429|500|502|503|504|529)\b|overloaded|rate.?limit|temporarily|timed? ?out|fetch failed|ECONNRESET|Provider returned error/i;
+const NOT_TRANSIENT = /\b(400|401|402)\b/;
+const OVERFLOW_ERROR = /context (length|window)|too many tokens|maximum context|prompt is too long/i;
+
+export function isContextOverflow(message) {
+  return OVERFLOW_ERROR.test(String(message || ''));
+}
+
+export function isTransientError(message) {
+  const text = String(message || '');
+  return TRANSIENT_ERROR.test(text) && !NOT_TRANSIENT.test(text) && !OVERFLOW_ERROR.test(text);
+}
+
+// Share of the context window the transcript may fill before old tool results
+// are trimmed, and characters per token of the estimate.
+const CONTEXT_SHARE = 0.55;
+const CHARS_PER_TOKEN = 3.5;
+const RETRY_BASE_MS = 1500;
+
+function sleep(ms, signal) {
+  return new Promise((resolve) => {
+    if (signal && signal.aborted) return resolve();
+    const done = () => {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    if (signal) signal.addEventListener('abort', done);
+  });
+}
+
+// The next deeper reasoning level the model supports ('' when there is none).
+// Never from off: a turn without reasoning was the user's choice.
+function deeperLevel(model, level) {
+  if (!level || level === 'off' || !model || !model.reasoning) return '';
+  let supported;
+  try { supported = getSupportedThinkingLevels(model); } catch (_) { return ''; }
+  let levels = UI_THINKING_LEVELS.filter((item) => supported.includes(item));
+  // Same ladder the picker offers (thinkingLevels): xhigh only without max.
+  if (levels.includes('max')) levels = levels.filter((item) => item !== 'xhigh' || item === level);
+  const index = levels.indexOf(level);
+  return index >= 0 && index < levels.length - 1 ? levels[index + 1] : '';
+}
+
 /**
  * Ejecuta un turno completo del agente (puede encadenar varias llamadas al
  * modelo si usa herramientas).
  *
  * history: mensajes de pi anteriores (user / assistant / toolResult)
  * prompt: mensaje de usuario de pi
- * onUpdate({ text, thinking, steps }) se llama con cada avance.
+ * onUpdate({ text, thinking, steps, cost, liveChars, retry }) se llama con cada
+ * avance; retry es { attempt, max } mientras se repite una petición que falló
+ * por un error pasajero (hasta que llega su primer texto), y null si no.
  * steering (opcional): la función le pone steering.steer(userMessage), que mete
  * un mensaje del usuario en cuanto acaba la llamada al modelo o la herramienta
  * en curso, sin cancelar nada. Cuando entra se llama a
  * onSteer({ message, segment: { text, thinking, steps, messages } }) con lo
  * hecho hasta ahí, y el resto de la ejecución es un segmento nuevo.
- * Devuelve { text, thinking, steps, messages, usage } (del último segmento) o
- * lanza con el error del modelo.
+ * maxRetries (2): cuántas veces se repite una petición tras un error pasajero
+ * (429, 5xx, red cortada…), con espera 1.5 s, 3 s…; un desbordamiento del
+ * contexto se repite una vez recortando más los resultados viejos.
+ * escalate: tras 2 errores de herramientas seguidos, sube el razonamiento un
+ * nivel (nunca desde off).
+ * coach (por defecto sí; false lo quita): notas para el modelo en los
+ * resultados de las herramientas (coach.js).
+ * toolExecution: 'sequential' (por defecto) o 'parallel' (las herramientas sin
+ * executionMode 'sequential' de una misma respuesta corren a la vez).
+ * Cada paso lleva startedAt / endedAt (ms). La herramienta think no es un
+ * paso: su texto va al razonamiento.
+ * Devuelve { text, thinking, steps, messages, usage, retries, escalated } (del
+ * último segmento) o lanza con el error del modelo. usage: { input (total,
+ * caché incluida), output, cacheRead, cacheWrite, cost }.
  */
 export async function runAgent(options) {
   const model = options.model;
+  const maxRetries = Number.isFinite(Number(options.maxRetries)) ? Math.max(0, Math.floor(Number(options.maxRetries))) : 2;
+  const coach = options.coach === false ? undefined : createToolCoach();
+
+  // Context budget in characters; an overflow error lowers it and forces the trim.
+  let budgetFactor = 1;
+  let forceAging = false;
+  const transformContext = async (messages) => {
+    const budget = (model && model.contextWindow ? model.contextWindow : 128000) * CONTEXT_SHARE * CHARS_PER_TOKEN * budgetFactor;
+    if (!forceAging && estimateContextChars(messages) <= budget) return messages;
+    // After an overflow only the newest round stays whole.
+    return ageToolResults(messages, { budget, keepRounds: forceAging ? 1 : 2 });
+  };
+
+  // Escalation: two tool errors in a row → one level deeper, once per run.
+  let consecutiveToolErrors = 0;
+  let escalated = '';
+  const prepareRequest = async ({ thinkingLevel }) => {
+    if (options.escalate && !escalated && consecutiveToolErrors >= 2) {
+      const next = deeperLevel(model, thinkingLevel);
+      if (next) {
+        escalated = next;
+        // continue() after a retry starts from the agent's own state.
+        agent.state.thinkingLevel = next;
+      }
+    }
+    return escalated ? { thinkingLevel: escalated } : undefined;
+  };
+
   const agent = new Agent({
     initialState: {
       systemPrompt: options.systemPrompt,
@@ -280,7 +374,12 @@ export async function runAgent(options) {
       ? { ...streamOptions, headers: { ...(streamOptions && streamOptions.headers), ...hooks.openRouterHeaders } }
       : streamOptions),
     sessionId: options.sessionId,
-    toolExecution: 'sequential'
+    // pi runs a batch in parallel only if every tool in it lacks executionMode
+    // 'sequential' (writes and questions keep their order).
+    toolExecution: options.toolExecution === 'parallel' ? 'parallel' : 'sequential',
+    afterToolCall: coach,
+    transformContext,
+    prepareRequest
   });
 
   let doneTexts = [];
@@ -294,18 +393,23 @@ export async function runAgent(options) {
       agent.steer(message);
     };
   }
-  const usage = { input: 0, output: 0, cost: 0 };
+  const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
   let liveText = '';
   let liveThinking = '';
   let liveTools = 0;
   let failure = null;
+  // Where the failed request's partial answer went, to take it back on a retry.
+  let failureSlot = -1;
+  let retry = null;
+  let retries = 0;
+  const thoughts = new Map();
 
   const join = (parts, live) => parts.concat(live ? [live] : []).filter((part) => part && part.trim()).join('\n\n');
   const emit = () => {
     if (typeof options.onUpdate === 'function') {
       // cost: what the finished requests cost; liveChars: what the current one has
       // written so far (the app estimates its price until the request ends).
-      options.onUpdate({ text: join(doneTexts, liveText), thinking: join(doneThinking, liveThinking), steps: steps.slice(), cost: usage.cost, liveChars: liveText.length + liveThinking.length + liveTools });
+      options.onUpdate({ text: join(doneTexts, liveText), thinking: join(doneThinking, liveThinking), steps: steps.slice(), cost: usage.cost, liveChars: liveText.length + liveThinking.length + liveTools, retry: retry ? { ...retry } : null });
     }
   };
 
@@ -329,6 +433,8 @@ export async function runAgent(options) {
       liveText = answer.text;
       liveThinking = answer.thinking;
       liveTools = toolCallChars(event.message);
+      // The repeated request is answering: the "retrying" row can go.
+      if (retry && (liveText || liveThinking || liveTools)) retry = null;
       emit();
     } else if (event.type === 'message_end' && event.message.role !== 'user') {
       const message = event.message;
@@ -341,15 +447,28 @@ export async function runAgent(options) {
         doneTexts.push(answer.text);
         doneThinking.push(answer.thinking);
         if (message.usage) {
+          // input stays the whole prompt (cache included); the cache parts are also kept apart.
           usage.input += (message.usage.input || 0) + (message.usage.cacheRead || 0) + (message.usage.cacheWrite || 0);
           usage.output += message.usage.output || 0;
+          usage.cacheRead += message.usage.cacheRead || 0;
+          usage.cacheWrite += message.usage.cacheWrite || 0;
           usage.cost += (message.usage.cost && message.usage.cost.total) || 0;
         }
-        if (message.stopReason === 'error' || message.stopReason === 'aborted') failure = message;
+        if (message.stopReason === 'error' || message.stopReason === 'aborted') {
+          failure = message;
+          failureSlot = doneTexts.length - 1;
+        } else {
+          retry = null;
+        }
         emit();
       }
     } else if (event.type === 'tool_execution_start') {
-      steps.push({ id: event.toolCallId, name: event.toolName, args: event.args || {}, status: 'running', output: '' });
+      // think is a private scratchpad: its thought joins the reasoning, never a step.
+      if (event.toolName === 'think') {
+        thoughts.set(event.toolCallId, String((event.args && event.args.thought) || ''));
+        return;
+      }
+      steps.push({ id: event.toolCallId, name: event.toolName, args: event.args || {}, status: 'running', output: '', startedAt: Date.now() });
       emit();
     } else if (event.type === 'tool_execution_update') {
       // Long tools (the APK release) say what they are doing meanwhile.
@@ -363,20 +482,46 @@ export async function runAgent(options) {
         emit();
       }
     } else if (event.type === 'tool_execution_end') {
+      if (thoughts.has(event.toolCallId)) {
+        const details = event.result && event.result.details;
+        const thought = String((details && details.thought) || thoughts.get(event.toolCallId) || '').trim();
+        thoughts.delete(event.toolCallId);
+        if (thought) doneThinking.push(thought);
+        emit();
+        return;
+      }
+      consecutiveToolErrors = event.isError ? consecutiveToolErrors + 1 : 0;
       const step = steps.find((item) => item.id === event.toolCallId);
       if (step) {
         step.status = event.isError ? 'error' : 'done';
+        step.endedAt = Date.now();
         const output = resultText(event.result);
         step.output = output.length > MAX_STEP_OUTPUT ? output.slice(0, MAX_STEP_OUTPUT) + '\n…' : output;
+        const details = event.result && event.result.details;
         // Web pages a tool found or read: the app lists them as the answer's sources.
-        if (event.result && event.result.details && Array.isArray(event.result.details.sources)) step.sources = event.result.details.sources.slice(0, 12);
-        if (event.result && event.result.details && Array.isArray(event.result.details.agents)) step.agents = event.result.details.agents;
+        if (details && Array.isArray(details.sources)) step.sources = details.sources.slice(0, 12);
+        if (details && Array.isArray(details.agents)) step.agents = details.agents;
+        if (details && Array.isArray(details.plan)) step.plan = details.plan;
         // Documents a tool created or edited: the app shows them under the answer.
-        if (event.result && event.result.details && Array.isArray(event.result.details.documents) && event.result.details.documents.length) step.documents = event.result.details.documents.slice(0, 12);
+        if (details && Array.isArray(details.documents) && details.documents.length) step.documents = details.documents.slice(0, 12);
       }
       emit();
     }
   });
+
+  // Take the failed request out of the transcript (and of what this run
+  // shows) so continue() asks again from the user message or tool results
+  // before it: tools that already ran are not run again.
+  const dropFailure = () => {
+    agent.state.messages = agent.state.messages.filter((message) => message !== failure);
+    messages = messages.filter((message) => message !== failure);
+    if (failureSlot >= 0 && failureSlot < doneTexts.length) {
+      doneTexts.splice(failureSlot, 1);
+      doneThinking.splice(failureSlot, 1);
+    }
+    failure = null;
+    failureSlot = -1;
+  };
 
   const signal = options.signal;
   const onAbort = () => agent.abort();
@@ -384,8 +529,43 @@ export async function runAgent(options) {
     if (signal.aborted) throw abortError();
     signal.addEventListener('abort', onAbort);
   }
+  let overflowRetried = false;
   try {
-    await agent.prompt(options.prompt);
+    let run = () => agent.prompt(options.prompt);
+    let dropped = null;
+    for (;;) {
+      failure = null;
+      failureSlot = -1;
+      try {
+        await run();
+      } catch (error) {
+        // continue() refused the transcript: report the error that led here.
+        if (!dropped) throw error;
+        failure = dropped;
+        break;
+      }
+      dropped = null;
+      if ((signal && signal.aborted) || !failure || failure.stopReason !== 'error') break;
+      const reason = failure.errorMessage || '';
+      if (isContextOverflow(reason) && !overflowRetried) {
+        overflowRetried = true;
+        budgetFactor = 0.3;
+        forceAging = true;
+        dropped = failure;
+        dropFailure();
+        run = () => agent.continue();
+        continue;
+      }
+      if (!isTransientError(reason) || retries >= maxRetries) break;
+      retries++;
+      dropped = failure;
+      dropFailure();
+      retry = { attempt: retries, max: maxRetries };
+      emit();
+      await sleep(RETRY_BASE_MS * Math.pow(2, retries - 1), signal);
+      if (signal && signal.aborted) break;
+      run = () => agent.continue();
+    }
   } catch (error) {
     // What the finished requests cost is spent even when the run fails.
     if (error && typeof error === 'object') error.usage = usage;
@@ -405,6 +585,7 @@ export async function runAgent(options) {
     const error = new Error(failure.errorMessage || 'El modelo ha devuelto un error.');
     error.partial = { text: join(doneTexts, ''), steps };
     error.usage = usage;
+    error.retries = retries;
     throw error;
   }
   return {
@@ -412,7 +593,9 @@ export async function runAgent(options) {
     thinking: join(doneThinking, ''),
     steps,
     messages,
-    usage
+    usage,
+    retries,
+    escalated
   };
 }
 
