@@ -1,0 +1,27 @@
+{
+  "id": "shot-20261025-005617-diiw",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-10-25T00:57:15.280Z",
+  "shots": [
+    {
+      "name": "renombrar en la barra",
+      "file": null,
+      "device": "phone",
+      "theme": "light",
+      "error": "page.fill: Timeout 8000ms exceeded."
+    },
+    {
+      "name": "chat nuevo a cero",
+      "file": "2-chat-nuevo-a-cero.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "menu mas renombrar",
+      "file": "3-menu-mas-renombrar.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
