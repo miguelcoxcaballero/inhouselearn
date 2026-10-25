@@ -1,0 +1,32 @@
+{
+  "id": "shot-20261025-165431-8hwc",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "prop/compositor",
+  "at": "2026-10-25T17:03:48.727Z",
+  "shots": [
+    {
+      "name": "P3 movil",
+      "file": "1-p3-movil.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "P3 escritorio",
+      "file": "2-p3-escritorio.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "P4 movil",
+      "file": "3-p4-movil.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "P4 escritorio",
+      "file": "4-p4-escritorio.png",
+      "device": "desktop",
+      "theme": "light"
+    }
+  ]
+}
