@@ -69,6 +69,31 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const pinned = await page.evaluate((id) => ({ pinned: appState.chats.find((c) => c.id === id).pinned, pin: !!document.querySelector('.chat-item[data-chat-id="' + id + '"] .gut .pn') }), target);
   check('right click / long press opens Fijar · Renombrar · Eliminar, and Fijar pins it (with its pin)', items[0] === 'Fijar' && items.includes('Renombrar') && items.includes('Eliminar') && pinned.pinned && pinned.pin, { items, pinned });
 
+  // Manual rename: double click on the name, and the new one is typed out
+  // letter by letter like the model's automatic names.
+  const renameId = await page.evaluate(() => appState.chats.find((c) => c.title === 'Revolución francesa causas').id);
+  await page.evaluate((id) => { document.querySelector('[data-title-chat-id="' + id + '"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); }, renameId);
+  const editor = await page.evaluate(() => { const input = document.querySelector('.chat-rename-input'); return input ? { value: input.value, focused: document.activeElement === input } : null; });
+  await page.fill('.chat-rename-input', 'Historia moderna');
+  await page.press('.chat-rename-input', 'Enter');
+  const typed = [];
+  for (let i = 0; i < 70; i++) {
+    typed.push(await page.evaluate((id) => { const el = document.querySelector('[data-title-chat-id="' + id + '"]'); return el ? (el.classList.contains('title-typing') ? '|' : '') + el.textContent : ''; }, renameId));
+    if (typed[typed.length - 1] === 'Historia moderna') break;
+    await page.waitForTimeout(80);
+  }
+  const renamed = await page.evaluate((id) => { const chat = appState.chats.find((c) => c.id === id); return { title: chat.title, custom: chat.customTitle }; }, renameId);
+  const partial = typed.filter((f) => f.startsWith('|'));
+  check('double click renames the chat, and the name is typed out like the automatic ones',
+    editor && editor.value === 'Revolución francesa causas' && editor.focused && renamed.custom === 'Historia moderna' && renamed.title === 'Historia moderna' &&
+    partial.length >= 3 && partial.some((f) => f.length > 1 && f.length < 22) && typed[typed.length - 1] === 'Historia moderna',
+    { renamed, partial: partial.slice(0, 10) });
+  await page.evaluate((id) => { document.querySelector('[data-title-chat-id="' + id + '"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); }, renameId);
+  await page.fill('.chat-rename-input', 'Nombre descartado');
+  await page.press('.chat-rename-input', 'Escape');
+  const escaped = await page.evaluate((id) => { const chat = appState.chats.find((c) => c.id === id); return { title: chat.title, custom: chat.customTitle, list: (document.querySelector('[data-title-chat-id="' + id + '"]') || {}).textContent }; }, renameId);
+  check('Escape discards the edit and keeps the name', escaped.title === 'Historia moderna' && escaped.custom === 'Historia moderna' && escaped.list === 'Historia moderna', escaped);
+
   // Search filters by title, accents ignored.
   await page.click('#chats-search-btn');
   await page.fill('#chats-search-input', 'parabolico');

@@ -1722,9 +1722,9 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261024-cost">
+  <link rel="stylesheet" href="composer-dock.css?v=20261026-cost-reset">
   <!-- The last sheet: the dark theme overrides everything above it. -->
-  <link rel="stylesheet" href="chats-menu.css?v=20261024-index-b">
+  <link rel="stylesheet" href="chats-menu.css?v=20261026-rename-cost">
   <link rel="stylesheet" href="theme.css?v=20261024-cost">
 </head>
 <body>
@@ -6436,7 +6436,14 @@
       const chat = typeof getActiveChat === 'function' ? getActiveChat() : null;
       const known = !!chat && chat.messages.some((message) => message.role === 'assistant' && (typeof message.cost === 'number' || typeof message.liveCost === 'number' || (message.alternatives || []).some((v) => typeof v.cost === 'number')));
       el.classList.toggle('hidden', !known);
-      if (!known) return;
+      if (!known) {
+        // Also hidden, the counter says which chat it counts and that this
+        // one owes nothing: switching chats never leaves the old figure on it.
+        const key = 'chat:' + (chat ? chat.id : '');
+        el.dataset.costFor = key;
+        el.dataset.cost = '0';
+        return;
+      }
       // Over the send button, ending at its right edge (never past the screen;
       // dictation.js puts its button next to it inside the same wrapper).
       const send = document.getElementById('send-btn');
@@ -6735,6 +6742,9 @@
       const visible = threadMessages(chat);
       if (!visible.length) {
         renderEmptyThread(settings);
+        // A chat with nothing in it shows no total: without this the previous
+        // chat's cost stayed above the send button after switching.
+        updateChatCost();
         return;
       }
       const lastId = lastAssistantId(chat);
@@ -8946,7 +8956,12 @@
         saveState();
         renderHistory();
       }
-      input.addEventListener('blur', commit);
+      input.addEventListener('blur', function() {
+        var before = chat.title || '';
+        commit();
+        // The name the user wrote is typed out like the model's automatic ones.
+        if (before !== chat.title) startTitleAnimation(chat.id, before, chat.title);
+      });
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
         if (e.key === 'Escape') { input.value = chat.title || ''; input.blur(); }

@@ -93,6 +93,18 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const writing = counted.filter((c) => !c.step);
   check('while a long tool call is being written the cost counts up live (shown too)', writing.length >= 3 && writing[writing.length - 1].live > writing[0].live && writing[writing.length - 1].shown !== writing[0].shown, counted);
 
+  // 8. A new chat starts at zero: the previous chat's total never leaks onto it.
+  const oldId = await page.evaluate(() => appState.activeChatId);
+  const fresh = await page.evaluate(() => {
+    const was = { hidden: document.getElementById('chat-cost').classList.contains('hidden'), total: Number(chatTotalCost(getActiveChat()).toFixed(6)) };
+    newChat();
+    const el = document.getElementById('chat-cost');
+    return { was, hidden: el.classList.contains('hidden'), cost: el.dataset.cost, key: el.dataset.costFor, id: appState.activeChatId };
+  });
+  check('a new chat starts at zero (the old chat\'s total never leaks above the send button)', fresh.was.total > 0 && !fresh.was.hidden && fresh.hidden && fresh.cost === '0' && fresh.key === 'chat:' + fresh.id, fresh);
+  const back = await page.evaluate((id) => { appState.activeChatId = id; renderThread(); const el = document.getElementById('chat-cost'); const chat = appState.chats.find((c) => c.id === id); return { hidden: el.classList.contains('hidden'), ok: el.dataset.costFor === 'chat:' + id && Math.abs(Number(el.dataset.cost) - chatTotalCost(chat)) < 1e-9 }; }, oldId);
+  check('…and switching back to the old chat brings its total with it', !back.hidden && back.ok, back);
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();
