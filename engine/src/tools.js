@@ -178,7 +178,8 @@ function loadPrelude() {
   if (!preludePromise) {
     preludePromise = Promise.resolve()
       .then(() => sandboxHooks.sandboxPrelude())
-      .then((text) => String(text || ''))
+      // A string, or one string per library (each evaluated on its own).
+      .then((text) => (Array.isArray(text) ? text.map((part) => String(part || '')).filter(Boolean) : String(text || '')))
       .catch(() => {
         // A failed download is retried next time; this run goes without it.
         preludePromise = null;
@@ -232,7 +233,9 @@ function workerSource(prelude) {
   return 'self.nsolve = ' + String(nsolve) + ';\n' +
     'self.integrate = ' + String(integrate) + ';\n' +
     'self.table = ' + String(table) + ';\n' +
-    (prelude ? 'try { (0, eval)(' + JSON.stringify(prelude) + '); } catch (e) { self.__preludeError = String((e && e.message) || e); }\n' : '') +
+    // Browser bundles (Algebrite) look for window: in a worker it is self.
+    'self.window = self;\n' +
+    [].concat(prelude || []).filter(Boolean).map((part) => 'try { (0, eval)(' + JSON.stringify(part) + '); } catch (e) { self.__preludeError = (self.__preludeError ? self.__preludeError + \'; \' : \'\') + String((e && e.message) || e); }\n').join('') +
     WORKER_SOURCE;
 }
 
@@ -308,6 +311,12 @@ export function createWorkspaceTools(workspace, opts = {}) {
   const snapshot = () => Object.fromEntries(workspace.list().map((file) => [file.path, workspace.read(file.path) || '']));
 
   const writeChecked = (path, content) => {
+    // The caller may forbid a path (a read-only agent, a file another agent owns),
+    // whichever tool writes it, run_js included.
+    if (typeof opts.canWrite === 'function') {
+      const verdict = opts.canWrite(path);
+      if (verdict !== true && verdict !== undefined) throw new Error(typeof verdict === 'string' ? verdict : 'No puedes cambiar ' + path + '.');
+    }
     const text = String(content == null ? '' : content);
     if (text.length > MAX_FILE_CHARS) {
       throw new Error('El archivo es demasiado grande para guardarlo en el navegador (máximo ' + MAX_FILE_CHARS + ' caracteres).');

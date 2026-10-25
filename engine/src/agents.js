@@ -404,12 +404,13 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
     const costBase = row.cost;
     let spentBefore = 0; // previous tries of this run
     push(true);
+    // One time allowance for all the tries of this agent.
+    let remaining = job.maxMinutes * 60000;
     for (let attempt = 1; ; attempt++) {
       const controller = new AbortController();
       own.controller = controller;
       if (signal && signal.aborted) controller.abort();
       let attemptCost = 0;
-      let remaining = job.maxMinutes * 60000;
       let timerStart = Date.now();
       let timer = null;
       const arm = () => { timerStart = Date.now(); timer = setTimeout(() => { own.stopReason = own.stopReason || 'Parado: ' + job.maxMinutes + ' min'; controller.abort(); }, Math.max(0, remaining)); };
@@ -426,7 +427,9 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
         if (update.kind) row.kind = String(update.kind).slice(0, 20);
         if (Number.isFinite(update.steps)) {
           row.steps = update.steps;
-          if (update.steps >= job.maxSteps && !own.stopReason) { own.stopReason = 'Parado: límite de ' + job.maxSteps + ' pasos'; controller.abort(); }
+          // The app warns from maxSteps−5 and refuses past maxSteps (the agent can still
+          // report); the scheduler only cuts an agent that keeps going anyway.
+          if (update.steps >= job.maxSteps + 5 && !own.stopReason) { own.stopReason = 'Parado: límite de ' + job.maxSteps + ' pasos'; controller.abort(); }
         }
         if (Array.isArray(update.trail)) row.trail = update.trail.slice(-24);
         if (update.wrote) own.wrote = true;
@@ -723,6 +726,10 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
     parts.push('Verificación: ' + k + '/' + acceptance.length + ' criterios OK' + (verify.passed ? '.' : (failing.length ? '; falla: ' + failing.slice(0, 5).join(' · ') : '.')));
   } else if (verifyRow && acceptance.length) {
     parts.push('Verificación: 0/' + acceptance.length + ' criterios OK (' + (verifyRow.status === 'done' ? 'el verificador no entregó su resultado' : verifyRow.doing) + ').');
+  } else if (verifyRow) {
+    // The light review (no criteria): its verdict also goes first.
+    const checks = verify && Array.isArray(verify.checks) ? verify.checks : [];
+    parts.push('Verificación: ' + (verify ? (verify.passed ? 'pasa' : 'no pasa') + (checks.length ? ' (' + checks.filter((check) => check.ok).length + '/' + checks.length + ' comprobaciones)' : '') : (verifyRow.status === 'done' ? 'hecha (ver su sección)' : verifyRow.doing || verifyRow.status)) + '.');
   }
   if (warnings.length) parts.push('Avisos del plan:\n' + warnings.map((item) => '- ' + item).join('\n'));
   rows.forEach((row) => parts.push(sectionOf(row)));

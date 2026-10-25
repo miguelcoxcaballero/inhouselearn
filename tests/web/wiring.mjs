@@ -18,7 +18,17 @@ const NEEDED = {
   'InhouseStudy.configureDrive': 'study.json in Drive',
   'WEB_FETCH_NOISE': 'web_fetch without menus',
   'writeStateDb(': 'the saved chats in IndexedDB',
-  'showLiveCost(': 'the live cost on other devices'
+  'showLiveCost(': 'the live cost on other devices',
+  'stableSystemPrompt(': 'the cacheable system prompt',
+  'turnContextText(': 'the per-turn <contexto_app> block',
+  'WORK_METHOD_PROMPT': '«Cómo trabajar»',
+  'markExecution(': 'parallel reads',
+  "toolExecution: 'parallel'": 'parallel reads in runAgent',
+  'configureSandbox(': 'math.js and Algebrite in run_js',
+  'escalate:': 'raising the reasoning after tool errors',
+  'subAgentSystemPrompt(': 'the shared prompt of the parallel agents',
+  'settleAgentSteps(': 'agents never left running',
+  'src="ultra.js': 'the Ultra code board'
 };
 
 test('index.html keeps the tools, Estudio and persistence wiring', () => {

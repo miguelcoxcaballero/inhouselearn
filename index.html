@@ -1750,7 +1750,7 @@
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261026-restore">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="ultra.css?v=20261026-ultra2">
+  <link rel="stylesheet" href="ultra.css?v=20261026-ultra3">
   <link rel="stylesheet" href="theme.css?v=20261026-ultra">
 </head>
 <body>
@@ -2067,7 +2067,7 @@
   <script src="documents.js?v=20261026-restore"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261026-ultra2"></script>
+  <script src="vendor/pi-engine.js?v=20261026-ultra3"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2082,8 +2082,8 @@
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261026-ultra"></script>
-  <script src="composer-dock.js?v=20261026-ultra2"></script>
-  <script src="ultra.js?v=20261026-ultra2"></script>
+  <script src="composer-dock.js?v=20261026-ultra3"></script>
+  <script src="ultra.js?v=20261026-ultra3"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -5013,7 +5013,8 @@
     // Which parallel agent asks (Ultra code): its name and colour on the
     // approval card, and its lane says «esperando» while the card waits.
     function approvalMeta(meta) {
-      return meta ? { agent: meta.agent, agentHue: meta.agentHue, onWait: meta.onWait } : {};
+      // signal: stopping that agent answers its waiting card «no».
+      return meta ? { agent: meta.agent, agentHue: meta.agentHue, onWait: meta.onWait, signal: meta.signal } : {};
     }
 
     function githubToolsFor(chat, signal, meta) {
@@ -5297,6 +5298,8 @@
             if (!ok) return Object.assign(outcome, { saved: [], declined: files.map((item) => item.path).join(', ') });
           }
           const saved = [];
+          // A parallel agent's documents count in its touched files (conflicts between agents).
+          if (meta && typeof meta.onWrite === 'function') files.forEach((item) => { try { meta.onWrite('biblioteca/' + item.path, 'write'); } catch (_) {} });
           for (const item of files) {
             const file = new File([item.bytes], item.path.split('/').pop(), { type: item.mimeType });
             const { added, skipped } = await library.ingest(chat.id, [{ file, path: item.path }], { generated: true });
@@ -7606,9 +7609,18 @@
       const copy = normalizeStoredMessage(message, { includeBinaries: false });
       copy.pending = !!message.pending;
       copy.piMessages = [];
-      copy.toolSteps = copy.toolSteps.map((step) => Object.assign({}, step, {
-        output: typeof step.output === 'string' && step.output.length > 4000 ? step.output.slice(0, 4000) + '…' : step.output
-      }));
+      copy.toolSteps = copy.toolSteps.map((step) => {
+        const out = Object.assign({}, step, {
+          output: typeof step.output === 'string' && step.output.length > 4000 ? step.output.slice(0, 4000) + '…' : step.output
+        });
+        // Agents update up to 4 times a second: while the turn runs only what the
+        // board draws travels (results, reports and long trails with the final copy).
+        if (message.pending && step.name === 'spawn_agents' && Array.isArray(step.agents)) {
+          out.agents = step.agents.map((agent) => Object.assign({}, agent, { result: '', report: undefined, task: String(agent.task || '').slice(0, 160), trail: Array.isArray(agent.trail) ? agent.trail.slice(-8) : [] }));
+          if (out.args && typeof out.args === 'object') out.args = { agents: [] };
+        }
+        return out;
+      });
       return copy;
     }
 
@@ -10528,19 +10540,21 @@
         approvalPromptText(chat),
         guided ? '' : '\n' + WORK_METHOD_PROMPT,
         '',
-        'Hoy es ' + todayText() + '. Al final de cada mensaje del usuario la app añade un bloque <contexto_app> con la hora, los archivos, la biblioteca y lo que sabes de él para ese turno: úsalo, pero no lo ha escrito el usuario y no lo cites.'
+        guided ? '' : 'Hoy es ' + todayText() + '. Al final de cada mensaje del usuario la app añade un bloque <contexto_app> con la hora, los archivos, la biblioteca y lo que sabes de él para ese turno: úsalo, pero no lo ha escrito el usuario y no lo cites.'
       ].filter((line) => line !== '').join('\n');
     }
 
     // What changes every turn (time, files, library, memory and subject,
     // visual reminders): appended to the user's message, never saved.
-    function turnContextText(chat, libraryForModel) {
+    // plain: without the <contexto_app> wrapper (Guided Learning keeps it in its
+    // system prompt, where its base prompt says «Your task now» is, below).
+    function turnContextText(chat, libraryForModel, plain) {
       const files = chatWorkspace(chat).list();
       const guided = !!(chat && chat.guidedLearning);
       const brief = window.InhouseStudy ? window.InhouseStudy.brief(chat.id) : '';
       return [
-        '<contexto_app>',
-        'Información de la app para este turno (no la ha escrito el usuario; no la cites).',
+        plain ? '' : '<contexto_app>',
+        plain ? '' : 'Información de la app para este turno (no la ha escrito el usuario; no la cites).',
         'Ahora: ' + currentMomentText() + '.',
         files.length
           ? 'Archivos del chat al empezar este turno: ' + files.slice(0, 60).map((file) => file.path).join(', ') + (files.length > 60 ? ', … (' + (files.length - 60) + ' más)' : '') + ' (cambian con tus herramientas: list_files para verlos ahora).'
@@ -10551,7 +10565,7 @@
         visualVarietyText(chat),
         // Last, where models pay most attention: the course task, or the visuals reminder.
         guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER,
-        '</contexto_app>'
+        plain ? '' : '</contexto_app>'
       ].filter(Boolean).join('\n');
     }
 
@@ -10765,9 +10779,11 @@
       let lastCleanText = '';
       const run = (tools) => InhousePi.runAgent({
         model,
-        systemPrompt: stableSystemPrompt(chat),
+        // Guided Learning: the course state and «Your task now» stay at the end of
+        // its system prompt (no cache gain there, the course moves every turn).
+        systemPrompt: chat.guidedLearning ? stableSystemPrompt(chat) + '\n\n' + turnContextText(chat, libraryForModel, true) : stableSystemPrompt(chat),
         history,
-        prompt: withTurnContext(prompt, turnContextText(chat, libraryForModel)),
+        prompt: chat.guidedLearning ? prompt : withTurnContext(prompt, turnContextText(chat, libraryForModel)),
         thinkingLevel: effectiveThinkingLevel(chat) || 'off',
         tools: markExecution(tools),
         // Reads and searches asked together run at once; writes stay one by one.
@@ -10807,13 +10823,17 @@
           // The same tools, built again for each parallel agent (Ultra code).
           // onCost: what a tool spends besides the model (web searches), for the agent's own row.
           // meta (parallel agents only): who asks for approval, its own overwrite-guard scope and its writes.
-          const workTools = (onCost, meta) => libraryTools.concat(
-            githubToolsFor(chat, signal, meta),
-            userDriveToolsFor(chat, signal, model.input.includes('image'), meta),
-            extraGoogleToolsFor(signal, model.input.includes('image'), chat),
-            webToolsFor(chat, signal, onCost),
-            documentToolsFor(chat, signal, model.input.includes('image'), meta),
-            approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat), meta ? { seenScope: meta.seenScope, onWrite: meta.onWrite } : {}), meta || {}));
+          const workTools = (onCost, meta) => {
+            // A parallel agent's tools stop with that agent, not only with the turn.
+            const toolSignal = (meta && meta.signal) || signal;
+            return libraryTools.concat(
+              githubToolsFor(chat, toolSignal, meta),
+              userDriveToolsFor(chat, toolSignal, model.input.includes('image'), meta),
+              extraGoogleToolsFor(toolSignal, model.input.includes('image'), chat),
+              webToolsFor(chat, toolSignal, onCost),
+              documentToolsFor(chat, toolSignal, model.input.includes('image'), meta),
+              approvalWorkspaceTools(chat, InhousePi.createWorkspaceTools(chatWorkspace(chat), meta ? { seenScope: meta.seenScope, onWrite: meta.onWrite, canWrite: meta.canWrite } : {}), meta || {}));
+          };
           const agentTools = ultraCodeOn(chat) && !chat.guidedLearning
             ? InhousePi.createAgentTools({
               runSubAgent: (job) => runSubAgent(chat, model, modelId, workTools, job),
@@ -11500,7 +11520,15 @@
       const meta = {
         agent: job.name,
         agentHue: job.hue,
-        onWait: (waiting) => update({ waiting, doing: waiting ? 'Esperando tu aprobación' : lastDoing })
+        signal: job.signal,
+        onWait: (waiting) => update({ waiting, doing: waiting ? 'Esperando tu aprobación' : lastDoing }),
+        // Enforced by the workspace itself, whichever tool writes (run_js too).
+        canWrite: (path) => {
+          if (readOnly) return 'Solo puedes leer: tu rol no cambia archivos; pon el cambio en tu informe.';
+          const clean = String(path || '').replace(/^\.?\//, '');
+          if (owned && !owned.some((re) => re.test(clean))) return 'Este archivo es de otro agente (o de nadie): no lo cambies; devuelve el cambio en tu informe.';
+          return true;
+        }
       };
       // The chat's tools for this agent: read-only roles keep only reads, owned
       // files are enforced, and the step budget warns, then refuses.
@@ -11518,8 +11546,10 @@
               const path = String((params && params.path) || '').replace(/^\.?\//, '');
               if (!owned.some((re) => re.test(path))) throw new Error('Este archivo es de otro agente (o de nadie): no lo cambies; devuelve el cambio en tu informe.');
             }
-            const result = await tool.execute(id, params, ...rest);
+            // Marked before the call: a write that fails after its side effect
+            // (a PR made, then a timeout) must not be retried as if nothing happened.
             if (!READ_ONLY_TOOL.test(tool.name)) { wrote = true; update({ wrote: true }); }
+            const result = await tool.execute(id, params, ...rest);
             if (calls >= maxSteps - 5 && result && Array.isArray(result.content)) {
               return Object.assign({}, result, { content: result.content.concat([{ type: 'text', text: 'Te quedan ' + Math.max(0, maxSteps - calls) + ' pasos: termina y responde con tu informe.' }]) });
             }
@@ -11540,7 +11570,8 @@
           maxRetries: 2,
           escalate: true,
           signal: job.signal,
-          sessionId: chat.id + ':' + (job.id || job.name),
+          // One session for all the agents of a chat: same backend, shared cache.
+          sessionId: chat.id + ':agents',
           onUpdate: (info) => {
             const steps = info.steps || [];
             const running = steps.filter((step) => step.status === 'running').pop();
@@ -11589,6 +11620,7 @@
     function settleAgentSteps(message, label) {
       (Array.isArray(message && message.toolSteps) ? message.toolSteps : []).forEach((step) => {
         if (step.name !== 'spawn_agents' || !Array.isArray(step.agents)) return;
+        if (step.status === 'running') { step.status = 'error'; step.endedAt = step.endedAt || Date.now(); }
         step.agents.forEach((agent) => {
           if (!/^(running|queued|waiting)$/.test(agent.status)) return;
           agent.status = 'stopped';
@@ -11671,12 +11703,12 @@
     });
 
     const NETWORK_ERROR = /network|failed to fetch|load failed|fetch failed|err_|connection|terminated|socket|aborted by the browser|no se pudo conectar/i;
-    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$|update_plan$|ask_user$|study_overview$|recall$|think$)/;
+    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_(gmail_search|gmail_read|drive_(search|list|read|shared_drives))|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$|update_plan$|ask_user$|study_overview$|recall$|think$)/;
 
     // Reads that may run at the same time as other reads. A tool that sets its
     // own mode keeps it; pi runs a batch in parallel only when every call in it
     // is parallel, so a batch with any write stays in order.
-    const PARALLEL_SAFE = (name) => READ_ONLY_TOOL.test(name) && !/^(run_js|set_course_plan|quiz|final_exam|check_diagram|think|update_plan|ask_user)$/.test(name);
+    const PARALLEL_SAFE = (name) => READ_ONLY_TOOL.test(name) && !/^(run_js|set_course_plan|quiz|final_exam|check_diagram|update_plan|ask_user)$/.test(name);
     function markExecution(tools) {
       return (tools || []).map((tool) => (tool.executionMode ? tool : Object.assign({}, tool, { executionMode: PARALLEL_SAFE(tool.name) ? 'parallel' : 'sequential' })));
     }
@@ -11859,9 +11891,12 @@
               return '';
             }
           }));
-          // Without them run_js still works (nsolve, integrate and table are built in).
-          if (texts.some((text) => !text)) sandboxPreludePromise = null;
-          return texts.filter(Boolean).join('\n;\n');
+          // One string per library (each evaluated on its own in the worker). A
+          // missing one rejects: nothing incomplete is cached, the next run_js
+          // tries again, and this one runs without them (nsolve, integrate and
+          // table are built in).
+          if (texts.some((text) => !text)) { sandboxPreludePromise = null; throw new Error('Librerías de cálculo no disponibles ahora.'); }
+          return texts;
         })();
       }
       return sandboxPreludePromise;

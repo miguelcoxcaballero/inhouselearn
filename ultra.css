@@ -273,3 +273,8 @@
 /* Stop: a quiet control, red only when pointed at. */
 .ua-stop { color: var(--muted); }
 @media (hover: hover) { .ua-stop:hover { color: var(--ua-err); } }
+
+/* Lanes come in one after another when the card appears (patches keep the nodes, so it never replays). */
+.ua-lane { animation: ua-lane-in 0.32s var(--ease, ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes ua-lane-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .ua-lane { animation: none; } }

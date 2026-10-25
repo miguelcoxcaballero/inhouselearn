@@ -501,7 +501,9 @@ export async function runAgent(options) {
         const details = event.result && event.result.details;
         const thought = String((details && details.thought) || thoughts.get(event.toolCallId) || '').trim();
         thoughts.delete(event.toolCallId);
-        if (thought) doneThinking.push(thought);
+        // Joined to the current request's reasoning (doneThinking has one entry per
+        // assistant message; an extra entry would shift what a retry removes).
+        if (thought) { if (doneThinking.length) doneThinking[doneThinking.length - 1] = [doneThinking[doneThinking.length - 1], thought].filter(Boolean).join('\n\n'); else liveThinking = [liveThinking, thought].filter(Boolean).join('\n\n'); }
         emit();
         return;
       }

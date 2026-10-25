@@ -187,7 +187,7 @@
   }
 
   function canStop(step, agent) {
-    return /^(running|waiting)$/.test(agent.status) && typeof window.ultraCanStop === 'function' && typeof window.ultraStopAgent === 'function' && !!window.ultraCanStop(step.id);
+    return LIVE.test(agent.status) && typeof window.ultraCanStop === 'function' && typeof window.ultraStopAgent === 'function' && !!window.ultraCanStop(step.id);
   }
 
   /* ─── Markup ───────────────────────────────────────────────────────── */
@@ -231,7 +231,7 @@
       '<div class="ua-lane-row">' +
       '<button type="button" class="ua-lane-head" aria-expanded="false" aria-controls="' + body + '">' +
       ORB +
-      '<span class="ua-name">' + esc(agent.name || 'Agente') + '</span>' +
+      '<span class="ua-name" title="' + esc(agent.name || 'Agente') + '">' + esc(agent.name || 'Agente') + '</span>' +
       '<span class="ua-role">' + esc(ROLE_LABEL[agent.role] || ROLE_LABEL.build) + '</span>' +
       '<span class="ua-status-text ua-sr">' + esc(STATUS_LABEL[agent.status] || '') + '</span>' +
       '<span class="ua-time"' + (time.since ? ' data-live-since="' + time.since + '"' : '') + '>' + esc(time.text) + '</span>' +
@@ -269,7 +269,7 @@
       parts.push('<line class="ua-edge" data-key="' + esc(key) + '" data-status="' + esc(entry.agent.status || 'queued') + '" x1="' + x + '" y1="' + y + '" x2="' + hub.x + '" y2="' + hub.y + '" style="--agent-hue:' + hue + '"/>');
       nodes.push('<g class="ua-node" data-key="' + esc(key) + '" data-status="' + esc(entry.agent.status || 'queued') + '" style="--agent-hue:' + hue + '">' +
         '<circle class="ua-node-dot" cx="' + x + '" cy="' + y + '" r="6"/>' +
-        '<text class="ua-node-label" x="' + x + '" y="' + (y - 10) + '" text-anchor="middle">' + esc(String(entry.agent.name || '').slice(0, 14)) + '</text>' +
+        '<text class="ua-node-label" x="' + x + '" y="' + (y - 10) + '" text-anchor="middle">' + esc(String(entry.agent.name || '').length > 14 ? String(entry.agent.name).slice(0, 13) + '…' : String(entry.agent.name || '')) + '<title>' + esc(entry.agent.name || '') + '</title></text>' +
         (motionPath ? '<circle class="ua-pulse" r="3" cx="0" cy="0" style="offset-path:path(\'' + path + '\')"/>' : '') +
         '</g>');
     });

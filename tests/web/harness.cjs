@@ -142,6 +142,13 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const last = prompts[prompts.length - 1] || '';
   check('the system prompt carries the current date and the new tools', /Ahora: [a-zé]+, \d{1,2} de [a-z]+ de 20\d\d/.test(last) && /search_files/.test(last) && /update_plan/.test(last) && /Biblioteca del chat: vacía/.test(last), (last.match(/Ahora:[^\n]*/) || [''])[0]);
 
+  // 9. run_js: math.js and Algebrite inside the sandbox (still no network), plus nsolve/integrate.
+  const maths = await page.evaluate(async () => {
+    const out = await InhousePi.runInSandbox("return [math.unit('1 mi').to('km').toNumber('km'), math.derivative('x^3', 'x').toString(), Algebrite.run('integral(x^2)'), Math.abs(nsolve((x) => x * x - 2, 0, 2) - Math.SQRT2) < 1e-9, typeof fetch, self.__preludeError || '']", {});
+    return out.result ? JSON.parse(out.result) : out;
+  });
+  check('run_js has math.js and Algebrite (units, derivatives, integrals) and still no network', Array.isArray(maths) && Math.abs(maths[0] - 1.609344) < 1e-6 && maths[1] === '3 * x ^ 2' && /1\/3/.test(maths[2]) && maths[3] === true && maths[4] === 'undefined' && !maths[5], maths);
+
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
 })();

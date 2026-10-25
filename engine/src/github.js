@@ -270,6 +270,8 @@ export function createGithubTools(ctx) {
     let head = await branchSha(repo, branch);
     const base = String(params.base || '').trim() || main;
     const creating = !head;
+    // A new branch: the approved diff was computed on the base as it was then.
+    const seenBase = creating ? await branchSha(repo, base) : null;
     const sourceRef = creating ? base : branch;
     const items = [];
     for (const file of files) {
@@ -289,7 +291,7 @@ export function createGithubTools(ctx) {
     }
     // Everything after the approval runs alone on this branch (another agent
     // may be committing to it), on the head as it is now.
-    const seen = head; // the head the approved diff was computed on
+    const seen = head || seenBase; // the commit the approved diff was computed on
     const done = await withBranchLock(repo + '@' + branch, async () => {
       head = await branchSha(repo, branch);
       // While the user was deciding, another agent may have committed here.

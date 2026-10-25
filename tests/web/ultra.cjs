@@ -86,6 +86,17 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const searched = await page.evaluate(() => { const card = document.querySelector('#thread .message:last-child .ua-card'); const row = card && card.querySelector('.ua-lane .msg-cost'); const m = getActiveChat().messages.slice(-1)[0]; return { agent: row ? Number(row.dataset.cost) : 0, answer: m.cost }; });
   check('an agent\'s row includes what its web searches cost (and so does the answer)', searched.agent >= 0.0075 && Math.abs(searched.answer - (0.0005 * 4 + 0.007)) < 1e-6, searched);
 
+  // 2c. A read-only explorer cannot write, not even with run_js tricks the old regex missed.
+  await page.evaluate(() => window.__replies.push(
+    { text: '', tools: [{ name: 'spawn_agents', args: { verify: false, agents: [{ name: 'Lector', role: 'explore', task: 'Lee los archivos del chat y resume qué hay en ellos, sin cambiar nada; devuelve la lista con una frase por archivo.' }] } }] },
+    { text: '', tools: [{ name: 'run_js', args: { code: 'const w = writeFile; w("pirata.md", "no debería existir"); return 1;' } }, { name: 'write_file', args: { path: 'pirata2.md', content: 'tampoco' } }] },
+    { text: 'Hecho.' },
+    { text: 'Listo.' }));
+  await send(page, 'Lee mis archivos con un agente');
+  await idle(page, 40000);
+  const ro = await page.evaluate(() => ({ files: Object.keys(getActiveChat().files || {}), tools: (window.__requests.filter((r) => /varios agentes que trabajan a la vez/.test(String(r.messages[0].content))).pop() || { tools: [] }).tools.map((t) => t.function.name) }));
+  check('a read-only agent cannot write (run_js aliasing included) and has no write tools', !ro.files.includes('pirata.md') && !ro.files.includes('pirata2.md') && !ro.tools.includes('write_file') && !ro.tools.includes('edit_file'), ro);
+
   // 3. Back to a normal level (here «Normal», the model has no levels) turns it off.
   await page.click('#model-menu-btn');
   await page.waitForSelector('[data-thinking-toggle]');
