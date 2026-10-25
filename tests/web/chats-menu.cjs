@@ -94,6 +94,28 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const escaped = await page.evaluate((id) => { const chat = appState.chats.find((c) => c.id === id); return { title: chat.title, custom: chat.customTitle, list: (document.querySelector('[data-title-chat-id="' + id + '"]') || {}).textContent }; }, renameId);
   check('Escape discards the edit and keeps the name', escaped.title === 'Historia moderna' && escaped.custom === 'Historia moderna' && escaped.list === 'Historia moderna', escaped);
 
+  // The open chat's own name, in the top bar: a tap is enough, the list does
+  // not need to be open (it closes itself when a chat is chosen).
+  await page.evaluate((id) => { appState.activeChatId = id; setChatsDrawer(false); renderHistory(); renderThread(); }, renameId);
+  await page.click('#top-title-main');
+  const topEditor = await page.evaluate(() => { const input = document.querySelector('#top-title-main .chat-rename-input'); return input ? { value: input.value, focused: document.activeElement === input } : null; });
+  await page.fill('#top-title-main .chat-rename-input', 'Historia contemporánea');
+  await page.press('#top-title-main .chat-rename-input', 'Enter');
+  await page.waitForFunction(() => getActiveChat().title === 'Historia contemporánea' && !document.querySelector('.title-typing'), null, { timeout: 10000 });
+  const topRenamed = await page.evaluate(() => ({ title: getActiveChat().title, custom: getActiveChat().customTitle, top: document.getElementById('top-title-main').textContent, list: (document.querySelector('[data-title-chat-id="' + appState.activeChatId + '"]') || {}).textContent }));
+  check('tapping the open chat\'s name in the top bar renames it (and the new name is typed out there too)',
+    topEditor && topEditor.value === 'Historia moderna' && topEditor.focused && topRenamed.title === 'Historia contemporánea' &&
+    topRenamed.custom === 'Historia contemporánea' && topRenamed.top === 'Historia contemporánea' && topRenamed.list === 'Historia contemporánea',
+    { topEditor, topRenamed });
+
+  // The same, from the + menu.
+  await page.click('#plus-btn');
+  const plusRename = await page.evaluate(() => { const btn = document.getElementById('rename-chat-btn'); return btn ? btn.textContent.replace(/\s+/g, ' ').trim() : ''; });
+  await page.click('#rename-chat-btn');
+  const plusEditor = await page.evaluate(() => !!document.querySelector('#top-title-main .chat-rename-input'));
+  await page.press('#top-title-main .chat-rename-input', 'Escape');
+  check('the + menu offers «Renombrar chat» and opens the editor of the open one', /Renombrar chat/.test(plusRename) && plusEditor, { plusRename, plusEditor });
+
   // Search filters by title, accents ignored.
   await page.click('#chats-search-btn');
   await page.fill('#chats-search-input', 'parabolico');

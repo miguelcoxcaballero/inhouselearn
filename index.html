@@ -1135,6 +1135,7 @@
     .send-wrap { position: relative; display: inline-flex; flex: 0 0 auto; width: max-content; }
     .chat-cost { position: absolute; bottom: calc(100% + 3px); right: 0; text-align: right; font-size: 0.6rem; font-weight: 600; color: #15803d; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; transition: transform 0.2s var(--ease), text-shadow 0.2s var(--ease); }
     .chat-cost.hidden { display: none; }
+     .chat-cost.zero { color: var(--muted); font-weight: 500; }
     .chat-cost.ticking { transform: translateY(-1px) scale(1.06); text-shadow: 0 0 6px rgba(34, 197, 94, 0.45); }
     @media (prefers-reduced-motion: reduce) { .chat-cost, .chat-cost.ticking { transition: none; transform: none; text-shadow: none; } }
     .session-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 9px 10px 9px 14px; border: 1px solid rgba(180, 83, 9, 0.35); border-radius: 14px; background: rgba(245, 158, 11, 0.1); font-size: 0.8rem; color: var(--text); }
@@ -1504,6 +1505,15 @@
     .chats-btn[aria-expanded="true"] { background: var(--text); border-color: var(--text); color: #fff; }
     .chats-btn:focus-visible, .sidebar-close:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
     .top-title { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: min(520px, 46vw); text-align: center; line-height: 1.2; }
+     /* El nombre del chat abierto se cambia tocándolo: se edita en su sitio. */
+     .top-title b.editable { cursor: text; }
+     .top-title b.editable:hover { text-decoration: underline dotted currentColor; text-underline-offset: 3px; }
+     .top-title b.editable:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 4px; }
+     .top-title .chat-rename-input {
+       width: 100%; font: inherit; letter-spacing: inherit; text-align: center; color: var(--text);
+       background: transparent; border: 0; border-bottom: 1.5px solid var(--orange); border-radius: 0;
+       outline: none; padding: 0; text-decoration: none;
+     }
     .top-title b {
       max-width: 100%; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-weight: 500; font-size: 1.18rem;
       letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -1861,6 +1871,11 @@
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                 </button>
                 <div class="plus-menu hidden" id="plus-menu" role="menu" aria-label="Más opciones">
+               <button class="plus-item rename-btn" id="rename-chat-btn" type="button" role="menuitem">
+                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                 <span class="plus-item-text"><b>Renombrar chat</b><small>Ponle el nombre que quieras a esta conversación</small></span>
+               </button>
+
               <button class="plus-item attach-btn" id="attach-btn" type="button" role="menuitem">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21.44 11.05l-8.49 8.49a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 1 1 5.66 5.66L9.4 17.43a2 2 0 1 1-2.83-2.83l8.49-8.48"/>
@@ -5514,6 +5529,10 @@
       menu.addEventListener('click', (event) => {
         if (event.target.closest('.plus-item')) window.setTimeout(() => setPlusMenu(false), 0);
       }, true);
+      // «Renombrar chat»: le pone nombre al chat abierto.
+      menu.addEventListener('click', (event) => {
+        if (event.target.closest('#rename-chat-btn')) startRenameChat(appState.activeChatId);
+      });
       document.addEventListener('click', (event) => {
         if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !btn.contains(event.target)) setPlusMenu(false);
       });
@@ -6434,25 +6453,30 @@
       const el = document.getElementById('chat-cost');
       if (!el) return;
       const chat = typeof getActiveChat === 'function' ? getActiveChat() : null;
-      const known = !!chat && chat.messages.some((message) => message.role === 'assistant' && (typeof message.cost === 'number' || typeof message.liveCost === 'number' || (message.alternatives || []).some((v) => typeof v.cost === 'number')));
-      el.classList.toggle('hidden', !known);
-      if (!known) {
-        // Also hidden, the counter says which chat it counts and that this
-        // one owes nothing: switching chats never leaves the old figure on it.
-        const key = 'chat:' + (chat ? chat.id : '');
-        el.dataset.costFor = key;
-        el.dataset.cost = '0';
-        return;
-      }
+      // The figure above the send button is always the open chat's own: a chat
+      // that has spent nothing reads $0.0000 (grey) instead of hiding, so the
+      // previous chat's total can never stay there when another one opens.
+      el.classList.remove('hidden');
       // Over the send button, ending at its right edge (never past the screen;
       // dictation.js puts its button next to it inside the same wrapper).
       const send = document.getElementById('send-btn');
       const wrap = send && send.parentElement;
       if (send && wrap) el.style.right = Math.max(0, wrap.offsetWidth - send.offsetLeft - send.offsetWidth) + 'px';
       const key = 'chat:' + chat.id;
+      const total = chatTotalCost(chat);
+      // Another chat: its counter starts at its own figure, so it never counts
+      // down from the previous chat's total.
+      if (el.dataset.costFor !== key || !costShown.has(key)) costShown.set(key, total);
       el.dataset.costFor = key;
-      el.dataset.cost = String(chatTotalCost(chat));
-      if (!costShown.has(key)) costShown.set(key, Number(el.dataset.cost));
+      el.dataset.cost = String(total);
+      el.classList.toggle('zero', total === 0);
+      // Written at once and not only on the next frame: the moment a chat
+      // opens its own total is already there.
+      if (costShown.get(key) === total) {
+        const html = costCounterHtml(total);
+        if (el.innerHTML !== html) el.innerHTML = html;
+        el.classList.remove('ticking');
+      }
       if (!fromTick) kickCostCounters();
     }
 
@@ -6567,6 +6591,8 @@
 
     function updateTopTitle(chat) {
       if (!elements.topTitleMain) return;
+      // Mientras se escribe el nombre nuevo en la barra, no se toca.
+      if (typeof renaming !== 'undefined' && renaming && renaming.top) return;
       let main = chat && chat.title ? chat.title : 'Nuevo chat';
       const course = chat && chat.guidedLearning ? courseOf(chat) : null;
       if (course && course.units.length) {
@@ -6734,6 +6760,9 @@
     }
 
     function renderThread(options) {
+      // The total above the send button first: it belongs to the chat being
+      // opened, so even if drawing the thread fails the old one's is not left.
+      updateChatCost();
       // The composer shows the open chat's own attachments and linked account.
       renderComposerAttachments();
       const settings = Object.assign({ preserveScroll: false }, options);
@@ -8356,6 +8385,24 @@
       }
       elements.chatList.innerHTML = html;
 
+      // Un nombre que se está escribiendo en la lista sobrevive a un redibujado
+      // (una respuesta de otro dispositivo, por ejemplo).
+      if (typeof renaming !== 'undefined' && renaming && !renaming.top) {
+        const state = renaming;
+        const el = document.querySelector('[data-title-chat-id="' + CSS.escape(state.chatId) + '"]');
+        if (el) {
+          state.restoring = true;
+          el.classList.add('renaming');
+          el.textContent = '';
+          el.appendChild(state.input);
+          state.el = el;
+          state.restoring = false;
+          state.input.focus();
+          const end = state.input.value.length;
+          state.input.setSelectionRange(end, end);
+        }
+      }
+
       elements.chatList.querySelectorAll('.chat-item[data-chat-id]').forEach(function(btn) {
         btn.addEventListener('click', function(event) {
           if (btn.dataset.longPressed) { delete btn.dataset.longPressed; return; }
@@ -8380,6 +8427,9 @@
       });
       elements.chatList.querySelectorAll('[data-title-chat-id]').forEach(function(el) {
         el.addEventListener('dblclick', function(e) { e.stopPropagation(); startRenameChat(el.dataset.titleChatId); });
+        // Segundo toque seguido sobre el nombre: elegir el chat ya cerró el
+        // índice, así que el nombre se edita en la barra de arriba.
+        el.addEventListener('click', function(e) { if (e.detail > 1) { e.stopPropagation(); startRenameChat(el.dataset.titleChatId); } });
       });
     }
 
@@ -8932,39 +8982,98 @@
 
     /* ─── SIDEBAR: RENAME + PIN ─────────────────────── */
 
+    // El nombre se edita donde se ve: su fila del índice o, si el índice está
+    // cerrado, el nombre del chat abierto en la barra de arriba. Al guardar se
+    // teclea con la misma animación que los nombres automáticos
+    // (startTitleAnimation). Enter guarda, Escape lo deja como estaba.
+    let renaming = null;
+
+    function renameAnchor(chatId) {
+      const sidebar = document.getElementById('sidebar');
+      const drawerOpen = !!(sidebar && sidebar.classList.contains('open'));
+      const row = document.querySelector('[data-title-chat-id="' + CSS.escape(chatId) + '"]');
+      if (drawerOpen && row) return { el: row, top: false };
+      if (chatId === appState.activeChatId && elements.topTitleMain) return { el: elements.topTitleMain, top: true };
+      if (row) return { el: row, top: false };
+      return null;
+    }
+
     function startRenameChat(chatId) {
-      var titleEl = document.querySelector('[data-title-chat-id="' + chatId + '"]');
-      if (!titleEl) return;
-      var chat = appState.chats.find(function(c) { return c.id === chatId; });
+      const chat = appState.chats.find((item) => item.id === chatId);
       if (!chat) return;
-      var input = document.createElement('input');
+      if (renaming) finishRename(false);
+      closeChatMenu();
+      let anchor = renameAnchor(chat.id);
+      if (!anchor) {
+        // Su fila está fuera de la pantalla y no es el chat abierto: se abre el índice.
+        setChatsDrawer(true);
+        anchor = renameAnchor(chat.id);
+      }
+      if (!anchor) return;
+      const input = document.createElement('input');
       input.type = 'text';
       input.className = 'chat-rename-input';
+      input.maxLength = 60;
       input.value = chat.customTitle || chat.title || '';
-      titleEl.textContent = '';
-      titleEl.appendChild(input);
+      input.spellcheck = false;
+      input.autocomplete = 'off';
+      input.setAttribute('aria-label', 'Nombre del chat');
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); finishRename(true); }
+        else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finishRename(false); }
+      });
+      input.addEventListener('blur', () => { if (renaming && !renaming.restoring) finishRename(true); });
+      // Tocar el editor no es tocar la fila del chat.
+      ['click', 'dblclick', 'pointerdown'].forEach((type) => input.addEventListener(type, (event) => event.stopPropagation()));
+      anchor.el.classList.add('renaming');
+      anchor.el.textContent = '';
+      anchor.el.appendChild(input);
+      renaming = { chatId: chat.id, input, el: anchor.el, top: anchor.top, restoring: false };
       input.focus();
       input.select();
-      function commit() {
-        var val = input.value.trim();
-        if (val && val !== deriveTitle(chat.messages)) {
-          chat.customTitle = val;
-        } else {
-          chat.customTitle = null;
-        }
-        chat.title = deriveTitle(chat.messages, chat);
-        saveState();
-        renderHistory();
-      }
-      input.addEventListener('blur', function() {
-        var before = chat.title || '';
-        commit();
-        // The name the user wrote is typed out like the model's automatic ones.
-        if (before !== chat.title) startTitleAnimation(chat.id, before, chat.title);
-      });
-      input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-        if (e.key === 'Escape') { input.value = chat.title || ''; input.blur(); }
+    }
+
+    function finishRename(save) {
+      const state = renaming;
+      if (!state) return;
+      renaming = null;
+      const chat = appState.chats.find((item) => item.id === state.chatId);
+      const before = chat ? (chat.title || '') : '';
+      const value = state.input.value;
+      if (state.input.parentNode) state.input.parentNode.removeChild(state.input);
+      state.el.classList.remove('renaming');
+      if (save && chat && applyChatRename(chat, value)) return; // la animación pone el nombre
+      if (state.top) updateTopTitle(chat);
+      else state.el.textContent = before;
+    }
+
+    function applyChatRename(chat, value) {
+      const name = String(value || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+      const before = chat.title || '';
+      if (!name || name === before) return false;
+      // Un curso se llama como su chat.
+      if (chat.guidedLearning && chat.course) chat.course.title = name;
+      chat.customTitle = name;
+      chat.title = deriveTitle(chat.messages, chat);
+      if (chat.title === before) return false;
+      saveState();
+      renderHistory();
+      startTitleAnimation(chat.id, before, chat.title);
+      return true;
+    }
+
+    // El nombre del chat abierto, en la barra de arriba: se toca y se cambia.
+    function bindTitleRename() {
+      const title = elements.topTitleMain;
+      if (!title || title.dataset.renameBound) return;
+      title.dataset.renameBound = '1';
+      title.classList.add('editable');
+      title.title = 'Toca para cambiar el nombre del chat';
+      title.setAttribute('role', 'button');
+      title.tabIndex = 0;
+      title.addEventListener('click', () => startRenameChat(appState.activeChatId));
+      title.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); startRenameChat(appState.activeChatId); }
       });
     }
 
@@ -11167,7 +11276,14 @@
 
     function startTitleAnimation(chatId, from, to) {
       if (!to || from === to) return;
-      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        // Sin animación, el nombre nuevo se pone de una vez.
+        document.querySelectorAll('[data-title-chat-id="' + CSS.escape(chatId) + '"]').forEach((el) => {
+          if (!el.querySelector('input')) el.textContent = to;
+        });
+        if (chatId === appState.activeChatId && elements.topTitleMain) elements.topTitleMain.textContent = to;
+        return;
+      }
       const steps = [];
       let t = 0;
       for (let i = String(from || '').length; i >= 0; i--) { steps.push({ at: t, text: String(from || '').slice(0, i) }); t += 28 + Math.random() * 18; }
@@ -11257,6 +11373,7 @@
       updateAuthUi();
       renderHistory();
       renderThread();
+      bindTitleRename();
       autoResizeComposer();
       renderComposerAttachments();
       loadComposerDrafts();

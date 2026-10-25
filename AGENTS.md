@@ -187,7 +187,9 @@ Mandatory guidance for every AI and developer working in this repository.
   requests plus the current one estimated from its characters, tool-call arguments included, and the output price;
   other devices get it in the live deltas' `c` and count up too, `showLiveCost`), then settles
   on the real figure. Right above the send button, small: the whole conversation's cost (every
-  answer and older version, live; `chatTotalCost`), always of the open chat: switching to an empty one hides it at once instead of keeping the old figure. Costs are saved: leaving or closing mid-answer
+  answer and older version, live; `chatTotalCost`), always of the open chat: `updateChatCost` (called
+   first in `renderThread`, so a redraw that fails cannot skip it) writes the open chat's own figure at once, and a chat
+   that has spent nothing shows `$0.0000` in grey (`.chat-cost.zero`) instead of the previous chat's total. Costs are saved: leaving or closing mid-answer
   writes the running estimate (`saveRunningCost`) and a reload counts it (`restoreState`); a Drive
   copy saved by an older page without costs never wipes the ones this browser knows
   (`keepKnownCosts`). Tests: `tests/web/extra-account.cjs`, `tests/web/cost-history.cjs`, `tests/web/live-sync.cjs`.
@@ -236,7 +238,11 @@ Mandatory guidance for every AI and developer working in this repository.
 - **Chat names:** after the first answer the chat's model names it (exactly three words, only the
   first letter in capitals, `normalizeChatTitle`); every three user messages it checks whether the
   topic changed a lot and only then renames (`autoTitle`, `autoTitleAt`). A user-written name or a
-  course title is never touched. Renaming by hand (double click on the name in the list, or «Renombrar» in the menu) saves it as `customTitle` and plays the same typing animation (`startTitleAnimation`); Escape discards the edit. Before that, the provisional name from the first message follows the same
+  course title is never touched. Renaming by hand saves it as `customTitle` and plays the same typing animation
+   (`startTitleAnimation`): the name is edited where it is shown —its row in the list (`startRenameChat`), or the open
+   chat's name in the top bar, which is tapped (or Enter) and works even after the list closed itself— and also from
+   «Renombrar chat» in the + menu and «Renombrar» in the row's menu; Escape discards the edit and an empty name is
+   ignored. A redraw of the list keeps the text being typed (`renaming`). Before that, the provisional name from the first message follows the same
   rules (at most three words, filler like «me», «el», «explícame» left out; `TITLE_FILLER`). The change is typed out (`startTitleAnimation`), also on other
   devices through live sync. Test: `tests/web/chat-title.cjs`.
 - **Ultra code:** an option of the reasoning dropdown in the model picker, for every model

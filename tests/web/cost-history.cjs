@@ -99,11 +99,11 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     const was = { hidden: document.getElementById('chat-cost').classList.contains('hidden'), total: Number(chatTotalCost(getActiveChat()).toFixed(6)) };
     newChat();
     const el = document.getElementById('chat-cost');
-    return { was, hidden: el.classList.contains('hidden'), cost: el.dataset.cost, key: el.dataset.costFor, id: appState.activeChatId };
+    return { was, hidden: el.classList.contains('hidden'), text: el.textContent, cost: el.dataset.cost, key: el.dataset.costFor, id: appState.activeChatId, zero: el.classList.contains('zero') };
   });
-  check('a new chat starts at zero (the old chat\'s total never leaks above the send button)', fresh.was.total > 0 && !fresh.was.hidden && fresh.hidden && fresh.cost === '0' && fresh.key === 'chat:' + fresh.id, fresh);
-  const back = await page.evaluate((id) => { appState.activeChatId = id; renderThread(); const el = document.getElementById('chat-cost'); const chat = appState.chats.find((c) => c.id === id); return { hidden: el.classList.contains('hidden'), ok: el.dataset.costFor === 'chat:' + id && Math.abs(Number(el.dataset.cost) - chatTotalCost(chat)) < 1e-9 }; }, oldId);
-  check('…and switching back to the old chat brings its total with it', !back.hidden && back.ok, back);
+  check('a new chat starts at zero (the old chat\'s total never leaks above the send button)', fresh.was.total > 0 && !fresh.was.hidden && !fresh.hidden && fresh.text === '$0.0000' && fresh.cost === '0' && fresh.zero && fresh.key === 'chat:' + fresh.id, fresh);
+  const back = await page.evaluate((id) => { appState.activeChatId = id; renderThread(); const el = document.getElementById('chat-cost'); const chat = appState.chats.find((c) => c.id === id); return { hidden: el.classList.contains('hidden'), zero: el.classList.contains('zero'), ok: el.dataset.costFor === 'chat:' + id && Math.abs(Number(el.dataset.cost) - chatTotalCost(chat)) < 1e-9 }; }, oldId);
+  check('…and switching back to the old chat brings its total with it', !back.hidden && !back.zero && back.ok, back);
 
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
