@@ -212,6 +212,22 @@ Mandatory guidance for every AI and developer working in this repository.
   elsewhere (`claudeOffset`: deleted chats via `keepClaudeSpendOf`, «Saldo real ahora» via `setClaudeRealBalance`).
   Shown under the key with a thin bar and «Ajustar» (credit, next renewal, real balance), in the usage ring of a Claude
   chat and first in the usage popup; synced with the other settings. Test: `tests/web/claude-api.cjs`.
+- **Model popup «Modelo · Cuentas»** (`#model-menu-popup`, styles at the end of `model-picker.css`, dark in `theme.css`):
+  two tabs (`setModelPopoverTab`). **Modelo**: a notice only when a key is missing or the list failed
+  (`#model-menu-status`, «Ir a Cuentas»), search + «Filtros» (with its count) folding capabilities, minimum
+  intelligence, order and **Empresa** (the company chips live in the panel now), the list grouped «Con tu API de
+  Claude» / «OpenRouter · populares» with each row's speedometer and red/green price, and the reasoning as one row
+  of pills (`thinkingShortLabel`; «Normal» for models without levels) ending in «Ultra» (`data-thinking-level`).
+  **Cuentas** (`renderAccounts`): the last 14 days' spending of every chat (`dailySpend`, today in orange), one row per
+  provider with what is left (Claude: `claudeBalance`, «Ajustar» opens `#claude-balance-form`; OpenRouter:
+  `openRouterLeft`, needs the management key for the account balance), and «Claves · N conectadas» folded with the
+  Claude, OpenRouter and management keys (same ids as before: `#claude-key-input`, `#api-key-input`…). The tab's
+  badge is what is left of the credit the open chat spends. `openModelMenuForKey` opens Cuentas with the keys out.
+  Both keys are kept the same way (this browser + Drive settings) and survive a reload (`tests/web/claude-api.cjs`).
+- **The composer card** (`composer.css`): one floating rounded card (text on top, then + · model pill with its level
+  chip · mic · round send, orange in light and ink in dark); the conversation's cost is a small pill on the card's top
+  edge (`.chat-cost`, no inline position). The usage ring left the row: balances live in the popup's «Cuentas».
+  Tests: `tests/web/extra-account.cjs`, `ultra.cjs`.
 - **Internet:** `web_search` and `web_fetch` (`engine/src/web.js`) are on in every chat. The browser
   cannot call a search engine (CORS): `webSearchRequest` is one non-streaming OpenRouter request with
   the `web` plugin (user's key, chat's model; results come back as `url_citation` annotations, ~$0.007

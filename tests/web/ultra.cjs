@@ -19,14 +19,12 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
 
   // 1. The option and its animation.
   await page.click('#model-menu-btn');
-  await page.waitForSelector('[data-thinking-toggle]');
-  const closed = await page.evaluate(() => ({ menu: document.querySelector('.thinking-menu').classList.contains('hidden'), rainbow: document.querySelectorAll('.thinking-segmented .ultra-text').length }));
-  await page.click('[data-thinking-toggle]');
-  const opened = await page.evaluate(() => ({ menu: !document.querySelector('.thinking-menu').classList.contains('hidden'), options: Array.from(document.querySelectorAll('.thinking-option .thinking-option-label')).map((el) => el.textContent), rainbow: document.querySelectorAll('.thinking-segmented .ultra-text').length }));
-  check('reasoning is one dropdown, with Ultra code as an option, not in colours until it is chosen', closed.menu && !closed.rainbow && opened.menu && opened.options.includes('Ultra code') && opened.rainbow === 0, { closed, opened });
+  await page.waitForSelector('[data-thinking-level="ultra"]');
+  const pills = await page.evaluate(() => ({ labels: Array.from(document.querySelectorAll('.thinking-pill')).map((el) => el.textContent), active: document.querySelector('.thinking-pill.active').textContent, current: document.getElementById('thinking-current').textContent, rainbowOn: document.querySelector('.thinking-pill.ultra-pill').classList.contains('active') }));
+  check('reasoning is one row of pills ending in «Ultra», which is not on until it is chosen', pills.labels.includes('Ultra') && pills.labels[pills.labels.length - 1] === 'Ultra' && !pills.rainbowOn && pills.current !== 'Ultra code', pills);
   await page.click('[data-thinking-level="ultra"]');
-  const on = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, sparks: document.querySelectorAll('.ultra-spark').length, burst: !!document.querySelector('.ultra-burst'), label: document.querySelector('.thinking-select-label').textContent, labelRainbow: document.querySelector('.thinking-select-label').classList.contains('ultra-text'), menuClosed: document.querySelector('.thinking-menu').classList.contains('hidden'), meta: elements.modelTriggerMeta.textContent, rainbow: elements.modelTriggerMeta.classList.contains('ultra-text') }));
-  check('choosing «Ultra code»: a burst of sparks, then the rainbow label (in the dropdown and on the model button)', on.flag && on.sparks >= 6 && on.burst && on.label === 'Ultra code' && on.labelRainbow && on.menuClosed && on.meta === 'Ultra code' && on.rainbow, on);
+  const on = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, sparks: document.querySelectorAll('.ultra-spark').length, burst: !!document.querySelector('.ultra-burst'), current: document.getElementById('thinking-current').textContent, currentRainbow: document.getElementById('thinking-current').classList.contains('ultra-text'), active: document.querySelector('.thinking-pill.active').dataset.thinkingLevel, meta: elements.modelTriggerMeta.textContent, rainbow: elements.modelTriggerMeta.classList.contains('ultra-text') }));
+  check('choosing «Ultra»: a burst of sparks, then the rainbow label (over the pills and on the model button)', on.flag && on.sparks >= 6 && on.burst && on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
   await page.keyboard.press('Escape');
   await page.evaluate(() => { if (typeof closeModelMenu === 'function') closeModelMenu(); });
 
@@ -99,10 +97,9 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
 
   // 3. Back to a normal level (here «Normal», the model has no levels) turns it off.
   await page.click('#model-menu-btn');
-  await page.waitForSelector('[data-thinking-toggle]');
-  await page.click('[data-thinking-toggle]');
+  await page.waitForSelector('[data-thinking-level="normal"]');
   await page.click('[data-thinking-level="normal"]');
-  const off = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, prompt: ultraPromptText(getActiveChat()), meta: elements.modelTriggerMeta.textContent, label: document.querySelector('.thinking-select-label').textContent }));
+  const off = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, prompt: ultraPromptText(getActiveChat()), meta: elements.modelTriggerMeta.textContent, label: document.getElementById('thinking-current').textContent }));
   check('choosing another level turns Ultra code off', !off.flag && off.prompt === '' && off.meta !== 'Ultra code' && off.label === 'Normal', off);
 
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));

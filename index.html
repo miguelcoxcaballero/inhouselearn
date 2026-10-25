@@ -1758,7 +1758,8 @@
   <link rel="stylesheet" href="guided.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-wait.css?v=20261024-wait1">
-  <link rel="stylesheet" href="model-picker.css?v=20261025-claude">
+  <link rel="stylesheet" href="model-picker.css?v=20261025-tabs">
+  <link rel="stylesheet" href="composer.css?v=20261025-card">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
@@ -1767,7 +1768,7 @@
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261025-claude2">
+  <link rel="stylesheet" href="theme.css?v=20261025-card">
 </head>
 <body>
 
@@ -1954,7 +1955,7 @@
               </button>
                 </div>
               </div>
-              <button class="usage-btn" id="usage-btn" type="button" aria-label="Uso y saldo">
+              <button class="usage-btn" id="usage-btn" type="button" aria-label="Uso y saldo" hidden>
                 <svg id="usage-donut" viewBox="0 0 36 36"></svg>
               </button>
                 <div class="model-menu-wrap">
@@ -1969,78 +1970,118 @@
                       <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                   </button>
-                  <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Configuración del modelo">
-                    <div class="model-popover-head">
-                      <div class="model-popover-title">Modelo del chat</div>
-                      <div class="model-popover-status" id="model-menu-status"></div>
+                  <div class="topbar-popover model-popover hidden" id="model-menu-popup" role="dialog" aria-label="Modelo y cuentas">
+                    <div class="mp-tabs" role="tablist" aria-label="Modelo y cuentas">
+                      <button type="button" class="mp-tab active" id="mp-tab-model" data-mp-tab="model" role="tab" aria-selected="true" aria-controls="mp-pane-model">Modelo</button>
+                      <button type="button" class="mp-tab" id="mp-tab-accounts" data-mp-tab="accounts" role="tab" aria-selected="false" aria-controls="mp-pane-accounts">Cuentas <span class="mp-badge hidden" id="mp-badge"></span></button>
                     </div>
 
-                    <div class="model-search-row">
-                      <div class="model-search">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
-                        <input id="model-search-input" type="search" placeholder="Busca un modelo o una compañía" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
-                      </div>
-                      <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
-                        <span>Filtros</span><span class="filter-count hidden" id="filter-count"></span>
-                      </button>
-                    </div>
-                    <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
-                    <div class="filter-panel hidden" id="filter-panel">
-                      <div class="filter-chips" id="capability-chips" role="group" aria-label="Capacidades"></div>
-                      <div class="filter-iq">
-                        <div class="filter-row-head">
-                          <span class="filter-label">Inteligencia mínima</span>
-                          <span class="filter-iq-value" id="iq-value"></span>
+                    <div class="mp-pane" id="mp-pane-model" role="tabpanel" aria-labelledby="mp-tab-model">
+                      <div class="model-popover-status hidden" id="model-menu-status"></div>
+                      <div class="model-search-row">
+                        <div class="model-search">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.6" y2="16.6"/></svg>
+                          <input id="model-search-input" type="search" placeholder="Buscar un modelo" autocomplete="off" spellcheck="false" aria-label="Buscar modelo">
                         </div>
-                        <input type="range" class="iq-range" id="iq-range" min="0" max="60" step="1" value="0" aria-label="Inteligencia mínima">
+                        <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                          <span>Filtros</span><span class="filter-count hidden" id="filter-count"></span>
+                        </button>
                       </div>
-                      <div class="filter-sort">
-                        <span class="filter-label">Ordenar</span>
-                        <div class="filter-sort-options" id="sort-options" role="radiogroup" aria-label="Ordenar"></div>
+                      <div class="filter-panel hidden" id="filter-panel">
+                        <div class="filter-chips" id="capability-chips" role="group" aria-label="Capacidades"></div>
+                        <div class="filter-iq">
+                          <div class="filter-row-head">
+                            <span class="filter-label">Inteligencia mínima</span>
+                            <span class="filter-iq-value" id="iq-value"></span>
+                          </div>
+                          <input type="range" class="iq-range" id="iq-range" min="0" max="60" step="1" value="0" aria-label="Inteligencia mínima">
+                        </div>
+                        <div class="filter-sort">
+                          <span class="filter-label">Ordenar</span>
+                          <div class="filter-sort-options" id="sort-options" role="radiogroup" aria-label="Ordenar"></div>
+                        </div>
+                        <div class="filter-company">
+                          <span class="filter-label">Empresa</span>
+                          <div class="company-chips" id="company-chips" role="tablist" aria-label="Compañías"></div>
+                        </div>
+                        <div class="filter-foot">
+                          <span id="filter-result"></span>
+                          <button type="button" class="filter-clear hidden" id="filter-clear">Quitar filtros</button>
+                        </div>
                       </div>
-                      <div class="filter-foot">
-                        <span id="filter-result"></span>
-                        <button type="button" class="filter-clear hidden" id="filter-clear">Quitar filtros</button>
+                      <div class="model-popover-section">
+                        <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
                       </div>
-                    </div>
-                    <div class="model-popover-section">
-                      <div class="model-list" id="model-list" role="listbox" aria-label="Modelos"></div>
-                    </div>
-
-                    <div class="model-popover-section hidden" id="thinking-section">
-                      <div class="model-popover-section-label">Razonamiento</div>
-                      <div class="thinking-segmented" id="thinking-segmented"></div>
-                    </div>
-
-                    <div class="model-popover-section api-key-section" id="api-key-section">
-                      <div class="model-popover-section-label"><span class="key-long">API key de </span>OpenRouter</div>
-                      <div class="api-key-row">
-                        <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false">
-                        <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
+                      <div class="model-popover-section hidden" id="thinking-section">
+                        <div class="thinking-head"><span>Razonamiento</span><span id="thinking-current"></span></div>
+                        <div class="thinking-segmented" id="thinking-segmented" role="radiogroup" aria-label="Razonamiento"></div>
                       </div>
-                      <div class="api-key-hint" id="api-key-hint">Se guarda solo en este navegador y se env&iacute;a directamente a OpenRouter. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
-                    </div>
-
-                    <div class="model-popover-section api-key-section claude-key-section" id="claude-key-section">
-                      <div class="model-popover-section-label"><span class="key-long">API key de </span>Claude <span class="claude-key-state" id="claude-key-state"></span></div>
-                      <div class="api-key-row">
-                        <input class="api-input" id="claude-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" aria-label="API key de Claude">
-                        <button class="btn btn-primary btn-sm" id="claude-key-btn" type="button">Guardar</button>
-                      </div>
-                      <div class="claude-balance hidden" id="claude-balance">
-                        <span class="claude-balance-text"></span>
-                        <button type="button" class="usage-link" id="claude-balance-adjust">Ajustar</button>
-                        <form class="claude-balance-form" id="claude-balance-form" hidden>
-                          <label>Crédito al mes <span class="claude-money"><input name="credit" inputmode="decimal" autocomplete="off"></span></label>
-                          <label>Próxima renovación <input name="next" type="date" class="claude-date"></label>
-                          <label>Saldo real ahora <span class="claude-money"><input name="real" inputmode="decimal" autocomplete="off" placeholder="opcional"></span></label>
-                          <button class="btn btn-primary btn-sm" type="submit">Guardar</button>
-                        </form>
-                      </div>
-                      <div class="api-key-hint" id="claude-key-hint">Opcional. Con ella salen arriba Opus, Sonnet, Haiku y Fable y se pagan con el cr&eacute;dito API de tu plan de Claude, directo a Anthropic. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Crear una key</a></div>
                     </div>
 
+                    <div class="mp-pane hidden" id="mp-pane-accounts" role="tabpanel" aria-labelledby="mp-tab-accounts">
+                      <div class="acc-spend">
+                        <div class="acc-spend-label">Gastado los últimos 14 días · todas las cuentas</div>
+                        <div class="acc-spend-total" id="acc-spend-total">$0.00</div>
+                        <div class="acc-spark" id="acc-spark" role="img" aria-label="Gasto de cada día"></div>
+                        <div class="acc-spark-axis"><span id="acc-spark-from"></span><span id="acc-spark-today"></span></div>
+                      </div>
+                      <div class="acc-provider" id="acc-claude">
+                        <span class="acc-logo acc-logo-claude" aria-hidden="true"></span>
+                        <div class="acc-main">
+                          <div class="acc-name">Claude · tu API <span class="claude-key-state" id="claude-key-state"></span></div>
+                          <div class="acc-bar"><i id="acc-claude-bar"></i></div>
+                          <div class="acc-sub" id="claude-balance"><span class="claude-balance-text"></span> <button type="button" class="usage-link" id="claude-balance-adjust">Ajustar</button></div>
+                        </div>
+                        <b class="acc-amount" id="acc-claude-amount">—</b>
+                      </div>
+                      <form class="claude-balance-form" id="claude-balance-form" hidden>
+                        <label>Crédito al mes <span class="claude-money"><input name="credit" inputmode="decimal" autocomplete="off"></span></label>
+                        <label>Próxima renovación <input name="next" type="date" class="claude-date"></label>
+                        <label class="wide">Saldo real ahora · console.anthropic.com <span class="claude-money"><input name="real" inputmode="decimal" autocomplete="off" placeholder="opcional"></span></label>
+                        <button class="btn btn-primary btn-sm" type="submit">Guardar</button>
+                        <p class="acc-hint">Lo gastado fuera de estos chats (Claude Code, otras apps) se descuenta a partir de aquí.</p>
+                      </form>
+                      <div class="acc-provider" id="acc-openrouter">
+                        <span class="acc-logo acc-logo-openrouter" aria-hidden="true"></span>
+                        <div class="acc-main">
+                          <div class="acc-name">OpenRouter</div>
+                          <div class="acc-bar"><i id="acc-openrouter-bar"></i></div>
+                          <div class="acc-sub" id="acc-openrouter-sub"></div>
+                        </div>
+                        <b class="acc-amount" id="acc-openrouter-amount">—</b>
+                      </div>
+                      <button type="button" class="acc-keys-toggle" id="acc-keys-toggle" aria-expanded="false" aria-controls="acc-keys">
+                        <span>Claves</span><small id="acc-keys-count"></small>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                      <div class="acc-keys" id="acc-keys" hidden>
+                        <div class="acc-key claude-key-section" id="claude-key-section">
+                          <div class="acc-key-head"><span>Claude</span><span class="acc-key-state" id="claude-key-status"></span></div>
+                          <div class="api-key-row">
+                            <input class="api-input" id="claude-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false" aria-label="API key de Claude">
+                            <button class="btn btn-primary btn-sm" id="claude-key-btn" type="button">Guardar</button>
+                          </div>
+                          <div class="api-key-hint" id="claude-key-hint">Con ella Opus, Sonnet, Haiku y Fable salen primero y se pagan con el cr&eacute;dito API de tu plan, directo a Anthropic. <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Crear una clave</a></div>
+                        </div>
+                        <div class="acc-key api-key-section" id="api-key-section">
+                          <div class="acc-key-head"><span>OpenRouter</span><span class="acc-key-state" id="api-key-status"></span></div>
+                          <div class="api-key-row">
+                            <input class="api-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." autocomplete="off" spellcheck="false" aria-label="API key de OpenRouter">
+                            <button class="btn btn-primary btn-sm" id="login-btn" type="button">Guardar</button>
+                          </div>
+                          <div class="api-key-hint" id="api-key-hint">Para los demás modelos. <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Crear una clave</a></div>
+                        </div>
+                        <div class="acc-key" id="mgmt-key-section">
+                          <div class="acc-key-head"><span>OpenRouter · clave de gestión</span><span class="acc-key-state">opcional</span></div>
+                          <div class="api-key-row">
+                            <input class="api-input" id="mgmt-key-input" type="password" placeholder="Para ver el saldo exacto" autocomplete="off" spellcheck="false" aria-label="Clave de gestión de OpenRouter">
+                            <button class="btn btn-secondary btn-sm" id="mgmt-key-btn" type="button">Añadir</button>
+                          </div>
+                        </div>
+                        <p class="acc-hint">Las claves se guardan en este navegador y en tu Drive, y van directas a cada proveedor.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               <span class="composer-spacer"></span>
@@ -4455,6 +4496,11 @@
       return currentThinkingLevel(chat);
     }
 
+    // The pill's word: short so a whole ladder fits in one row.
+    function thinkingShortLabel(level) {
+      return ({ off: 'No', minimal: 'Mín', low: 'Bajo', medium: 'Medio', high: 'Alto', xhigh: 'Muy alto', max: 'Máx' })[level] || thinkingLabel(level);
+    }
+
     function thinkingLabel(level) {
       return THINKING_LABELS[level] || level;
     }
@@ -5919,10 +5965,20 @@
       }
       let rest = filtered;
       if (browsing && filtered.length) {
-        parts.push(heading('Recomendados ahora', 'los más usados esta semana en OpenRouter'));
-        filtered.slice(0, RECOMMENDED_COUNT).forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
-        rest = filtered.slice(RECOMMENDED_COUNT);
-        if (rest.length) parts.push(heading('Todos los modelos', rest.length + ' más'));
+        const claude = filtered.filter((entry) => isClaudeModelId(entry.id));
+        const others = filtered.filter((entry) => !isClaudeModelId(entry.id));
+        if (claude.length) {
+          parts.push(heading('Con tu API de Claude', 'inteligencia · $ salida / entrada'));
+          claude.forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
+        }
+        if (others.length) {
+          parts.push(heading('OpenRouter · populares', claude.length ? '' : 'inteligencia · $ salida / entrada'));
+          others.slice(0, RECOMMENDED_COUNT).forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
+        }
+        rest = others.slice(RECOMMENDED_COUNT);
+        if (rest.length) parts.push(heading('Todos los de OpenRouter', rest.length + ' más'));
+      } else if (filtered.length) {
+        parts.push(heading(filtered.length + (filtered.length === 1 ? ' modelo' : ' modelos'), 'inteligencia · $ salida / entrada'));
       }
       rest.slice(0, MODEL_LIST_LIMIT).forEach((entry) => parts.push(modelRowMarkup(entry.id, activeId, entry)));
       if (rest.length > MODEL_LIST_LIMIT) {
@@ -5956,25 +6012,23 @@
 
       const ultra = ultraCodeOn(chat);
       if (elements.thinkingSection && elements.thinkingSegmented) {
-        // One dropdown: the model's levels and, for every model, Ultra code
-        // (only in colours once it is on). Models without levels get «Normal».
+        // One row of pills: the model's levels (or «Normal») and, for every
+        // model, Ultra code (in colours only once it is on).
         elements.thinkingSection.classList.remove('hidden');
-        const options = (levels.length < 2 ? [{ id: 'normal', label: 'Normal', note: 'Sin agentes' }] : levels.map((level) => ({ id: level, label: thinkingLabel(level) })))
-          .concat([{ id: 'ultra', label: 'Ultra code', note: 'Razonamiento máximo y agentes en paralelo' }]);
+        const options = (levels.length < 2 ? [{ id: 'normal', label: 'Normal', title: 'Sin agentes' }] : levels.map((level) => ({ id: level, label: thinkingShortLabel(level), title: thinkingLabel(level) })))
+          .concat([{ id: 'ultra', label: 'Ultra', title: 'Ultra code: razonamiento máximo y agentes en paralelo' }]);
         const current = ultra ? 'ultra' : (levels.length < 2 ? 'normal' : thinkingLevel);
-        const open = elements.thinkingSegmented.dataset.open === '1';
-        const currentLabel = (options.find((option) => option.id === current) || options[0]).label;
-        elements.thinkingSegmented.innerHTML =
-          '<button type="button" class="thinking-select" data-thinking-toggle aria-haspopup="listbox" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-            '<span class="thinking-select-label' + (ultra ? ' ultra-text' : '') + '">' + escapeHtml(currentLabel) + '</span>' +
-            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
-          '</button>' +
-          '<div class="thinking-menu' + (open ? '' : ' hidden') + '" role="listbox">' + options.map((option) => {
-            const active = option.id === current;
-            return '<button type="button" class="thinking-option' + (active ? ' active' : '') + (option.id === 'ultra' ? ' ultra-option' : '') + '" data-thinking-level="' + escapeHtml(option.id) + '" role="option" aria-selected="' + (active ? 'true' : 'false') + '">' +
-              '<span class="thinking-option-label' + (option.id === 'ultra' && active ? ' ultra-text' : '') + '">' + escapeHtml(option.label) + '</span>' +
-              (option.note ? '<small>' + escapeHtml(option.note) + '</small>' : '') + '</button>';
-          }).join('') + '</div>';
+        const currentOption = options.find((option) => option.id === current) || options[0];
+        const head = document.getElementById('thinking-current');
+        if (head) {
+          head.textContent = current === 'ultra' ? 'Ultra code' : currentOption.title === 'Sin agentes' ? 'Normal' : currentOption.title;
+          head.classList.toggle('ultra-text', ultra);
+        }
+        elements.thinkingSegmented.innerHTML = options.map((option) => {
+          const active = option.id === current;
+          return '<button type="button" class="thinking-pill' + (active ? ' active' : '') + (option.id === 'ultra' ? ' ultra-pill' : '') + '" data-thinking-level="' + escapeHtml(option.id) + '" role="radio" aria-checked="' + (active ? 'true' : 'false') + '" title="' + escapeHtml(option.title) + '">' +
+            '<span class="' + (option.id === 'ultra' ? 'ultra-text' : '') + '">' + escapeHtml(option.label) + '</span></button>';
+        }).join('');
       }
 
       if (elements.modelCopy) {
@@ -6015,26 +6069,20 @@
         elements.claudeKeyState.classList.toggle('error', !!apiSettings.anthropicKey && check === 'rejected');
         elements.claudeKeyState.dataset.state = !apiSettings.anthropicKey ? '' : check === 'rejected' ? 'error' : check === 'checking' ? 'checking' : 'ok';
       }
-      renderClaudeBalance();
+      renderAccounts();
       if (elements.modelMenuStatus) {
-        let statusCopy;
-        if (!apiSettings.apiKey && apiSettings.anthropicKey) {
-          statusCopy = 'Modelos de Claude con tu API. Para los demás, pega abajo una key de OpenRouter.';
-        } else if (!apiSettings.apiKey) {
-          statusCopy = 'Pega tu API key de OpenRouter abajo para empezar.';
+        // A notice only when something is missing; the counts live in the list.
+        let notice = '';
+        if (!apiSettings.apiKey && !apiSettings.anthropicKey) {
+          notice = 'Para empezar, añade una clave de Claude o de OpenRouter. <button type="button" class="usage-link" data-open-keys>Ir a Cuentas</button>';
         } else if (!modelCatalog.entries.length && modelCatalog.error) {
-          statusCopy = 'No se pudo cargar la lista de modelos: ' + modelCatalog.error;
-        } else if (!modelCatalog.entries.length) {
-          statusCopy = 'Cargando los modelos de OpenRouter…';
-        } else {
-          const claudeCount = modelCatalog.entries.filter((entry) => isClaudeModelId(entry.id)).length;
-          const routerCount = modelCatalog.entries.length - claudeCount;
-          statusCopy = claudeCount
-            ? claudeCount + ' de Claude con tu API' + (apiSettings.apiKey ? ' · ' + routerCount + ' en OpenRouter.' : '.')
-            : routerCount + ' modelos en OpenRouter. Pagas por tokens con tu saldo.';
+          notice = 'No se pudo cargar la lista de modelos: ' + escapeHtml(modelCatalog.error);
+        } else if (!apiSettings.apiKey && apiSettings.anthropicKey) {
+          notice = 'Los modelos de OpenRouter necesitan su clave. <button type="button" class="usage-link" data-open-keys>Añadirla</button>';
         }
-        elements.modelMenuStatus.textContent = statusCopy;
-        elements.modelMenuStatus.classList.toggle('error', !!apiSettings.apiKey && !modelCatalog.entries.length && !!modelCatalog.error);
+        if (elements.modelMenuStatus.innerHTML !== notice) elements.modelMenuStatus.innerHTML = notice;
+        elements.modelMenuStatus.classList.toggle('hidden', !notice);
+        elements.modelMenuStatus.classList.toggle('error', !!modelCatalog.error && !modelCatalog.entries.length);
       }
     }
 
@@ -6745,11 +6793,7 @@
       // that has spent nothing reads $0.0000 (grey) instead of hiding, so the
       // previous chat's total can never stay there when another one opens.
       el.classList.remove('hidden');
-      // Over the send button, ending at its right edge (never past the screen;
-      // dictation.js puts its button next to it inside the same wrapper).
-      const send = document.getElementById('send-btn');
-      const wrap = send && send.parentElement;
-      if (send && wrap) el.style.right = Math.max(0, wrap.offsetWidth - send.offsetLeft - send.offsetWidth) + 'px';
+      // A small pill on the composer card's top edge (composer.css).
       const key = 'chat:' + chat.id;
       const total = chatTotalCost(chat);
       // Another chat: its counter starts at its own figure, so it never counts
@@ -9700,7 +9744,7 @@
     function saveOpenRouterManagementKey(value) {
       saveApiSettings({ managementKey: String(value || '').trim() });
       renderUsagePopup();
-      refreshOpenRouterCredits().then(renderUsagePopup);
+      refreshOpenRouterCredits().then(() => { renderUsagePopup(); renderAccounts(); });
     }
 
     function quotaColor(ratio) {
@@ -10205,11 +10249,6 @@
       }
       if (elements.thinkingSegmented) {
         elements.thinkingSegmented.addEventListener('click', (event) => {
-          if (event.target.closest('[data-thinking-toggle]')) {
-            elements.thinkingSegmented.dataset.open = elements.thinkingSegmented.dataset.open === '1' ? '0' : '1';
-            renderModelControls();
-            return;
-          }
           const btn = event.target.closest('[data-thinking-level]');
           if (!btn) return;
           const chat = getActiveChat();
@@ -10240,6 +10279,7 @@
       });
       if (elements.claudeKeyBtn) elements.claudeKeyBtn.addEventListener('click', () => { saveClaudeKeyFromInput(); });
       bindClaudeBalance();
+      bindAccounts();
       if (elements.claudeKeyInput) {
         elements.claudeKeyInput.addEventListener('keydown', (event) => {
           if (event.key === 'Enter') {
@@ -10524,6 +10564,8 @@
         if (elements.modelMenuPopup && elements.modelMenuPopup.classList.contains('hidden')) {
           toggleModelMenu();
         }
+        setModelPopoverTab('accounts');
+        setAccountKeysOpen(true);
         const target = focusTarget || elements.apiKeyInput;
         if (target) target.focus();
       }, 0);
@@ -10630,25 +10672,179 @@
       return 'Quedan ' + formatBalance(balance.left) + ' de ' + formatBalance(balance.credit) + ' · se renueva el ' + when;
     }
 
+    // ─── «Cuentas» tab of the model popup ────────────────
+    // Spending of the last 14 days (every chat, so every device and provider),
+    // one row per provider with what is left, and the keys folded underneath.
+    function dailySpend(days) {
+      const today = new Date();
+      const keys = [];
+      for (let i = days - 1; i >= 0; i--) keys.push(localDayKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)));
+      const byDay = Object.fromEntries(keys.map((key) => [key, 0]));
+      const add = (createdAt, cost) => {
+        const when = new Date(createdAt || '');
+        if (isNaN(when)) return;
+        const key = localDayKey(when);
+        if (key in byDay) byDay[key] += Number(cost) || 0;
+      };
+      appState.chats.forEach((chat) => (chat.messages || []).forEach((message) => {
+        if (message.role !== 'assistant') return;
+        add(message.createdAt, message.pending && typeof message.liveCost === 'number' ? message.liveCost : message.cost);
+        (message.alternatives || []).forEach((version) => add(version.createdAt || message.createdAt, version.cost));
+      }));
+      return keys.map((key) => ({ day: key, cost: byDay[key] }));
+    }
+
+    function openRouterLeft() {
+      const credits = appState.openRouterCredits;
+      if (credits && credits.source === 'account' && credits.total > 0) return { left: Math.max(0, credits.total - credits.used), total: credits.total, label: 'saldo de la cuenta' };
+      if (credits && credits.key && credits.key.remaining !== null && credits.key.remaining !== undefined) return { left: credits.key.remaining, total: credits.key.limit || credits.key.remaining, label: 'límite de la clave' };
+      return null;
+    }
+
+    function shortMoney(value) {
+      return '$' + (value >= 10 ? Math.round(value) : (Math.round(value * 10) / 10).toString());
+    }
+
+    function shortDate(date) {
+      return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+    }
+
     function renderClaudeBalance() {
-      const box = document.getElementById('claude-balance');
-      if (!box) return;
       const api = getApiSettings();
-      box.classList.toggle('hidden', !api.anthropicKey);
-      if (!api.anthropicKey) return;
-      const balance = claudeBalance();
-      const text = box.querySelector('.claude-balance-text');
-      const ratio = balance.credit ? balance.left / balance.credit : 0;
-      if (text) {
-        text.textContent = claudeBalanceText(balance);
-        text.style.setProperty('--claude-left', Math.round(ratio * 100) + '%');
-        text.dataset.low = ratio < 0.15 ? 'true' : 'false';
-      }
+      const amount = document.getElementById('acc-claude-amount');
+      if (!amount) return;
+      const bar = document.getElementById('acc-claude-bar');
+      const text = document.querySelector('#claude-balance .claude-balance-text');
+      const adjust = document.getElementById('claude-balance-adjust');
       const form = document.getElementById('claude-balance-form');
+      document.getElementById('acc-claude').classList.toggle('off', !api.anthropicKey);
+      if (!api.anthropicKey) {
+        amount.textContent = '—';
+        if (bar) bar.style.width = '0%';
+        if (text) text.textContent = 'Sin clave: añádela en «Claves» para usar tu crédito';
+        if (adjust) adjust.hidden = true;
+        if (form) form.hidden = true;
+        return;
+      }
+      const balance = claudeBalance();
+      const ratio = balance.credit ? balance.left / balance.credit : 0;
+      amount.textContent = formatBalance(balance.left);
+      if (bar) {
+        bar.style.width = Math.round(Math.max(0, Math.min(1, ratio)) * 100) + '%';
+        bar.dataset.low = ratio < 0.15 ? 'true' : 'false';
+      }
+      if (text) text.textContent = 'de ' + formatBalance(balance.credit) + ' · se renueva el ' + shortDate(balance.next) + ' ·';
+      if (adjust) adjust.hidden = false;
       if (form && form.hidden) {
         form.elements.credit.value = String(api.claudeCredit);
         form.elements.next.value = localDayKey(claudePeriod().next);
         form.elements.real.value = '';
+      }
+    }
+
+    function renderAccounts() {
+      const pane = document.getElementById('mp-pane-accounts');
+      if (!pane) return;
+      const api = getApiSettings();
+      const days = dailySpend(14);
+      const total = days.reduce((sum, day) => sum + day.cost, 0);
+      const max = Math.max(...days.map((day) => day.cost), 0);
+      document.getElementById('acc-spend-total').textContent = formatBalance(total);
+      document.getElementById('acc-spark').innerHTML = days.map((day, index) => '<i' + (index === days.length - 1 ? ' class="today"' : '') +
+        ' style="height:' + (max ? Math.max(3, Math.round(day.cost / max * 40)) : 3) + 'px" title="' + escapeHtml(shortDate(new Date(day.day + 'T00:00:00')) + ' · ' + formatUsd(day.cost)) + '"></i>').join('');
+      document.getElementById('acc-spark-from').textContent = shortDate(new Date(days[0].day + 'T00:00:00'));
+      document.getElementById('acc-spark-today').textContent = 'hoy ' + formatUsd(days[days.length - 1].cost);
+      renderClaudeBalance();
+      const routerLeft = openRouterLeft();
+      const routerBar = document.getElementById('acc-openrouter-bar');
+      document.getElementById('acc-openrouter').classList.toggle('off', !api.apiKey);
+      document.getElementById('acc-openrouter-amount').textContent = routerLeft ? formatBalance(routerLeft.left) : '—';
+      const ratio = routerLeft && routerLeft.total ? routerLeft.left / routerLeft.total : 0;
+      routerBar.style.width = Math.round(Math.max(0, Math.min(1, ratio)) * 100) + '%';
+      routerBar.dataset.low = ratio < 0.15 ? 'true' : 'false';
+      document.getElementById('acc-openrouter-sub').textContent = !api.apiKey ? 'Sin clave: añádela en «Claves» para los demás modelos'
+        : routerLeft ? routerLeft.label : 'Añade la clave de gestión en «Claves» para ver el saldo';
+      const connected = [api.anthropicKey, api.apiKey].filter(Boolean).length;
+      document.getElementById('acc-keys-count').textContent = connected ? connected + (connected === 1 ? ' conectada' : ' conectadas') : 'ninguna conectada';
+      const check = appState.claudeKeyCheck;
+      const claudeStatus = document.getElementById('claude-key-status');
+      claudeStatus.textContent = !api.anthropicKey ? 'sin clave' : check === 'checking' ? 'comprobando…' : check === 'rejected' ? 'Anthropic la rechaza' : '● conectada';
+      claudeStatus.dataset.state = !api.anthropicKey ? '' : check === 'rejected' ? 'error' : check === 'checking' ? 'checking' : 'ok';
+      const routerRejected = !!(appState.openRouterCredits && appState.openRouterCredits.keyValid === false);
+      const routerStatus = document.getElementById('api-key-status');
+      routerStatus.textContent = !api.apiKey ? 'sin clave' : routerRejected ? 'OpenRouter la rechaza' : '● conectada';
+      routerStatus.dataset.state = !api.apiKey ? '' : routerRejected ? 'error' : 'ok';
+      const mgmtBtn = document.getElementById('mgmt-key-btn');
+      const mgmtInput = document.getElementById('mgmt-key-input');
+      if (mgmtBtn) mgmtBtn.textContent = api.managementKey ? 'Quitar' : 'Añadir';
+      if (mgmtInput && document.activeElement !== mgmtInput) mgmtInput.value = api.managementKey || '';
+      // The tab's badge: what is left of the credit the open chat spends.
+      const chat = getActiveChat();
+      const claudeFirst = !!api.anthropicKey && (isClaudeModelId(chat && chat.model) || !routerLeft);
+      const left = claudeFirst ? claudeBalance().left : routerLeft ? routerLeft.left : null;
+      const badge = document.getElementById('mp-badge');
+      badge.classList.toggle('hidden', left === null);
+      if (left !== null) {
+        badge.textContent = shortMoney(left);
+        const share = claudeFirst ? left / (api.claudeCredit || 1) : (routerLeft.total ? left / routerLeft.total : 1);
+        badge.dataset.low = share < 0.15 ? 'true' : 'false';
+      }
+    }
+
+    function setModelPopoverTab(tab) {
+      const accounts = tab === 'accounts';
+      appState.modelPopoverTab = accounts ? 'accounts' : 'model';
+      document.querySelectorAll('.mp-tab').forEach((button) => {
+        const on = button.dataset.mpTab === appState.modelPopoverTab;
+        button.classList.toggle('active', on);
+        button.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      document.getElementById('mp-pane-model').classList.toggle('hidden', accounts);
+      document.getElementById('mp-pane-accounts').classList.toggle('hidden', !accounts);
+      if (accounts) {
+        renderAccounts();
+        refreshOpenRouterCredits().then(renderAccounts).catch(() => {});
+      }
+    }
+
+    function setAccountKeysOpen(open) {
+      const keys = document.getElementById('acc-keys');
+      const toggle = document.getElementById('acc-keys-toggle');
+      if (!keys || !toggle) return;
+      keys.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function bindAccounts() {
+      document.querySelectorAll('.mp-tab').forEach((button) => button.addEventListener('click', () => setModelPopoverTab(button.dataset.mpTab)));
+      const toggle = document.getElementById('acc-keys-toggle');
+      if (toggle) toggle.addEventListener('click', () => setAccountKeysOpen(document.getElementById('acc-keys').hidden));
+      const mgmtBtn = document.getElementById('mgmt-key-btn');
+      const mgmtInput = document.getElementById('mgmt-key-input');
+      if (mgmtBtn) {
+        mgmtBtn.addEventListener('click', () => {
+          // «Quitar» with the saved key in the field removes it; anything typed is saved.
+          const saved = getApiSettings().managementKey;
+          saveOpenRouterManagementKey(saved && mgmtInput.value === saved ? '' : mgmtInput.value);
+          if (saved && mgmtInput.value === saved) mgmtInput.value = '';
+          renderAccounts();
+        });
+      }
+      if (mgmtInput) {
+        mgmtInput.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          saveOpenRouterManagementKey(mgmtInput.value);
+          renderAccounts();
+        });
+      }
+      const status = document.getElementById('model-menu-status');
+      if (status) {
+        status.addEventListener('click', (event) => {
+          if (!event.target.closest('[data-open-keys]')) return;
+          setModelPopoverTab('accounts');
+          setAccountKeysOpen(true);
+        });
       }
     }
 
@@ -10658,6 +10854,7 @@
       if (!toggle || !form) return;
       toggle.addEventListener('click', () => {
         form.hidden = !form.hidden;
+        toggle.setAttribute('aria-expanded', form.hidden ? 'false' : 'true');
         renderClaudeBalance();
         if (!form.hidden) form.elements.real.focus();
       });
@@ -10672,7 +10869,7 @@
         const real = parseFloat(String(form.elements.real.value).replace(',', '.'));
         if (Number.isFinite(real) && real >= 0) setClaudeRealBalance(real);
         form.hidden = true;
-        renderClaudeBalance();
+        renderAccounts();
         renderUsageDonut();
       });
     }
@@ -12044,14 +12241,14 @@
     // Turning Ultra code on: the label lights up in a sweep of colours with a
     // few sparks, like Claude's ultrathink, then keeps a slow shimmer.
     function playUltraCodeBurst() {
-      const targets = [document.querySelector('.thinking-select-label'), elements.modelTriggerMeta].filter(Boolean);
+      const targets = [document.getElementById('thinking-current'), elements.modelTriggerMeta].filter(Boolean);
       targets.forEach((el) => {
         el.classList.remove('ultra-burst');
         void el.offsetWidth;
         el.classList.add('ultra-burst');
         window.setTimeout(() => el.classList.remove('ultra-burst'), 1400);
       });
-      const pill = document.querySelector('.thinking-select');
+      const pill = document.querySelector('.thinking-pill.ultra-pill');
       if (!pill || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
       // The refined burst (ring + sparks) lives with the agents board in ultra.js.
       if (window.UltraAgents && typeof window.UltraAgents.burst === 'function') { window.UltraAgents.burst(pill); return; }
@@ -12381,7 +12578,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.10.25.4';
+    const APP_VERSION = '2026.10.25.5';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

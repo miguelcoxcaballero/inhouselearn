@@ -1,0 +1,72 @@
+/* The composer as one floating card: the text on top and one quiet row under
+   it (+ · model · mic · send). The conversation's cost sits on its top edge.
+   Loads after model-picker.css and before theme.css (dark colours there). */
+
+:root .composer-area {
+  background: var(--bg); border-top: 0;
+  padding: 4px 24px max(16px, env(safe-area-inset-bottom, 0px));
+}
+:root .composer-shell, :root .composer-shell:focus-within {
+  position: relative; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 24px;
+  padding: 6px 10px 10px 16px;
+  box-shadow: 0 10px 30px rgba(28, 25, 20, 0.07), 0 1px 2px rgba(28, 25, 20, 0.05);
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+:root .composer-shell:focus-within { border-color: rgba(224, 122, 60, 0.5); box-shadow: 0 0 0 4px var(--orange-soft), 0 10px 30px rgba(28, 25, 20, 0.07); }
+:root .composer-shell.drag-active { border-radius: 24px; }
+:root .composer { min-height: 40px; padding: 10px 2px 6px; font-size: 1rem; line-height: 1.5; }
+:root .composer-row { gap: 8px; padding-top: 4px; }
+
+/* The row: same height everywhere, outlined circles and one outlined pill. */
+:root .plus-btn { width: 36px; height: 36px; border-color: var(--border-strong); background: transparent; }
+:root .model-menu-wrap { flex: 0 1 auto; min-width: 0; max-width: 300px; }
+:root .model-trigger {
+  width: auto; max-width: 100%; height: 36px; padding: 0 10px 0 4px; gap: 7px;
+  border: 1px solid var(--border-strong); background: transparent; border-radius: 999px;
+}
+:root .model-trigger-brand { width: 28px; height: 28px; padding: 6px; }
+:root .model-trigger-main { font-size: 0.84rem; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root .model-trigger-copy { min-width: 0; flex: 0 1 auto; }
+:root .model-trigger-chip { display: inline-flex; flex: 0 0 auto; padding: 1px 8px; font-size: 0.7rem; font-weight: 600; border-radius: 999px; }
+:root .model-trigger-chip.hidden { display: none; }
+:root .model-trigger-caret { display: block; width: 14px; height: 14px; flex: 0 0 auto; }
+
+:root .send-wrap { position: static; display: inline-flex; align-items: center; gap: 4px; }
+:root .dictation-btn { order: -1; width: 36px; height: 36px; border: 0; background: transparent; color: var(--text-secondary); }
+:root .dictation-btn:hover { background: rgba(0, 0, 0, 0.04); color: var(--text); }
+:root .send-btn, :root .send-btn.busy {
+  width: 36px; height: 36px; padding: 0; gap: 0; border-radius: 50%; justify-content: center;
+  background: var(--orange); color: #fff; box-shadow: 0 2px 8px var(--orange-glow);
+}
+:root .send-btn:hover:not([disabled]) { background: #cf6a2c; transform: none; }
+:root .send-btn[disabled] { opacity: 1; background: var(--border-strong); color: var(--surface); box-shadow: none; }
+:root .send-btn.busy { background: var(--text); box-shadow: none; }
+:root .send-label { display: none; }
+
+/* The whole conversation's cost: a small pill on the card's top edge. */
+:root .chat-cost {
+  position: absolute; top: -10px; right: 18px; bottom: auto; z-index: 2;
+  padding: 0 8px; line-height: 18px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border-strong);
+  font-size: 0.66rem; font-weight: 600;
+}
+:root .chat-cost.zero { font-weight: 500; }
+
+@media (max-width: 768px) {
+  :root .composer-area { padding: 2px 12px max(12px, env(safe-area-inset-bottom, 0px)); }
+  :root .composer-shell, :root .composer-shell:focus-within { padding: 4px 8px 8px 14px; border-radius: 22px; }
+  :root .composer { font-size: 0.95rem; }
+  :root .composer-row { gap: 6px; }
+  :root .plus-btn, :root .send-btn, :root .send-btn.busy, :root .dictation-btn { width: 38px; height: 38px; }
+  :root .model-menu-wrap { flex: 0 1 auto; max-width: none; }
+  :root .model-trigger { width: auto; height: 38px; padding: 0 8px 0 4px; gap: 6px; }
+  :root .model-trigger-brand { width: 28px; height: 28px; }
+  :root .model-trigger-main { font-size: 0.8rem; }
+  :root .model-trigger-chip { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+  :root .model-trigger-chip.hidden { display: none; }
+  :root .model-trigger-caret { display: block; }
+  :root .chat-cost { right: 14px; }
+}
+
+/* Usage and balance live in the model popup's «Cuentas» tab now. */
+:root .usage-btn { display: none; }

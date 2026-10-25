@@ -64,7 +64,10 @@ function toolReply(name, input) {
   });
 
   // 1. The key field: saved, checked with GET /v1/models, Claude's models first.
+  // The keys live in the model popup's «Cuentas» tab, under «Claves».
   await page.evaluate(() => { toggleModelMenu(); });
+  await page.click('#mp-tab-accounts');
+  await page.click('#acc-keys-toggle');
   await page.waitForSelector('#claude-key-input', { state: 'visible' });
   await page.fill('#claude-key-input', 'sk-ant-api03-test');
   await page.click('#claude-key-btn');
@@ -131,7 +134,8 @@ function toolReply(name, input) {
 
   // 6. A rejected key says so next to the field.
   keyStatus = 401;
-  await page.evaluate(() => { toggleModelMenu(); });
+  await page.evaluate(() => { openModelMenuForKey(elements.claudeKeyInput); });
+  await page.waitForSelector('#claude-key-input', { state: 'visible' });
   await page.fill('#claude-key-input', 'sk-ant-api03-mala');
   await page.click('#claude-key-btn');
   await page.waitForFunction(() => appState.claudeKeyCheck === 'rejected');
@@ -209,10 +213,13 @@ function toolReply(name, input) {
     updateConfigUi();
     renderUsageDonut();
     toggleModelMenu();
+    setModelPopoverTab('accounts');
     return {
       first: first.left, afterDelete: afterDelete.left, adjusted: adjusted.left,
-      text: document.querySelector('#claude-balance .claude-balance-text').textContent,
-      visible: !document.getElementById('claude-balance').classList.contains('hidden'),
+      text: document.getElementById('acc-claude-amount').textContent + ' ' + document.querySelector('#claude-balance .claude-balance-text').textContent,
+      visible: !document.getElementById('mp-pane-accounts').classList.contains('hidden') && !document.getElementById('claude-balance-adjust').hidden,
+      badge: document.getElementById('mp-badge').textContent,
+      bar: document.getElementById('acc-claude-bar').style.width,
       donut: document.getElementById('usage-btn').title || document.getElementById('usage-donut').textContent,
       renew: period.next.getDate(), aheadDay: ahead.getDate(), linked: [localDayKey(linked.start), localDayKey(linked.next)], later: [localDayKey(later.start), localDayKey(later.next)]
     };
@@ -220,9 +227,19 @@ function toolReply(name, input) {
   check('Claude\'s credit left counts only this period\'s Claude answers (older versions included)', balance.first === 97 && balance.renew === balance.aheadDay, balance);
   check('…the period runs from the last renewal to the next (a plan linked the day before counts from then)', balance.linked[0] === '2026-10-25' && balance.linked[1] === '2026-11-26' && balance.later[0] === '2026-11-26' && balance.later[1] === '2026-12-26', balance);
   check('…a deleted chat\'s spending stays counted, and «saldo real» adjusts it', balance.afterDelete === 97 && Math.abs(balance.adjusted - 80) < 1e-9, balance);
-  check('…shown under the key («Quedan $80… de $100 · se renueva el 26 …») and in the usage ring of a Claude chat', /^Quedan \$80/.test(balance.text) && /de \$100/.test(balance.text) && /se renueva el \d+/.test(balance.text) && balance.visible && /Claude/.test(balance.donut), balance);
+  check('…shown in «Cuentas» ($80.00, «de $100.00 · se renueva el …», the bar) and on the tab\'s badge ($80)', /^\$80\.00 de \$100\.00 · se renueva el \d+/.test(balance.text) && balance.visible && balance.badge === '$80' && balance.bar === '80%' && /Claude/.test(balance.donut), balance);
   const popup = await page.evaluate(() => { closeModelMenu(); toggleUsagePopup(); return document.getElementById('usage-popup-content').textContent; });
   check('the usage popup shows Claude\'s credit first', /Claude · tu API\$80/.test(popup.replace(/\s+/g, '')) || /Claude · tu API/.test(popup) && /\$80/.test(popup), popup.slice(0, 200));
+
+  // 11. The Claude key is kept like OpenRouter's: a reload still has both, and the Claude models.
+  await page.evaluate(() => { saveApiSettings({ apiKey: 'sk-or-test', anthropicKey: 'sk-ant-api03-guardada' }); applyClaudeModels(); saveState({ skipDrive: true }); sessionStorage.setItem('__settings', localStorage.getItem(STORAGE_KEY + '::openrouterSettings')); });
+  // The shared mock writes a fresh OpenRouter-only copy on every load; put back what this browser had saved.
+  await page.addInitScript(() => { const saved = sessionStorage.getItem('__settings'); if (saved) localStorage.setItem('inhouseGeminiStandaloneV1::openrouterSettings', saved); });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.InhousePi && typeof getApiSettings === 'function' && appState.stateLoaded);
+  await page.waitForTimeout(800);
+  const kept = await page.evaluate(() => { openModelMenuForKey(); return new Promise((resolve) => setTimeout(() => resolve({ claude: getApiSettings().anthropicKey, router: getApiSettings().apiKey, field: document.getElementById('claude-key-input').value, models: modelCatalog.entries.filter((entry) => entry.id.startsWith('claude-api/')).length, count: document.getElementById('acc-keys-count').textContent, synced: buildSyncedSettings().openRouter.anthropicKey }), 300)); });
+  check('after a reload the Claude key is still saved (field, Drive settings and Claude models), like OpenRouter\'s', kept.claude === 'sk-ant-api03-guardada' && kept.router === 'sk-or-test' && kept.field === 'sk-ant-api03-guardada' && kept.models === 4 && kept.count === '2 conectadas' && kept.synced === 'sk-ant-api03-guardada', kept);
 
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();
