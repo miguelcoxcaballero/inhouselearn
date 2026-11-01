@@ -25,7 +25,8 @@
 //   runSubAgent(job) → Promise<{ text, cost, report? }>,
 //   registerControls?(stepId, { stop(agentId) }), unregisterControls?(stepId),
 //   turnBudget?: tope en $ de todos los spawn_agents de la respuesta (8 por defecto),
-//   timing?: { stagger, backoff, grace }   (solo para los tests)
+//   timing?: { stagger, backoff, grace, calm }   (solo para los tests; calm: cuántos agentes seguidos
+//            terminan bien antes de que el límite de paralelo recupere uno)
 // }
 // job: { id, name, role, effort, task, readOnly, ownedFiles, maxSteps, hue, signal,
 //        onUpdate(update), onWrite(path, kind) → string|undefined, onReport(report) }
@@ -104,7 +105,7 @@ function createAgentReportTool(lookup, names) {
 // was spent, what each agent wrote, whether a plan was already refused) is the
 // state of ONE answer.
 export function createAgentTools(ctx) {
-  const timing = Object.assign({ stagger: STAGGER_MS, backoff: 1500, grace: 1500 }, ctx && ctx.timing);
+  const timing = Object.assign({ stagger: STAGGER_MS, backoff: 1500, grace: 1500, calm: 2 }, ctx && ctx.timing);
   const cap = Number(ctx && ctx.turnBudget);
   const turn = { spent: 0, cap: Number.isFinite(cap) && cap >= MIN_BUDGET ? cap : DEFAULT_TURN_BUDGET };
   const store = new Map();

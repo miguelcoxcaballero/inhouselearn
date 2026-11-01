@@ -107,7 +107,7 @@ export async function runSpawn(env, stepId, params, signal, onUpdate) {
     notice = poolNotice();
   };
   const speedUp = () => {
-    pool = nextParallel(pool, 'ok');
+    pool = nextParallel(pool, 'ok', timing.calm);
     if (notice) notice = poolNotice();
   };
 

@@ -205,7 +205,8 @@ test('a provider that limits requests halves how many agents start at once', asy
     } finally {
       running--;
     }
-  });
+    // calm: 99 keeps the pool from growing back while the test measures the slowed one.
+  }, { timing: Object.assign({}, TIMING, { calm: 99 }) });
   const updates = [];
   const result = await tool.execute('p1', { verify: false, agents: Array.from({ length: 9 }, (_, i) => agent('Agente ' + (i + 1), { id: 'a' + (i + 1) })) }, undefined, (u) => updates.push(u));
   assert.ok(result.details.agents.every((row) => row.status === 'done'), JSON.stringify(result.details.agents.map((row) => [row.id, row.status])));

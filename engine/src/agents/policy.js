@@ -33,12 +33,13 @@ export function startVerdict({ spent, budget, finishedCosts }) {
 
 // How many agents run at once. A provider that answers 429 / overloaded halves it
 // (never below MIN_PARALLEL); after two agents in a row that end well it grows one back.
-export function nextParallel(state, event) {
+export function nextParallel(state, event, calmNeeded) {
   const max = state.max || MAX_PARALLEL;
+  const need = Number.isFinite(calmNeeded) && calmNeeded > 0 ? calmNeeded : 2;
   if (event === 'limit') return { limit: Math.max(MIN_PARALLEL, Math.floor(state.limit / 2)), calm: 0, max, slowed: true };
   if (event === 'ok') {
     const calm = (state.calm || 0) + 1;
-    return calm >= 2 && state.limit < max ? { limit: state.limit + 1, calm: 0, max, slowed: state.slowed } : { limit: state.limit, calm, max, slowed: state.slowed };
+    return calm >= need && state.limit < max ? { limit: state.limit + 1, calm: 0, max, slowed: state.slowed } : { limit: state.limit, calm, max, slowed: state.slowed };
   }
   return state;
 }
