@@ -190,13 +190,21 @@ let failed = 0;
     const shell = document.querySelector('.composer-shell');
     window.UltraAgents.ignite({});
     const sweep = shell.querySelector(':scope > .ultra-sweep');
-    return { sweeps: document.querySelectorAll('.ultra-sweep').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), igniting: shell.classList.contains('ultra-igniting'), animation: sweep ? getComputedStyle(sweep, '::before').animationName : '', sparks: document.querySelectorAll('.ultra-spark, .ua-spark, .ua-burst-ring').length };
+    return { sweeps: document.querySelectorAll('.ultra-sweep').length, halos: document.querySelectorAll('.ultra-halo').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), igniting: shell.classList.contains('ultra-igniting'), animation: sweep ? getComputedStyle(sweep, '::before').animationName : '', sparks: document.querySelectorAll('.ultra-spark, .ua-spark, .ua-burst-ring').length };
   });
-  check('turning it on: ONE band of light around the composer (even if asked twice), the tag, and no sparks', lit.sweeps === 1 && lit.mode === 'on' && lit.tag && lit.igniting && /ultra-sweep/.test(lit.animation) && lit.sparks === 0, lit);
+  check('turning it on: ONE light around the composer with ONE glow (even if asked twice), the tag, and no sparks', lit.sweeps === 1 && lit.halos === 1 && lit.mode === 'on' && lit.tag && lit.igniting && /ultra-sweep/.test(lit.animation) && lit.sparks === 0, lit);
   await page.waitForTimeout(2400);
-  const after = await page.evaluate(() => ({ sweeps: document.querySelectorAll('.ultra-sweep').length, igniting: document.querySelector('.composer-shell').classList.contains('ultra-igniting') }));
-  check('…and the band is gone after about two seconds', after.sweeps === 0 && !after.igniting, after);
+  const after = await page.evaluate(() => ({ sweeps: document.querySelectorAll('.ultra-sweep, .ultra-halo').length, lit: document.querySelectorAll('.ultra-lit').length, igniting: document.querySelector('.composer-shell').classList.contains('ultra-igniting') }));
+  check('…and the light is gone after about two seconds, nothing left lit', after.sweeps === 0 && after.lit === 0 && !after.igniting, after);
   await page.evaluate(() => { window.UltraAgents.setMode(false); document.querySelectorAll('.ultra-tag').forEach((el) => el.remove()); });
+  const cut = await page.evaluate(() => {
+    window.UltraAgents.ignite({});
+    window.UltraAgents.setMode(false);
+    const shell = document.querySelector('.composer-shell');
+    return { overlays: document.querySelectorAll('.ultra-sweep, .ultra-halo').length, lit: document.querySelectorAll('.ultra-lit').length, igniting: shell.classList.contains('ultra-igniting'), mode: shell.dataset.ultra || '' };
+  });
+  check('turning it off while it plays ends the moment at once (no light left going round)', cut.overlays === 0 && cut.lit === 0 && !cut.igniting && cut.mode === '', cut);
+  await page.evaluate(() => { document.querySelectorAll('.ultra-tag').forEach((el) => el.remove()); });
 
   // Dark theme: the same tokens, AMOLED values.
   const tokens = () => page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return ['--ua-accent', '--ua-ok', '--ua-err', '--ua-wait', '--ua-lane-bg', '--ua-read', '--ua-search', '--ua-edit', '--ua-web', '--ua-accent-soft'].map((name) => cs.getPropertyValue(name).trim()); });

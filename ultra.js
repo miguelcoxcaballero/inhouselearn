@@ -689,16 +689,19 @@
   }
 
   /* ─── Turning Ultra code on ─────────────────────────────────────────────
-     The composer is what always carries the mode: its border takes a violet
-     tint and a small «Ultra code» tag sits on its top edge (like the tag Claude
-     Code puts on its input box). Turning the mode on plays ONE calm moment: a
-     band of light runs once around the border, the tag settles on the edge and
-     the labels come on letter by letter; then the tint stays and the tag keeps a
-     slow glint. No sparks. All the drawing is CSS (ultra.css); this only adds and
-     removes classes and the two small elements, and does nothing under reduced
-     motion except show the steady state. */
+     Only lilac. While the mode is on the composer carries it: a lilac border, a
+     faint blurred lilac halo under it and a small «Ultra code» tag with a lit dot
+     on its top edge (like the tag Claude Code puts on its input box). Turning it
+     on plays ONE moment: a light makes one lap of the border at a constant speed
+     (.ultra-sweep) with its blurred glow outside the card (.ultra-halo), the
+     composer blooms, the tag comes into focus and a shine crosses the words once;
+     the dot pulses when the light gets back to it. Nothing keeps moving
+     afterwards, and turning the mode off while it plays ends it at once
+     (quench). All the drawing is CSS (ultra.css); this only adds and removes
+     classes and the two overlays, and under reduced motion shows the steady
+     state only. */
 
-  const IGNITE_MS = 2100;
+  const IGNITE_MS = 1900;
   let igniteTimer = 0;
 
   function composerShell() {
@@ -719,6 +722,16 @@
     return tag;
   }
 
+  // Ends the moment at once: the light, its glow, the bloom and every lit label.
+  function quench(shell) {
+    window.clearTimeout(igniteTimer);
+    if (shell) {
+      shell.querySelectorAll(':scope > .ultra-sweep, :scope > .ultra-halo').forEach((el) => el.remove());
+      shell.classList.remove('ultra-igniting');
+    }
+    document.querySelectorAll('.ultra-lit').forEach((el) => el.classList.remove('ultra-lit'));
+  }
+
   // The steady state, set on every render of the model controls: on or off.
   // Returns true when it changed.
   function setMode(on) {
@@ -729,6 +742,7 @@
       shell.dataset.ultra = 'on';
       ensureTag(shell);
     } else {
+      if (was || shell.classList.contains('ultra-igniting')) quench(shell);
       delete shell.dataset.ultra;
       const tag = shell.querySelector(':scope > .ultra-tag');
       if (tag && !tag.classList.contains('leaving')) {
@@ -751,32 +765,34 @@
     setMode(true);
     const before = () => { if (typeof opts.before === 'function') opts.before(); };
     if (!shell || reducedMotion()) { before(); return; }
-    window.clearTimeout(igniteTimer);
-    // The button of the popup pops at once…
+    quench(shell);
+    // The button of the popup gives at once…
     if (opts.pill) {
-      opts.pill.classList.remove('ultra-lit');
       void opts.pill.offsetWidth;
       opts.pill.classList.add('ultra-lit');
     }
-    // …and then the composer, uncovered, lights up.
+    // …and then the composer, uncovered, lights up: the glow first, the light over it.
     const light = () => {
       before();
-      shell.querySelectorAll(':scope > .ultra-sweep').forEach((el) => el.remove());
+      shell.querySelectorAll(':scope > .ultra-sweep, :scope > .ultra-halo').forEach((el) => el.remove());
+      const radius = getComputedStyle(shell).borderTopLeftRadius || '24px';
+      const halo = document.createElement('span');
+      halo.className = 'ultra-halo';
+      halo.innerHTML = '<span class="ultra-halo-track"></span>';
       const sweep = document.createElement('span');
       sweep.className = 'ultra-sweep';
-      sweep.setAttribute('aria-hidden', 'true');
-      shell.appendChild(sweep);
-      const lit = [shell, shell.querySelector(':scope > .ultra-tag'), opts.pill].concat(opts.labels || []).filter(Boolean);
+      [halo, sweep].forEach((el) => {
+        el.setAttribute('aria-hidden', 'true');
+        el.style.setProperty('--ua-r', radius);
+        shell.appendChild(el);
+      });
+      const lit = [shell.querySelector(':scope > .ultra-tag'), opts.pill].concat(opts.labels || []).filter(Boolean);
       shell.classList.remove('ultra-igniting');
       lit.forEach((el) => el.classList.remove('ultra-lit'));
       void shell.offsetWidth;
       shell.classList.add('ultra-igniting');
       lit.forEach((el) => el.classList.add('ultra-lit'));
-      igniteTimer = window.setTimeout(() => {
-        sweep.remove();
-        shell.classList.remove('ultra-igniting');
-        lit.forEach((el) => el.classList.remove('ultra-lit'));
-      }, IGNITE_MS);
+      igniteTimer = window.setTimeout(() => quench(shell), IGNITE_MS);
     };
     const delay = Number(opts.delay) || 0;
     if (delay > 0) igniteTimer = window.setTimeout(light, delay);

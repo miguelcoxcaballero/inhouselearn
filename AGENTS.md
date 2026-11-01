@@ -294,7 +294,7 @@ Mandatory guidance for every AI and developer working in this repository.
   closes it. The usage ring left the row: balances live there. «Cuentas» uses the companies' real logos
   (`icons/companies/claude.svg`, `openrouter.svg`). The files strip above it scrolls sideways with the wheel and a
   mouse drag (`bindHorizontalScroll`, fades where files hide; a drag never opens a file). The level chip draws
-  «Ultra code» as an inner `.ultra-text` span (on the chip itself its background hid the rainbow word).
+  «Ultra code» as an inner `.ultra-text` span (on the chip itself its background hid the gradient word).
   Tests: `tests/web/extra-account.cjs`, `ultra.cjs`, `composer-fixes.cjs`.
 - **Empty answers:** `runAgent` throws «El modelo ha terminado sin escribir ninguna respuesta» (or «se ha quedado sin
   espacio de salida mientras pensaba» on `length`) when a turn ends with no text and no tools, instead of a blank answer
@@ -402,12 +402,18 @@ Mandatory guidance for every AI and developer working in this repository.
   shown on the card while it lasts, never on a finished one); one answer has a cap for all its
   spawn_agents (`turnBudget`, `ULTRA_TURN_BUDGET` = $8; state of the tool instance, which is built per
   turn). Results come back as a digest bounded by `RESULT_BUDGET` and `agent_report(agent, part)` reads one
-  agent in full. `ultraPromptText` says when NOT to fan out. **Turning it on:** the composer carries the
-  mode (`UltraAgents.setMode`: `data-ultra="on"` → violet border and the «Ultra code» tag on its top edge)
-  and `UltraAgents.ignite` plays ONE calm moment (a band of light once around the border, the tag settling,
-  the words lighting up left to right, the rainbow crossing them): all CSS in ultra.css, nothing but the
-  steady state under reduced motion, no sparks. `.ultra-text` is violet with a rainbow glint every few
-  seconds.
+  agent in full. `ultraPromptText` says when NOT to fan out. **Turning it on (only lilac: the user asked for no rainbow):**
+  the composer carries the mode (`UltraAgents.setMode`: `data-ultra="on"` → lilac border, a faint blurred lilac
+  halo under it (`--ua-rest`) and the «Ultra code» tag with a lit dot on its top edge) and `UltraAgents.ignite`
+  plays ONE moment: a light makes one lap of the border at constant speed (`.ultra-sweep::before` on
+  `offset-path: inset(0 round var(--ua-r))`, the composer's radius set by ultra.js; the old conic gradient raced
+  through the corners), its glow blurred, dimmer than the light and only outside the card (`.ultra-halo`, masked to
+  the outside), a short bloom, the tag coming into focus (blur → sharp), a shine crossing the words once
+  (`ultra-shine`) and the dot pulsing when the light gets back. Nothing keeps animating afterwards (`.ultra-text` is
+  a still two-tone lilac); turning it off mid-way ends it at once (`quench`); without basic-shape offset paths
+  there is no light (never a still light in a corner); reduced motion shows the steady state only. All CSS in
+  ultra.css, dark tokens in theme.css; `ultra.cjs` fails if a colour of the word, the light or its glow is not a
+  violet hue. The agents board's running border orbits in lilac too.
 - **How the model is prompted and run** (index.html, engine/src/index.js): `stableSystemPrompt` is
   byte-identical across the turns of a chat (and a day) so providers with prompt caching reuse it;
   `turnContextText` (time, files, library, `InhouseStudy.brief`, visual events/variety, the course task or
