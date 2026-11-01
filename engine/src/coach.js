@@ -14,6 +14,11 @@ export const NOTE_MARK = '⁣nota:';
 // are pure bookkeeping: a hint there would only confuse the model.
 const SILENT = new Set(['set_course_plan', 'quiz', 'final_exam', 'check_diagram', 'think', 'update_plan', 'ask_user', 'submit_result']);
 
+// Ultra code: after this many tool calls made alone (no spawn_agents yet) the model is reminded
+// once, and once more at the second number. Counting the calls it makes is what the user sees as
+// «it did everything itself»: a model that planned a fan-out never reaches the first.
+export const ULTRA_NUDGE_AT = [4, 12];
+
 export const COACH_NOTES = {
   repeat: 'Esta misma llamada ya ha fallado con estos argumentos. No la repitas igual: cambia los argumentos, usa otra herramienta o explica qué te bloquea.',
   firstFailure: 'La herramienta ha fallado. Lee el error, corrige la causa y reintenta una vez; si no se puede, dilo en vez de suponer el resultado.',
@@ -21,7 +26,8 @@ export const COACH_NOTES = {
   webFetch: 'Prueba otra fuente de web_search en vez de insistir con esta página.',
   reviewDocument: 'Antes de decir que está listo, revísalo con doc_view.',
   testCode: 'Si es código, pruébalo con run_js.',
-  checkCi: 'Si el repositorio tiene CI, mira github_ci_status antes de decir que funciona.'
+  checkCi: 'Si el repositorio tiene CI, mira github_ci_status antes de decir que funciona.',
+  ultra: (n) => 'Ultra code está activo y llevas ' + n + ' llamadas tú solo, sin repartir. Si lo que falta se puede dividir (investigar, cambiar, comprobar), llama ahora a spawn_agents: un context común, tareas completas y acceptance para que lo verifique quien no lo escribió. Solo si de verdad es trivial, termina y responde.'
 };
 
 // Same arguments in any key order → same key.
@@ -39,15 +45,21 @@ export function withoutNotes(content) {
 }
 
 /**
- * createToolCoach() → afterToolCall(context) for pi's Agent.
+ * createToolCoach({ ultra }) → afterToolCall(context) for pi's Agent.
  * The returned function also exposes .errors (tool errors so far in the run).
+ * ultra: the turn is in Ultra code (the model has spawn_agents).
  */
-export function createToolCoach() {
+export function createToolCoach(options) {
+  const ultra = !!(options && options.ultra);
   const failed = new Set();
   const failedTools = new Set();
   const succeeded = new Set();
   let errors = 0;
   let warnedMany = false;
+  // Ultra code: calls made so far with no spawn_agents, and the reminders already given.
+  let alone = 0;
+  let fannedOut = false;
+  let nudged = 0;
 
   const notesFor = (name, args, isError) => {
     const notes = [];
@@ -76,10 +88,22 @@ export function createToolCoach() {
     return notes;
   };
 
+  // The reminder of Ultra code, when it is due.
+  const ultraNote = (name) => {
+    if (!ultra || fannedOut) return '';
+    if (name === 'spawn_agents' || name === 'agent_report') { fannedOut = true; return ''; }
+    alone++;
+    const at = ULTRA_NUDGE_AT[nudged];
+    if (at && alone >= at) { nudged++; return COACH_NOTES.ultra(alone); }
+    return '';
+  };
+
   const afterToolCall = async (context) => {
     const name = context && context.toolCall && context.toolCall.name;
     if (!name || SILENT.has(name)) return undefined;
     const notes = notesFor(name, context.args != null ? context.args : context.toolCall.arguments, !!context.isError);
+    const nudge = ultraNote(name);
+    if (nudge) notes.push(nudge);
     if (!notes.length) return undefined;
     const content = (context.result && Array.isArray(context.result.content) ? context.result.content : []).concat([{ type: 'text', text: NOTE_MARK + ' ' + notes.join(' ') }]);
     return { content };

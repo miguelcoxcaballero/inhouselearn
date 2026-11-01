@@ -144,8 +144,21 @@ function summarize(entry, rank) {
     // Artificial Analysis indices as published by OpenRouter for each model.
     intelligence: benchmarks && typeof benchmarks.intelligence_index === 'number' ? benchmarks.intelligence_index : null,
     coding: benchmarks && typeof benchmarks.coding_index === 'number' ? benchmarks.coding_index : null,
-    agentic: benchmarks && typeof benchmarks.agentic_index === 'number' ? benchmarks.agentic_index : null
+    agentic: benchmarks && typeof benchmarks.agentic_index === 'number' ? benchmarks.agentic_index : null,
+    // Design Arena, the other benchmark OpenRouter publishes (for many models that have no
+    // Artificial Analysis record at all): the mean Elo of its «models» arena.
+    arena: arenaMean(entry.benchmarks && entry.benchmarks.design_arena),
+    // One model listed twice (a «:free» copy…) shares this slug: the picker lets them share scores.
+    canonical: entry.canonical_slug || ''
   };
+}
+
+/** Mean Elo over the categories of Design Arena's «models» arena (at least three), or null. */
+export function arenaMean(list) {
+  const elos = (Array.isArray(list) ? list : [])
+    .filter((item) => item && item.arena === 'models' && typeof item.elo === 'number' && Number.isFinite(item.elo))
+    .map((item) => item.elo);
+  return elos.length >= 3 ? Math.round((elos.reduce((sum, elo) => sum + elo, 0) / elos.length) * 10) / 10 : null;
 }
 
 function thinkingLevelMapFrom(reasoning) {
@@ -239,7 +252,9 @@ export function claudeApiModels() {
       } : null,
       intelligence: null,
       coding: null,
-      agentic: null
+      agentic: null,
+      arena: null,
+      canonical: ''
     };
     registered.set(summary.id, { summary, model: Object.assign({}, base, { maxTokens: Math.min(base.maxTokens || CLAUDE_MAX_OUTPUT, CLAUDE_MAX_OUTPUT) }) });
     return summary;
@@ -500,7 +515,8 @@ function withoutCoachNotes(list) {
 export async function runAgent(options) {
   const model = options.model;
   const maxRetries = Number.isFinite(Number(options.maxRetries)) ? Math.max(0, Math.floor(Number(options.maxRetries))) : 2;
-  const coach = options.coach === false ? undefined : createToolCoach();
+  // ultra: the turn is in Ultra code (the model has spawn_agents): the coach reminds it to fan out.
+  const coach = options.coach === false ? undefined : createToolCoach({ ultra: !!options.ultra });
 
   // Context budget in characters; an overflow error lowers it and forces the trim.
   let budgetFactor = 1;

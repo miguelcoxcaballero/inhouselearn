@@ -97,11 +97,15 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
       subTools: (reqs[1].tools || []).map((t) => t.function.name),
       subSystem: String(reqs[1].messages[0].content).slice(0, 2000),
       mainSystem: String(reqs[0].messages[0].content),
+        mainUser: JSON.stringify(reqs[0].messages.slice(-1)[0].content),
       final: reqs[3].messages.filter((x) => x.role === 'tool').map((x) => String(x.content)).join('\n')
     };
   });
   check('when they finish the board says so, both done', /2 agentes/.test(after.title) && !/Trabajando/.test(after.title) && after.done.join() === 'done,done', after);
   check('the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents', after.mainTools.includes('spawn_agents') && after.mainTools.includes('agent_report') && !after.subTools.includes('agent_report') && /Modo Ultra code/.test(after.mainSystem) && /agent_report/.test(after.mainSystem) && !after.subTools.includes('spawn_agents') && after.subTools.includes('web_search') && /varios agentes que trabajan a la vez/.test(after.subSystem), { main: after.mainTools, sub: after.subTools });
+  // Like Claude Code's ultracode: fanning out is the default for substantive work (understand → change →
+  // verify), only trivial work stays direct, and every turn's message carries a short reminder.
+  check('the Ultra prompt makes fanning out the default (understand → change → verify; only trivial work is done directly) and each turn carries a reminder', /REPARTES/.test(after.mainSystem) && /entender → cambiar → verificar/.test(after.mainSystem) && /solo si es trivial/.test(after.mainSystem) && !/Hazlo tú, sin agentes ni plan, si es una pregunta/.test(after.mainSystem) && /Ultra code está activo/.test(after.mainUser) && /spawn_agents/.test(after.mainUser), { system: after.mainSystem.slice(after.mainSystem.indexOf('Modo Ultra code'), after.mainSystem.indexOf('Modo Ultra code') + 200), user: after.mainUser.slice(-260) });
   check('the main model gets both results to integrate', /## Fuentes/.test(after.final) && /## Esquema/.test(after.final) && after.content === 'He juntado lo de los dos agentes.', after.final.slice(0, 300));
   check('the agents\' cost is part of the answer\'s cost (4 requests)', Math.abs(after.cost - 0.002) < 1e-9, after.cost);
 
@@ -140,8 +144,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await page.click('#model-menu-btn');
   await page.waitForSelector('[data-thinking-level="normal"]');
   await page.click('[data-thinking-level="normal"]');
-  const off = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, prompt: ultraPromptText(getActiveChat()), meta: elements.modelTriggerMeta.textContent, label: document.getElementById('thinking-current').textContent, mode: document.querySelector('.composer-shell').dataset.ultra || '' }));
-  check('choosing another level turns Ultra code off', !off.flag && off.prompt === '' && off.meta !== 'Ultra code' && off.label === 'Normal', off);
+  const off = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, prompt: ultraPromptText(getActiveChat()), turn: turnContextText(getActiveChat(), null), meta: elements.modelTriggerMeta.textContent, label: document.getElementById('thinking-current').textContent, mode: document.querySelector('.composer-shell').dataset.ultra || '' }));
+  check('choosing another level turns Ultra code off', !off.flag && off.prompt === '' && !/Ultra code está activo/.test(off.turn) && off.meta !== 'Ultra code' && off.label === 'Normal', off);
   await page.waitForTimeout(450);
   const gone = await page.evaluate(() => ({ mode: document.querySelector('.composer-shell').dataset.ultra || '', tag: document.querySelectorAll('.ultra-tag').length }));
   check('…and the composer goes back to normal: no violet mode, the tag fades out and leaves', off.mode === '' && gone.mode === '' && gone.tag === 0, { off, gone });
