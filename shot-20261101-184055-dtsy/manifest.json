@@ -1,0 +1,33 @@
+{
+  "id": "shot-20261101-184055-dtsy",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "",
+  "at": "2026-11-01T18:41:22.031Z",
+  "seconds": 13,
+  "shots": [
+    {
+      "name": "antes 0,25 s",
+      "file": "1-antes-0-25-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "antes 0,8 s",
+      "file": "2-antes-0-8-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "antes 1,3 s",
+      "file": "3-antes-1-3-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "antes fijo",
+      "file": "4-antes-fijo.png",
+      "device": "desktop",
+      "theme": "dark"
+    }
+  ]
+}
