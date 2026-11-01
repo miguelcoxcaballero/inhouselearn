@@ -24,7 +24,14 @@ export function effortFor(role, requested) {
   return normalizeEffort(requested) || ROLE_EFFORT[role] || 'high';
 }
 
-export function stepCapFor(role) {
+// The most steps (tool calls) the model may ask for one agent.
+export const MAX_STEPS_LIMIT = 100;
+
+// The step cap of an agent: what the model asked for (5 to 100, for a long loop such as
+// change → measure → fix), else its role's.
+export function stepCapFor(role, requested) {
+  const asked = Math.round(Number(requested));
+  if (Number.isFinite(asked) && asked >= 5) return Math.min(MAX_STEPS_LIMIT, asked);
   return STEP_CAPS[role] || STEP_CAPS.build;
 }
 

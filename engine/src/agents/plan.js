@@ -42,7 +42,7 @@ export function planAgents(list, options) {
       task: String(agent.task).trim(),
       role,
       effort: effortFor(role, agent.effort),
-      maxSteps: stepCapFor(role),
+      maxSteps: stepCapFor(role, agent.max_steps),
       rawDeps: (Array.isArray(agent.depends_on) ? agent.depends_on : []).map((dep) => String(dep).trim()).filter(Boolean),
       files: (Array.isArray(agent.files) ? agent.files : []).map((glob) => String(glob).trim()).filter(Boolean).slice(0, 20),
       returns: String(agent.returns || '').trim(),

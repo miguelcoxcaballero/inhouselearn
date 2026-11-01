@@ -15,6 +15,20 @@ import { shouldVerify, fixRoundsFrom, startVerdict, nextParallel, failingKey } f
 
 // The first agent goes alone for a moment so the provider's prompt cache (same
 // system prompt and tools for everyone) is written once and read by the rest.
+/**
+ * What an agent that was stopped before it wrote its report did, from its last steps and the files it
+ * touched: better than coming back empty (the main model can go on from there). '' when nothing is known.
+ */
+export function partialSummary(row) {
+  const steps = (Array.isArray(row && row.trail) ? row.trail : []).map((item) => item && item.t).filter(Boolean);
+  const files = Array.isArray(row && row.files) ? row.files : [];
+  if (!steps.length && !files.length) return '';
+  return 'Se paró antes de entregar su informe (' + ((row && row.doing) || 'parado') + ').' +
+    (steps.length ? ' Últimos pasos: ' + steps.slice(-8).join(' · ') + '.' : '') +
+    (files.length ? ' Archivos que tocó: ' + files.join(', ') + '.' : '') +
+    ' Lo que falte, hazlo tú o relánzalo con una tarea más concreta o con max_steps mayor.';
+}
+
 export const STAGGER_MS = 300;
 const MAX_TRIES = 3;
 const TRANSIENT = /429|rate.?limit|overloaded|\b5\d\d\b|network|failed to fetch|timeout|ECONNRESET/i;
@@ -284,9 +298,11 @@ export async function runSpawn(env, stepId, params, signal, onUpdate) {
         row.doing = own.stopReason || 'Parado';
         row.endedAt = Date.now();
         own.text = partial;
-        if (!own.report) own.report = synthesizeReport(partial || '(sin texto: se paró antes de escribir)', 'partial');
+        const did = partial || partialSummary(row);
+        own.text = did;
+        if (!own.report) own.report = synthesizeReport(did || '(sin texto: se paró antes de escribir)', 'partial');
         row.report = compactReport(own.report);
-        row.result = clip(partial, 4000);
+        row.result = clip(did, 4000);
         push(true);
         return;
       }

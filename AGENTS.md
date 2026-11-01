@@ -450,7 +450,10 @@ Mandatory guidance for every AI and developer working in this repository.
     (`.ultra-sweep` and `.ultra-sweep.ultra-ccw`, each with its blurred `.ultra-halo`), the word comes into focus and glows
     while the shine crosses it, and `opts.haptic` (the page passes `haptic('success')`) gives a soft tick on a phone. Measured
     on 1280×800 AMOLED: the glow reaches ~80 px with a smooth falloff, the lights cross at ~690 px/s and the composer's
-    inside does not change. Tests: `ultra.cjs`, `coach.mjs`.
+    inside does not change. **Harness:** an agent may be given `max_steps` (5–100, `stepCapFor`; default 25 explore, 40 build)
+    for a long change → measure → fix loop (a 40-step build agent that read big files and iterated with screenshots came back
+    empty); and an agent cut by its cap or its minutes hands over `partialSummary` (its last steps and the files it touched)
+    instead of «sin texto». Tests: `ultra.cjs`, `coach.mjs`, `agents-plan.mjs`.
 - **How the model is prompted and run** (index.html, engine/src/index.js): `stableSystemPrompt` is
   byte-identical across the turns of a chat (and a day) so providers with prompt caching reuse it;
   `turnContextText` (time, files, library, `InhouseStudy.brief`, visual events/variety, the course task or

@@ -26,6 +26,7 @@ try {
 const { planAgents, createAgentTools, createSubAgentReportTool, pickLevel } = agents;
 // The decision rules are pure modules of their own.
 const policy = await import('../../engine/src/agents/policy.js');
+const { partialSummary } = await import('../../engine/src/agents/run.js');
 
 const LONG = ' Lee los archivos que hagan falta, haz el cambio completo con cuidado y devuelve qué archivos cambiaste y cómo lo comprobaste.';
 const agent = (name, extra) => Object.assign({ name, task: 'Tarea de ' + name + '.' + LONG }, extra);
@@ -336,6 +337,41 @@ test('scheduler: a reader is cut at its own, lower step cap', async () => {
   });
   const result = await tool.execute('s5b', { verify: false, agents: [agent('Lector', { id: 'r', role: 'explore' })] });
   assert.equal(result.details.agents[0].doing, 'Parado: límite de 25 pasos');
+});
+
+test('max_steps raises or lowers the step cap of one agent (never above 100, never below 5)', () => {
+  const task = 'x'.repeat(60);
+  const plan = planAgents([
+    { name: 'A', task, max_steps: 80 },
+    { name: 'B', task, role: 'explore' },
+    { name: 'C', task, max_steps: 1000 },
+    { name: 'D', task, max_steps: 2 },
+    { name: 'E', task, role: 'explore', max_steps: 12 }
+  ], { context: 'contexto común' });
+  assert.deepEqual(plan.nodes.map((node) => node.maxSteps), [80, 25, 100, 40, 12]);
+});
+
+test('an agent stopped before its report still tells what it did: its last steps and the files it touched', () => {
+  const said = partialSummary({ doing: 'Parado: límite de 40 pasos', trail: [{ t: 'Leído ultra.css' }, { t: 'Editado ultra.js' }], files: ['ultra.js'] });
+  assert.match(said, /Se paró antes de entregar su informe \(Parado: límite de 40 pasos\)/);
+  assert.match(said, /Leído ultra\.css · Editado ultra\.js/);
+  assert.match(said, /Archivos que tocó: ultra\.js/);
+  assert.match(said, /max_steps/);
+  assert.equal(partialSummary({ doing: 'Parado', trail: [], files: [] }), '');
+  assert.equal(partialSummary(undefined), '');
+});
+
+test('scheduler: an agent cut at its step cap hands over what it did instead of coming back empty', async () => {
+  const tool = spawnTool(async (job) => {
+    job.onWrite('src/a.js', 'edit');
+    for (let i = 1; i <= 60 && !job.signal.aborted; i++) { job.onUpdate({ steps: i, trail: [{ t: 'Leído a.js' }, { t: 'Editado src/a.js' }] }); await sleep(1); }
+    throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+  });
+  const result = await tool.execute('s5c', { verify: false, agents: [agent('Obrero', { id: 'o' })] });
+  assert.equal(result.details.agents[0].status, 'stopped');
+  assert.match(textOf(result), /Se paró antes de entregar su informe/);
+  assert.match(textOf(result), /Editado src\/a\.js/);
+  assert.match(textOf(result), /src\/a\.js/);
 });
 
 test('scheduler: no retry after the agent wrote something', async () => {

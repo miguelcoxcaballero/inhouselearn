@@ -47,7 +47,7 @@ const SPAWN_DESCRIPTION = 'Ultra code: split a big job into parts and run them a
   'role "explore" = read-only research (reasons at medium, 25 steps); "build" writes (high, 40 steps); effort low|medium|high|max sets it per agent: do not pay max for reading. ' +
   'acceptance: checkable criteria; a read-only verifier (by default when something is written, when there are criteria or with 3+ agents; verify:false skips it) tries to refute the work against the real files/commits/sources, and the owners fix what fails: fix_rounds times (default 1, up to 3; it stops when nothing improves). ' +
   'budget_usd (default ' + DEFAULT_BUDGET + '): cap for this call, and the answer as a whole has a cap too; the most expensive agent is stopped when it runs out and none is started that what is left could not finish. When many agents ran their results come back trimmed: agent_report(agent) gives one agent\'s full text. ' +
-  'max_minutes per agent (default ' + DEFAULT_MINUTES + '). on_failure "stop" skips everything not started once one fails. ' +
+  'max_minutes per agent (default ' + DEFAULT_MINUTES + '), max_steps its tool-call cap (default 25 explore, 40 build, up to 100: raise it for a long loop such as change → measure → fix; an agent cut by its cap hands over only what it had written and a list of its last steps). on_failure "stop" skips everything not started once one fails. ' +
   'In Ultra code this is how substantive work is done, without waiting to be asked: understand (explore agents in parallel, one per area or source) \u2192 change (build agents, each with its files) \u2192 verify (acceptance, checked by someone who did not write the change). Even a modest job gets one or two agents plus that check; only a trivial one (a question, a one-line change) is done directly.';
 
 // ─── submit_result: how each agent hands in its report ─────────────────────────────────
@@ -144,7 +144,8 @@ export function createAgentTools(ctx) {
           depends_on: Type.Optional(Type.Array(Type.String())),
           files: Type.Optional(Type.Array(Type.String(), { description: 'Globs of the files this agent owns.' })),
           returns: Type.Optional(Type.String({ description: 'What it must return.' })),
-          max_minutes: Type.Optional(Type.Number({ minimum: 1, maximum: 30 }))
+          max_minutes: Type.Optional(Type.Number({ minimum: 1, maximum: 30 })),
+            max_steps: Type.Optional(Type.Number({ minimum: 5, maximum: 100, description: 'Tool calls this agent may make (default 25 explore, 40 build); raise it for a long loop such as change → measure → fix.' }))
         }), { minItems: 1, maxItems: MAX_AGENTS })
       }),
       executionMode: 'sequential',
