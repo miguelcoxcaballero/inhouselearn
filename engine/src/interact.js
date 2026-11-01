@@ -19,7 +19,7 @@ export function createInteractTools(ctx) {
     {
       name: 'update_plan',
       label: 'Plan',
-      description: 'Keep a short checklist of the steps of a long task (three steps or more: a document, a project, a multi-part exercise), shown to the user in the chat. Call it once with the whole plan, then again each time a step starts or ends, always sending the full list. Only one step in_progress at a time; mark a step done right after finishing it. Not for simple questions.',
+      description: 'Keep a short checklist of the steps of a long task (three steps or more: a document, a project, a multi-part exercise), shown to the user in the chat. Call it once with the whole plan, then again each time a step starts or ends, always sending the full list. Only one step in_progress at a time; mark a step done right after finishing it, and send the plan one last time with every finished step as done before you write your final answer (a step left in_progress shows as unfinished). Not for simple questions.',
       parameters: Type.Object({
         items: Type.Array(Type.Object({
           text: Type.String({ description: 'The step, a few words.' }),

@@ -433,6 +433,8 @@ html[data-theme="dark"] .study-btn.danger { color: #fca5a5; border-color: rgba(2
    claros para que se lean sobre #000 y carriles apenas más claros que el fondo. */
 html[data-theme="dark"] {
   --ua-accent: #a78bfa;
+  --ua-base: #a78bfa;
+  --ua-glow: rgba(167, 139, 250, 0.4);
   --ua-accent-soft: rgba(167, 139, 250, 0.13);
   --ua-read: #94a3b8;
   --ua-search: #2dd4bf;

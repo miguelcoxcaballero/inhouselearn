@@ -23,8 +23,28 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const pills = await page.evaluate(() => ({ labels: Array.from(document.querySelectorAll('.thinking-pill')).map((el) => el.textContent), active: document.querySelector('.thinking-pill.active').textContent, current: document.getElementById('thinking-current').textContent, rainbowOn: document.querySelector('.thinking-pill.ultra-pill').classList.contains('active') }));
   check('reasoning is one row of pills ending in «Ultra», which is not on until it is chosen', pills.labels.includes('Ultra') && pills.labels[pills.labels.length - 1] === 'Ultra' && !pills.rainbowOn && pills.current !== 'Ultra code', pills);
   await page.click('[data-thinking-level="ultra"]');
-  const on = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, sparks: document.querySelectorAll('.ultra-spark').length, burst: !!document.querySelector('.ultra-burst'), current: document.getElementById('thinking-current').textContent, currentRainbow: document.getElementById('thinking-current').classList.contains('ultra-text'), active: document.querySelector('.thinking-pill.active').dataset.thinkingLevel, meta: elements.modelTriggerMeta.textContent, rainbow: !!elements.modelTriggerMeta.querySelector('.ultra-text') }));
-  check('choosing «Ultra»: a burst of sparks, then the rainbow label (over the pills and on the model button)', on.flag && on.sparks >= 6 && on.burst && on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
+  // The button pops first; then the popup (which covers the composer) closes and the composer lights up.
+  await page.waitForSelector('.composer-shell > .ultra-sweep', { timeout: 3000 });
+  const on = await page.evaluate(() => {
+    const shell = document.querySelector('.composer-shell');
+    const sweep = shell.querySelector(':scope > .ultra-sweep');
+    const tag = shell.querySelector(':scope > .ultra-tag');
+    return {
+      flag: getActiveChat().ultraCode, mode: shell.dataset.ultra, igniting: shell.classList.contains('ultra-igniting'), popupClosed: document.getElementById('model-menu-popup').classList.contains('hidden'),
+      sweep: !!sweep, sweepAnimation: sweep ? getComputedStyle(sweep, '::before').animationName : '',
+      tag: tag ? tag.textContent : '', tagLit: !!(tag && tag.classList.contains('ultra-lit')),
+      sparks: document.querySelectorAll('.ultra-spark, .ua-spark, .ua-burst-ring, .ultra-burst').length,
+      current: document.getElementById('thinking-current').textContent, currentRainbow: document.getElementById('thinking-current').classList.contains('ultra-text'),
+      active: document.querySelector('.thinking-pill.active').dataset.thinkingLevel, meta: elements.modelTriggerMeta.textContent,
+      rainbow: !!elements.modelTriggerMeta.querySelector('.ultra-text'), pillLit: document.querySelector('.thinking-pill.ultra-pill').classList.contains('ultra-lit')
+    };
+  });
+  await page.screenshot({ path: SCRATCH + '/ultra-ignite.png' });
+  check('choosing «Ultra»: one band of light runs around the composer and its «Ultra code» tag settles; no sparks', on.flag && on.mode === 'on' && on.popupClosed && on.igniting && on.sweep && /ultra-sweep/.test(on.sweepAnimation) && on.tag === 'Ultra code' && on.tagLit && on.pillLit && on.sparks === 0, on);
+  check('…and the labels read «Ultra code» (over the pills and on the model button)', on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
+  await page.waitForTimeout(2600);
+  const settled = await page.evaluate(() => { const shell = document.querySelector('.composer-shell'); return { sweep: document.querySelectorAll('.ultra-sweep').length, lit: document.querySelectorAll('.ultra-lit, .ultra-igniting').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), border: getComputedStyle(shell).borderTopColor }; });
+  check('afterwards only the steady state stays: violet border and tag, nothing left running', settled.sweep === 0 && settled.lit === 0 && settled.mode === 'on' && settled.tag && settled.border !== 'rgb(0, 0, 0)', settled);
   await page.keyboard.press('Escape');
   await page.evaluate(() => { if (typeof closeModelMenu === 'function') closeModelMenu(); });
 
@@ -60,7 +80,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     };
   });
   check('when they finish the board says so, both done', /2 agentes/.test(after.title) && !/Trabajando/.test(after.title) && after.done.join() === 'done,done', after);
-  check('the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents', after.mainTools.includes('spawn_agents') && /Modo Ultra code/.test(after.mainSystem) && !after.subTools.includes('spawn_agents') && after.subTools.includes('web_search') && /varios agentes que trabajan a la vez/.test(after.subSystem), { main: after.mainTools, sub: after.subTools });
+  check('the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents', after.mainTools.includes('spawn_agents') && after.mainTools.includes('agent_report') && !after.subTools.includes('agent_report') && /Modo Ultra code/.test(after.mainSystem) && /agent_report/.test(after.mainSystem) && !after.subTools.includes('spawn_agents') && after.subTools.includes('web_search') && /varios agentes que trabajan a la vez/.test(after.subSystem), { main: after.mainTools, sub: after.subTools });
   check('the main model gets both results to integrate', /## Fuentes/.test(after.final) && /## Esquema/.test(after.final) && after.content === 'He juntado lo de los dos agentes.', after.final.slice(0, 300));
   check('the agents\' cost is part of the answer\'s cost (4 requests)', Math.abs(after.cost - 0.002) < 1e-9, after.cost);
 
@@ -99,8 +119,21 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await page.click('#model-menu-btn');
   await page.waitForSelector('[data-thinking-level="normal"]');
   await page.click('[data-thinking-level="normal"]');
-  const off = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, prompt: ultraPromptText(getActiveChat()), meta: elements.modelTriggerMeta.textContent, label: document.getElementById('thinking-current').textContent }));
+  const off = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, prompt: ultraPromptText(getActiveChat()), meta: elements.modelTriggerMeta.textContent, label: document.getElementById('thinking-current').textContent, mode: document.querySelector('.composer-shell').dataset.ultra || '' }));
   check('choosing another level turns Ultra code off', !off.flag && off.prompt === '' && off.meta !== 'Ultra code' && off.label === 'Normal', off);
+  await page.waitForTimeout(450);
+  const gone = await page.evaluate(() => ({ mode: document.querySelector('.composer-shell').dataset.ultra || '', tag: document.querySelectorAll('.ultra-tag').length }));
+  check('…and the composer goes back to normal: no violet mode, the tag fades out and leaves', off.mode === '' && gone.mode === '' && gone.tag === 0, { off, gone });
+
+  // 4. Under «reduce motion» turning it on shows the steady state and plays nothing.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // (choosing «Normal» leaves the popup open: only open it if it is closed.)
+  await page.evaluate(() => { if (document.getElementById('model-menu-popup').classList.contains('hidden')) document.getElementById('model-menu-btn').click(); });
+  await page.waitForSelector('[data-thinking-level="ultra"]');
+  await page.click('[data-thinking-level="ultra"]');
+  const calm = await page.evaluate(() => { const shell = document.querySelector('.composer-shell'); return { mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), sweep: document.querySelectorAll('.ultra-sweep').length, igniting: shell.classList.contains('ultra-igniting'), moving: getComputedStyle(shell.querySelector('.ultra-tag-text')).animationName }; });
+  check('with reduced motion: the violet border and the tag, no band of light and nothing animating', calm.mode === 'on' && calm.tag && calm.sweep === 0 && !calm.igniting && calm.moving === 'none', calm);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 
   console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
   await browser.close();

@@ -407,14 +407,14 @@ class StreamView {
       if (stepsSlot) {
         // spawn_agents is not a visible row (it has its board) but its live row
         // («Coordinando N agentes») still belongs here while the answer runs.
-        stepsSlot.innerHTML = visibleToolSteps(message).length || (message.pending && steps.some((step) => step.name === 'spawn_agents')) ? renderToolStepsMarkup(message) : '';
+        stepsSlot.innerHTML = visibleToolSteps(message).length || steps.some((step) => step.name === 'update_plan') || (message.pending && steps.some((step) => step.name === 'spawn_agents')) ? renderToolStepsMarkup(message) : '';
         bindThreadActions(stepsSlot);
       }
     }
     // Ultra code's board (ultra.js): patched in place, so its lanes, orbs and
     // running animations survive every update.
     const agentSteps = steps.filter((step) => step.name === 'spawn_agents' && Array.isArray(step.agents));
-    const agentsKey = agentSteps.length ? JSON.stringify(agentSteps.map((step) => [step.id, step.status, step.agents, step.waves, step.budget, step.verify, step.files, step.details && step.details.verify, step.details && step.details.files])) : '';
+    const agentsKey = agentSteps.length ? JSON.stringify(agentSteps.map((step) => [step.id, step.status, step.agents, step.waves, step.budget, step.verify, step.files, step.rounds, step.notice, step.details && step.details.verify, step.details && step.details.files])) : '';
     if (agentsKey !== this.agentsKey) {
       this.agentsKey = agentsKey;
       const agentsSlot = this.article.querySelector('.slot-agents');

@@ -136,7 +136,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   await send(page, 'Trabajo largo');
   await idle(page);
   const plan = await page.evaluate(() => { const el = document.querySelector('#thread .message:last-child .plan-card'); return el && { head: el.querySelector('.plan-head').innerText, items: [...el.querySelectorAll('li')].map((li) => li.className + ':' + li.innerText), steps: !!document.querySelector('#thread .message:last-child .tool-steps') }; });
-  check('update_plan draws its latest checklist in the thread (no step box for it)', plan && /2\/3/.test(plan.head) && plan.items.join('|') === 'done:Leer los apuntes|done:Escribir el resumen|in_progress:Revisarlo' && !plan.steps, plan);
+  check('update_plan draws its latest checklist in the thread (no step box for it)', plan && /2\/3/.test(plan.head) && plan.items.join('|') === 'done:Leer los apuntes|done:Escribir el resumen|pending:Revisarlo' && !plan.steps, plan);
+    // (the step the model left in progress is a plain empty ring once the answer ended: nothing spins, see activity-state.cjs)
 
   // 8. The system prompt says the date and the tools.
   const last = prompts[prompts.length - 1] || '';
