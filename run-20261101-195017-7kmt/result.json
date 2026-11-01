@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-195017-7kmt",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "4161f7f",
+ "os": "ubuntu-24.04",
+ "sha": "",
+ "runner": "",
+ "command": "set +e\ngit log --oneline -1\necho '=== unit (engine sources, no browser)'\nnode --test tests/web/agents-plan.mjs tests/web/coach.mjs tests/web/model-scores.mjs tests/web/wiring.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok|    error|  error)' | head -30\nexit 0",
+ "exit_code": "setup",
+ "seconds": null,
+ "lines": 0,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41343752560"
+}
