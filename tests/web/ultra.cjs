@@ -1,5 +1,5 @@
 // Ultra code: a reasoning option in the model picker for every model; turning
-// it on plays a rainbow burst with sparks and keeps a shimmering label; the
+// it on runs a glint around the pill and keeps a shimmering rainbow label; the
 // model gets spawn_agents and the Ultra prompt; parallel agents run with the
 // same tools (minus spawn_agents) and show, in a card, what each one is doing
 // and spending, live; their cost goes into the answer's cost.
@@ -23,8 +23,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const pills = await page.evaluate(() => ({ labels: Array.from(document.querySelectorAll('.thinking-pill')).map((el) => el.textContent), active: document.querySelector('.thinking-pill.active').textContent, current: document.getElementById('thinking-current').textContent, rainbowOn: document.querySelector('.thinking-pill.ultra-pill').classList.contains('active') }));
   check('reasoning is one row of pills ending in «Ultra», which is not on until it is chosen', pills.labels.includes('Ultra') && pills.labels[pills.labels.length - 1] === 'Ultra' && !pills.rainbowOn && pills.current !== 'Ultra code', pills);
   await page.click('[data-thinking-level="ultra"]');
-  const on = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, sparks: document.querySelectorAll('.ultra-spark').length, burst: !!document.querySelector('.ultra-burst'), current: document.getElementById('thinking-current').textContent, currentRainbow: document.getElementById('thinking-current').classList.contains('ultra-text'), active: document.querySelector('.thinking-pill.active').dataset.thinkingLevel, meta: elements.modelTriggerMeta.textContent, rainbow: !!elements.modelTriggerMeta.querySelector('.ultra-text') }));
-  check('choosing «Ultra»: a burst of sparks, then the rainbow label (over the pills and on the model button)', on.flag && on.sparks >= 6 && on.burst && on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
+  const on = await page.evaluate(() => ({ flag: getActiveChat().ultraCode, sparks: document.querySelectorAll('.ultra-spark, .ua-spark').length, glint: document.querySelectorAll('.ua-glint').length, burst: !!document.querySelector('.ultra-burst'), current: document.getElementById('thinking-current').textContent, currentRainbow: document.getElementById('thinking-current').classList.contains('ultra-text'), active: document.querySelector('.thinking-pill.active').dataset.thinkingLevel, meta: elements.modelTriggerMeta.textContent, rainbow: !!elements.modelTriggerMeta.querySelector('.ultra-text') }));
+  check('choosing «Ultra»: a glint around the pill (no sparks), then the rainbow label (over the pills and on the model button)', on.flag && on.sparks === 0 && on.glint === 1 && on.burst && on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
   await page.keyboard.press('Escape');
   await page.evaluate(() => { if (typeof closeModelMenu === 'function') closeModelMenu(); });
 

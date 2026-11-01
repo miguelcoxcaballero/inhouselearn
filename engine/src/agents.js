@@ -36,6 +36,46 @@ const VAGUE = /(?:^|[^\wáéíóúñ])(arriba|antes|esta conversaci[oó]n|lo que
 const PATH_IN_TEXT = /(?:^|[\s`'"(«])((?:[\w.-]+\/)*[\w-][\w.-]*\.(?:m?js|cjs|jsx|tsx?|css|scss|html?|md|json|ya?ml|toml|txt|py|rb|go|rs|java|kts?|swift|c|cc|cpp|h|hpp|cs|php|sh|sql|vue|svelte|xml|svg|csv|tex|bib|gradle|docx|xlsx|pptx|pdf))(?=$|[\s`'")»,:;!?]|\.(?:\s|$))/g;
 const FAILED = new Set(['error', 'stopped', 'skipped']);
 const ACTIVE = new Set(['running', 'waiting']);
+// How hard each agent thinks. Only the main model needs the deepest level: a
+// reader reasons at «medium», a builder at «high», the verifier at «medium»
+// (the app maps these to the levels the model really has). Cheaper and faster.
+export const AGENT_EFFORTS = ['low', 'medium', 'high', 'max'];
+const DEFAULT_EFFORT = { explore: 'medium', build: 'high', verify: 'medium' };
+
+// Reads several agents of one run would repeat (the same file, the same
+// search, the same page): the first one runs it, the others get its result
+// (also while it is still running). Any write by any agent empties it, so a
+// read never returns something older than the last change.
+export function createReadCache(limit) {
+  const max = Math.max(10, Number(limit) || 200);
+  const map = new Map();
+  const stats = { hits: 0, misses: 0 };
+  return {
+    stats,
+    async read(key, fn) {
+      const cached = map.get(key);
+      if (cached) {
+        try {
+          const value = await cached;
+          stats.hits++;
+          return { value, hit: true };
+        } catch (_) { /* the other agent's read failed or was stopped: read again */ }
+      }
+      stats.misses++;
+      const promise = Promise.resolve().then(fn);
+      map.set(key, promise);
+      while (map.size > max) map.delete(map.keys().next().value);
+      try {
+        return { value: await promise, hit: false };
+      } catch (error) {
+        if (map.get(key) === promise) map.delete(key);
+        throw error;
+      }
+    },
+    clear() { map.clear(); },
+    get size() { return map.size; }
+  };
+}
 
 function textResult(text, details) {
   return { content: [{ type: 'text', text }], details: details || {} };
@@ -98,10 +138,12 @@ export function planAgents(list) {
     if (wanted && !given.has(wanted)) given.set(wanted, id);
     if (!given.has(id)) given.set(id, id);
     const minutes = Math.max(1, Math.min(30, Math.round(Number(agent.max_minutes)) || DEFAULT_MINUTES));
+    const role = agent.role === 'explore' ? 'explore' : 'build';
     return {
       id, name, index,
       task: String(agent.task).trim(),
-      role: agent.role === 'explore' ? 'explore' : 'build',
+      role,
+      effort: AGENT_EFFORTS.includes(agent.effort) ? agent.effort : DEFAULT_EFFORT[role],
       rawDeps: (Array.isArray(agent.depends_on) ? agent.depends_on : []).map((dep) => String(dep).trim()).filter(Boolean),
       files: (Array.isArray(agent.files) ? agent.files : []).map((glob) => String(glob).trim()).filter(Boolean).slice(0, 20),
       returns: String(agent.returns || '').trim(),
@@ -252,7 +294,9 @@ function confidenceLabel(report) {
 const SPAWN_DESCRIPTION = 'Ultra code: split a big job into parts and run them as separate agents (up to ' + MAX_AGENTS + ', ' + MAX_PARALLEL + ' at a time), then integrate what they return. Agents start from zero and never see this conversation: put what all need (user goal, decisions, repository, branch, conventions) in context once, and give each a self-contained task (what, where, what to return in returns). ' +
   'depends_on: ids of agents whose results this one needs; it starts when they finish and receives their reports (waves); independent agents run in parallel. ' +
   'files: globs this agent owns; only it should change them (two agents editing one file without a dependency conflict). role "explore" = read-only research. ' +
-  'acceptance: checkable criteria; a read-only verifier checks them against the real files/commits/sources after the agents and may send one round of fixes to the owners (verify:false to skip; with ≥2 agents a light review runs by default). ' +
+  'acceptance: checkable criteria; a read-only verifier checks them against the real files/commits/sources after the agents and may send one round of fixes to the owners (verify:false to skip; by default it runs when there are criteria, or 2+ agents and at least one "build"; research-only runs skip it). ' +
+  'effort: how hard each agent reasons (low|medium|high|max; default medium for explore, high for build): keep max for the genuinely hard part, it is slower and dearer. ' +
+  'Agents of one run share their reads: a file, search or page one already fetched is not fetched (or paid) again, until any agent writes. ' +
   'budget_usd (default ' + DEFAULT_BUDGET + '): cap for all agents together; the most expensive is stopped when it runs out. max_minutes per agent (default ' + DEFAULT_MINUTES + '). on_failure "stop" skips everything not started once one fails. Do not use it for a single small task.';
 
 // ─── spawn_agents ────────────────────────────────────
@@ -278,6 +322,7 @@ export function createAgentTools(ctx) {
           depends_on: Type.Optional(Type.Array(Type.String())),
           files: Type.Optional(Type.Array(Type.String(), { description: 'Globs of the files this agent owns.' })),
           returns: Type.Optional(Type.String({ description: 'What it must return.' })),
+          effort: Type.Optional(Type.Union(AGENT_EFFORTS.map((effort) => Type.Literal(effort)), { description: 'Reasoning effort (default: medium for explore, high for build).' })),
           max_minutes: Type.Optional(Type.Number({ minimum: 1, maximum: 30 }))
         }), { minItems: 1, maxItems: MAX_AGENTS })
       }),
@@ -295,17 +340,21 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
   const acceptance = (Array.isArray(params.acceptance) ? params.acceptance : []).map((item) => String(item || '').trim()).filter(Boolean).slice(0, 10);
   const budget = Math.max(0.05, Math.min(20, Number(params.budget_usd) || DEFAULT_BUDGET));
   const stopOnFailure = params.on_failure === 'stop';
-  const doVerify = params.verify === false ? false : (params.verify === true || nodes.length >= 2);
+  // The verifier costs a whole agent: by default only when there is something
+  // to check against (criteria) or something was built by several agents.
+  const doVerify = params.verify === false ? false
+    : (params.verify === true || acceptance.length > 0 || (nodes.length >= 2 && nodes.some((node) => node.role === 'build')));
   const startAll = Date.now();
+  const readCache = createReadCache();
 
   const rows = nodes.map((node) => ({
-    id: node.id, name: node.name, role: node.role, task: clip(node.task, 400),
+    id: node.id, name: node.name, role: node.role, effort: node.effort, task: clip(node.task, 400),
     status: 'queued', doing: 'En cola', kind: '', cost: 0, steps: 0, maxSteps: MAX_AGENT_STEPS,
     startedAt: 0, endedAt: 0, trail: [], result: '', files: [], wave: node.wave, deps: node.deps.slice(),
     hue: Math.round((node.index * 137.508 + 210) % 360)
   }));
   const verifyRow = doVerify ? {
-    id: 'verify', name: 'Verificación', role: 'verify', task: acceptance.length ? clip(acceptance.map((item, i) => (i + 1) + '. ' + item).join(' '), 400) : 'Comprueba que cada informe cumple su tarea.',
+    id: 'verify', name: 'Verificación', role: 'verify', effort: DEFAULT_EFFORT.verify, task: acceptance.length ? clip(acceptance.map((item, i) => (i + 1) + '. ' + item).join(' '), 400) : 'Comprueba que cada informe cumple su tarea.',
     status: 'queued', doing: 'Después de los agentes', kind: '', cost: 0, steps: 0, maxSteps: MAX_AGENT_STEPS,
     startedAt: 0, endedAt: 0, trail: [], result: '', files: [], wave: waves + 1, deps: nodes.map((node) => node.id), hue: 145
   } : null;
@@ -325,6 +374,7 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
   const details = () => {
     const out = { agents: allRows.map((row) => Object.assign({}, row, { trail: row.trail.slice(-24), files: row.files.slice(0, 20) })), waves, budget };
     if (verify) out.verify = verify;
+    if (readCache.stats.hits) out.shared = readCache.stats.hits;
     const files = touchedList();
     if (files.length) out.files = files;
     if (warnings.length) out.warnings = warnings.slice();
@@ -446,6 +496,7 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
       const subJob = {
         id: row.id, name: row.name, role: job.role, task: job.task, readOnly: job.readOnly,
         ownedFiles: job.ownedFiles, maxSteps: job.maxSteps, hue: row.hue,
+        effort: job.effort || DEFAULT_EFFORT[job.role] || 'high', readCache,
         signal: controller.signal,
         onUpdate: onAgentUpdate,
         onWrite: (path, kind) => {
@@ -561,7 +612,7 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
       (node.role === 'explore' ? '\n\nSolo investiga y lee: no cambies nada.' : '') +
       '\n\nAl terminar, llama a submit_result con tu informe (resumen, estado, artefactos, lo pendiente).';
   };
-  const jobFor = (node, task) => ({ role: node.role, task, readOnly: node.role === 'explore', ownedFiles: node.files.length ? node.files.slice() : null, maxSteps: MAX_AGENT_STEPS, maxMinutes: node.maxMinutes });
+  const jobFor = (node, task) => ({ role: node.role, effort: node.effort, task, readOnly: node.role === 'explore', ownedFiles: node.files.length ? node.files.slice() : null, maxSteps: MAX_AGENT_STEPS, maxMinutes: node.maxMinutes });
 
   // Starts every node whose dependencies are done, ≤ MAX_PARALLEL at a time,
   // staggered; failures skip their dependants (or everything, on_failure stop).
@@ -630,7 +681,7 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
       'Después llama a submit_result con data = { "passed": true|false, "checks": [{ "criterion": "…", "ok": true|false, "evidence": "qué viste y dónde", "owner_id": "id del agente responsable" }], "fixes": [{ "owner_id": "…", "instruction": "qué tiene que corregir, concreto" }] }. ' +
       'fixes solo para lo que falla; passed es true si todo se cumple.';
   };
-  const verifyJob = () => ({ role: 'verify', task: verifierTask(), readOnly: true, ownedFiles: null, maxSteps: MAX_AGENT_STEPS, maxMinutes: DEFAULT_MINUTES });
+  const verifyJob = () => ({ role: 'verify', effort: DEFAULT_EFFORT.verify, task: verifierTask(), readOnly: true, ownedFiles: null, maxSteps: MAX_AGENT_STEPS, maxMinutes: DEFAULT_MINUTES });
   const readVerdict = () => {
     const report = inner.get('verify').report;
     const data = report && report.data && typeof report.data === 'object' ? report.data : null;
@@ -744,7 +795,8 @@ async function runSpawn(ctx, timing, stepId, params, signal, onUpdate) {
       (verify && verify.checks.length ? verify.checks.map((check) => (check.ok ? '✓ ' : '✕ ') + check.criterion + (check.evidence ? ' — ' + check.evidence : '')).join('\n') : (own.report ? own.report.summary : verifyRow.doing)));
   }
   const seconds = Math.round((Date.now() - startAll) / 1000);
-  parts.push('(' + rows.length + ' agentes en ' + waves + (waves === 1 ? ' oleada' : ' oleadas') + ': ' + ok + ' ok, ' + failedRows.length + ' fallidos, ' + notStarted + ' sin empezar, ' + money(totalCost()) + ') ' + seconds + ' s. Revisa e integra lo que han hecho antes de responder.');
+  parts.push('(' + rows.length + ' agentes en ' + waves + (waves === 1 ? ' oleada' : ' oleadas') + ': ' + ok + ' ok, ' + failedRows.length + ' fallidos, ' + notStarted + ' sin empezar, ' + money(totalCost()) + ') ' + seconds + ' s' +
+    (readCache.stats.hits ? ', ' + readCache.stats.hits + (readCache.stats.hits === 1 ? ' lectura compartida' : ' lecturas compartidas') + ' entre agentes' : '') + '. Revisa e integra lo que han hecho antes de responder.');
   if (failedRows.length || notStarted || (verify && !verify.passed)) {
     const redo = failedRows.concat(rows.filter((row) => row.status === 'skipped')).map((row) => row.name);
     parts.push('Siguiente paso sugerido: ' + (redo.length ? 'repite solo ' + quoteList(redo) + ' (con spawn_agents y una tarea más concreta' + (budgetOut ? ' o más budget_usd' : '') + ') o hazlo tú; lo que ya terminó está bien' : 'corrige tú lo que el verificador marca como fallido') + '.');

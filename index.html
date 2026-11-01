@@ -1154,15 +1154,21 @@
     .session-banner-text b { font-weight: 650; }
     .session-banner-btn { flex: 0 0 auto; border: 0; border-radius: 999px; padding: 7px 14px; background: var(--text); color: var(--bg); font: inherit; font-weight: 600; cursor: pointer; }
     .session-banner-btn[disabled] { opacity: 0.5; cursor: default; }
-    /* Ultra code: rainbow text with a slow shimmer; a burst when it is turned on */
-    .ultra-text { background: linear-gradient(90deg, #ff5f6d, #ffb347, #f9e64f, #4ade80, #38bdf8, #a78bfa, #f472b6, #ff5f6d); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; font-weight: 700; animation: ultra-shimmer 4s linear infinite; }
-    @keyframes ultra-shimmer { to { background-position: 300% 0; } }
-
-    .ultra-burst { animation: ultra-burst 1.3s cubic-bezier(.2,.8,.2,1); }
-    .ultra-burst .ultra-text, .ultra-text.ultra-burst { animation: ultra-shimmer 0.6s linear 2, ultra-burst 1.3s cubic-bezier(.2,.8,.2,1); }
-    @keyframes ultra-burst { 0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } 25% { transform: scale(1.14); filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.8)); } 60% { transform: scale(0.98); } 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } }
-    .ultra-spark { position: fixed; z-index: 1000; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; pointer-events: none; animation: ultra-spark 0.85s cubic-bezier(.2,.8,.2,1) forwards; }
-    @keyframes ultra-spark { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; } }
+    /* Ultra code, like Claude's ultrathink: the word in rainbow colours (each
+       letter its own hue) with a light that runs across it now and then. Two
+       layers clipped to the text: the glint on top, the rainbow below. */
+    .ultra-text {
+      background-image: linear-gradient(100deg, transparent 0%, transparent 40%, rgba(255, 255, 255, 0.85) 50%, transparent 60%, transparent 100%), linear-gradient(90deg, #e5484d, #f76b15, #e2a400, #30a46c, #0090ff, #8e4ec6, #d6409f, #e5484d);
+      background-size: 250% 100%, 200% 100%; background-repeat: no-repeat, repeat;
+      -webkit-background-clip: text; background-clip: text; color: transparent !important; -webkit-text-fill-color: transparent; font-weight: 700;
+      animation: ultra-shimmer 4.2s linear infinite;
+    }
+    @keyframes ultra-shimmer { 0% { background-position: 150% 0, 0% 0; } 45% { background-position: -50% 0, 90% 0; } 100% { background-position: -50% 0, 200% 0; } }
+    /* Turning it on: the light runs twice, quick, and the word lifts a hair. */
+    .ultra-burst { animation: ultra-lift 0.9s cubic-bezier(.2, .9, .3, 1.15); }
+    .ultra-burst .ultra-text, .ultra-text.ultra-burst { animation: ultra-shimmer 0.75s linear 2, ultra-lift 0.9s cubic-bezier(.2, .9, .3, 1.15), ultra-shimmer 4.2s linear 1.5s infinite; }
+    @keyframes ultra-lift { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(-1px) scale(1.05); } 100% { transform: translateY(0) scale(1); } }
+    .ultra-burst .ultra-text { display: inline-block; }
     @media (prefers-reduced-motion: reduce) { .ultra-text, .ultra-burst, .ultra-burst .ultra-text { animation: none; } }
     /* Ultra code agents */
     .agents-card { margin: 2px 0 10px; border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; background: var(--surface); font-size: 0.82rem; }
@@ -1773,12 +1779,12 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261101-card2">
+  <link rel="stylesheet" href="composer-dock.css?v=20261101-claude">
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261101-card2">
+  <link rel="stylesheet" href="ultra.css?v=20261101-claude">
+  <link rel="stylesheet" href="theme.css?v=20261101-claude">
 </head>
 <body>
 
@@ -2154,7 +2160,7 @@
   <script src="documents.js?v=20261025-preview"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261101-run"></script>
+  <script src="vendor/pi-engine.js?v=20261101-ultra"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2170,7 +2176,7 @@
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261101-card"></script>
   <script src="composer-dock.js?v=20261101-card2"></script>
-  <script src="ultra.js?v=20261026-polish3"></script>
+  <script src="ultra.js?v=20261101-claude"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -12198,6 +12204,36 @@
 
     const ROLE_LABEL = { explore: 'explora', build: 'construye', verify: 'verifica', review: 'revisa' };
 
+    // The level an agent thinks at: its effort (engine: medium to explore and
+    // verify, high to build, max only when the model asks for it) mapped to the
+    // nearest level this model really has. Only the main model uses the deepest.
+    const EFFORT_LADDER = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+    function subAgentThinkingLevel(chat, effort) {
+      const levels = thinkingLevelsForModel(activeModelName(chat)).filter((level) => level !== 'off');
+      if (!levels.length) return effectiveThinkingLevel(chat) || 'off';
+      if (!effort || effort === 'max') return levels[levels.length - 1];
+      const want = EFFORT_LADDER.indexOf(effort);
+      let best = levels[levels.length - 1];
+      let gap = Infinity;
+      levels.forEach((level) => {
+        const at = EFFORT_LADDER.indexOf(level);
+        if (at < 0) return;
+        // Ties go up: never think less than asked when the exact level is missing.
+        const distance = Math.abs(at - want) + (at < want ? 0.5 : 0);
+        if (distance < gap) { gap = distance; best = level; }
+      });
+      return best;
+    }
+
+    // Reads the agents of one run share (engine createReadCache): the same
+    // file, search, page or document is fetched once. Not read_file/search_files
+    // (the overwrite guard needs each agent's own reads; they are free anyway).
+    const SHARED_READ = /^(github_(read_file|list_files|grep|search_code|list_repos|list_issues)|web_search|web_fetch|read_library|search_library|list_library|drive_(search|list|read)|extra_drive_(search|list|read)|recall)$/;
+    function sharedReadKey(name, params) {
+      const sort = (value) => (Array.isArray(value) ? value.map(sort) : value && typeof value === 'object' ? Object.keys(value).sort().reduce((out, key) => { out[key] = sort(value[key]); return out; }, {}) : value);
+      try { return name + ':' + JSON.stringify(sort(params || {})); } catch (_) { return ''; }
+    }
+
     // One parallel agent of Ultra code (engine/src/agents.js decides the plan,
     // waves, budgets and retries; this runs one agent with the chat's tools).
     async function runSubAgent(chat, model, modelId, workTools, job) {
@@ -12254,8 +12290,26 @@
             }
             // Marked before the call: a write that fails after its side effect
             // (a PR made, then a timeout) must not be retried as if nothing happened.
-            if (!READ_ONLY_TOOL.test(tool.name)) { wrote = true; update({ wrote: true }); }
-            const result = await tool.execute(id, params, ...rest);
+            const writes = !READ_ONLY_TOOL.test(tool.name);
+            if (writes) { wrote = true; update({ wrote: true }); }
+            const cache = job.readCache;
+            // A write empties the shared reads before and after it runs.
+            if (writes && cache) cache.clear();
+            let result;
+            const key = cache && SHARED_READ.test(tool.name) ? sharedReadKey(tool.name, params) : '';
+            try {
+              if (key) {
+                const shared = await cache.read(key, () => tool.execute(id, params, ...rest));
+                result = shared.value;
+                if (shared.hit && result && Array.isArray(result.content)) {
+                  result = Object.assign({}, result, { content: result.content.concat([{ type: 'text', text: '(Lo mismo que ya leyó otro agente en esta ejecución: no se ha repetido ni pagado.)' }]) });
+                }
+              } else {
+                result = await tool.execute(id, params, ...rest);
+              }
+            } finally {
+              if (writes && cache) cache.clear();
+            }
             if (calls >= maxSteps - 5 && result && Array.isArray(result.content)) {
               return Object.assign({}, result, { content: result.content.concat([{ type: 'text', text: 'Te quedan ' + Math.max(0, maxSteps - calls) + ' pasos: termina y responde con tu informe.' }]) });
             }
@@ -12270,7 +12324,7 @@
           systemPrompt: subAgentSystemPrompt(chat),
           history: [],
           prompt: withTurnContext({ role: 'user', content: [{ type: 'text', text: userText }], timestamp: Date.now() }, '<contexto_app>\nAhora: ' + currentMomentText() + '.\n</contexto_app>'),
-          thinkingLevel: effectiveThinkingLevel(chat) || 'off',
+          thinkingLevel: subAgentThinkingLevel(chat, job.effort),
           tools: markExecution(tools),
           toolExecution: 'parallel',
           maxRetries: 2,
@@ -12338,45 +12392,32 @@
       });
     }
 
-    // Turning Ultra code on: the label lights up in a sweep of colours with a
-    // few sparks, like Claude's ultrathink, then keeps a slow shimmer.
+    // Turning Ultra code on, like Claude's ultrathink: the rainbow word gets a
+    // quick double glint and lifts a hair, and a thin light runs once around
+    // the pill (ultra.js · burst). No sparks.
     function playUltraCodeBurst() {
       const targets = [document.getElementById('thinking-current'), elements.modelTriggerMeta].filter(Boolean);
       targets.forEach((el) => {
         el.classList.remove('ultra-burst');
         void el.offsetWidth;
         el.classList.add('ultra-burst');
-        window.setTimeout(() => el.classList.remove('ultra-burst'), 1400);
+        window.setTimeout(() => el.classList.remove('ultra-burst'), 1600);
       });
       const pill = document.querySelector('.thinking-pill.ultra-pill');
       if (!pill || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-      // The refined burst (ring + sparks) lives with the agents board in ultra.js.
-      if (window.UltraAgents && typeof window.UltraAgents.burst === 'function') { window.UltraAgents.burst(pill); return; }
-      const box = pill.getBoundingClientRect();
-      for (let i = 0; i < 14; i++) {
-        const spark = document.createElement('span');
-        spark.className = 'ultra-spark';
-        const angle = (Math.PI * 2 * i) / 14 + Math.random() * 0.4;
-        const distance = 26 + Math.random() * 30;
-        spark.style.left = (box.left + box.width / 2) + 'px';
-        spark.style.top = (box.top + box.height / 2) + 'px';
-        spark.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
-        spark.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
-        spark.style.background = 'hsl(' + Math.round(i * 360 / 14) + ' 90% 60%)';
-        document.body.appendChild(spark);
-        window.setTimeout(() => spark.remove(), 900);
-      }
+      if (window.UltraAgents && typeof window.UltraAgents.burst === 'function') window.UltraAgents.burst(pill);
     }
 
     function ultraPromptText(chat) {
       if (!ultraCodeOn(chat) || chat.guidedLearning) return '';
       return [
-        '- Modo Ultra code: razonas al máximo y puedes poner a trabajar varios agentes a la vez con spawn_agents. Procedimiento:',
-        '  1. ¿Hay dos o más partes independientes o varias fuentes que investigar? Si no, hazlo tú.',
-        '  2. Escribe el plan con update_plan.',
-        '  3. Llama a spawn_agents UNA vez: goal, criterios de aceptación comprobables (acceptance), context común (archivos, repositorio, rama, convenciones) y una tarea autocontenida por agente que diga qué devolver; files con los archivos de cada uno; depends_on si unas partes necesitan el resultado de otras (investigar → implementar → probar). Máximo 6 a la vez y 12 en total; role "explore" para los que solo leen.',
-        '  4. Cada agente tiene límites de pasos, tiempo y gasto (budget_usd); si se para, recibes lo que llevaba hecho. Con varios agentes un verificador de solo lectura comprueba los informes contra los criterios.',
-        '  5. Lee el veredicto y el informe de archivos tocados; arregla tú lo que quede o lanza una ronda pequeña. Responde con lo hecho, enlaces y lo que no se pudo.'
+        '- Modo Ultra code: razonas al máximo y puedes repartir el trabajo entre varios agentes a la vez con spawn_agents. Úsalo con criterio:',
+        '  1. Decide si compensa. Sí: dos o más partes independientes (varios archivos o módulos, varias fuentes, investigar varias opciones, implementar y probar por separado). No: una tarea pequeña o muy acoplada, una pregunta directa, o algo que resuelves en pocos pasos; entonces hazlo tú, sin agentes.',
+        '  2. Antes de repartir, mira tú lo justo (estructura, archivos clave) para escribir tareas concretas; no mandes a un agente a descubrir lo que ya sabes. Escribe el plan con update_plan.',
+        '  3. Llama a spawn_agents UNA vez con: goal; acceptance (criterios comprobables: «los tests pasan», «el archivo X exporta Y»); context común (objetivo del usuario, decisiones, repositorio, rama, convenciones, rutas), porque los agentes no ven esta conversación; y por agente una tarea autocontenida que diga qué hacer, dónde y qué devolver (returns).',
+        '  4. Reparte bien: files para que cada archivo tenga un solo dueño; depends_on solo cuando una parte necesita de verdad el resultado de otra (explorar → construir → probar); role "explore" para los que solo leen; effort "medium" para leer y buscar, "high" para construir, "max" solo para lo realmente difícil. Máximo 6 a la vez y 12 en total; menos agentes con tareas claras rinden más que muchos difusos.',
+        '  5. Los agentes comparten lecturas (lo que uno ya leyó no se vuelve a pedir ni pagar) y tienen límites de pasos, tiempo y gasto (budget_usd); si uno se para recibes lo que llevaba. Con criterios, o con varios que construyen, un verificador de solo lectura lo comprueba contra lo real.',
+        '  6. Al volver: lee el veredicto, los avisos y los archivos tocados; resuelve tú los choques y lo pendiente, o repite solo lo que falló con una tarea más concreta. Responde con lo hecho, los enlaces y lo que no se pudo, sin contar cómo se repartió.'
       ].join('\n');
     }
 
@@ -12678,7 +12719,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.11.01.4';
+    const APP_VERSION = '2026.11.01.5';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

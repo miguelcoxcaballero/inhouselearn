@@ -20,7 +20,7 @@ try {
   register('data:text/javascript,' + encodeURIComponent(hooks), import.meta.url);
   agents = await import('../../engine/src/agents.js?stub');
 }
-const { planAgents, createAgentTools, createSubAgentReportTool } = agents;
+const { planAgents, createAgentTools, createSubAgentReportTool, createReadCache } = agents;
 
 const LONG = ' Lee los archivos que hagan falta, haz el cambio completo con cuidado y devuelve qué archivos cambiaste y cómo lo comprobaste.';
 const agent = (name, extra) => Object.assign({ name, task: 'Tarea de ' + name + '.' + LONG }, extra);
@@ -272,6 +272,63 @@ test('submit_result tool', async () => {
   assert.equal(out.content[0].text, 'Recibido. Termina con una frase.');
   assert.equal(got.status, 'partial');
   assert.deepEqual(got.data, { a: 1 });
+});
+
+test('effort: medium to explore, high to build, medium to verify; the model can ask for another', async () => {
+  const plan = planAgents([agent('Lee', { role: 'explore' }), agent('Hace'), agent('Duro', { effort: 'max' }), agent('Raro', { effort: 'enorme' })]);
+  assert.deepEqual(plan.nodes.map((node) => node.effort), ['medium', 'high', 'max', 'high']);
+  const jobs = {};
+  const tool = spawnTool(async (job) => {
+    jobs[job.id] = job.effort;
+    if (job.id === 'verify') job.onReport({ summary: 'ok', status: 'done', data: { passed: true, checks: [] } });
+    return { text: 'ok', cost: 0 };
+  });
+  const result = await tool.execute('e1', { acceptance: ['Funciona'], agents: [agent('Lee', { id: 'lee', role: 'explore' }), agent('Hace', { id: 'hace', effort: 'low' })] });
+  assert.deepEqual(jobs, { lee: 'medium', hace: 'low', verify: 'medium' });
+  assert.deepEqual(result.details.agents.map((row) => row.effort), ['medium', 'low', 'medium']);
+});
+
+test('verifier by default only with criteria or with builders: research-only runs skip it', async () => {
+  const seen = [];
+  const tool = spawnTool(async (job) => { seen.push(job.id); return { text: 'ok', cost: 0 }; });
+  const research = await tool.execute('v1', { agents: [agent('A', { id: 'a', role: 'explore' }), agent('B', { id: 'b', role: 'explore' })] });
+  assert.ok(!seen.includes('verify'), 'two explorers and no criteria: no verifier');
+  assert.ok(!research.details.agents.find((row) => row.id === 'verify'));
+  seen.length = 0;
+  await tool.execute('v2', { agents: [agent('A', { id: 'a', role: 'explore' }), agent('B', { id: 'b' })] });
+  assert.ok(seen.includes('verify'), 'a builder among 2+ agents: light review');
+  seen.length = 0;
+  await tool.execute('v3', { acceptance: ['Tres fuentes'], agents: [agent('Solo', { id: 'solo', role: 'explore' })] });
+  assert.ok(seen.includes('verify'), 'criteria always get checked');
+});
+
+test('read cache: one fetch for the same read (also while in flight), a write empties it, failures are not kept', async () => {
+  const cache = createReadCache();
+  let fetches = 0;
+  const slow = () => new Promise((resolve) => { fetches++; setTimeout(() => resolve({ content: [{ type: 'text', text: 'archivo' }] }), 20); });
+  const [a, b] = await Promise.all([cache.read('github_read_file:{"path":"a.js"}', slow), cache.read('github_read_file:{"path":"a.js"}', slow)]);
+  assert.equal(fetches, 1);
+  assert.equal(a.hit, false);
+  assert.equal(b.hit, true);
+  assert.equal(b.value.content[0].text, 'archivo');
+  cache.clear();
+  await cache.read('github_read_file:{"path":"a.js"}', slow);
+  assert.equal(fetches, 2, 'after a write it reads again');
+  await assert.rejects(cache.read('k', async () => { throw new Error('404'); }));
+  const again = await cache.read('k', async () => 'bien');
+  assert.equal(again.value, 'bien');
+  assert.equal(again.hit, false);
+  assert.equal(cache.stats.hits, 1);
+});
+
+test('spawn: agents get the same read cache; its hits are counted in the result', async () => {
+  const tool = spawnTool(async (job) => {
+    await job.readCache.read('web_fetch:{"url":"https://x"}', async () => { await sleep(10); return 'pagina'; });
+    return { text: 'ok', cost: 0 };
+  });
+  const result = await tool.execute('c1', { verify: false, agents: [agent('A', { id: 'a', role: 'explore' }), agent('B', { id: 'b', role: 'explore' }), agent('C', { id: 'c', role: 'explore' })] });
+  assert.equal(result.details.shared, 2);
+  assert.match(textOf(result), /2 lecturas compartidas entre agentes/);
 });
 
 test('a parent abort settles every agent as stopped before rethrowing', async () => {

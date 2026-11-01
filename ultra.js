@@ -1,21 +1,21 @@
 /* ─── Ultra code: el tablero de los agentes ──────────────────────────
-   Una tarjeta por cada paso spawn_agents de una respuesta: cabecera con
-   el progreso, el reloj, el coste total y el presupuesto; una barra de
-   segmentos (uno por agente); una constelación opcional (el agente
-   principal en el centro, un nodo por agente); y un carril por agente,
-   agrupados por oleadas, con su orbe de estado, su rastro de pasos y lo
-   que está haciendo. El verificador va siempre el último, con sus
-   criterios. Debajo, los archivos que han tocado (los choques, marcados).
+   Una tarjeta por cada paso spawn_agents de una respuesta, con el aire de
+   Claude: arriba la chispa (un asterisco de rayos que late y gira mientras
+   trabajan), el título con un brillo que lo recorre, el reloj y el coste;
+   una línea fina de progreso; y debajo un árbol tranquilo con un carril por
+   agente (agrupados por oleadas): su punto de estado, su nombre, su rol, y
+   bajo él «⎿ lo que está haciendo · N pasos». El verificador va el último,
+   con sus criterios. Al final, los archivos que han tocado (choques, marcados).
 
    The card is patched IN PLACE: every lane is keyed (data-key =
    stepId:agentId) and only its attributes and small texts change, so the
-   DOM nodes survive updates and running CSS animations (spinning rings,
-   flowing edges, the orbit border) never restart. The whole card is drawn
-   again only when its shape changes (agents, waves or roles). Bodies are
-   rendered lazily, when a lane is opened.
+   DOM nodes survive updates and running CSS animations (the spark, the
+   pulsing dots, the sheen) never restart. The whole card is drawn again only
+   when its shape changes (agents, waves or roles). Bodies are rendered
+   lazily, when a lane is opened.
 
-   Data: step.agents (engine/src/agents.js) plus waves, budget, verify and
-   files, read from the step itself or from step.details.
+   Data: step.agents (engine/src/agents.js) plus waves, budget, verify, files
+   and shared (reads shared between agents), from the step or step.details.
 
    Loaded before the main script of index.html; uses its globals at call
    time (escapeHtml, costCounterMarkup, kickCostCounters, renderMarkdown,
@@ -24,12 +24,12 @@
 
 (function () {
   const ROLE_LABEL = { explore: 'Explora', build: 'Construye', verify: 'Verifica', review: 'Verifica' };
+  const EFFORT_LABEL = { low: 'rápido', medium: 'medio', high: 'a fondo', max: 'máximo' };
   const STATUS_LABEL = {
     queued: 'En cola', running: 'Trabajando', waiting: 'Esperando tu aprobación',
     done: 'Hecho', error: 'Con error', stopped: 'Detenido', skipped: 'Omitido'
   };
   const LIVE = /^(queued|running|waiting)$/;
-  const SPARK_PALETTE = ['#a78bfa', '#f472b6', '#38bdf8', '#c4b5fd', '#f9a8d4', '#7dd3fc'];
   // Cards whose completion moment already played (once per step id).
   const celebrated = new Set();
   // Steps this page saw running: if a full redraw shows them finished before
@@ -42,18 +42,6 @@
   const cardData = new WeakMap();
   let bound = null;
 
-  // A registered angle makes the orbit border turn smoothly; without it the
-  // border stays still (an unregistered custom property only jumps).
-  let orbit = false;
-  try {
-    if (window.CSS && typeof CSS.registerProperty === 'function') {
-      CSS.registerProperty({ name: '--ua-a', syntax: '<angle>', inherits: false, initialValue: '0deg' });
-      orbit = true;
-    }
-  } catch (_) { orbit = true; /* already registered (CSS @property) */ }
-  let motionPath = false;
-  try { motionPath = !!(window.CSS && CSS.supports && CSS.supports('offset-path', "path('M0 0 L1 1')")); } catch (_) {}
-
   const esc = (value) => (typeof escapeHtml === 'function' ? escapeHtml(value) : String(value == null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])));
   const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
@@ -62,11 +50,6 @@
     if (typeof formatSeconds === 'function') return formatSeconds(ms);
     const s = Math.max(0, Math.round(ms / 1000));
     return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
-  }
-
-  function hueOf(agent, index) {
-    const hue = Number(agent && agent.hue);
-    return Number.isFinite(hue) ? ((Math.round(hue) % 360) + 360) % 360 : (index * 67 + 260) % 360;
   }
 
   function costMarkup(id, value) {
@@ -81,7 +64,7 @@
       .map((step) => (step.agents.every((agent) => agent && typeof agent === 'object') ? step : Object.assign({}, step, { agents: step.agents.filter((agent) => agent && typeof agent === 'object') })));
   }
 
-  // waves, budget, verify and files: on the step, or in its result details.
+  // waves, budget, verify, files and shared: on the step, or in its result details.
   function detailsOf(step) {
     const d = step.details && typeof step.details === 'object' ? step.details : {};
     const pick = (key) => (step[key] !== undefined ? step[key] : d[key]);
@@ -90,6 +73,7 @@
     return {
       waves: num(pick('waves')),
       budget: num(pick('budget')),
+      shared: num(pick('shared')),
       verify: verify && typeof verify === 'object' ? verify : null,
       files: Array.isArray(files) ? files.slice(0, 40) : []
     };
@@ -135,6 +119,12 @@
       if (e && e > end) end = e;
     });
     return { start, end };
+  }
+
+  function progressOf(step) {
+    const total = step.agents.length || 1;
+    const finished = step.agents.filter((agent) => !LIVE.test(agent.status)).length;
+    return Math.max(0, Math.min(1, finished / total));
   }
 
   /* ─── Text ─────────────────────────────────────────────────────────── */
@@ -190,26 +180,41 @@
     return STATUS_LABEL[agent.status] || '';
   }
 
+  function countText(agent) {
+    const steps = num(agent.steps);
+    return steps ? steps + (steps === 1 ? ' paso' : ' pasos') : '';
+  }
+
+  function roleText(agent) {
+    const role = ROLE_LABEL[agent.role] || ROLE_LABEL.build;
+    const effort = EFFORT_LABEL[agent.effort];
+    return effort ? role + ' · ' + effort : role;
+  }
+
   function canStop(step, agent) {
     return LIVE.test(agent.status) && typeof window.ultraCanStop === 'function' && typeof window.ultraStopAgent === 'function' && !!window.ultraCanStop(step.id);
   }
 
   /* ─── Markup ───────────────────────────────────────────────────────── */
 
+  // The spark: three strokes crossing (six rays) and a core, like Claude's
+  // thinking asterisk. CSS makes it breathe and turn while the card runs.
+  const SPARK = '<svg class="ua-glyph" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<g class="ua-glyph-rays"><path d="M12 3.2v17.6M4.4 7.6l15.2 8.8M4.4 16.4l15.2-8.8"/></g>' +
+    '<g class="ua-glyph-rays ua-glyph-rays2"><path d="M12 6.5v11M7.2 9.25l9.6 5.5M7.2 14.75l9.6-5.5"/></g>' +
+    '<circle class="ua-glyph-core" cx="12" cy="12" r="2.1"/></svg>';
+  // The lane's state: a hollow ring (queued), a breathing dot with a ripple
+  // (running), an amber dot (waiting), a drawn check, a cross, a bar.
   const ORB = '<svg class="ua-orb" viewBox="0 0 20 20" aria-hidden="true">' +
-    '<circle class="ua-orb-track" cx="10" cy="10" r="8"/>' +
-    '<circle class="ua-orb-ring" cx="10" cy="10" r="8" pathLength="100"/>' +
-    '<circle class="ua-orb-dot" cx="10" cy="10" r="3.2"/>' +
-    '<path class="ua-orb-check" d="M6.2 10.4 8.8 13 13.9 7.4" pathLength="1"/>' +
-    '<path class="ua-orb-x" d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" pathLength="1"/>' +
-    '<path class="ua-orb-bar" d="M7 10h6"/>' +
+    '<circle class="ua-orb-track" cx="10" cy="10" r="7"/>' +
+    '<circle class="ua-orb-ring" cx="10" cy="10" r="4"/>' +
+    '<circle class="ua-orb-dot" cx="10" cy="10" r="3.4"/>' +
+    '<path class="ua-orb-check" d="M6.6 10.3 8.9 12.6 13.5 7.6" pathLength="1"/>' +
+    '<path class="ua-orb-x" d="M7.6 7.6l4.8 4.8M12.4 7.6l-4.8 4.8" pathLength="1"/>' +
+    '<path class="ua-orb-bar" d="M7.2 10h5.6"/>' +
     '</svg>';
   const CHEVRON = '<svg class="ua-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
   const STOP = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/></svg>';
-
-  function tickMarkup(item) {
-    return '<i class="ua-tick" data-k="' + esc(item.k || 'read') + '" data-s="' + esc(item.s || 'd') + '"></i>';
-  }
 
   function checksMarkup(verify) {
     const checks = verify && Array.isArray(verify.checks) ? verify.checks.slice(0, 20) : [];
@@ -223,20 +228,17 @@
   function laneMarkup(message, step, entry, details, position) {
     const agent = entry.agent;
     const key = agentKey(step, entry);
-    const hue = hueOf(agent, entry.index);
     const time = laneTime(agent);
-    const trail = Array.isArray(agent.trail) ? agent.trail.slice(-24) : [];
     const isVerify = agent.role === 'verify' || agent.role === 'review';
     const checks = isVerify ? checksMarkup(details.verify) : '';
     const body = domId(message.id + '-' + key);
     return '<li class="ua-lane" data-key="' + esc(key) + '" data-status="' + esc(agent.status || 'queued') + '" data-role="' + esc(agent.role || 'build') + '"' +
-      (agent.kind ? ' data-kind="' + esc(agent.kind) + '"' : '') +
-      ' style="--i:' + position + ';--agent-hue:hsl(' + hue + ' 75% 60%)">' +
+      (agent.kind ? ' data-kind="' + esc(agent.kind) + '"' : '') + ' style="--i:' + position + '">' +
       '<div class="ua-lane-row">' +
       '<button type="button" class="ua-lane-head" aria-expanded="false" aria-controls="' + body + '">' +
       ORB +
       '<span class="ua-name" title="' + esc(agent.name || 'Agente') + '">' + esc(agent.name || 'Agente') + '</span>' +
-      '<span class="ua-role">' + esc(ROLE_LABEL[agent.role] || ROLE_LABEL.build) + '</span>' +
+      '<span class="ua-role">' + esc(roleText(agent)) + '</span>' +
       '<span class="ua-status-text ua-sr">' + esc(STATUS_LABEL[agent.status] || '') + '</span>' +
       '<span class="ua-time"' + (time.since ? ' data-live-since="' + time.since + '"' : '') + '>' + esc(time.text) + '</span>' +
       '<span class="ua-cost">' + costMarkup(message.id + ':agent:' + step.id + ':' + entry.index, num(agent.cost)) + '</span>' +
@@ -244,43 +246,11 @@
       '</button>' +
       '<button type="button" class="ua-stop" data-ua-stop="' + esc(agent.id != null ? agent.id : entry.index) + '" aria-label="Detener ' + esc(agent.name || 'agente') + '" title="Detener este agente"' + (canStop(step, agent) ? '' : ' hidden') + '>' + STOP + '</button>' +
       '</div>' +
-      '<div class="ua-rail" aria-hidden="true"><span class="ua-ticks">' + trail.map(tickMarkup).join('') + '</span><span class="ua-comet"></span></div>' +
-      '<div class="ua-doing"><span class="ua-doing-text">' + esc(doingText(agent)) + '</span></div>' +
+      '<div class="ua-doing"><span class="ua-elbow" aria-hidden="true">⎿</span><span class="ua-doing-box"><span class="ua-doing-text">' + esc(doingText(agent)) + '</span></span>' +
+      '<span class="ua-count">' + esc(countText(agent)) + '</span></div>' +
       (isVerify ? '<ul class="ua-checks"' + (checks ? '' : ' hidden') + '>' + checks + '</ul>' : '') +
       '<div class="ua-body" id="' + body + '" hidden></div>' +
       '</li>';
-  }
-
-  function segsMarkup(layout) {
-    return layout.order.map((entry) => '<i data-status="' + esc(entry.agent.status || 'queued') + '" style="--agent-hue:hsl(' + hueOf(entry.agent, entry.index) + ' 75% 60%)"></i>').join('');
-  }
-
-  // Hub at the bottom centre, one node per agent on an arc above it.
-  function constellationMarkup(step, layout) {
-    const n = layout.order.length;
-    if (n < 2) return '';
-    const hub = { x: 160, y: 84 };
-    const radius = 64;
-    const parts = [];
-    const nodes = [];
-    layout.order.forEach((entry, i) => {
-      const angle = Math.PI - ((i + 0.5) * Math.PI) / n;
-      const x = Math.round((hub.x + Math.cos(angle) * radius * 1.9) * 10) / 10;
-      const y = Math.round((hub.y - Math.sin(angle) * radius) * 10) / 10;
-      const key = agentKey(step, entry);
-      const hue = 'hsl(' + hueOf(entry.agent, entry.index) + ' 75% 60%)';
-      const path = 'M' + x + ' ' + y + ' L' + hub.x + ' ' + hub.y;
-      parts.push('<line class="ua-edge" data-key="' + esc(key) + '" data-status="' + esc(entry.agent.status || 'queued') + '" x1="' + x + '" y1="' + y + '" x2="' + hub.x + '" y2="' + hub.y + '" style="--agent-hue:' + hue + '"/>');
-      nodes.push('<g class="ua-node" data-key="' + esc(key) + '" data-status="' + esc(entry.agent.status || 'queued') + '" style="--agent-hue:' + hue + '">' +
-        '<circle class="ua-node-dot" cx="' + x + '" cy="' + y + '" r="6"/>' +
-        '<text class="ua-node-label" x="' + x + '" y="' + (y - 10) + '" text-anchor="middle">' + esc(String(entry.agent.name || '').length > 14 ? String(entry.agent.name).slice(0, 13) + '…' : String(entry.agent.name || '')) + '<title>' + esc(entry.agent.name || '') + '</title></text>' +
-        (motionPath ? '<circle class="ua-pulse" r="3" cx="0" cy="0" style="offset-path:path(\'' + path + '\')"/>' : '') +
-        '</g>');
-    });
-    return '<svg class="ua-constellation" viewBox="0 0 320 96" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
-      parts.join('') + nodes.join('') +
-      '<circle class="ua-hub-halo" cx="' + hub.x + '" cy="' + hub.y + '" r="11"/>' +
-      '<circle class="ua-hub" cx="' + hub.x + '" cy="' + hub.y + '" r="7"/></svg>';
   }
 
   function filesMarkup(details) {
@@ -298,6 +268,10 @@
     const ratio = budget > 0 ? Math.min(1, total / budget) : 0;
     return '<span class="ua-budget-bar"><i style="width:' + (ratio * 100).toFixed(1) + '%"></i></span>' +
       '<span class="ua-budget-text">' + Math.round(ratio * 100) + '% de $' + budget.toFixed(2) + '</span>';
+  }
+
+  function sharedText(details) {
+    return details.shared > 0 ? details.shared + (details.shared === 1 ? ' lectura compartida' : ' lecturas compartidas') : '';
   }
 
   function cardMarkup(message, step) {
@@ -319,18 +293,20 @@
       body = '<ol class="ua-lanes">' + lanes(layout.order, 0) + '</ol>';
     }
     const ratio = details.budget > 0 ? total / details.budget : 0;
-    return '<section class="ua-card' + (orbit ? ' ua-orbit' : '') + '" data-step="' + esc(step.id) + '" data-msg="' + esc(message.id) + '" data-shape="' + esc(shapeKey(step)) + '" data-running="' + (running ? '1' : '0') + '" style="--n:' + step.agents.length + '" aria-label="Agentes de Ultra code">' +
-      '<header class="ua-head">' +
-      '<span class="ua-badge">Ultra</span>' +
+    const shared = sharedText(details);
+    return '<section class="ua-card" data-step="' + esc(step.id) + '" data-msg="' + esc(message.id) + '" data-shape="' + esc(shapeKey(step)) + '" data-running="' + (running ? '1' : '0') + '" style="--n:' + step.agents.length + '" aria-label="Agentes de Ultra code">' +
+      '<header class="ua-head">' + SPARK +
       '<span class="ua-title" aria-live="polite">' + esc(titleText(step, details, layout)) + '</span>' +
-      '<span class="ua-clock"' + (running && start ? ' data-live-since="' + start + '"' : '') + '>' + (running && start ? esc(fmtDuration(Date.now() - start)) : '') + '</span>' +
-      '<span class="ua-total">' + costMarkup(message.id + ':agents:' + step.id, total) + '</span>' +
+      '<span class="ua-meta"><span class="ua-clock"' + (running && start ? ' data-live-since="' + start + '"' : '') + '>' + (running && start ? esc(fmtDuration(Date.now() - start)) : '') + '</span>' +
+      '<span class="ua-total">' + costMarkup(message.id + ':agents:' + step.id, total) + '</span></span>' +
       '</header>' +
+      '<div class="ua-progress" aria-hidden="true"><i style="width:' + (progressOf(step) * 100).toFixed(1) + '%"></i></div>' +
       '<div class="ua-budget"' + (details.budget > 0 ? '' : ' hidden') + (ratio > 0.8 ? ' data-warn="1"' : '') + (details.budget > 0 && ratio < 0.25 ? ' data-low="1"' : '') + '>' + (details.budget > 0 ? budgetMarkup(total, details.budget) : '') + '</div>' +
-      '<div class="ua-segs" aria-hidden="true">' + segsMarkup(layout) + '</div>' +
-      constellationMarkup(step, layout) +
       '<div class="ua-board">' + body + '</div>' +
+      '<div class="ua-foot"' + (details.files.length || shared ? '' : ' hidden') + '>' +
       '<div class="ua-files"' + (details.files.length ? '' : ' hidden') + '>' + filesMarkup(details) + '</div>' +
+      '<div class="ua-shared"' + (shared ? '' : ' hidden') + '>' + esc(shared) + '</div>' +
+      '</div>' +
       '</section>';
   }
 
@@ -361,9 +337,9 @@
     }
   }
 
-  // The doing text crossfades: the new line fades in over the old one.
+  // The doing line crossfades: the new text rises in over the old one.
   function setDoing(lane, text) {
-    const holder = lane.querySelector('.ua-doing');
+    const holder = lane.querySelector('.ua-doing-box');
     if (!holder) return;
     const current = holder.querySelector('.ua-doing-text:not(.out)');
     if (current && current.textContent === text) return;
@@ -380,22 +356,6 @@
     holder.appendChild(next);
   }
 
-  function patchTicks(lane, trail) {
-    const holder = lane.querySelector('.ua-ticks');
-    if (!holder) return;
-    const items = trail.slice(-24);
-    while (holder.children.length > items.length) holder.lastElementChild.remove();
-    items.forEach((item, i) => {
-      let tick = holder.children[i];
-      if (!tick) {
-        holder.insertAdjacentHTML('beforeend', tickMarkup(item));
-        return;
-      }
-      setAttr(tick, 'data-k', item.k || 'read');
-      setAttr(tick, 'data-s', item.s || 'd');
-    });
-  }
-
   function patchLane(lane, message, step, entry, details) {
     const agent = entry.agent;
     const previous = lane.dataset.status;
@@ -405,6 +365,7 @@
     // The error nudge plays once, when the lane turns red in front of you.
     if (previous && previous !== status && status === 'error') lane.classList.add('ua-just-failed');
     setText(lane.querySelector('.ua-status-text'), STATUS_LABEL[status] || '');
+    setText(lane.querySelector('.ua-role'), roleText(agent));
     const time = laneTime(agent);
     const timeEl = lane.querySelector('.ua-time');
     setAttr(timeEl, 'data-live-since', time.since || null);
@@ -412,8 +373,8 @@
     else if (!timeEl.textContent) setText(timeEl, time.text);
     setCost(lane.querySelector('.ua-cost'), num(agent.cost));
     setAttr(lane.querySelector('.ua-stop'), 'hidden', canStop(step, agent) ? null : '');
-    patchTicks(lane, Array.isArray(agent.trail) ? agent.trail : []);
     setDoing(lane, doingText(agent));
+    setText(lane.querySelector('.ua-count'), countText(agent));
     const checks = lane.querySelector('.ua-checks');
     if (checks) {
       const html = checksMarkup(details.verify);
@@ -443,6 +404,11 @@
       setText(clock, '');
     }
     setCost(card.querySelector('.ua-total'), total);
+    const bar = card.querySelector('.ua-progress > i');
+    if (bar) {
+      const width = (progressOf(step) * 100).toFixed(1) + '%';
+      if (bar.style.width !== width) bar.style.width = width;
+    }
     const budget = card.querySelector('.ua-budget');
     if (budget) {
       setAttr(budget, 'hidden', details.budget > 0 ? null : '');
@@ -452,31 +418,27 @@
       if (details.budget > 0) {
         if (!budget.querySelector('.ua-budget-bar')) budget.innerHTML = budgetMarkup(total, details.budget);
         const ratio = Math.min(1, total / details.budget);
-        const bar = budget.querySelector('.ua-budget-bar i');
-        if (bar) bar.style.width = (ratio * 100).toFixed(1) + '%';
+        const fill = budget.querySelector('.ua-budget-bar i');
+        if (fill) fill.style.width = (ratio * 100).toFixed(1) + '%';
         setText(budget.querySelector('.ua-budget-text'), Math.round(ratio * 100) + '% de $' + details.budget.toFixed(2));
       }
     }
-    const segs = card.querySelectorAll('.ua-segs > i');
-    layout.order.forEach((entry, i) => {
-      setAttr(segs[i], 'data-status', entry.agent.status || 'queued');
-      const key = agentKey(step, entry);
-      const lane = card.querySelector('.ua-lane[data-key="' + cssEscape(key) + '"]');
+    layout.order.forEach((entry) => {
+      const lane = card.querySelector('.ua-lane[data-key="' + cssEscape(agentKey(step, entry)) + '"]');
       if (lane) patchLane(lane, message, step, entry, details);
-      const node = card.querySelector('.ua-node[data-key="' + cssEscape(key) + '"]');
-      if (node) {
-        const before = node.getAttribute('data-status');
-        setAttr(node, 'data-status', entry.agent.status || 'queued');
-        // A pulse travels back to the hub when an agent hands in its work.
-        if (before && LIVE.test(before) && entry.agent.status === 'done') node.classList.add('ua-return');
-      }
-      setAttr(card.querySelector('.ua-edge[data-key="' + cssEscape(key) + '"]'), 'data-status', entry.agent.status || 'queued');
     });
     const files = card.querySelector('.ua-files');
     if (files) {
       setHtml(files, filesMarkup(details));
       setAttr(files, 'hidden', details.files.length ? null : '');
     }
+    const shared = sharedText(details);
+    const sharedEl = card.querySelector('.ua-shared');
+    if (sharedEl) {
+      setText(sharedEl, shared);
+      setAttr(sharedEl, 'hidden', shared ? null : '');
+    }
+    setAttr(card.querySelector('.ua-foot'), 'hidden', details.files.length || shared ? null : '');
     card.dataset.running = running ? '1' : '0';
     return wasRunning && !running;
   }
@@ -486,7 +448,8 @@
   }
 
   // Once per step id, only when it finishes in front of the reader (not on a
-  // reload, which never saw it running, and not for another device's turn).
+  // reload, which never saw it running, and not for another device's turn):
+  // the spark blooms once and the card breathes a soft ring.
   function celebrate(card, stepId, options) {
     if (celebrated.has(stepId) || (options && options.remote) || document.hidden) return;
     const box = card.getBoundingClientRect();
@@ -495,7 +458,7 @@
     card.classList.remove('ua-glow');
     void card.offsetWidth;
     card.classList.add('ua-glow');
-    window.setTimeout(() => card.classList.remove('ua-glow'), 1800);
+    window.setTimeout(() => card.classList.remove('ua-glow'), 1600);
     if (typeof haptic === 'function') haptic('success');
   }
 
@@ -553,7 +516,7 @@
 
   function reportChips(report) {
     if (!report || typeof report !== 'object') return '';
-    const list = (value) => (Array.isArray(value) ? value : []).map((item) => (typeof item === 'string' ? item : String((item && (item.path || item.title || item.text || item.name)) || ''))).filter(Boolean).slice(0, 20);
+    const list = (value) => (Array.isArray(value) ? value : []).map((item) => (typeof item === 'string' ? item : String((item && (item.path || item.ref || item.title || item.text || item.name)) || ''))).filter(Boolean).slice(0, 20);
     const artifacts = list(report.artifacts || report.files);
     const issues = list(report.issues || report.open_issues || report.openIssues);
     let html = '';
@@ -669,49 +632,35 @@
     if (bound) return;
     bound = rootEl || document;
     bound.addEventListener('click', onClick);
-    // The error nudge and the return pulse play once, then are forgotten.
+    // The error nudge plays once, then is forgotten.
     bound.addEventListener('animationend', (event) => {
       const el = event.target;
       if (!el || !el.closest) return;
       if (event.animationName === 'ua-nudge') { const lane = el.closest('.ua-lane'); if (lane) lane.classList.remove('ua-just-failed'); }
-      if (event.animationName === 'ua-return') { const node = el.closest('.ua-node'); if (node) node.classList.remove('ua-return'); }
     });
   }
 
-  /* ─── Turning Ultra code on: a ring and a few sparks ───────────────── */
-
+  /* ─── Turning Ultra code on: a glint runs once around the pill ─────── */
+  // No confetti: a thin rainbow light travels once around the pill's edge
+  // while a soft halo blooms and fades behind it (the word itself shimmers
+  // through .ultra-burst in index.html), like Claude's ultrathink.
   function burst(anchorEl) {
     if (!anchorEl || reducedMotion()) return;
     const box = anchorEl.getBoundingClientRect();
-    const cx = box.left + box.width / 2;
-    const cy = box.top + box.height / 2;
-    const ring = document.createElement('span');
-    ring.className = 'ua-burst-ring';
-    ring.style.left = cx + 'px';
-    ring.style.top = cy + 'px';
-    ring.style.setProperty('--ua-burst-size', Math.max(44, Math.min(110, box.width * 0.8)) + 'px');
-    document.body.appendChild(ring);
-    window.setTimeout(() => ring.remove(), 900);
-    for (let i = 0; i < 14; i++) {
-      const spark = document.createElement('span');
-      spark.className = 'ultra-spark ua-spark';
-      const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.35;
-      // Wide pills throw their sparks wider than tall.
-      const distance = 34 + Math.random() * 34;
-      const size = (6 + Math.random() * 4).toFixed(1) + 'px';
-      const colour = SPARK_PALETTE[i % SPARK_PALETTE.length];
-      spark.style.left = cx + 'px';
-      spark.style.top = cy + 'px';
-      spark.style.width = size;
-      spark.style.height = size;
-      spark.style.setProperty('--dx', (Math.cos(angle) * distance * 1.5).toFixed(1) + 'px');
-      spark.style.setProperty('--dy', (Math.sin(angle) * distance * 0.8).toFixed(1) + 'px');
-      spark.style.background = colour;
-      // The glow (box-shadow: currentColor) takes the spark's own colour.
-      spark.style.color = colour;
-      document.body.appendChild(spark);
-      window.setTimeout(() => spark.remove(), 900);
-    }
+    if (!box.width || !box.height) return;
+    const radius = getComputedStyle(anchorEl).borderRadius || '999px';
+    document.querySelectorAll('.ua-glint').forEach((el) => el.remove());
+    const glint = document.createElement('span');
+    glint.className = 'ua-glint';
+    glint.setAttribute('aria-hidden', 'true');
+    glint.style.left = (box.left - 3) + 'px';
+    glint.style.top = (box.top - 3) + 'px';
+    glint.style.width = (box.width + 6) + 'px';
+    glint.style.height = (box.height + 6) + 'px';
+    glint.style.borderRadius = radius === '0px' ? '12px' : 'calc(' + radius + ' + 3px)';
+    glint.innerHTML = '<span class="ua-glint-halo"></span><span class="ua-glint-edge"></span>';
+    document.body.appendChild(glint);
+    window.setTimeout(() => glint.remove(), 1300);
   }
 
   window.UltraAgents = { markupAll, patch, bind, burst };

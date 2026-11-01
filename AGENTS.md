@@ -353,14 +353,31 @@ Mandatory guidance for every AI and developer working in this repository.
   the agent (`approvalMeta` → `approveChange` → the dock queue, '+N en espera') and set its lane «waiting»,
   per-lane stop (`window.ultraStopAgent`), and `settleAgentSteps` so a stop, error, cut or reload never leaves
   a lane running. GitHub commits from several agents: a per-branch lock, rebase on a moved branch, and a
-  stop if another agent changed the same files (also between the approval and the commit). The board is
-  `ultra.js` (`UltraAgents`) + `ultra.css`: patched in place by keyed lanes (stream.js no longer redraws it),
-  header with title, clock, cost, budget bar and status segments, a constellation, waves, a pinned verifier
-  lane, expandable lanes (task, steps, result through `renderMarkdown`, «Copiar»), a completion glow once,
-  tokens with AMOLED versions in theme.css, everything off under reduced motion. The live row says
-  «Coordinando N agentes» / «Integrando lo de N agentes». Turning Ultra code on plays the burst
-  (`UltraAgents.burst`). Tests: `tests/web/ultra.cjs`, `ultra-board.cjs`, `agents-plan.mjs`,
-  `github-concurrent.cjs`.
+  stop if another agent changed the same files (also between the approval and the commit).
+  **Efficiency (2026-11-01):** each agent has an `effort` (low|medium|high|max; default medium for explore and
+  the verifier, high for build) that `subAgentThinkingLevel` maps to the nearest level the model has (ties go up),
+  so only the main model thinks at the deepest level. The verifier runs by default only with `acceptance`, or with
+  2+ agents and at least one builder (research-only runs skip it; `verify: true/false` still forces). The agents of
+  one run share their reads (`createReadCache` in the engine, passed as `job.readCache`; `SHARED_READ` +
+  `sharedReadKey` in index.html): the same GitHub read/grep, web search/page, library or Drive read is fetched and
+  paid once (in-flight reads are joined), any write by any agent empties it before and after, failed reads are not
+  kept, and the hits are counted (`details.shared`, «N lecturas compartidas» in the result and the board).
+  `read_file`/`search_files` are never shared (the overwrite guard needs each agent's own reads).
+  The board is `ultra.js` (`UltraAgents`) + `ultra.css`, in **Claude's style** (warm terracotta accent
+  `--ua-accent`, no rainbow lanes): patched in place by keyed lanes (stream.js no longer redraws it); the header
+  is the spark (`.ua-glyph`, an SVG asterisk whose rays breathe, turn and morph while it runs, like Claude's
+  thinking glyph; never a font glyph, which Android may draw as an emoji), the title with a light running across it
+  while it works (`ua-shimmer`), clock · cost; a 2 px progress line (finished/total, with a sheen while running);
+  the budget; waves; lanes with no backgrounds, separated by hairlines: a status dot (breathing with a ripple while
+  running, amber waiting, drawn check/cross, bar), name · role · effort, time, cost, then «⎿ doing · N pasos»;
+  a pinned verifier lane with its criteria; expandable lanes (task, steps, result through `renderMarkdown`,
+  «Copiar»); a footer with touched files and shared reads; on completion the spark blooms once and the card
+  breathes a soft ring (`ua-glow`). Tokens with AMOLED versions in theme.css, everything off under reduced
+  motion. The live row says «Coordinando N agentes» / «Integrando lo de N agentes». Turning Ultra code on (like
+  Claude's ultrathink) gives the rainbow word (`.ultra-text`: rainbow layer + a glint layer, both clipped to the
+  text) a quick double glint and a hair of lift (`.ultra-burst`) and runs one thin light around the pill with a
+  soft halo (`UltraAgents.burst` → `.ua-glint`, removed after 1.3 s); no sparks or confetti.
+  Tests: `tests/web/ultra.cjs`, `ultra-board.cjs`, `agents-plan.mjs`, `github-concurrent.cjs`.
 - **How the model is prompted and run** (index.html, engine/src/index.js): `stableSystemPrompt` is
   byte-identical across the turns of a chat (and a day) so providers with prompt caching reuse it;
   `turnContextText` (time, files, library, `InhouseStudy.brief`, visual events/variety, the course task or

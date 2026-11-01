@@ -89,10 +89,12 @@ let failed = 0;
       statuses: lanes.map((lane) => lane.dataset.key + '=' + lane.dataset.status),
       order: lanes.map((lane) => lane.dataset.key.split(':')[1]),
       waveHeads: Array.from(slot.querySelectorAll('.ua-wave-head')).map((el) => el.textContent),
-      segs: slot.querySelectorAll('.ua-segs > i').length,
+      progress: slot.querySelectorAll('.ua-progress > i').length,
+      progressWidth: (slot.querySelector('.ua-progress > i') || { style: {} }).style.width,
+      glyphs: slot.querySelectorAll('.ua-head .ua-glyph').length,
       orbs: slot.querySelectorAll('.ua-lane .ua-orb').length,
-      nodes: slot.querySelectorAll('.ua-constellation .ua-node').length,
-      ticks: lanes.map((lane) => lane.querySelectorAll('.ua-tick').length),
+      old: slot.querySelectorAll('.ua-constellation, .ua-segs, .ua-tick, .ua-badge').length,
+      counts: lanes.map((lane) => (lane.querySelector('.ua-count') || {}).textContent),
       stops: lanes.filter((lane) => !lane.querySelector('.ua-stop').hidden).length,
       budget: (slot.querySelector('.ua-budget-text') || {}).textContent,
       laneTime: (slot.querySelector('.ua-lane[data-status="running"] .ua-time') || {}).textContent,
@@ -110,7 +112,7 @@ let failed = 0;
   const s0 = await snapshot();
   check('queued: one card, every lane «queued», the verifier pinned last', s0.cards === 1 && s0.statuses.every((item) => /=queued$/.test(item)) && s0.order[s0.order.length - 1] === 'v', s0);
   check('two waves: «Oleada 1», «Oleada 2» and «Verificación» headers', s0.waveHeads.includes('Oleada 1') && s0.waveHeads.includes('Oleada 2') && s0.waveHeads.includes('Verificación'), s0.waveHeads);
-  check('one segment, one orb and one constellation node per agent', s0.segs === 5 && s0.orbs === 5 && s0.nodes === 5, s0);
+  check('Claude style: the spark in the header, one status dot per agent, a progress line at 0 %, no constellation, segments, ticks or badge', s0.glyphs === 1 && s0.orbs === 5 && s0.progress === 1 && parseFloat(s0.progressWidth) === 0 && s0.old === 0, s0);
 
   // 2. Running.
   await page.evaluate(() => window.UltraAgents.patch(window.__ultraSlot, window.__ultraStage(1)));
@@ -120,9 +122,15 @@ let failed = 0;
   check('running: data-status running / waiting, the title counts and names the wave', s1.statuses.includes('step-1:a1=running') && s1.statuses.includes('step-1:a3=waiting') && /^Trabajando · 0 de 5 · oleada 1\/2/.test(s1.title), s1);
   check('patched in place: same card, same lane, same orb node', same1.lane && same1.orb && same1.card, same1);
   check('the live clock ticks (data-live-since)', /(\d+:\d\d|\d+ s|\d+ min)/.test(s1.clock || '') && /s$/.test(s1.laneTime || ''), { clock: s1.clock, lane: s1.laneTime });
-  check('the rail has one tick per trail item; stop buttons only on live lanes', JSON.stringify(s1.ticks) === JSON.stringify([2, 1, 1, 0, 0]) && s1.stops === 5, s1);
-  const spinning = await page.evaluate(() => getComputedStyle(document.querySelector('.ua-lane[data-key="step-1:a1"] .ua-orb-ring')).animationName);
-  check('a running orb spins in its colour', spinning === 'ua-spin', spinning);
+  check('«⎿ doing · N pasos» under each lane; stop buttons only on live lanes', JSON.stringify(s1.counts) === JSON.stringify(['2 pasos', '1 paso', '1 paso', '', '']) && s1.stops === 5, s1);
+  const motion = await page.evaluate(() => ({
+    ring: getComputedStyle(document.querySelector('.ua-lane[data-key="step-1:a1"] .ua-orb-ring')).animationName,
+    dot: getComputedStyle(document.querySelector('.ua-lane[data-key="step-1:a1"] .ua-orb-dot')).animationName,
+    spark: getComputedStyle(document.querySelector('.ua-card .ua-glyph-rays')).animationName,
+    title: getComputedStyle(document.querySelector('.ua-card .ua-title')).animationName,
+    elbow: (document.querySelector('.ua-lane[data-key="step-1:a1"] .ua-elbow') || {}).textContent
+  }));
+  check('running: the dot breathes with a ripple, the spark turns, a light runs across the title', motion.ring === 'ua-ripple' && motion.dot === 'ua-blink' && motion.spark === 'ua-spark' && motion.title === 'ua-shimmer' && motion.elbow === '⎿', motion);
   await page.click('.ua-lane[data-key="step-1:a2"] .ua-stop');
   const stops = await page.evaluate(() => window.__stops.slice());
   check('a lane\'s stop button calls ultraStopAgent(stepId, agentId)', stops[0] === 'step-1/a2', stops);
@@ -181,11 +189,18 @@ let failed = 0;
     return { names, before };
   });
   check('prefers-reduced-motion: animationName none everywhere', !reduced.names.length && reduced.before === 'none', reduced);
-  const burst = await page.evaluate(() => { window.UltraAgents.burst(document.querySelector('.ua-badge')); return document.querySelectorAll('.ua-spark, .ua-burst-ring').length; });
-  check('…and the activation burst draws nothing', burst === 0, burst);
+  const burst = await page.evaluate(() => { window.UltraAgents.burst(document.querySelector('.ua-copy') || document.querySelector('.ua-lane-head')); return document.querySelectorAll('.ua-glint, .ua-spark, .ultra-spark').length; });
+  check('…and the activation glint draws nothing', burst === 0, burst);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  const sparks = await page.evaluate(() => { window.UltraAgents.burst(document.querySelector('.ua-badge')); return { sparks: document.querySelectorAll('.ua-spark').length, ring: document.querySelectorAll('.ua-burst-ring').length }; });
-  check('the activation burst: a ring and 14 sparks', sparks.sparks === 14 && sparks.ring === 1, sparks);
+  const glint = await page.evaluate(() => {
+    window.UltraAgents.burst(document.querySelector('.ua-copy') || document.querySelector('.ua-lane-head'));
+    const el = document.querySelector('.ua-glint');
+    return { glints: document.querySelectorAll('.ua-glint').length, edge: !!(el && el.querySelector('.ua-glint-edge')), halo: !!(el && el.querySelector('.ua-glint-halo')), run: el ? getComputedStyle(el.querySelector('.ua-glint-edge')).animationName : '', sparks: document.querySelectorAll('.ua-spark, .ultra-spark').length };
+  });
+  check('the activation: one glint that runs around the edge with a halo, no sparks', glint.glints === 1 && glint.edge && glint.halo && glint.run === 'ua-glint-run' && glint.sparks === 0, glint);
+  await page.waitForTimeout(1400);
+  const gone = await page.evaluate(() => document.querySelectorAll('.ua-glint').length);
+  check('…and it removes itself', gone === 0, gone);
 
   // Dark theme: the same tokens, AMOLED values.
   const tokens = () => page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return ['--ua-accent', '--ua-ok', '--ua-err', '--ua-wait', '--ua-lane-bg', '--ua-read', '--ua-search', '--ua-edit', '--ua-web', '--ua-accent-soft'].map((name) => cs.getPropertyValue(name).trim()); });
@@ -197,14 +212,15 @@ let failed = 0;
   await page.screenshot({ path: SCRATCH + '/ultra-board-dark.png', fullPage: false });
   await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
 
-  // A new shape (an agent added) redraws the card; one agent hides the constellation.
+  // A new shape (an agent removed) redraws the card; one agent has no wave headers.
   const single = await page.evaluate(() => {
     const message = window.__ultraStage(1);
     message.toolSteps[0].agents = message.toolSteps[0].agents.slice(0, 1);
+    message.toolSteps[0].shared = 3;
     window.UltraAgents.patch(window.__ultraSlot, message);
-    return { nodes: document.querySelectorAll('.ua-constellation').length, lanes: document.querySelectorAll('.ua-lane').length, heads: document.querySelectorAll('.ua-wave-head').length };
+    return { lanes: document.querySelectorAll('.ua-lane').length, heads: document.querySelectorAll('.ua-wave-head').length, shared: (document.querySelector('.ua-shared:not([hidden])') || {}).textContent };
   });
-  check('one agent: no constellation and no wave headers', single.nodes === 0 && single.lanes === 1 && single.heads === 0, single);
+  check('one agent: no wave headers; reads shared between agents are counted in the footer', single.lanes === 1 && single.heads === 0 && single.shared === '3 lecturas compartidas', single);
 
   // 4. The approval queue above the composer.
   const queue = await page.evaluate(async () => {

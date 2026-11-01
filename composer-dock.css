@@ -254,7 +254,7 @@
 /* Ultra code: «Coordinando N agentes» con un orbe pequeño por agente */
 .live-now.agents { border-color: color-mix(in srgb, var(--ua-accent, #7c3aed) 35%, transparent); background: linear-gradient(90deg, var(--ua-accent-soft, rgba(124,58,237,0.08)), transparent 70%); }
 .live-orbs { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 3px; max-width: 40%; overflow: hidden; }
-.live-orbs i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--agent-hue); opacity: 0.3; }
+.live-orbs i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--ua-accent, #c96442); opacity: 0.3; }
 .live-orbs i[data-status="running"] { opacity: 1; animation: live-pulse 1.2s ease-in-out infinite; }
 .live-orbs i[data-status="waiting"] { opacity: 1; background: var(--ua-wait, #d97706); }
 .live-orbs i[data-status="done"] { opacity: 1; background: var(--ua-ok, var(--green)); }
