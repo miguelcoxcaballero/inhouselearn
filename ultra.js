@@ -701,7 +701,7 @@
      classes and the two overlays, and under reduced motion shows the steady
      state only. */
 
-  const IGNITE_MS = 1900;
+  const IGNITE_MS = 2500;
   let igniteTimer = 0;
 
   function composerShell() {
@@ -726,7 +726,7 @@
   function quench(shell) {
     window.clearTimeout(igniteTimer);
     if (shell) {
-      shell.querySelectorAll(':scope > .ultra-sweep, :scope > .ultra-halo').forEach((el) => el.remove());
+      shell.querySelectorAll(':scope > .ultra-sweep, :scope > .ultra-halo, :scope > .ultra-aura').forEach((el) => el.remove());
       shell.classList.remove('ultra-igniting');
     }
     document.querySelectorAll('.ultra-lit').forEach((el) => el.classList.remove('ultra-lit'));
@@ -774,18 +774,28 @@
     // …and then the composer, uncovered, lights up: the glow first, the light over it.
     const light = () => {
       before();
-      shell.querySelectorAll(':scope > .ultra-sweep, :scope > .ultra-halo').forEach((el) => el.remove());
+      shell.querySelectorAll(':scope > .ultra-sweep, :scope > .ultra-halo, :scope > .ultra-aura').forEach((el) => el.remove());
       const radius = getComputedStyle(shell).borderTopLeftRadius || '24px';
-      const halo = document.createElement('span');
-      halo.className = 'ultra-halo';
-      halo.innerHTML = '<span class="ultra-halo-track"></span>';
-      const sweep = document.createElement('span');
-      sweep.className = 'ultra-sweep';
-      [halo, sweep].forEach((el) => {
+      // The wide glow round the card, then, for each direction, a blurred glow and a crisp light:
+      // two comets leave the tag, one each way round the border, and meet on the far side.
+      const lights = [];
+      const aura = document.createElement('span');
+      aura.className = 'ultra-aura';
+      lights.push(aura);
+      ['', ' ultra-ccw'].forEach((direction) => {
+        const halo = document.createElement('span');
+        halo.className = 'ultra-halo' + direction;
+        halo.innerHTML = '<span class="ultra-halo-track"></span>';
+        const sweep = document.createElement('span');
+        sweep.className = 'ultra-sweep' + direction;
+        lights.push(halo, sweep);
+      });
+      lights.forEach((el) => {
         el.setAttribute('aria-hidden', 'true');
         el.style.setProperty('--ua-r', radius);
         shell.appendChild(el);
       });
+      if (typeof opts.haptic === 'function') opts.haptic();
       const lit = [shell.querySelector(':scope > .ultra-tag'), opts.pill].concat(opts.labels || []).filter(Boolean);
       shell.classList.remove('ultra-igniting');
       lit.forEach((el) => el.classList.remove('ultra-lit'));

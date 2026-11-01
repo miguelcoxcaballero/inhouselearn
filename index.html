@@ -1776,8 +1776,8 @@
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="ultra.css?v=20261101-lila1">
-  <link rel="stylesheet" href="theme.css?v=20261101-lila1">
+  <link rel="stylesheet" href="ultra.css?v=20261101-aura1">
+  <link rel="stylesheet" href="theme.css?v=20261101-aura1">
   <!-- After theme.css: the activity timeline uses the tokens, so it follows the theme. -->
   <link rel="stylesheet" href="activity.css?v=20261101-act1">
 </head>
@@ -2172,7 +2172,7 @@
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261101-card"></script>
   <script src="composer-dock.js?v=20261101-ultra3"></script>
-  <script src="ultra.js?v=20261101-lila1"></script>
+  <script src="ultra.js?v=20261101-aura1"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -12474,7 +12474,9 @@
         pill: document.querySelector('.thinking-pill.ultra-pill'),
         labels: [document.getElementById('thinking-current'), elements.modelTriggerMeta],
         delay: 320,
-        before: () => { if (typeof closeModelMenu === 'function') closeModelMenu(); }
+        before: () => { if (typeof closeModelMenu === 'function') closeModelMenu(); },
+          // A soft tick on the phone when the composer lights up (the device's haptics setting decides).
+          haptic: () => { if (typeof haptic === 'function') haptic('success'); }
       });
     }
 

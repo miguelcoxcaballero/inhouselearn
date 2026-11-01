@@ -268,8 +268,13 @@
   --ua-glow: rgba(139, 92, 246, 0.24);   /* el florecer del compositor */
   --ua-ring: rgba(139, 92, 246, 0.11);   /* el anillo de foco */
   --ua-rest: 0 10px 30px rgba(28, 25, 20, 0.06), 0 14px 36px -16px rgba(139, 92, 246, 0.45);
-  --ua-lap: 1.6s;
-  --ua-ease: cubic-bezier(.4, .1, .3, 1);
+  --ua-hot: #f5f3ff;                     /* el núcleo casi blanco de las luces */
+  --ua-aura-1: rgba(196, 181, 253, 0.5); /* el resplandor ancho del compositor: capa corta y brillante… */
+  --ua-aura-2: rgba(139, 92, 246, 0.36); /* …la media… */
+  --ua-aura-3: rgba(109, 40, 217, 0.24); /* …y la amplia */
+  --ua-lap: 1.35s;                       /* lo que tarda cada cometa en llegar al otro lado */
+  --ua-moment: 2.3s;                     /* todo el momento de encenderlo */
+  --ua-ease: cubic-bezier(.45, .05, .25, 1);
 }
 
 /* «Ultra code» (el botón del modelo, el desplegable y la etiqueta): dos tonos de
@@ -281,10 +286,19 @@
   -webkit-background-clip: text; background-clip: text;
 }
 .ultra-lit.ultra-text, .ultra-lit .ultra-text {
-  animation: ultra-word-in 0.5s cubic-bezier(.2, .7, .2, 1) both, ultra-shine 1.2s cubic-bezier(.4, 0, .2, 1) 0.15s both;
+  animation: ultra-word-in 1.1s cubic-bezier(.22, 1, .36, 1) both, ultra-shine 1.4s cubic-bezier(.65, 0, .35, 1) 0.15s both;
 }
-.ultra-tag.ultra-lit .ultra-text, .thinking-pill.ultra-lit .ultra-text { animation: ultra-shine 1.2s cubic-bezier(.4, 0, .2, 1) 0.2s both; }
-@keyframes ultra-word-in { from { opacity: 0; filter: blur(4px); } }
+.ultra-tag.ultra-lit .ultra-text, .thinking-pill.ultra-lit .ultra-text { animation: ultra-shine 1.4s cubic-bezier(.65, 0, .35, 1) 0.2s both, ultra-word-glow 1.3s ease-out 0.2s both; }
+/* The word comes into focus and, while the shine crosses it, glows softly (one list of filter functions, so it interpolates). */
+@keyframes ultra-word-in {
+  0% { opacity: 0; filter: blur(4px) drop-shadow(0 0 0 transparent); }
+  45% { opacity: 1; filter: blur(0) drop-shadow(0 0 7px var(--ua-aura-1)); }
+  100% { opacity: 1; filter: blur(0) drop-shadow(0 0 0 transparent); }
+}
+@keyframes ultra-word-glow {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  45% { filter: drop-shadow(0 0 6px var(--ua-aura-1)); }
+}
 @keyframes ultra-shine { from { background-position: 100% 0, 0 0; } to { background-position: 0 0, 0 0; } }
 /* El botón «Ultra» del desplegable: lila cuando está puesto; al elegirlo, cede y vuelve. */
 :root .thinking-pill.ultra-pill.active {
@@ -314,13 +328,15 @@
 }
 .ultra-tag.leaving { opacity: 0; transform: translateY(3px); filter: blur(3px); }
 .ultra-tag.ultra-lit { animation: ultra-tag-in 0.6s cubic-bezier(.2, .7, .2, 1) 0.04s both; }
-.ultra-tag.ultra-lit::before { animation: ultra-dot var(--ua-lap) ease-in-out both; }
+.ultra-tag.ultra-lit::before { animation: ultra-dot 1.6s ease-in-out both; }
 @keyframes ultra-tag-in { from { opacity: 0; transform: translateY(4px); filter: blur(6px); } }
 @keyframes ultra-dot {
   0%, 76% { transform: none; }
   88% { transform: scale(1.7); box-shadow: 0 0 10px 3px color-mix(in srgb, var(--ua-base) 70%, transparent); }
 }
-/* La luz que da una vuelta al borde (un anillo de 1,5 px) y su resplandor
+/* Dos cometas salen de la etiqueta (arriba a la izquierda) en sentidos opuestos por el borde
+   (anillos de 2 px, núcleo casi blanco y cola larga) y se encuentran en el lado contrario; cada
+   una con su resplandor
    desenfocado, solo por fuera de la tarjeta (máscara). Las dos siguen el contorno
    del compositor (--ua-r, que pone ultra.js) a la misma velocidad todo el camino. */
 .ultra-sweep, .ultra-halo {
@@ -328,31 +344,51 @@
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
 }
-.ultra-sweep { inset: -1px; padding: 1.5px; border-radius: inherit; }
-.ultra-halo { inset: -56px; padding: 55px; border-radius: calc(var(--ua-r, 24px) + 55px); filter: blur(14px); }
-.ultra-halo-track { position: absolute; inset: 55px; border-radius: var(--ua-r, 24px); }
+.ultra-sweep { inset: -1px; padding: 2px; border-radius: inherit; }
+.ultra-halo { inset: -66px; padding: 65px; border-radius: calc(var(--ua-r, 24px) + 65px); filter: blur(16px); }
+.ultra-halo-track { position: absolute; inset: 65px; border-radius: var(--ua-r, 24px); }
 .ultra-sweep::before, .ultra-halo-track::before {
   content: ''; position: absolute; left: 0; top: 0; border-radius: 999px;
   offset-path: inset(0 round var(--ua-r, 24px)); offset-rotate: auto;
-  animation: ultra-sweep var(--ua-lap) var(--ua-ease) both, ultra-beam-fade var(--ua-lap) linear both;
+  animation: ultra-sweep var(--ua-lap) var(--ua-ease) 0.06s both, ultra-beam-fade var(--ua-lap) linear 0.06s both;
 }
 .ultra-sweep::before {
-  width: 150px; height: 24px; offset-anchor: 94% 50%;
-  background: linear-gradient(90deg, transparent, var(--ua-beam) 70%, var(--ua-beam-core) 94%, transparent);
+  width: 240px; height: 26px; offset-anchor: 94% 50%;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--ua-beam) 30%, transparent) 36%, var(--ua-beam) 76%, var(--ua-beam-core) 95%, transparent 100%);
 }
 .ultra-halo-track::before {
-  width: 210px; height: 40px; offset-anchor: 90% 50%;
-  background: linear-gradient(90deg, transparent, var(--ua-halo) 66%, var(--ua-halo) 90%, transparent);
+  width: 300px; height: 48px; offset-anchor: 90% 50%;
+  background: linear-gradient(90deg, transparent, var(--ua-halo) 62%, var(--ua-halo) 90%, transparent);
   animation-name: ultra-sweep, ultra-halo-fade;
 }
-@keyframes ultra-sweep { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+/* Each comet goes half the way round; the second one runs it backwards, its head still first. */
+@keyframes ultra-sweep { from { offset-distance: 0%; } to { offset-distance: 50%; } }
+@keyframes ultra-sweep-rev { from { offset-distance: 100%; } to { offset-distance: 50%; } }
+.ultra-sweep.ultra-ccw::before, .ultra-halo.ultra-ccw .ultra-halo-track::before { offset-rotate: auto 180deg; animation-name: ultra-sweep-rev, ultra-beam-fade; }
+.ultra-halo.ultra-ccw .ultra-halo-track::before { animation-name: ultra-sweep-rev, ultra-halo-fade; }
 @keyframes ultra-beam-fade { 0% { opacity: 0; } 9%, 80% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes ultra-halo-fade { 0% { opacity: 0; } 14%, 72% { opacity: 1; } 100% { opacity: 0; } }
 /* Sin caminos de formas básicas (navegadores antiguos) no hay luz: quieta en una esquina se vería rota. */
 @supports not (offset-path: inset(0 round 1px)) { .ultra-sweep, .ultra-halo { display: none; } }
 /* Un florecer suave de todo el compositor mientras la luz pasa; vuelve solo al halo fijo. */
-.composer-shell.ultra-igniting { animation: ultra-bloom 1.7s cubic-bezier(.3, .1, .3, 1) both; }
-@keyframes ultra-bloom { 38% { box-shadow: var(--ua-rest), 0 0 0 1px color-mix(in srgb, var(--ua-base) 22%, transparent), 0 0 46px -6px var(--ua-glow); } }
+/* (.ultra-igniting only marks the moment: the glow and the lights below do the drawing.) */
+/* The glow round the card: three soft layers (tight, middle, wide) that bloom as the lights leave,
+   peak as they pass and decay into the steady halo. A box-shadow only paints outside its box, so the
+   inside stays clean, and only opacity and scale move (the compositor does it). */
+.ultra-aura {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: inherit; opacity: 0;
+  box-shadow: 0 0 9px 1px var(--ua-aura-1), 0 0 30px 3px var(--ua-aura-2), 0 0 84px 12px var(--ua-aura-3);
+  will-change: opacity, transform;
+  animation: ultra-aura var(--ua-moment) cubic-bezier(.3, .1, .3, 1) both;
+}
+@keyframes ultra-aura {
+  0% { opacity: 0; transform: scale(0.992); }
+  15% { opacity: 0.85; transform: scale(1); }
+  36% { opacity: 1; }
+  60% { opacity: 0.6; }
+  82% { opacity: 0.2; }
+  100% { opacity: 0; transform: scale(1); }
+}
 
 @media (max-width: 420px) {
   .ua-card { padding: 10px 9px 9px; }
@@ -365,6 +401,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ua-card, .ua-card::before, .ua-card * { animation: none !important; transition: none !important; }
   /* The composer keeps its lilac border, its halo and its tag; nothing moves. */
+  .ultra-aura { display: none; }
   .ultra-sweep, .ultra-halo { display: none; }
   .ultra-text, .ultra-lit, .ultra-lit.ultra-text, .ultra-lit .ultra-text, .ultra-tag, .ultra-tag::before, .composer-shell.ultra-igniting { animation: none !important; transition: none !important; }
 }

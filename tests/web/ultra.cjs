@@ -60,10 +60,33 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     return { hues, glow: !!track, path: sweep ? getComputedStyle(sweep, '::before').offsetPath : '' };
   });
   check('only lilac: the word, the light and its blurred glow are all violet hues (no rainbow), and the light follows the border', lilac.glow && /inset/.test(lilac.path) && lilac.hues.length >= 4 && lilac.hues.every((h) => h >= 245 && h <= 285), lilac);
+  // The moment itself: a wide three-layer glow round the card (outside only) and two comets, one each way
+  // round the border from the tag, each with its blurred copy; every colour of the glow is lilac too.
+  const moment = await page.evaluate(() => {
+    const shell = document.querySelector('.composer-shell');
+    const aura = shell.querySelector(':scope > .ultra-aura');
+    const hues = [];
+    const shadow = aura ? getComputedStyle(aura).boxShadow : '';
+    shadow.replace(/rgba?\(([^)]+)\)/g, (match, body) => {
+      const [r, g, b, a = 1] = body.split(/[\s,\/]+/).filter(Boolean).map(Number);
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      if (!(a > 0) || max - min < 24) return match;
+      const h = max === r ? (g - b) / (max - min) : max === g ? 2 + (b - r) / (max - min) : 4 + (r - g) / (max - min);
+      hues.push(Math.round((h * 60 + 360) % 360));
+      return match;
+    });
+    const ccw = shell.querySelector(':scope > .ultra-sweep.ultra-ccw');
+    return {
+      aura: !!aura, layers: shadow.split('), ').length, hues, animation: aura ? getComputedStyle(aura).animationName : '',
+      sweeps: shell.querySelectorAll(':scope > .ultra-sweep').length, halos: shell.querySelectorAll(':scope > .ultra-halo').length,
+      ccwBackwards: ccw ? getComputedStyle(ccw, '::before').animationName : '', ccwRotate: ccw ? getComputedStyle(ccw, '::before').offsetRotate : ''
+    };
+  });
+  check('the moment: a wide three-layer lilac glow round the card and two comets (one each way, the second one backwards) with their blurred copies', moment.aura && moment.layers === 3 && moment.hues.length >= 3 && moment.hues.every((h) => h >= 245 && h <= 285) && /ultra-aura/.test(moment.animation) && moment.sweeps === 2 && moment.halos === 2 && /ultra-sweep-rev/.test(moment.ccwBackwards) && /180/.test(moment.ccwRotate), moment);
   await page.screenshot({ path: SCRATCH + '/ultra-ignite.png' });
   check('choosing «Ultra»: one band of light runs around the composer and its «Ultra code» tag settles; no sparks', on.flag && on.mode === 'on' && on.popupClosed && on.igniting && on.sweep && /ultra-sweep/.test(on.sweepAnimation) && on.tag === 'Ultra code' && on.tagLit && on.pillLit && on.sparks === 0, on);
   check('…and the labels read «Ultra code» (over the pills and on the model button)', on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
-  await page.waitForTimeout(2600);
+  await page.waitForTimeout(3300);
   const settled = await page.evaluate(() => { const shell = document.querySelector('.composer-shell'); return { sweep: document.querySelectorAll('.ultra-sweep').length, lit: document.querySelectorAll('.ultra-lit, .ultra-igniting').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), border: getComputedStyle(shell).borderTopColor }; });
   check('afterwards only the steady state stays: violet border and tag, nothing left running', settled.sweep === 0 && settled.lit === 0 && settled.mode === 'on' && settled.tag && settled.border !== 'rgb(0, 0, 0)', settled);
   await page.keyboard.press('Escape');
