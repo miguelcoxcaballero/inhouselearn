@@ -1,0 +1,64 @@
++ cat > /tmp/cand.py <<'EOF'
+import re, pathlib, json
+root = pathlib.Path('.')
+debt = (root/'docs/dev/debt/libSceLibcInternal.md').read_text()
+inv = re.findall(r"^- \[([^\]]+)\]\(\.\./\.\./\.\./core/libs/prx/libSceLibcInternal/(InventoryExports\d*\.cpp)\) \(libSceLibcInternal, NID `([^`]+)`\) - listed", debt, re.M)
+print("inventory entries:", len(inv))
+libc_src = {}
+for p in (root/'core/libs/prx/libc').rglob('*.cpp'):
+    if 'tests' in p.parts: continue
+    libc_src[str(p)] = p.read_text(errors='ignore')
+lci_src = {}
+for p in (root/'core/libs/prx/libSceLibcInternal').rglob('*.cpp'):
+    if 'tests' in p.parts: continue
+    lci_src[str(p)] = p.read_text(errors='ignore')
+def body_of(text, idx):
+    i = text.find('{', idx); d=0
+    for j in range(i, len(text)):
+        if text[j]=='{': d+=1
+        elif text[j]=='}':
+            d-=1
+            if d==0: return text[i:j+1]
+    return ''
+def find_impl(name, srcs):
+    pat = re.compile(r"\b" + re.escape(name) + r"_nid_postfix\s*\(([^;{]*)\)\s*\{")
+    for path, t in srcs.items():
+        m = pat.search(t)
+        if m:
+            b = body_of(t, m.start())
+            line = t[:m.start()].count('\n')+1
+            return path, line, 'NotImplemented' in b, m.group(0)[:200], len(b)
+    return None
+VB = ('basic_istream','basic_ostream','basic_iostream','stringstream','fstream','strstream','13basic_istream','basic_ios')
+done8 = {'XFh0C66aEms','OypvNf3Uq3c','xiqd+QkuYXc','pN02FS5SPgg','YXVCU6PdgZk','dsJKehuajH4','X9D8WWSG3As','XyJPhPqpzMw','s2eGsgUF9vk','v09ZcAhZzSc'}
+out=[]
+for name, f, nid in inv:
+    if nid in done8: continue
+    m = list(re.finditer(r"(C[12]|D[12])E", name))
+    if not name.startswith('_ZN') or not m: continue
+    m = m[-1]
+    tag = m.group(1); other = tag[0] + ('2' if tag[1]=='1' else '1')
+    cp = name[:m.start()] + other + name[m.start()+2:]
+    r = find_impl(cp, libc_src) or find_impl(cp, lci_src)
+    vb = any(v in name for v in VB)
+    if r:
+        out.append((name, nid, f, cp, r, vb))
+for o in out:
+    name,nid,f,cp,r,vb = o
+    print(f"CAND nid={nid} name={name} file={f} counterpart={cp} impl={r[0]}:{r[1]} notimpl={r[2]} vbase={vb} bodylen={r[4]}")
+    print("    sig:", r[3])
+EOF
+python3 /tmp/cand.py
+echo "=== also same-name already implemented in libc (any name) count"
+python3 - <<'EOF'
+import re,pathlib
+debt=pathlib.Path('docs/dev/debt/libSceLibcInternal.md').read_text()
+inv=re.findall(r"^- \[([^\]]+)\]\(\.\./\.\./\.\./core/libs/prx/libSceLibcInternal/(InventoryExports\d*\.cpp)\) \(libSceLibcInternal, NID `([^`]+)`\) - listed", debt, re.M)
+libc=" ".join(p.read_text(errors='ignore') for p in pathlib.Path('core/libs/prx/libc').rglob('*.cpp') if 'tests' not in p.parts)
+for name,f,nid in inv:
+    if re.search(r"\b"+re.escape(name)+r"_nid_postfix\s*\(", libc):
+        print("SAME", nid, name, f)
+EOF
+inventory entries: 147
+=== also same-name already implemented in libc (any name) count
+SAME V23qt24VPVs _ZSt17iostream_categoryv InventoryExports6.cpp
