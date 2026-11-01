@@ -1,0 +1,80 @@
++ set -e
+git log --oneline -3
+git fetch -q --unshallow origin || true
+git remote add up https://github.com/boykopovar/AnyPS5.git; git fetch -q up main
+git diff --stat up/main...HEAD | tail -5
+python3 --version; lsb_release -ds
+echo "=== WITH FIX unittest"
+python3 -m unittest tools/tests/test_shader_scan.py -v 2>&1 | tail -15
+echo "=== conventions"
+python3 tools/check_conventions.py --base up/main | tail -5
+cat > /tmp/m.py <<'EOF'
+import sys; sys.path.insert(0, 'tools')
+from pathlib import Path
+import shader_scan
+r = shader_scan.measure(Path('.'), shader_scan.load_isa_forms(Path('tools/rdna2_isa_forms.txt')))
+print(r['instructions'], r['dpp'])
+print([(f['encoding'], f['form'], f['missing']) for f in r['forms'] if f['missing']])
+print(r['untranslated'])
+EOF
+python3 /tmp/m.py
+git checkout -q up/main -- tools/shader_scan.py
+echo "=== WITH MAIN'S shader_scan.py"
+python3 /tmp/m.py
+python3 -m unittest tools/tests/test_shader_scan.py 2>&1 | tail -15 || true
+git fetch -q up pull/7156/head:p7156 pull/6973/head:p6973 || true
+git diff up/main...p7156 --stat | grep shader_scan || echo "7156 does not touch shader_scan.py"
+git diff up/main...p6973 --stat | grep shader_scan || echo "6973 does not touch shader_scan.py"
+curl -s "https://api.github.com/search/issues?q=repo:boykopovar/AnyPS5+is:pr+is:open+shader_scan" | grep -E '"(number|title)"' | head -20 || true
+f2f6ecd fix(tools): count fallthrough case labels in the shader decoder scan
+ tools/shader_scan.py            |  4 ++++
+ tools/tests/test_shader_scan.py | 12 ++++++++++++
+ 2 files changed, 16 insertions(+)
+Python 3.12.3
+Ubuntu 24.04.5 LTS
+=== WITH FIX unittest
+test_still_needed_panel_lists_names_and_draws_the_bars (tools.tests.test_shader_scan.ReportTests.test_still_needed_panel_lists_names_and_draws_the_bars) ... ok
+test_unreadable_recompiler_leaves_the_numbers_out_unless_required (tools.tests.test_shader_scan.ReportTests.test_unreadable_recompiler_leaves_the_numbers_out_unless_required) ... ok
+test_without_source_numbers_the_old_files_are_written (tools.tests.test_shader_scan.ReportTests.test_without_source_numbers_the_old_files_are_written) ... ok
+test_a_missing_opcode_table_stops_the_scan_naming_it (tools.tests.test_shader_scan.ScanTests.test_a_missing_opcode_table_stops_the_scan_naming_it) ... ok
+test_a_missing_translator_stops_the_scan (tools.tests.test_shader_scan.ScanTests.test_a_missing_translator_stops_the_scan) ... ok
+test_comments_keep_offsets_and_literals (tools.tests.test_shader_scan.ScanTests.test_comments_keep_offsets_and_literals) ... ok
+test_fallthrough_case_labels_decode_to_the_opcode_their_group_returns (tools.tests.test_shader_scan.ScanTests.test_fallthrough_case_labels_decode_to_the_opcode_their_group_returns) ... ok
+test_known_answers_on_a_small_tree (tools.tests.test_shader_scan.ScanTests.test_known_answers_on_a_small_tree) ... ok
+test_unsupported_throws_skip_comments_rethrows_other_messages_and_tests (tools.tests.test_shader_scan.ScanTests.test_unsupported_throws_skip_comments_rethrows_other_messages_and_tests) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.073s
+
+OK
+/tmp/tmp58ugurg8/forms.txt: 6 forms
+=== conventions
+All conventions checks passed.
+{'total': 1460, 'decoded': 1460, 'translated': 1459} {'total': 202, 'decoded': 199}
+[('VOP1', 'dpp8', ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32'])]
+['IMAGE_GATHER8H_PCK']
+=== WITH MAIN'S shader_scan.py
+{'total': 1460, 'decoded': 1456, 'translated': 1455} {'total': 202, 'decoded': 199}
+[('SOPP', 'base', ['S_CBRANCH_CDBGSYS', 'S_CBRANCH_CDBGUSER', 'S_CBRANCH_CDBGSYS_OR_USER', 'S_ENDPGM_SAVED']), ('VOP1', 'dpp8', ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32'])]
+['IMAGE_GATHER8H_PCK']
+1
+2
+
+- (2, 1, 1)
+?     ^  ^
+
++ (2, 2, 2)
+?     ^  ^
+
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.072s
+
+FAILED (failures=1)
+/tmp/tmphya9yrzb/forms.txt: 6 forms
+7156 does not touch shader_scan.py
+6973 does not touch shader_scan.py
+      "number": 7156,
+      "title": "fix(libkernel): omit inactive wait trace sites",
+      "number": 6973,
+      "title": "feat(agc): preserve initial native multisample color contents",
