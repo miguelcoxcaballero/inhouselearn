@@ -83,5 +83,5 @@
 :root .workspace-files.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
 :root .workspace-files.more-left { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
 :root .workspace-files.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
-/* Ultra code on the model pill: no orange tint behind the rainbow word. */
+/* Ultra code on the model pill: no orange tint behind the lilac word. */
 :root .model-trigger-chip.is-ultra { background: transparent; padding-left: 2px; padding-right: 2px; }

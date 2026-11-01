@@ -1,5 +1,6 @@
 // Ultra code: a reasoning option in the model picker for every model; turning
-// it on plays a rainbow burst with sparks and keeps a shimmering label; the
+// it on plays one moment, only in lilac (a light round the composer with its
+// blurred glow, the tag, a shine over the words), and nothing keeps moving; the
 // model gets spawn_agents and the Ultra prompt; parallel agents run with the
 // same tools (minus spawn_agents) and show, in a card, what each one is doing
 // and spending, live; their cost goes into the answer's cost.
@@ -39,6 +40,26 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
       rainbow: !!elements.modelTriggerMeta.querySelector('.ultra-text'), pillLit: document.querySelector('.thinking-pill.ultra-pill').classList.contains('ultra-lit')
     };
   });
+  // Only lilac: every colour of the word, the light and its glow is a violet hue (whites and greys aside).
+  const lilac = await page.evaluate(() => {
+    const shell = document.querySelector('.composer-shell');
+    const sweep = shell.querySelector(':scope > .ultra-sweep');
+    const track = shell.querySelector(':scope > .ultra-halo .ultra-halo-track');
+    const sources = [getComputedStyle(shell.querySelector('.ultra-tag-text')).backgroundImage];
+    if (sweep) sources.push(getComputedStyle(sweep, '::before').backgroundImage);
+    if (track) sources.push(getComputedStyle(track, '::before').backgroundImage);
+    const hues = [];
+    sources.join(' ').replace(/rgba?\(([^)]+)\)/g, (match, body) => {
+      const [r, g, b, a = 1] = body.split(/[\s,\/]+/).filter(Boolean).map(Number);
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      if (!(a > 0) || max - min < 24) return match;
+      const h = max === r ? (g - b) / (max - min) : max === g ? 2 + (b - r) / (max - min) : 4 + (r - g) / (max - min);
+      hues.push(Math.round((h * 60 + 360) % 360));
+      return match;
+    });
+    return { hues, glow: !!track, path: sweep ? getComputedStyle(sweep, '::before').offsetPath : '' };
+  });
+  check('only lilac: the word, the light and its blurred glow are all violet hues (no rainbow), and the light follows the border', lilac.glow && /inset/.test(lilac.path) && lilac.hues.length >= 4 && lilac.hues.every((h) => h >= 245 && h <= 285), lilac);
   await page.screenshot({ path: SCRATCH + '/ultra-ignite.png' });
   check('choosing «Ultra»: one band of light runs around the composer and its «Ultra code» tag settles; no sparks', on.flag && on.mode === 'on' && on.popupClosed && on.igniting && on.sweep && /ultra-sweep/.test(on.sweepAnimation) && on.tag === 'Ultra code' && on.tagLit && on.pillLit && on.sparks === 0, on);
   check('…and the labels read «Ultra code» (over the pills and on the model button)', on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);

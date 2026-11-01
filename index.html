@@ -1765,7 +1765,7 @@
   <link rel="stylesheet" href="guided-stage.css?v=20261024-visual1">
   <link rel="stylesheet" href="guided-wait.css?v=20261024-wait1">
   <link rel="stylesheet" href="model-picker.css?v=20261025-logos2">
-  <link rel="stylesheet" href="composer.css?v=20261025-fixes">
+  <link rel="stylesheet" href="composer.css?v=20261101-lila1">
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
@@ -1773,8 +1773,8 @@
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="ultra.css?v=20261101-ultra3">
-  <link rel="stylesheet" href="theme.css?v=20261101-ultra3">
+  <link rel="stylesheet" href="ultra.css?v=20261101-lila1">
+  <link rel="stylesheet" href="theme.css?v=20261101-lila1">
   <!-- After theme.css: the activity timeline uses the tokens, so it follows the theme. -->
   <link rel="stylesheet" href="activity.css?v=20261101-act1">
 </head>
@@ -2169,7 +2169,7 @@
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261101-card"></script>
   <script src="composer-dock.js?v=20261101-ultra3"></script>
-  <script src="ultra.js?v=20261101-ultra3"></script>
+  <script src="ultra.js?v=20261101-lila1"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -6096,7 +6096,7 @@
       }
       if (elements.modelTriggerMeta) {
         const showLevel = ultra || (levels.length > 1 && !!thinkingLevel && thinkingLevel !== 'off');
-        // The rainbow is painted through the text (background-clip): on the chip itself
+        // The lilac gradient is painted through the text (background-clip): on the chip itself
         // its own background replaced the gradient and the word went invisible.
         const chipHtml = ultra ? '<span class="ultra-text">Ultra code</span>' : escapeHtml(showLevel ? thinkingLabel(thinkingLevel) : '');
         if (elements.modelTriggerMeta.innerHTML !== chipHtml) elements.modelTriggerMeta.innerHTML = chipHtml;
@@ -12438,12 +12438,12 @@
       });
     }
 
-    // Turning Ultra code on: the composer lights up. A band of light runs once
-    // around its border, the «Ultra code» tag settles on the edge and the labels
-    // come on letter by letter: a calm moment, no sparks. The model popup covers the
-    // composer (all of it on a phone), so its button pops first and then the popup
-    // closes to let the composer light up. The look lives in ultra.js
-    // (UltraAgents.ignite) and ultra.css.
+    // Turning Ultra code on: the composer lights up, only in lilac. A light makes one
+    // lap of its border with its blurred glow outside it, the «Ultra code» tag comes
+    // into focus and a shine crosses the labels once: one calm moment, no sparks. The
+    // model popup covers the composer (all of it on a phone), so its button gives first
+    // and then the popup closes to let the composer light up. The look lives in
+    // ultra.js (UltraAgents.ignite) and ultra.css.
     function playUltraCodeBurst() {
       if (!window.UltraAgents || typeof window.UltraAgents.ignite !== 'function') return;
       window.UltraAgents.ignite({
@@ -12765,7 +12765,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.11.01.6';
+    const APP_VERSION = '2026.11.01.7';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

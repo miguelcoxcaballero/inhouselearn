@@ -32,11 +32,11 @@
 /* The board's own lists only: a result's markdown lists keep their numbers. */
 .ua-card .ua-lanes, .ua-card .ua-steps, .ua-card .ua-checks { list-style: none; margin: 0 !important; padding: 0 !important; }
 .ua-card .ua-lane, .ua-card .ua-steps > li, .ua-card .ua-checks > li { margin: 0 !important; }
-/* Running: a thin conic light orbits the border (masked to 1px). */
+/* Running: a thin lilac light orbits the border (masked to 1px). */
 .ua-card[data-running="1"] { border-color: transparent; }
 .ua-card[data-running="1"]::before {
   content: ''; position: absolute; inset: -1px; z-index: -1; padding: 1px; border-radius: inherit; pointer-events: none;
-  background: conic-gradient(from var(--ua-a), var(--ua-accent), var(--ua-web) 22%, var(--border-strong) 38%, var(--border-strong) 62%, var(--ua-search) 80%, var(--ua-accent));
+  background: conic-gradient(from var(--ua-a), var(--ua-accent), color-mix(in srgb, var(--ua-accent) 40%, var(--border-strong)) 20%, var(--border-strong) 36%, var(--border-strong) 64%, color-mix(in srgb, var(--ua-accent) 40%, var(--border-strong)) 82%, var(--ua-accent));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -247,73 +247,112 @@
 .ua-file b { color: var(--ua-err); font-size: 0.72rem; }
 
 /* ─── Ultra code en el compositor (ultra.js · setMode / ignite) ───────────────
-   El compositor lleva siempre el modo: el borde con un tinte violeta y una
-   etiqueta «Ultra code» sobre su borde superior (como la que Claude Code pone en
-   su caja de texto). Al encenderlo hay UN momento tranquilo: una franja de luz
-   recorre el borde una vez, la etiqueta se asienta y las palabras se encienden de
-   izquierda a derecha; después queda el tinte y un brillo lento. Sin chispas.
-   Con «reducir movimiento» solo se ve el estado, sin animación. */
+   Solo lila. Mientras está puesto, el compositor lleva el modo: el borde teñido,
+   un halo lila difuso muy suave debajo y la etiqueta «Ultra code» con su punto
+   encendido sobre el borde superior (como la que Claude Code pone en su caja).
+   Al encenderlo hay UN momento: una luz da una vuelta al borde a velocidad
+   constante (offset-path; el degradado cónico de antes corría en las esquinas)
+   con su resplandor desenfocado solo por fuera de la tarjeta, el compositor
+   florece un instante, la etiqueta aparece enfocándose y un brillo cruza las
+   palabras una vez; el punto late cuando la luz vuelve a él. Después no queda
+   nada moviéndose. Con «reducir movimiento», solo el estado fijo.
+   Las versiones oscuras (AMOLED) de estos tokens están en theme.css. */
 :root {
-  --ua-base: #7c3aed;
-  --ua-glow: rgba(124, 58, 237, 0.3);
-  --ua-prism: linear-gradient(100deg, var(--ua-base) 0%, var(--ua-base) 36%, #ff5f6d 42%, #ffb347 46%, #facc15 50%, #4ade80 54%, #38bdf8 58%, #a78bfa 62%, var(--ua-base) 68%, var(--ua-base) 100%);
+  --ua-base: #8b5cf6;                    /* borde, etiqueta y punto */
+  --ua-ink: #6d28d9;                     /* «Ultra code», de un lila… */
+  --ua-ink-2: #8b5cf6;                   /* …a otro más claro */
+  --ua-shine: #c4b5fd;                   /* el brillo que lo cruza */
+  --ua-beam: #a78bfa;                    /* la luz del borde… */
+  --ua-beam-core: #7c3aed;               /* …y su punta */
+  --ua-halo: rgba(167, 139, 250, 0.75);  /* su resplandor desenfocado */
+  --ua-glow: rgba(139, 92, 246, 0.24);   /* el florecer del compositor */
+  --ua-ring: rgba(139, 92, 246, 0.11);   /* el anillo de foco */
+  --ua-rest: 0 10px 30px rgba(28, 25, 20, 0.06), 0 14px 36px -16px rgba(139, 92, 246, 0.45);
+  --ua-lap: 1.6s;
+  --ua-ease: cubic-bezier(.4, .1, .3, 1);
 }
-@property --ua-reveal { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
 
-/* La palabra «Ultra code» (el botón del modelo, el desplegable y la etiqueta): violeta
-   con un destello de arcoíris que la cruza de vez en cuando. */
+/* «Ultra code» (el botón del modelo, el desplegable y la etiqueta): dos tonos de
+   lila; al encenderlo aparece enfocándose y un brillo lo cruza una vez. */
 .ultra-text {
   display: inline-block; font-weight: 700; color: transparent !important; -webkit-text-fill-color: transparent;
-  background: var(--ua-prism) 100% 0 / 320% 100%; -webkit-background-clip: text; background-clip: text;
-  animation: ultra-glint 7s linear infinite;
+  background-image: linear-gradient(100deg, transparent 38%, var(--ua-shine) 50%, transparent 62%), linear-gradient(90deg, var(--ua-ink), var(--ua-ink-2));
+  background-size: 260% 100%, 100% 100%; background-position: 100% 0, 0 0; background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text;
 }
-@keyframes ultra-glint { 0%, 30% { background-position: 100% 0; } 72%, 100% { background-position: 0 0; } }
-@keyframes ultra-flash { from { background-position: 100% 0; } to { background-position: 0 0; } }
-/* Al encenderlo, las palabras se encienden de izquierda a derecha y el arcoíris las cruza entero. */
 .ultra-lit.ultra-text, .ultra-lit .ultra-text {
-  -webkit-mask-image: linear-gradient(90deg, #000 var(--ua-reveal), rgba(0, 0, 0, 0.16) calc(var(--ua-reveal) + 22%));
-  mask-image: linear-gradient(90deg, #000 var(--ua-reveal), rgba(0, 0, 0, 0.16) calc(var(--ua-reveal) + 22%));
-  animation: ultra-reveal 1.1s cubic-bezier(.3, .1, .2, 1) both, ultra-flash 1.25s cubic-bezier(.4, 0, .2, 1) both, ultra-glint 7s linear 1.4s infinite;
+  animation: ultra-word-in 0.5s cubic-bezier(.2, .7, .2, 1) both, ultra-shine 1.2s cubic-bezier(.4, 0, .2, 1) 0.15s both;
 }
-@keyframes ultra-reveal { from { --ua-reveal: -22%; } to { --ua-reveal: 110%; } }
-.thinking-pill.ultra-pill.ultra-lit { animation: ultra-pop 0.6s cubic-bezier(.3, 1.5, .5, 1) both; }
-@keyframes ultra-pop { 0% { transform: scale(0.94); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.ultra-tag.ultra-lit .ultra-text, .thinking-pill.ultra-lit .ultra-text { animation: ultra-shine 1.2s cubic-bezier(.4, 0, .2, 1) 0.2s both; }
+@keyframes ultra-word-in { from { opacity: 0; filter: blur(4px); } }
+@keyframes ultra-shine { from { background-position: 100% 0, 0 0; } to { background-position: 0 0, 0 0; } }
+/* El botón «Ultra» del desplegable: lila cuando está puesto; al elegirlo, cede y vuelve. */
+:root .thinking-pill.ultra-pill.active {
+  background: color-mix(in srgb, var(--ua-base) 11%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ua-base) 32%, transparent);
+}
+.thinking-pill.ultra-pill.ultra-lit { animation: ultra-press 0.5s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ultra-press { from { transform: scale(0.95); } }
 
-/* El estado fijo: el borde del compositor con tinte violeta. */
-:root .composer-shell[data-ultra="on"] { border-color: color-mix(in srgb, var(--ua-base) 40%, var(--border-strong)); }
+/* El estado fijo: borde lila y un halo difuso muy suave debajo. */
+:root .composer-shell[data-ultra="on"] { border-color: color-mix(in srgb, var(--ua-base) 42%, var(--border-strong)); box-shadow: var(--ua-rest); }
 :root .composer-shell[data-ultra="on"]:focus-within {
-  border-color: color-mix(in srgb, var(--ua-base) 62%, var(--border-strong));
-  box-shadow: 0 0 0 4px var(--ua-accent-soft), 0 10px 30px rgba(28, 25, 20, 0.07);
+  border-color: color-mix(in srgb, var(--ua-base) 64%, var(--border-strong));
+  box-shadow: 0 0 0 4px var(--ua-ring), var(--ua-rest);
 }
-/* La etiqueta sobre su borde superior. */
+/* La etiqueta sobre el borde superior, con su punto encendido. */
 .ultra-tag {
   position: absolute; top: -9px; left: 20px; z-index: 3; pointer-events: none;
-  display: inline-flex; align-items: center; height: 17px; padding: 0 8px; border-radius: 999px;
-  background: var(--surface); border: 1px solid color-mix(in srgb, var(--ua-base) 42%, var(--border-strong));
-  font-size: 0.63rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1;
-  transition: opacity 0.25s var(--ease, ease), transform 0.25s var(--ease, ease);
+  display: inline-flex; align-items: center; gap: 5px; height: 18px; padding: 0 8px 0 7px; border-radius: 999px;
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--ua-base) 40%, var(--border-strong));
+  font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1;
+  transition: opacity 0.3s var(--ease, ease), transform 0.3s var(--ease, ease), filter 0.3s var(--ease, ease);
 }
-.ultra-tag.leaving { opacity: 0; transform: translateY(3px); }
-.ultra-tag.ultra-lit { animation: ultra-tag-in 0.55s cubic-bezier(.2, .8, .2, 1) 0.15s both; }
-@keyframes ultra-tag-in { from { opacity: 0; transform: translateY(6px) scale(0.94); } }
-/* La franja de luz que recorre el borde una vez (un anillo de 1,5 px y su resplandor). */
-.ultra-sweep { position: absolute; inset: -1px; z-index: 2; pointer-events: none; border-radius: inherit; }
-.ultra-sweep::before, .ultra-sweep::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
-  background: conic-gradient(from var(--ua-a), rgba(124, 58, 237, 0) 0deg, rgba(124, 58, 237, 0) 232deg, rgba(139, 92, 246, 0.55) 282deg, #c084fc 316deg, #f472b6 337deg, #38bdf8 354deg, rgba(56, 189, 248, 0) 360deg);
-  animation: ultra-sweep 1.5s cubic-bezier(.45, .05, .25, 1) both;
+.ultra-tag::before {
+  content: ''; flex: none; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ua-base); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--ua-base) 55%, transparent);
 }
-.ultra-sweep::before {
-  padding: 1.5px;
+.ultra-tag.leaving { opacity: 0; transform: translateY(3px); filter: blur(3px); }
+.ultra-tag.ultra-lit { animation: ultra-tag-in 0.6s cubic-bezier(.2, .7, .2, 1) 0.04s both; }
+.ultra-tag.ultra-lit::before { animation: ultra-dot var(--ua-lap) ease-in-out both; }
+@keyframes ultra-tag-in { from { opacity: 0; transform: translateY(4px); filter: blur(6px); } }
+@keyframes ultra-dot {
+  0%, 76% { transform: none; }
+  88% { transform: scale(1.7); box-shadow: 0 0 10px 3px color-mix(in srgb, var(--ua-base) 70%, transparent); }
+}
+/* La luz que da una vuelta al borde (un anillo de 1,5 px) y su resplandor
+   desenfocado, solo por fuera de la tarjeta (máscara). Las dos siguen el contorno
+   del compositor (--ua-r, que pone ultra.js) a la misma velocidad todo el camino. */
+.ultra-sweep, .ultra-halo {
+  position: absolute; z-index: 1; pointer-events: none;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
 }
-.ultra-sweep::after { filter: blur(11px); animation-name: ultra-sweep-glow; }
-@keyframes ultra-sweep { 0% { --ua-a: -30deg; opacity: 0; } 10%, 82% { opacity: 1; } 100% { --ua-a: 390deg; opacity: 0; } }
-@keyframes ultra-sweep-glow { 0% { --ua-a: -30deg; opacity: 0; } 10%, 82% { opacity: 0.55; } 100% { --ua-a: 390deg; opacity: 0; } }
-/* Un resplandor suave en todo el compositor mientras la franja pasa. */
-.composer-shell.ultra-igniting { animation: ultra-bloom 1.7s ease-out 1; }
-@keyframes ultra-bloom { 32% { box-shadow: 0 0 0 5px var(--ua-accent-soft), 0 12px 46px var(--ua-glow), 0 1px 2px rgba(28, 25, 20, 0.05); } }
+.ultra-sweep { inset: -1px; padding: 1.5px; border-radius: inherit; }
+.ultra-halo { inset: -56px; padding: 55px; border-radius: calc(var(--ua-r, 24px) + 55px); filter: blur(14px); }
+.ultra-halo-track { position: absolute; inset: 55px; border-radius: var(--ua-r, 24px); }
+.ultra-sweep::before, .ultra-halo-track::before {
+  content: ''; position: absolute; left: 0; top: 0; border-radius: 999px;
+  offset-path: inset(0 round var(--ua-r, 24px)); offset-rotate: auto;
+  animation: ultra-sweep var(--ua-lap) var(--ua-ease) both, ultra-beam-fade var(--ua-lap) linear both;
+}
+.ultra-sweep::before {
+  width: 150px; height: 24px; offset-anchor: 94% 50%;
+  background: linear-gradient(90deg, transparent, var(--ua-beam) 70%, var(--ua-beam-core) 94%, transparent);
+}
+.ultra-halo-track::before {
+  width: 210px; height: 44px; offset-anchor: 90% 50%;
+  background: linear-gradient(90deg, transparent, var(--ua-halo) 66%, var(--ua-halo) 90%, transparent);
+  animation-name: ultra-sweep, ultra-halo-fade;
+}
+@keyframes ultra-sweep { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+@keyframes ultra-beam-fade { 0% { opacity: 0; } 9%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ultra-halo-fade { 0% { opacity: 0; } 14%, 72% { opacity: 1; } 100% { opacity: 0; } }
+/* Sin caminos de formas básicas (navegadores antiguos) no hay luz: quieta en una esquina se vería rota. */
+@supports not (offset-path: inset(0 round 1px)) { .ultra-sweep, .ultra-halo { display: none; } }
+/* Un florecer suave de todo el compositor mientras la luz pasa; vuelve solo al halo fijo. */
+.composer-shell.ultra-igniting { animation: ultra-bloom 1.7s cubic-bezier(.3, .1, .3, 1) both; }
+@keyframes ultra-bloom { 38% { box-shadow: var(--ua-rest), 0 0 0 1px color-mix(in srgb, var(--ua-base) 22%, transparent), 0 0 46px -6px var(--ua-glow); } }
 
 @media (max-width: 420px) {
   .ua-card { padding: 10px 9px 9px; }
@@ -325,10 +364,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ua-card, .ua-card::before, .ua-card * { animation: none !important; transition: none !important; }
-  /* The composer keeps its violet border and its tag; nothing moves. */
-  .ultra-sweep { display: none; }
-  .ultra-text, .ultra-lit, .ultra-lit.ultra-text, .ultra-lit .ultra-text, .ultra-tag, .composer-shell.ultra-igniting { animation: none !important; transition: none !important; }
-  .ultra-lit.ultra-text, .ultra-lit .ultra-text { -webkit-mask-image: none; mask-image: none; }
+  /* The composer keeps its lilac border, its halo and its tag; nothing moves. */
+  .ultra-sweep, .ultra-halo { display: none; }
+  .ultra-text, .ultra-lit, .ultra-lit.ultra-text, .ultra-lit .ultra-text, .ultra-tag, .ultra-tag::before, .composer-shell.ultra-igniting { animation: none !important; transition: none !important; }
 }
 
 /* Finished lanes read as a preview of their result; headings of a result stay small. */
