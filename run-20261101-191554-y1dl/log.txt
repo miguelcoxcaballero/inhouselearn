@@ -1,0 +1,115 @@
++ pip install pillow -q 2>&1 | tail -1
+cat > /tmp/heat3.py <<'PY'
+import urllib.request, io
+from PIL import Image
+base = 'https://raw.githubusercontent.com/miguelcoxcaballero/inhouselearn/screenshots/shot-20261101-191305-48tn/'
+files = ['1-0-3-s.png', '2-0-65-s.png', '3-1-0-s.png', '4-1-4-s.png', '5-1-9-s.png', '6-fijo.png']
+def load(f): return Image.open(io.BytesIO(urllib.request.urlopen(base + f).read())).convert('RGB')
+v = lambda p: p[2] - p[1]
+fx = load(files[-1]); W, H = fx.size; fp = fx.load()
+cnt = {y: sum(1 for x in range(0, W, 2) if v(fp[x, y]) > 14 and fp[x, y][2] > 40) for y in range(int(H * 0.4), H)}
+mx = max(cnt.values())
+lines = sorted(y for y, c in cnt.items() if c > 0.6 * mx)
+top, bottom = lines[0], lines[-1]
+xs = [x for x in range(W) if v(fp[x, top]) > 14 and fp[x, top][2] > 40]
+x0, x1 = min(xs), max(xs)
+print('composer: top y=%d bottom y=%d x=%d..%d (w=%d h=%d) viewport %dx%d' % (top, bottom, x0, x1, x1 - x0, bottom - top, W, H))
+for f in files:
+    im = load(f); px = im.load()
+    print('=====', f)
+    for label, x in (('x@10%', x0 + (x1 - x0) // 10), ('x@50%', (x0 + x1) // 2), ('x@90%', x0 + (x1 - x0) * 9 // 10)):
+        print('  above top edge %-6s (b-g, every 6px, far->near):' % label, [max(0, v(px[x, y])) for y in range(top - 96, top - 1, 6)])
+    # brightest point in a 4px band along each edge
+    def best(points):
+        b = max(points, key=lambda p: px[p[0], p[1]][2] + 0.0 if False else (px[p[0], p[1]][0] + px[p[0], p[1]][1] + px[p[0], p[1]][2]))
+        return (b, sum(px[b[0], b[1]]))
+    topband = [(x, y) for x in range(x0, x1) for y in range(top - 2, top + 3)]
+    botband = [(x, y) for x in range(x0, x1) for y in range(bottom - 2, min(H, bottom + 3))]
+    lband = [(x, y) for y in range(top, bottom) for x in range(x0 - 2, x0 + 3)]
+    rband = [(x, y) for y in range(top, bottom) for x in range(x1 - 2, x1 + 3)]
+    for name, band in (('top', topband), ('bottom', botband), ('left', lband), ('right', rband)):
+        (px_, py_), s = best(band)
+        print('  brightest on %-6s edge at (%d,%d) sum=%d' % (name, px_ - x0, py_ - top, s))
+    # glow reach to the left of the left edge at mid height, and right of the right edge
+    my = (top + bottom) // 2
+    print('  left of left edge  (b-g, every 6px, far->near):', [max(0, v(px[x, my])) for x in range(x0 - 96, x0 - 1, 6)])
+    print('  right of right edge (b-g, every 6px, near->far):', [max(0, v(px[x, my])) for x in range(x1 + 2, min(W, x1 + 96), 6)])
+    # interior untouched? mean colour of an interior patch vs fixed frame
+    ix0, ix1, iy0, iy1 = x0 + 120, x1 - 120, top + 20, bottom - 20
+    def mean(img):
+        p = img.load(); n = 0; s = [0, 0, 0]
+        for y in range(iy0, iy1, 3):
+            for x in range(ix0, ix1, 3):
+                n += 1
+                for i in range(3): s[i] += p[x, y][i]
+        return [round(a / n, 1) for a in s]
+    print('  interior mean rgb:', mean(im), ' (settled:', mean(fx), ')')
+PY
+python3 /tmp/heat3.py
+composer: top y=686 bottom y=792 x=298..981 (w=683 h=106) viewport 1280x800
+===== 1-0-3-s.png
+  above top edge x@10%  (b-g, every 6px, far->near): [0, 0, 1, 2, 3, 4, 5, 9, 12, 19, 27, 39, 51, 63, 72, 7]
+  above top edge x@50%  (b-g, every 6px, far->near): [0, 0, 1, 2, 3, 4, 5, 7, 8, 10, 12, 15, 20, 25, 30, 40]
+  above top edge x@90%  (b-g, every 6px, far->near): [0, 0, 1, 2, 3, 4, 5, 7, 8, 10, 12, 16, 20, 25, 30, 40]
+  brightest on top    edge at (26,0) sum=698
+  brightest on bottom edge at (64,104) sum=223
+  brightest on left   edge at (-1,1) sum=518
+  brightest on right  edge at (684,96) sum=432
+  left of left edge  (b-g, every 6px, far->near): [1, 3, 3, 6, 7, 12, 18, 25, 37, 49, 60, 72, 80, 30, 0, 0]
+  right of right edge (b-g, every 6px, near->far): [0, 0, 0, 48, 37, 27, 21, 15, 13, 9, 7, 6, 5, 4, 3, 2]
+  interior mean rgb: [16.2, 16.1, 15.5]  (settled: [15.8, 15.7, 14.9] )
+===== 2-0-65-s.png
+  above top edge x@10%  (b-g, every 6px, far->near): [0, 0, 1, 3, 3, 5, 6, 8, 10, 12, 15, 19, 25, 29, 36, 3]
+  above top edge x@50%  (b-g, every 6px, far->near): [0, 1, 1, 3, 3, 5, 8, 9, 14, 18, 23, 33, 43, 53, 59, 69]
+  above top edge x@90%  (b-g, every 6px, far->near): [0, 0, 1, 3, 3, 5, 6, 8, 10, 12, 15, 19, 25, 29, 35, 46]
+  brightest on top    edge at (22,2) sum=739
+  brightest on bottom edge at (318,104) sum=434
+  brightest on left   edge at (-1,96) sum=454
+  brightest on right  edge at (684,1) sum=452
+  left of left edge  (b-g, every 6px, far->near): [2, 3, 3, 5, 6, 8, 10, 12, 17, 22, 27, 36, 46, 74, 0, 0]
+  right of right edge (b-g, every 6px, near->far): [0, 0, 0, 55, 43, 31, 25, 18, 15, 11, 9, 7, 6, 5, 3, 2]
+  interior mean rgb: [15.9, 15.8, 15.1]  (settled: [15.8, 15.7, 14.9] )
+===== 3-1-0-s.png
+  above top edge x@10%  (b-g, every 6px, far->near): [0, 0, 1, 3, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 1]
+  above top edge x@50%  (b-g, every 6px, far->near): [0, 1, 1, 3, 3, 4, 6, 6, 9, 10, 12, 15, 20, 24, 29, 38]
+  above top edge x@90%  (b-g, every 6px, far->near): [0, 0, 1, 3, 3, 4, 5, 6, 8, 10, 12, 15, 20, 23, 29, 38]
+  brightest on top    edge at (71,0) sum=749
+  brightest on bottom edge at (559,104) sum=425
+  brightest on left   edge at (-1,96) sum=429
+  brightest on right  edge at (684,1) sum=429
+  left of left edge  (b-g, every 6px, far->near): [2, 3, 3, 4, 5, 6, 8, 10, 14, 18, 23, 31, 39, 69, 0, 0]
+  right of right edge (b-g, every 6px, near->far): [0, 0, 0, 81, 74, 64, 51, 41, 30, 20, 14, 8, 6, 5, 3, 2]
+  interior mean rgb: [15.9, 15.8, 15.0]  (settled: [15.8, 15.7, 14.9] )
+===== 4-1-4-s.png
+  above top edge x@10%  (b-g, every 6px, far->near): [0, 0, 1, 2, 1, 3, 4, 5, 6, 7, 9, 12, 15, 18, 23, 0]
+  above top edge x@50%  (b-g, every 6px, far->near): [0, 1, 1, 2, 1, 3, 4, 5, 7, 7, 9, 12, 15, 18, 22, 30]
+  above top edge x@90%  (b-g, every 6px, far->near): [0, 0, 1, 2, 1, 3, 4, 5, 6, 7, 9, 12, 15, 17, 22, 30]
+  brightest on top    edge at (26,-2) sum=715
+  brightest on bottom edge at (632,104) sum=190
+  brightest on left   edge at (-1,1) sum=414
+  brightest on right  edge at (684,96) sum=415
+  left of left edge  (b-g, every 6px, far->near): [1, 2, 1, 3, 4, 5, 6, 7, 11, 13, 17, 24, 30, 63, 0, 0]
+  right of right edge (b-g, every 6px, near->far): [0, 0, 0, 38, 28, 21, 16, 11, 9, 7, 6, 4, 4, 3, 1, 1]
+  interior mean rgb: [15.8, 15.7, 15.0]  (settled: [15.8, 15.7, 14.9] )
+===== 5-1-9-s.png
+  above top edge x@10%  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 4, 5, 6, 9, 0]
+  above top edge x@50%  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 1, 1, 2, 3, 2, 3, 4, 5, 6, 8, 11]
+  above top edge x@90%  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 1, 1, 2, 2, 2, 3, 4, 5, 5, 8, 11]
+  brightest on top    edge at (26,-2) sum=715
+  brightest on bottom edge at (50,104) sum=129
+  brightest on left   edge at (2,23) sum=363
+  brightest on right  edge at (684,96) sum=343
+  left of left edge  (b-g, every 6px, far->near): [0, 0, 0, 1, 1, 2, 2, 2, 4, 5, 7, 11, 15, 52, 0, 0]
+  right of right edge (b-g, every 6px, near->far): [0, 0, 0, 19, 14, 9, 6, 3, 3, 2, 2, 2, 1, 1, 0, 0]
+  interior mean rgb: [15.8, 15.7, 15.0]  (settled: [15.8, 15.7, 14.9] )
+===== 6-fijo.png
+  above top edge x@10%  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0]
+  above top edge x@50%  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2]
+  above top edge x@90%  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2]
+  brightest on top    edge at (26,-2) sum=715
+  brightest on bottom edge at (50,104) sum=101
+  brightest on left   edge at (2,23) sum=363
+  brightest on right  edge at (684,96) sum=316
+  left of left edge  (b-g, every 6px, far->near): [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 4, 7, 46, 0, 0]
+  right of right edge (b-g, every 6px, near->far): [0, 0, 0, 10, 6, 3, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+  interior mean rgb: [15.8, 15.7, 14.9]  (settled: [15.8, 15.7, 14.9] )
