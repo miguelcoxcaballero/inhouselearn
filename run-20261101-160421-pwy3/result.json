@@ -1,0 +1,46 @@
+{
+ "id": "run-20261101-160421-pwy3",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v3",
+ "os": "ubuntu-24.04",
+ "sha": "8c4a77929028e80288a21d7a5a4dd3e2f072f8bf",
+ "runner": "Linux X64",
+ "command": "set +e +o pipefail\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nrun() { timeout 200 node tests/web/chats-menu.cjs > /tmp/cm.log 2>&1; echo \"$1: PASS $(grep -c '^PASS' /tmp/cm.log) FAIL $(grep -c '^FAIL' /tmp/cm.log) → $(grep '^FAIL' /tmp/cm.log | cut -c6-40 | tr '\\n' '|')\"; }\necho \"=== BRANCH (feat/ultra-v3)\"; for i in 1 2 3; do run \"branch run $i\"; done\ngit fetch -q origin main && git checkout -q origin/main -- index.html composer-dock.js composer-dock.css stream.js ultra.js ultra.css theme.css activity.css\ngit rm -q --cached model-scores.js 2>/dev/null; mv model-scores.js /tmp/ 2>/dev/null\necho \"=== MAIN files (index.html, dock, stream, ultra, theme, activity from main)\"; for i in 1 2 3; do run \"main run $i\"; done\nexit 0",
+ "exit_code": 0,
+ "seconds": 239,
+ "lines": 20,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 6,
+   "text": "run() { timeout 200 node tests/web/chats-menu.cjs > /tmp/cm.log 2>&1; echo \"$1: PASS $(grep -c '^PASS' /tmp/cm.log) FAIL $(grep -c '^FAIL' /tmp/cm.log) → $(grep '^FAIL' /tmp/cm.log | cut -c6-40 | tr '\\n' '|')\"; }"
+  },
+  {
+   "line": 13,
+   "text": "branch run 1: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|"
+  },
+  {
+   "line": 14,
+   "text": "branch run 2: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|"
+  },
+  {
+   "line": 15,
+   "text": "branch run 3: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|"
+  },
+  {
+   "line": 17,
+   "text": "main run 1: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|"
+  },
+  {
+   "line": 18,
+   "text": "main run 2: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|"
+  },
+  {
+   "line": 19,
+   "text": "main run 3: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|"
+  }
+ ],
+ "errors_total": 7,
+ "tail": "+ set +e +o pipefail\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nrun() { timeout 200 node tests/web/chats-menu.cjs > /tmp/cm.log 2>&1; echo \"$1: PASS $(grep -c '^PASS' /tmp/cm.log) FAIL $(grep -c '^FAIL' /tmp/cm.log) → $(grep '^FAIL' /tmp/cm.log | cut -c6-40 | tr '\\n' '|')\"; }\necho \"=== BRANCH (feat/ultra-v3)\"; for i in 1 2 3; do run \"branch run $i\"; done\ngit fetch -q origin main && git checkout -q origin/main -- index.html composer-dock.js composer-dock.css stream.js ultra.js ultra.css theme.css activity.css\ngit rm -q --cached model-scores.js 2>/dev/null; mv model-scores.js /tmp/ 2>/dev/null\necho \"=== MAIN files (index.html, dock, stream, ultra, theme, activity from main)\"; for i in 1 2 3; do run \"main run $i\"; done\nexit 0\n=== BRANCH (feat/ultra-v3)\nbranch run 1: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|\nbranch run 2: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|\nbranch run 3: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|\n=== MAIN files (index.html, dock, stream, ultra, theme, activity from main)\nmain run 1: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|\nmain run 2: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|\nmain run 3: PASS 10 FAIL 2 → double click renames the chat with |tapping the open chat's name in the|\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41324405329"
+}
