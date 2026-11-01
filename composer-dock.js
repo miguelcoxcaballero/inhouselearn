@@ -780,6 +780,9 @@ const STEP_TEXT = {
   github_ci_status: ['Mirando la CI de', 'CI revisada de'],
   github_list_issues: ['Leyendo las issues de', 'Issues de'],
   github_comment: ['Comentando en', 'Comentado en'],
+  github_pr_activity: ['Leyendo las revisiones del PR', 'Revisiones leídas del PR'],
+  github_update_pull_request: ['Editando el PR', 'PR editado'],
+  github_watch_prs: ['Siguiendo los PR', 'PR en seguimiento'],
   github_release_android: ['Publicando la APK', 'APK publicada'],
   github_screenshot: ['Haciendo capturas reales', 'Capturas hechas'],
   github_fork: ['Haciendo fork de', 'Fork de'],
@@ -859,6 +862,13 @@ function describeToolStep(step) {
       break;
     case 'github_create_pull_request':
       target = args.title ? '«' + String(args.title).slice(0, 60) + '»' : '';
+      break;
+    case 'github_pr_activity':
+    case 'github_update_pull_request':
+      target = args.number ? '#' + Number(args.number) : '';
+      break;
+    case 'github_watch_prs':
+      target = (args.add || []).map((item) => '#' + Number(item.number)).join(', ');
       break;
     case 'github_list_files':
     case 'github_ci_status':

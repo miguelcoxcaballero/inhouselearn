@@ -67,6 +67,9 @@ const APPROVAL_GITHUB_LABELS = {
   github_create_pull_request: 'GitHub: abrir PR',
   github_list_issues: 'GitHub: issues y PRs',
   github_comment: 'GitHub: comentar',
+  github_pr_activity: 'GitHub: revisiones del PR',
+  github_update_pull_request: 'GitHub: editar PR',
+  github_watch_prs: 'GitHub: seguir PR',
   github_fork: 'GitHub: hacer fork',
   github_run: 'GitHub: compilar y probar'
 };

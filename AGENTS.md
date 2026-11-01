@@ -213,6 +213,20 @@ Mandatory guidance for every AI and developer working in this repository.
   `repo` with `owner:branch` and `maintainer_can_modify`; a fine-grained token cannot write to repositories of
   another account, so a 403/404 returns a compare link with title and body filled in for the user to tap.
   Test: `tests/web/fork-run.cjs` (prints SKIP while `vendor/pi-engine.js` predates the tools).
+  **A classic token** (scopes `repo` + `workflow`) is accepted by the same connect dialog and lets the model open
+  PRs, comment and edit PRs in other people's repositories itself; the connect text and the 403 fallback say so.
+  **Autonomous PR follow-up (2026-11-01):** `github_watch_prs` (main agent only: `ctx.watch` from `githubContext`)
+  follows PRs through `pr-watch.js` (`InhousePrWatch`): stored on THIS device only (`localStorage`
+  `inhouse-learn-pr-watch`, so two devices never answer twice; a tab lock for tabs), looked at 15 s after load, every
+  10 min and on resume, never mid-turn or while the user types. Merged → an assistant note in its chat (`prWatch: true`,
+  no model request), unread mark, notification (Android `answered` when hidden; the browser's if granted) and it stops
+  following. Closed → note, or in «Acceso total» a turn to find out why. New reviews/comments by anyone but the token's
+  login → in «Acceso total» with GitHub on, ONE automatic queued turn (`auto: true`, text marked «no lo ha escrito el
+  usuario») that tells the model to fix, build with `github_run`, answer with `github_comment` (`reply_to` = a code
+  comment's id → its thread) and keep the description true (`github_update_pull_request`); otherwise only a note.
+  At most `MAX_ROUNDS` (8) automatic turns per PR. `github_pr_activity` (read-only) gives state, reviews, code comments
+  with ids and the checks. Without the app open nothing runs (GitHub's own email still reports merges). Test:
+  `tests/web/pr-watch.cjs`.
 - **The user's Google Drive:** + menu → Google Drive (per browser, `localStorage` `::userDrive`;
   on per chat, `chat.userDrive`). Connecting asks Google only for `drive.readonly` (added to
   `googleOauthScopes()`, checked with tokeninfo; if Google does not grant it nothing is connected).
