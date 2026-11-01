@@ -1,0 +1,178 @@
++ cat > /tmp/c2.py <<'EOF'
+import re, pathlib
+R=pathlib.Path('.')
+def srcs(lib):
+    return {str(p):p.read_text(errors='ignore') for p in (R/'core/libs/prx'/lib).rglob('*.cpp') if 'tests' not in p.parts}
+def body_of(t,i):
+    i=t.find('{',i);d=0
+    for j in range(i,len(t)):
+        if t[j]=='{':d+=1
+        elif t[j]=='}':
+            d-=1
+            if d==0:return t[i:j+1]
+    return ''
+DEF=re.compile(r"APS5_VABI\s+(\w+)\s*\(([^;{]*)\)\s*\{")
+EXP=re.compile(r'APS5_EXPORT\(\s*"([^"]+)"\s*,\s*(\w+)\s*\)')
+def stubs(lib):
+    res=[]
+    for path,t in srcs(lib).items():
+        exp={fn:nid for nid,fn in EXP.findall(t)}
+        for m in DEF.finditer(t):
+            fn=m.group(1); b=body_of(t,m.start())
+            if 'NotImplemented' in b and fn in exp:
+                res.append((exp[fn],fn,path,t[:m.start()].count('\n')+1))
+    return res
+# names from debt
+names={}
+for lib in ('libSceLibcInternal','libSceFreeTypeOt'):
+    d=(R/f'docs/dev/debt/{lib}.md').read_text()
+    for name,nid in re.findall(r"^- \[([^\]]+)\]\([^)]*\) \([^,]+, NID `([^`]+)`\)",d,re.M):
+        names[nid]=name
+libc_all="\n".join(srcs('libc').values())
+lci_all="\n".join(srcs('libSceLibcInternal').values())
+print("== libSceLibcInternal stubs")
+st=stubs('libSceLibcInternal'); print(len(st))
+named=0
+for nid,fn,path,line in st:
+    nm=names.get(nid)
+    if not nm:
+        mm=re.match(r"(_Z\w+?)_nid",fn)
+        nm=mm.group(1) if mm else None
+    if not nm: continue
+    named+=1
+    hit=[]
+    m=list(re.finditer(r"(C[12]|D[12])E",nm))
+    if nm.startswith('_ZN') and m:
+        m=m[-1];o=m.group(1)[0]+('2' if m.group(1)[1]=='1' else '1')
+        cp=nm[:m.start()]+o+nm[m.start()+2:]
+        if cp in libc_all: hit.append('libc:'+cp)
+        if cp in lci_all: hit.append('lci:'+cp)
+    if nm in libc_all: hit.append('libc-same')
+    print(f"{nid}\t{nm}\t{path}:{line}\t{' '.join(hit)}")
+print("named",named)
+print("== libSceFreeTypeOt stubs vs libSceFreeType impl")
+ft="\n".join(srcs('libSceFreeType').values())
+for nid,fn,path,line in stubs('libSceFreeTypeOt'):
+    nm=names.get(nid,fn)
+    base=re.sub(r"^sceFreeTypeOt","",fn)
+    m=re.search(r"(FT_\w+?)(_nid|$)",fn+" "+nm)
+    key=m.group(1) if m else None
+    impl=''
+    if key:
+        mm=re.search(r"APS5_VABI\s+\w*"+re.escape(key)+r"\w*\s*\(",ft)
+        if mm:
+            b=body_of(ft,mm.start()); impl='FT-impl' if 'NotImplemented' not in b else 'FT-stub'
+    print(f"{nid}\t{fn}\t{nm}\t{path}:{line}\t{impl}")
+EOF
+python3 /tmp/c2.py > /tmp/out.txt; wc -l /tmp/out.txt; grep -E "libc:|lci:|libc-same|FT-impl" /tmp/out.txt | head -80; echo ===; grep -c . /tmp/out.txt; sed -n '1,5p' /tmp/out.txt; grep -A200 "FreeTypeOt stubs" /tmp/out.txt | head -120
+247 /tmp/out.txt
+YXVCU6PdgZk	_ZNSt8_LocinfoD2Ev	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:282	libc:_ZNSt8_LocinfoD1Ev
+CC-BLMBu9-I	malloc_stats	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:312	libc-same
+V23qt24VPVs	_ZSt17iostream_categoryv	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:360	libc-same
+Q6oqEnefZQ8	__atomic_load_n	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:462	libc-same
+XyJPhPqpzMw	_ZNSt4_PadD1Ev	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:474	libc:_ZNSt4_PadD2Ev
+X9D8WWSG3As	_ZNSt8ios_baseD1Ev	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:492	libc:_ZNSt8ios_baseD2Ev
+===
+247
+== libSceLibcInternal stubs
+656
+DWMcG8yogkY	_ZSt8_XLgammaf	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:6	
+CKlZ-H-D1CE	_ZNSt7collateIcE5_InitERKSt8_Locinfo	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:12	
+V2FICbvPa+s	_ZNSt7num_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE5_InitERKSt8_Locinfo	core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:18	
+== libSceFreeTypeOt stubs vs libSceFreeType impl
+UD7IFu7ML2U	sceFreeTypeOtUnknown_UD7IFu7ML2U_nid_no_patch	sceFreeTypeOtUnknown_UD7IFu7ML2U_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:62	
+2T7lbS+CSzA	sceFreeTypeOtUnknown_2T7lbS_CSzA_nid_no_patch	sceFreeTypeOtUnknown_2T7lbS_CSzA_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:67	
+MGEIQsujKaY	sceFreeTypeOtUnknown_MGEIQsujKaY_nid_no_patch	sceFreeTypeOtUnknown_MGEIQsujKaY_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:72	
+mkmgcRnAJog	sceFreeTypeOtUnknown_mkmgcRnAJog_nid_no_patch	sceFreeTypeOtUnknown_mkmgcRnAJog_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:77	
+m18bTUNF-0g	sceFreeTypeOtUnknown_m18bTUNF_0g_nid_no_patch	sceFreeTypeOtUnknown_m18bTUNF_0g_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:82	
+vTZ34rw1sfg	sceFreeTypeOtUnknown_vTZ34rw1sfg_nid_no_patch	sceFreeTypeOtUnknown_vTZ34rw1sfg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:87	
+PvCNusrp9xQ	sceFreeTypeOtUnknown_PvCNusrp9xQ_nid_no_patch	sceFreeTypeOtUnknown_PvCNusrp9xQ_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:92	
+dlM4ASZdcjk	sceFreeTypeOtUnknown_dlM4ASZdcjk_nid_no_patch	sceFreeTypeOtUnknown_dlM4ASZdcjk_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:97	
+Ev3BqJ-U1Fg	sceFreeTypeOtUnknown_Ev3BqJ_U1Fg_nid_no_patch	sceFreeTypeOtUnknown_Ev3BqJ_U1Fg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:102	
+ZhtAXOoLNyo	sceFreeTypeOtUnknown_ZhtAXOoLNyo_nid_no_patch	sceFreeTypeOtUnknown_ZhtAXOoLNyo_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:107	
+73vg+nRH68g	sceFreeTypeOtUnknown_73vg_nRH68g_nid_no_patch	sceFreeTypeOtUnknown_73vg_nRH68g_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:112	
+wBKAYO7yEXw	sceFreeTypeOtUnknown_wBKAYO7yEXw_nid_no_patch	sceFreeTypeOtUnknown_wBKAYO7yEXw_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:117	
+nSIux4OQyJM	sceFreeTypeOtUnknown_nSIux4OQyJM_nid_no_patch	sceFreeTypeOtUnknown_nSIux4OQyJM_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:122	
+Dr3F3qrSQ2c	sceFreeTypeOtUnknown_Dr3F3qrSQ2c_nid_no_patch	sceFreeTypeOtUnknown_Dr3F3qrSQ2c_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:127	
+avLzN0tTxLI	sceFreeTypeOtUnknown_avLzN0tTxLI_nid_no_patch	sceFreeTypeOtUnknown_avLzN0tTxLI_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:132	
+0rKmI1ZbMAc	sceFreeTypeOtUnknown_0rKmI1ZbMAc_nid_no_patch	sceFreeTypeOtUnknown_0rKmI1ZbMAc_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:137	
+BBRhYfYBDgU	sceFreeTypeOtUnknown_BBRhYfYBDgU_nid_no_patch	sceFreeTypeOtUnknown_BBRhYfYBDgU_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:142	
+c1nbr8oSWlg	sceFreeTypeOtUnknown_c1nbr8oSWlg_nid_no_patch	sceFreeTypeOtUnknown_c1nbr8oSWlg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:147	
+AVEEb57HhUw	sceFreeTypeOtUnknown_AVEEb57HhUw_nid_no_patch	sceFreeTypeOtUnknown_AVEEb57HhUw_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:152	
+x8y0qzLiYOU	sceFreeTypeOtHasPSGlyphNames_nid_no_patch	sceFreeTypeOtHasPSGlyphNames_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:157	
+VW4GD-TaIUc	sceFreeTypeOtUnknown_VW4GD_TaIUc_nid_no_patch	sceFreeTypeOtUnknown_VW4GD_TaIUc_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:162	
+GiuNQjoj4fs	sceFreeTypeOtUnknown_GiuNQjoj4fs_nid_no_patch	sceFreeTypeOtUnknown_GiuNQjoj4fs_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:167	
+5qqbXOGlHw4	sceFreeTypeOtUnknown_5qqbXOGlHw4_nid_no_patch	sceFreeTypeOtUnknown_5qqbXOGlHw4_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:172	
+4LY5pyZ5IQk	sceFreeTypeOtUnknown_4LY5pyZ5IQk_nid_no_patch	sceFreeTypeOtUnknown_4LY5pyZ5IQk_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:177	
+zE0V+0aouZ4	sceFreeTypeOtUnknown_zE0V_0aouZ4_nid_no_patch	sceFreeTypeOtUnknown_zE0V_0aouZ4_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:182	
+WIvTHYs7ZQQ	sceFreeTypeOtUnknown_WIvTHYs7ZQQ_nid_no_patch	sceFreeTypeOtUnknown_WIvTHYs7ZQQ_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:187	
+yrtsLmTfa48	sceFreeTypeOtUnknown_yrtsLmTfa48_nid_no_patch	sceFreeTypeOtUnknown_yrtsLmTfa48_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:192	
+tCMhTh7h8D4	sceFreeTypeOtUnknown_tCMhTh7h8D4_nid_no_patch	sceFreeTypeOtUnknown_tCMhTh7h8D4_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:197	
+zyezaHweY3U	sceFreeTypeOtNewSize_nid_no_patch	sceFreeTypeOtNewSize_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:202	
+C-PpdS5zris	sceFreeTypeOtUnknown_C_PpdS5zris_nid_no_patch	sceFreeTypeOtUnknown_C_PpdS5zris_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:207	
+g8eLxL9VAhU	sceFreeTypeOtUnknown_g8eLxL9VAhU_nid_no_patch	sceFreeTypeOtUnknown_g8eLxL9VAhU_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:212	
+OeNH41MA2Vs	sceFreeTypeOtUnknown_OeNH41MA2Vs_nid_no_patch	sceFreeTypeOtUnknown_OeNH41MA2Vs_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:217	
+Bhm8Injl0KA	sceFreeTypeOtOutlineCopy_nid_no_patch	sceFreeTypeOtOutlineCopy_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:222	
+++lgV9pRsO4	sceFreeTypeOtOutlineDecompose_nid_no_patch	sceFreeTypeOtOutlineDecompose_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:227	
+BqGJsJcFYaM	sceFreeTypeOtUnknown_BqGJsJcFYaM_nid_no_patch	sceFreeTypeOtUnknown_BqGJsJcFYaM_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:232	
+umIqupy8UU0	sceFreeTypeOtUnknown_umIqupy8UU0_nid_no_patch	sceFreeTypeOtUnknown_umIqupy8UU0_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:237	
+l6Cf9rb9fZQ	sceFreeTypeOtUnknown_l6Cf9rb9fZQ_nid_no_patch	sceFreeTypeOtUnknown_l6Cf9rb9fZQ_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:242	
+BgUMBGvhATU	sceFreeTypeOtUnknown_BgUMBGvhATU_nid_no_patch	sceFreeTypeOtUnknown_BgUMBGvhATU_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:247	
+0Aal-TIC4so	sceFreeTypeOtOutlineGetBBox_nid_no_patch	sceFreeTypeOtOutlineGetBBox_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:252	
+4RRjK-Wd1lU	sceFreeTypeOtUnknown_4RRjK_Wd1lU_nid_no_patch	sceFreeTypeOtUnknown_4RRjK_Wd1lU_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:257	
+weVsBCT+TTQ	sceFreeTypeOtOutlineGetOrientation_nid_no_patch	sceFreeTypeOtOutlineGetOrientation_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:262	
+QH2emcgeFck	sceFreeTypeOtUnknown_QH2emcgeFck_nid_no_patch	sceFreeTypeOtUnknown_QH2emcgeFck_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:267	
+NG7OgYsgcF8	sceFreeTypeOtUnknown_NG7OgYsgcF8_nid_no_patch	sceFreeTypeOtUnknown_NG7OgYsgcF8_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:272	
+9km02mPqPJE	sceFreeTypeOtUnknown_9km02mPqPJE_nid_no_patch	sceFreeTypeOtUnknown_9km02mPqPJE_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:277	
+0Lv6K1d47jg	sceFreeTypeOtUnknown_0Lv6K1d47jg_nid_no_patch	sceFreeTypeOtUnknown_0Lv6K1d47jg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:282	
+8fAMdZCnewA	sceFreeTypeOtPropertyGet_nid_no_patch	sceFreeTypeOtPropertyGet_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:287	
+LsB538+IPrE	sceFreeTypeOtPropertySet_nid_no_patch	sceFreeTypeOtPropertySet_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:292	
+hz-J3hohXW8	sceFreeTypeOtUnknown_hz_J3hohXW8_nid_no_patch	sceFreeTypeOtUnknown_hz_J3hohXW8_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:297	
+KVbmKCGGowg	sceFreeTypeOtUnknown_KVbmKCGGowg_nid_no_patch	sceFreeTypeOtUnknown_KVbmKCGGowg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:302	
+hF3stKUWbWg	sceFreeTypeOtUnknown_hF3stKUWbWg_nid_no_patch	sceFreeTypeOtUnknown_hF3stKUWbWg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:307	
+p5GNJaXO2yE	sceFreeTypeOtUnknown_p5GNJaXO2yE_nid_no_patch	sceFreeTypeOtUnknown_p5GNJaXO2yE_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:312	
+8cnVx1yH9-I	sceFreeTypeOtUnknown_8cnVx1yH9_I_nid_no_patch	sceFreeTypeOtUnknown_8cnVx1yH9_I_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:317	
+HVSaZbxYi2s	sceFreeTypeOtUnknown_HVSaZbxYi2s_nid_no_patch	sceFreeTypeOtUnknown_HVSaZbxYi2s_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:322	
+qAPXM5DN62Q	sceFreeTypeOtUnknown_qAPXM5DN62Q_nid_no_patch	sceFreeTypeOtUnknown_qAPXM5DN62Q_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:327	
+5ipBcLYVc2k	sceFreeTypeOtUnknown_5ipBcLYVc2k_nid_no_patch	sceFreeTypeOtUnknown_5ipBcLYVc2k_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:332	
+8A0cAU4yBVY	sceFreeTypeOtUnknown_8A0cAU4yBVY_nid_no_patch	sceFreeTypeOtUnknown_8A0cAU4yBVY_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:337	
+z9Wsaf34JA4	sceFreeTypeOtUnknown_z9Wsaf34JA4_nid_no_patch	sceFreeTypeOtUnknown_z9Wsaf34JA4_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:342	
+PaDk9bdmdhU	sceFreeTypeOtRequestSize_nid_no_patch	sceFreeTypeOtRequestSize_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:347	
+Z8KG6700sw4	sceFreeTypeOtUnknown_Z8KG6700sw4_nid_no_patch	sceFreeTypeOtUnknown_Z8KG6700sw4_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:352	
+uK7vGxAQVxM	sceFreeTypeOtUnknown_uK7vGxAQVxM_nid_no_patch	sceFreeTypeOtUnknown_uK7vGxAQVxM_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:357	
+zetC8Tp1S8w	sceFreeTypeOtUnknown_zetC8Tp1S8w_nid_no_patch	sceFreeTypeOtUnknown_zetC8Tp1S8w_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:362	
+DAmwG6U7YIc	sceFreeTypeOtUnknown_DAmwG6U7YIc_nid_no_patch	sceFreeTypeOtUnknown_DAmwG6U7YIc_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:367	
+Yu9oXRVmTTo	sceFreeTypeOtUnknown_Yu9oXRVmTTo_nid_no_patch	sceFreeTypeOtUnknown_Yu9oXRVmTTo_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:372	
+ihIHD8BTNxI	sceFreeTypeOtUnknown_ihIHD8BTNxI_nid_no_patch	sceFreeTypeOtUnknown_ihIHD8BTNxI_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:377	
+yCEJIsjIOO8	sceFreeTypeOtUnknown_yCEJIsjIOO8_nid_no_patch	sceFreeTypeOtUnknown_yCEJIsjIOO8_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:382	
+L1uHkWTazkI	sceFreeTypeOtSin_nid_no_patch	sceFreeTypeOtSin_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:387	
+uDXTnGbAz44	sceFreeTypeOtUnknown_uDXTnGbAz44_nid_no_patch	sceFreeTypeOtUnknown_uDXTnGbAz44_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:392	
+iruPsrXCN7U	sceFreeTypeOtUnknown_iruPsrXCN7U_nid_no_patch	sceFreeTypeOtUnknown_iruPsrXCN7U_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:397	
+xj3tNJptfLI	sceFreeTypeOtStrokerBeginSubPath_nid_no_patch	sceFreeTypeOtStrokerBeginSubPath_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:402	
+TPKhRt1QIeE	sceFreeTypeOtStrokerConicTo_nid_no_patch	sceFreeTypeOtStrokerConicTo_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:407	
+6+yXRlVrjbc	sceFreeTypeOtStrokerCubicTo_nid_no_patch	sceFreeTypeOtStrokerCubicTo_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:412	
++RLa-6fbshA	sceFreeTypeOtStrokerDone_nid_no_patch	sceFreeTypeOtStrokerDone_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:417	
+pBqh-Uh-gns	sceFreeTypeOtStrokerEndSubPath_nid_no_patch	sceFreeTypeOtStrokerEndSubPath_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:422	
+2rcvKZfm5rI	sceFreeTypeOtUnknown_2rcvKZfm5rI_nid_no_patch	sceFreeTypeOtUnknown_2rcvKZfm5rI_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:427	
+7cIS2cFG3PE	sceFreeTypeOtUnknown_7cIS2cFG3PE_nid_no_patch	sceFreeTypeOtUnknown_7cIS2cFG3PE_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:432	
+LfyUi-LkdCk	sceFreeTypeOtStrokerGetBorderCounts_nid_no_patch	sceFreeTypeOtStrokerGetBorderCounts_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:437	
+rzIWh7FJnmU	sceFreeTypeOtStrokerGetCounts_nid_no_patch	sceFreeTypeOtStrokerGetCounts_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:442	
+cKndiZnt0EA	sceFreeTypeOtStrokerLineTo_nid_no_patch	sceFreeTypeOtStrokerLineTo_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:447	
+eqGCaeizvWM	sceFreeTypeOtStrokerNew_nid_no_patch	sceFreeTypeOtStrokerNew_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:452	
+RvFx7dv9ThU	sceFreeTypeOtUnknown_RvFx7dv9ThU_nid_no_patch	sceFreeTypeOtUnknown_RvFx7dv9ThU_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:457	
+Po8kyd3DlIw	sceFreeTypeOtStrokerRewind_nid_no_patch	sceFreeTypeOtStrokerRewind_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:462	
+B3uU5aDZn94	sceFreeTypeOtStrokerSet_nid_no_patch	sceFreeTypeOtStrokerSet_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:467	
+dojyaLKzKN0	sceFreeTypeOtTan_nid_no_patch	sceFreeTypeOtTan_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:472	
+08-mhD-AAds	sceFreeTypeOtUnknown_08_mhD_AAds_nid_no_patch	sceFreeTypeOtUnknown_08_mhD_AAds_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:477	
+64XMq6sDxUo	sceFreeTypeOtUnknown_64XMq6sDxUo_nid_no_patch	sceFreeTypeOtUnknown_64XMq6sDxUo_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:482	
+4xG87W9dTSg	sceFreeTypeOtUnknown_4xG87W9dTSg_nid_no_patch	sceFreeTypeOtUnknown_4xG87W9dTSg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:487	
+4+SScYDT5Pg	sceFreeTypeOtUnknown_4_SScYDT5Pg_nid_no_patch	sceFreeTypeOtUnknown_4_SScYDT5Pg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:492	
+2rmvbvOCyjY	sceFreeTypeOtUnknown_2rmvbvOCyjY_nid_no_patch	sceFreeTypeOtUnknown_2rmvbvOCyjY_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:497	
+1jmC2QcpRl0	sceFreeTypeOtUnknown_1jmC2QcpRl0_nid_no_patch	sceFreeTypeOtUnknown_1jmC2QcpRl0_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:502	
+HMcNe70D9TI	sceFreeTypeOtUnknown_HMcNe70D9TI_nid_no_patch	sceFreeTypeOtUnknown_HMcNe70D9TI_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:507	
+6wJwUIVwAxg	sceFreeTypeOtUnknown_6wJwUIVwAxg_nid_no_patch	sceFreeTypeOtUnknown_6wJwUIVwAxg_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:512	
+3WpTQrvGUcU	sceFreeTypeOtVectorUnit_nid_no_patch	sceFreeTypeOtVectorUnit_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:517	
+Ln9I6YfmYJU	sceFreeTypeOtUnknown_Ln9I6YfmYJU_nid_no_patch	sceFreeTypeOtUnknown_Ln9I6YfmYJU_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:590	
+7cVMwHmN308	sceFreeTypeOtUnknown_7cVMwHmN308_nid_no_patch	sceFreeTypeOtUnknown_7cVMwHmN308_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:595	
+AEU2tkjdZ2w	sceFreeTypeOtUnknown_AEU2tkjdZ2w_nid_no_patch	sceFreeTypeOtUnknown_AEU2tkjdZ2w_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:600	
+uSNqxrARpEQ	sceFreeTypeOtUnknown_uSNqxrARpEQ_nid_no_patch	sceFreeTypeOtUnknown_uSNqxrARpEQ_nid_no_patch	core/libs/prx/libSceFreeTypeOt/Export.cpp:605	
