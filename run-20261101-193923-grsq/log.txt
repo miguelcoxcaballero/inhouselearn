@@ -1,0 +1,38 @@
++ set +e +o pipefail
+(cd engine && npm ci --silent && npm run build >/dev/null)
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 2
+export OUT=/tmp
+fail=0
+for t in approval-card harness queue ultra composer-fixes activity-state; do
+  echo "=== $t"
+  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo "exit $?"
+  grep -E '^(FAIL|SKIP)' /tmp/$t.log | cut -c1-500
+  echo "PASS: $(grep -c '^PASS' /tmp/$t.log)"
+  if grep -q '^FAIL' /tmp/$t.log; then fail=1; fi
+done
+exit $fail
+
+  ../vendor/pi-engine.js  1.0mb ⚠️
+
+⚡ Done in 247ms
+=== approval-card
+exit 0
+PASS: 11
+=== harness
+exit 0
+PASS: 21
+=== queue
+exit 0
+PASS: 9
+=== ultra
+exit 0
+PASS: 16
+=== composer-fixes
+exit 0
+PASS: 5
+=== activity-state
+exit 0
+PASS: 5
