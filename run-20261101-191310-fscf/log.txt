@@ -1,0 +1,42 @@
++ git fetch --depth=3 origin fix/shader-scan-fallthrough-cases >/dev/null 2>&1 || true
+git log --oneline -3
+git show HEAD~1:tools/shader_scan.py > /tmp/old_shader_scan.py
+cat > /tmp/probe.py <<'EOF'
+import importlib.util, sys
+def load(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+for label, path in (("main", "/tmp/old_shader_scan.py"), ("branch", "tools/shader_scan.py")):
+    s = load(path, "scan_" + label)
+    isa = s.load_isa_forms("tools/rdna2_isa_forms.txt")
+    m = s.measure(".", isa)
+    print("==", label)
+    print("instructions", m["instructions"])
+    print("dpp", m["dpp"])
+    print("untranslated", m["untranslated"])
+    for f in m["forms"]:
+        if f["missing"]:
+            print("missing", f["encoding"], f["form"], f["total"], f["decoded"], f["missing"])
+EOF
+python3 /tmp/probe.py
+python3 -m unittest tools/tests/test_shader_scan.py 2>&1 | tail -4
+f2f6ecd fix(tools): count fallthrough case labels in the shader decoder scan
+f2d874c Merge pull request #13933 from klosixgaming-arch/ci/review-queue-label
+e6fb11c Merge pull request #13937 from xXPBSXx/tools/q4-select-tests-recursion
+== main
+instructions {'total': 1460, 'decoded': 1456, 'translated': 1455}
+dpp {'total': 202, 'decoded': 199}
+untranslated ['IMAGE_GATHER8H_PCK']
+missing SOPP base 36 32 ['S_CBRANCH_CDBGSYS', 'S_CBRANCH_CDBGUSER', 'S_CBRANCH_CDBGSYS_OR_USER', 'S_ENDPGM_SAVED']
+missing VOP1 dpp8 59 56 ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32']
+== branch
+instructions {'total': 1460, 'decoded': 1460, 'translated': 1459}
+dpp {'total': 202, 'decoded': 199}
+untranslated ['IMAGE_GATHER8H_PCK']
+missing VOP1 dpp8 59 56 ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32']
+Ran 19 tests in 0.055s
+
+OK
+/tmp/tmpgqotw65o/forms.txt: 6 forms

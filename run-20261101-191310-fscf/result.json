@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-191310-fscf",
+ "repo": "miguelcoxcaballero/AnyPS5",
+ "ref": "fix/shader-scan-fallthrough-cases",
+ "os": "ubuntu-24.04",
+ "sha": "f2f6ecd5f25b67aabcab71be624db8d1f7913dad",
+ "runner": "Linux X64",
+ "command": "git fetch --depth=3 origin fix/shader-scan-fallthrough-cases >/dev/null 2>&1 || true\ngit log --oneline -3\ngit show HEAD~1:tools/shader_scan.py > /tmp/old_shader_scan.py\ncat > /tmp/probe.py <<'EOF'\nimport importlib.util, sys\ndef load(path, name):\n    spec = importlib.util.spec_from_file_location(name, path)\n    mod = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(mod)\n    return mod\nfor label, path in ((\"main\", \"/tmp/old_shader_scan.py\"), (\"branch\", \"tools/shader_scan.py\")):\n    s = load(path, \"scan_\" + label)\n    isa = s.load_isa_forms(\"tools/rdna2_isa_forms.txt\")\n    m = s.measure(\".\", isa)\n    print(\"==\", label)\n    print(\"instructions\", m[\"instructions\"])\n    print(\"dpp\", m[\"dpp\"])\n    print(\"untranslated\", m[\"untranslated\"])\n    for f in m[\"forms\"]:\n        if f[\"missing\"]:\n            print(\"missing\", f[\"encoding\"], f[\"form\"], f[\"total\"], f[\"decoded\"], f[\"missing\"])\nEOF\npython3 /tmp/probe.py\npython3 -m unittest tools/tests/test_shader_scan.py 2>&1 | tail -4",
+ "exit_code": 0,
+ "seconds": 21,
+ "lines": 43,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ git fetch --depth=3 origin fix/shader-scan-fallthrough-cases >/dev/null 2>&1 || true\ngit log --oneline -3\ngit show HEAD~1:tools/shader_scan.py > /tmp/old_shader_scan.py\ncat > /tmp/probe.py <<'EOF'\nimport importlib.util, sys\ndef load(path, name):\n    spec = importlib.util.spec_from_file_location(name, path)\n    mod = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(mod)\n    return mod\nfor label, path in ((\"main\", \"/tmp/old_shader_scan.py\"), (\"branch\", \"tools/shader_scan.py\")):\n    s = load(path, \"scan_\" + label)\n    isa = s.load_isa_forms(\"tools/rdna2_isa_forms.txt\")\n    m = s.measure(\".\", isa)\n    print(\"==\", label)\n    print(\"instructions\", m[\"instructions\"])\n    print(\"dpp\", m[\"dpp\"])\n    print(\"untranslated\", m[\"untranslated\"])\n    for f in m[\"forms\"]:\n        if f[\"missing\"]:\n            print(\"missing\", f[\"encoding\"], f[\"form\"], f[\"total\"], f[\"decoded\"], f[\"missing\"])\nEOF\npython3 /tmp/probe.py\npython3 -m unittest tools/tests/test_shader_scan.py 2>&1 | tail -4\nf2f6ecd fix(tools): count fallthrough case labels in the shader decoder scan\nf2d874c Merge pull request #13933 from klosixgaming-arch/ci/review-queue-label\ne6fb11c Merge pull request #13937 from xXPBSXx/tools/q4-select-tests-recursion\n== main\ninstructions {'total': 1460, 'decoded': 1456, 'translated': 1455}\ndpp {'total': 202, 'decoded': 199}\nuntranslated ['IMAGE_GATHER8H_PCK']\nmissing SOPP base 36 32 ['S_CBRANCH_CDBGSYS', 'S_CBRANCH_CDBGUSER', 'S_CBRANCH_CDBGSYS_OR_USER', 'S_ENDPGM_SAVED']\nmissing VOP1 dpp8 59 56 ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32']\n== branch\ninstructions {'total': 1460, 'decoded': 1460, 'translated': 1459}\ndpp {'total': 202, 'decoded': 199}\nuntranslated ['IMAGE_GATHER8H_PCK']\nmissing VOP1 dpp8 59 56 ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32']\nRan 19 tests in 0.055s\n\nOK\n/tmp/tmpgqotw65o/forms.txt: 6 forms\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41340615988"
+}
