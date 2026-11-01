@@ -1,0 +1,51 @@
++ (cd engine && npm ci --silent && npm run build >/dev/null) && node -e "require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js','utf8')); console.log('engine ok', typeof InhousePi.createGithubTools)"
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 2
+export OUT=/tmp
+node --test tests/web/wiring.mjs 2>&1 | tail -5
+fail=0
+for t in pr-watch fork-run github approval-card harness queue; do
+  echo "=== $t"
+  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo "exit $?"
+  grep -E '^(FAIL|SKIP)|errors' /tmp/$t.log | cut -c1-700
+  echo "PASS: $(grep -c '^PASS' /tmp/$t.log)"
+  grep -q '^FAIL' /tmp/$t.log && fail=1
+done
+exit $fail
+
+  ../vendor/pi-engine.js  1.0mb ⚠️
+
+⚡ Done in 193ms
+engine ok function
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 68.163401
+=== pr-watch
+exit 0
+errors []
+PASS: 10
+=== fork-run
+exit 0
+errors []
+PASS: 11
+=== github
+exit 0
+FAIL model gets the GitHub tools and the prepare → push workflow — ["github_list_repos","github_list_files","github_read_file","github_grep","github_search_code","github_write_files","github_edit_file","github_discard","github_push","github_create_pull_request","github_ci_status","github_release_android","github_screenshot","github_fork","github_run","github_list_issues","github_comment","github_pr_activity","github_update_pull_request","github_watch_prs"]
+errors []
+PASS: 13
+=== approval-card
+exit 0
+PASS no JavaScript errors — []
+PASS: 11
+=== harness
+exit 0
+errors []
+PASS: 21
+=== queue
+exit 0
+errors []
+PASS: 9

@@ -1,0 +1,30 @@
+{
+ "id": "run-20261101-192929-61em",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/pr-autonomo",
+ "os": "ubuntu-24.04",
+ "sha": "3bec7604b996dbda665cb5e441333949b71a6bf6",
+ "runner": "Linux X64",
+ "command": "(cd engine && npm ci --silent && npm run build >/dev/null) && node -e \"require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js','utf8')); console.log('engine ok', typeof InhousePi.createGithubTools)\"\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 2\nexport OUT=/tmp\nnode --test tests/web/wiring.mjs 2>&1 | tail -5\nfail=0\nfor t in pr-watch fork-run github approval-card harness queue; do\n  echo \"=== $t\"\n  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo \"exit $?\"\n  grep -E '^(FAIL|SKIP)|errors' /tmp/$t.log | cut -c1-700\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)\"\n  grep -q '^FAIL' /tmp/$t.log && fail=1\ndone\nexit $fail",
+ "exit_code": 1,
+ "seconds": 94,
+ "lines": 52,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 12,
+   "text": "grep -E '^(FAIL|SKIP)|errors' /tmp/$t.log | cut -c1-700"
+  },
+  {
+   "line": 14,
+   "text": "grep -q '^FAIL' /tmp/$t.log && fail=1"
+  },
+  {
+   "line": 37,
+   "text": "FAIL model gets the GitHub tools and the prepare → push workflow — [\"github_list_repos\",\"github_list_files\",\"github_read_file\",\"github_grep\",\"github_search_code\",\"github_write_files\",\"github_edit_file\",\"github_discard\",\"github_push\",\"github_create_pull_request\",\"github_ci_status\",\"github_release_android\",\"github_screenshot\",\"github_fork\",\"github_run\",\"github_list_issues\",\"github_comment\",\"github_p"
+  }
+ ],
+ "errors_total": 3,
+ "tail": "+ (cd engine && npm ci --silent && npm run build >/dev/null) && node -e \"require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js','utf8')); console.log('engine ok', typeof InhousePi.createGithubTools)\"\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 2\nexport OUT=/tmp\nnode --test tests/web/wiring.mjs 2>&1 | tail -5\nfail=0\nfor t in pr-watch fork-run github approval-card harness queue; do\n  echo \"=== $t\"\n  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo \"exit $?\"\n  grep -E '^(FAIL|SKIP)|errors' /tmp/$t.log | cut -c1-700\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)\"\n  grep -q '^FAIL' /tmp/$t.log && fail=1\ndone\nexit $fail\n\n  ../vendor/pi-engine.js  1.0mb ⚠️\n\n⚡ Done in 193ms\nengine ok function\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 68.163401\n=== pr-watch\nexit 0\nerrors []\nPASS: 10\n=== fork-run\nexit 0\nerrors []\nPASS: 11\n=== github\nexit 0\nFAIL model gets the GitHub tools and the prepare → push workflow — [\"github_list_repos\",\"github_list_files\",\"github_read_file\",\"github_grep\",\"github_search_code\",\"github_write_files\",\"github_edit_file\",\"github_discard\",\"github_push\",\"github_create_pull_request\",\"github_ci_status\",\"github_release_android\",\"github_screenshot\",\"github_fork\",\"github_run\",\"github_list_issues\",\"github_comment\",\"github_pr_activity\",\"github_update_pull_request\",\"github_watch_prs\"]\nerrors []\nPASS: 13\n=== approval-card\nexit 0\nPASS no JavaScript errors — []\nPASS: 11\n=== harness\nexit 0\nerrors []\nPASS: 21\n=== queue\nexit 0\nerrors []\nPASS: 9\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41341986092"
+}
