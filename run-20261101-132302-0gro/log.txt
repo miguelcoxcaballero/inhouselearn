@@ -1,0 +1,70 @@
++ git fetch --shallow-since=2026-10-29 origin main >/dev/null 2>&1 || true
+echo "== autor del commit"
+git log origin/main --format='%h | %an <%ae> | %cn | %ad | %s' -- core/libs/prx/libSceLibcInternal/AlignedNew.cpp | head -5
+echo "== estado PR"
+curl -s https://api.github.com/repos/boykopovar/AnyPS5/pulls/14240 | python3 -c "import json,sys;d=json.load(sys.stdin);print('merged',d.get('merged'),(d.get('merged_by') or {}).get('login'),d.get('closed_at'))"
+curl -s "https://api.github.com/search/issues?q=repo:boykopovar/AnyPS5+is:pr+is:merged+author:miguelcoxcaballero" | python3 -c "import json,sys;print('merged count',json.load(sys.stdin).get('total_count'))"
+mkdir -p /tmp/prs
+for p in 1 2 3 4 5 6 7 8; do curl -s "https://api.github.com/repos/boykopovar/AnyPS5/pulls?state=open&per_page=100&page=$p" > /tmp/prs/list$p.json; done
+python3 - <<'EOF'
+import json,glob
+nums=[]
+for f in sorted(glob.glob('/tmp/prs/list*.json')):
+    try: d=json.load(open(f))
+    except: continue
+    if isinstance(d,list): nums+= [x['number'] for x in d]
+    else: print('api',f,str(d)[:200])
+print('open PRs',len(nums))
+open('/tmp/prs/nums.txt','w').write('\n'.join(map(str,nums)))
+EOF
+cat /tmp/prs/nums.txt | xargs -P 16 -I{} sh -c 'curl -sL https://github.com/boykopovar/AnyPS5/pull/{}.diff -o /tmp/prs/{}.diff'
+ls /tmp/prs/*.diff | wc -l
+cat > /tmp/a.py <<'EOF'
+import re,os,hashlib,struct,base64,glob,collections
+SUF=bytes.fromhex("518D64A635DED8C1")
+def nid(n):
+    h=hashlib.sha1(n.encode()+SUF).digest()
+    return base64.b64encode(struct.pack('>Q',struct.unpack('<Q',h[:8])[0]),b'+-').decode().rstrip('=')
+print('selftest',nid('_ZnamSt11align_val_tRKSt9nothrow_t'))
+impl={}
+pend=[]
+for root,_,fs in os.walk('core/libs'):
+    for f in fs:
+        if not f.endswith(('.cpp','.hpp','.h','.c')): continue
+        p=os.path.join(root,f)
+        try: t=open(p,encoding='utf-8',errors='ignore').read()
+        except: continue
+        for m in re.finditer(r'APS5_VABI\s+(\w+)_nid_postfix\s*\([^;{]*\)[^;{]*\{',t):
+            body=t[m.end():t.find('\n}',m.end())]
+            if 'NotImplemented' not in body: impl.setdefault(m.group(1),p)
+        for m in re.finditer(r'APS5_EXPORT\("([^"]+)",\s*(\w+)\)',t):
+            fn=m.group(2)
+            d=re.search(r'\b'+re.escape(fn)+r'\s*\([^;{]*\)[^;{]*\{',t)
+            if not d: continue
+            body=t[d.end():t.find('\n}',d.end())]
+            if 'NotImplemented' in body: pend.append((m.group(1),fn,p))
+print('implemented names',len(impl),'pending exports',len(pend))
+bynid={nid(n):n for n in impl}
+diffs={}
+for f in glob.glob('/tmp/prs/*.diff'):
+    diffs[os.path.basename(f)[:-5]]=open(f,errors='ignore').read()
+hits=[]
+for N,fn,p in pend:
+    if N in bynid:
+        busy=[k for k,v in diffs.items() if N in v]
+        hits.append((p.split('/prx/')[-1].split('/')[0],N,bynid[N],impl[bynid[N]],busy))
+c=collections.Counter(h[0] for h in hits)
+print('candidates by lib',c)
+for h in sorted(hits): print(*h,sep=' | ')
+EOF
+python3 /tmp/a.py
+== autor del commit
+f1a7b02 | Dean <158058829+oneandonlydean@users.noreply.github.com> | GitHub | Mon Nov 2 02:06:56 2026 +1300 | Merge pull request #7243 from gjonn/fix/agc-packed-target-replace-blend
+== estado PR
+merged True oneandonlydean 2026-11-01T04:37:40Z
+merged count 1
+open PRs 800
+800
+selftest QUTtkTPfnxA
+implemented names 2483 pending exports 8247
+candidates by lib Counter()
