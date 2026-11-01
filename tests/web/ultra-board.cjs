@@ -188,8 +188,8 @@ let failed = 0;
   const lit = await page.evaluate(() => {
     window.UltraAgents.ignite({});
     const shell = document.querySelector('.composer-shell');
-    const sweep = shell.querySelector(':scope > .ultra-sweep');
     window.UltraAgents.ignite({});
+    const sweep = shell.querySelector(':scope > .ultra-sweep');
     return { sweeps: document.querySelectorAll('.ultra-sweep').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), igniting: shell.classList.contains('ultra-igniting'), animation: sweep ? getComputedStyle(sweep, '::before').animationName : '', sparks: document.querySelectorAll('.ultra-spark, .ua-spark, .ua-burst-ring').length };
   });
   check('turning it on: ONE band of light around the composer (even if asked twice), the tag, and no sparks', lit.sweeps === 1 && lit.mode === 'on' && lit.tag && lit.igniting && /ultra-sweep/.test(lit.animation) && lit.sparks === 0, lit);

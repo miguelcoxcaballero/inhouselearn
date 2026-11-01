@@ -119,7 +119,7 @@ const toolOutputs = (page, n) => page.evaluate((k) => window.__requests.slice(-1
   const card = await page.evaluate(() => ({
     title: document.querySelector('.dock-approve-head b').textContent,
     msg: document.querySelector('.dock-approve-msg').textContent,
-    files: document.querySelector('.dock-approve-files').innerText,
+    files: document.querySelector('.dock-approve-files').textContent,
     fullscreen: !document.getElementById('confirm-backdrop').classList.contains('hidden'),
     aboveComposer: document.getElementById('composer-dock').getBoundingClientRect().bottom <= document.querySelector('.composer-shell').getBoundingClientRect().top + 1,
     live: document.querySelector('.live-now') ? document.querySelector('.live-now').innerText : ''
