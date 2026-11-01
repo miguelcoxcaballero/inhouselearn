@@ -1,0 +1,45 @@
+{
+  "id": "shot-20261101-191305-48tn",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v4",
+  "at": "2026-11-01T19:13:39.982Z",
+  "seconds": 21,
+  "shots": [
+    {
+      "name": "0,3 s",
+      "file": "1-0-3-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "0,65 s",
+      "file": "2-0-65-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "1,0 s",
+      "file": "3-1-0-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "1,4 s",
+      "file": "4-1-4-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "1,9 s",
+      "file": "5-1-9-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "fijo",
+      "file": "6-fijo.png",
+      "device": "desktop",
+      "theme": "dark"
+    }
+  ]
+}
