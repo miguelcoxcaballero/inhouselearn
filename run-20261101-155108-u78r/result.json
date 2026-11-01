@@ -1,0 +1,30 @@
+{
+ "id": "run-20261101-155108-u78r",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v3",
+ "os": "ubuntu-24.04",
+ "sha": "8c4a77929028e80288a21d7a5a4dd3e2f072f8bf",
+ "runner": "Linux X64",
+ "command": "git log --oneline -2\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\nfor t in ultra-board harness github approval-card steer-now cut-retry; do\n  echo \"################ $t\"\n  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1 || true\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)\"\n  grep -E '^FAIL' /tmp/$t.log | cut -c1-420\n  grep -E 'rror' /tmp/$t.log | grep -v initScript | head -3 | cut -c1-300\ndone\ntrue",
+ "exit_code": 1,
+ "seconds": 12,
+ "lines": 17,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 9,
+   "text": "echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)\""
+  },
+  {
+   "line": 10,
+   "text": "grep -E '^FAIL' /tmp/$t.log | cut -c1-420"
+  },
+  {
+   "line": 16,
+   "text": "PASS: 38  FAIL: 0"
+  }
+ ],
+ "errors_total": 3,
+ "tail": "+ git log --oneline -2\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\nfor t in ultra-board harness github approval-card steer-now cut-retry; do\n  echo \"################ $t\"\n  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1 || true\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)\"\n  grep -E '^FAIL' /tmp/$t.log | cut -c1-420\n  grep -E 'rror' /tmp/$t.log | grep -v initScript | head -3 | cut -c1-300\ndone\ntrue\n8c4a779 La cola ya no repite su animación al escribir y los modelos recuperan su velocímetro y su número de inteligencia\n################ ultra-board\nPASS: 38  FAIL: 0\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41323301617"
+}

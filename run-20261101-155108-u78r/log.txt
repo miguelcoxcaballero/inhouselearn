@@ -1,0 +1,16 @@
++ git log --oneline -2
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT
+for t in ultra-board harness github approval-card steer-now cut-retry; do
+  echo "################ $t"
+  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1 || true
+  echo "PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)"
+  grep -E '^FAIL' /tmp/$t.log | cut -c1-420
+  grep -E 'rror' /tmp/$t.log | grep -v initScript | head -3 | cut -c1-300
+done
+true
+8c4a779 La cola ya no repite su animación al escribir y los modelos recuperan su velocímetro y su número de inteligencia
+################ ultra-board
+PASS: 38  FAIL: 0
