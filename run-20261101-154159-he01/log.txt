@@ -1,0 +1,56 @@
++ set +e
+cat > /tmp/a.py <<'EOF'
+import re,sys,glob
+sys.path.insert(0,'tools')
+import nid_names as N
+db=N.load_db(N.DEFAULT_CACHE)
+def scan(lib):
+    impl={}; stub={}
+    for f in glob.glob(f'core/libs/prx/{lib}/**/*.cpp',recursive=True):
+        s=open(f,errors='replace').read()
+        bodies={}
+        for m in re.finditer(r'APS5_VABI\s+(\w+)\s*\(([^)]*)\)\s*(?:noexcept\s*)?\{',s):
+            fn=m.group(1); i=m.end(); body=s[i:i+120]
+            bodies[fn]=bool(re.match(r'\s*NotImplemented_nid_no_patch\(',body))
+        def add(nid,fn):
+            if fn not in bodies: return
+            (stub if bodies[fn] else impl)[nid]=(fn,f)
+        for nid,fn in re.findall(r'APS5_EXPORT\(\s*"([^"]+)"\s*,\s*(\w+)\s*\)',s): add(nid,fn)
+        for fn in bodies:
+            if fn.endswith('_nid_postfix') or '_nid_disambig' in fn:
+                add(N.compute_nid(N.strip_nid_postfix(fn)),fn)
+    return impl,stub
+I={}
+for lib in ['libSceLibcInternal','libc']:
+    I[lib]=scan(lib)
+    print(lib,'impl',len(I[lib][0]),'stub',len(I[lib][1]))
+allimpl={}
+for lib in I:
+    for nid,v in I[lib][0].items(): allimpl.setdefault(nid,(lib,)+v)
+name2nid={}
+for lib in I:
+    for nid in list(I[lib][0])+list(I[lib][1]):
+        if nid in db: name2nid[db[nid]]=nid
+swaps=[('C2E','C1E'),('C1E','C2E'),('D2Ev','D1Ev'),('D1Ev','D2Ev')]
+for lib in I:
+    for nid,(fn,f) in sorted(I[lib][1].items(), key=lambda x: db.get(x[0],'')):
+        nm=db.get(nid)
+        if not nm: continue
+        for a,b in swaps:
+            if a in nm:
+                other=nm.replace(a,b,1)
+                onid=N.compute_nid(other)
+                if onid in allimpl:
+                    print('PAIR',lib,nid,nm,'<=',other,allimpl[onid][0],allimpl[onid][1],allimpl[onid][2])
+EOF
+python3 /tmp/a.py 2>&1 | grep -v downloading
+libSceLibcInternal impl 80 stub 709
+libc impl 1405 stub 1
+PAIR libSceLibcInternal XFh0C66aEms _ZNSt12future_errorD2Ev <= _ZNSt12future_errorD1Ev libc _ZNSt12future_errorD1Ev_nid_postfix core/libs/prx/libc/src/exception/StandardExceptions.cpp
+PAIR libSceLibcInternal OypvNf3Uq3c _ZNSt14overflow_errorD2Ev <= _ZNSt14overflow_errorD1Ev libc _ZNSt14overflow_errorD1Ev_nid_postfix core/libs/prx/libc/src/exception/StandardExceptions.cpp
+PAIR libSceLibcInternal xiqd+QkuYXc _ZNSt15underflow_errorD2Ev <= _ZNSt15underflow_errorD1Ev libc _ZNSt15underflow_errorD1Ev_nid_postfix core/libs/prx/libc/src/exception/StandardExceptions.cpp
+PAIR libSceLibcInternal XyJPhPqpzMw _ZNSt4_PadD1Ev <= _ZNSt4_PadD2Ev libc _ZNSt4_PadD2Ev_nid_postfix core/libs/prx/libc/src/Threads.cpp
+PAIR libSceLibcInternal dsJKehuajH4 _ZNSt6locale7_LocimpC2ERKS0_ <= _ZNSt6locale7_LocimpC1ERKS0_ libc _ZNSt6locale7_LocimpC1ERKS0__nid_postfix core/libs/prx/libc/src/LocaleSupport.cpp
+PAIR libSceLibcInternal pN02FS5SPgg _ZNSt8_LocinfoC2EPKc <= _ZNSt8_LocinfoC1EPKc libc _ZNSt8_LocinfoC1EPKc_nid_postfix core/libs/prx/libc/src/LocaleSupport.cpp
+PAIR libSceLibcInternal YXVCU6PdgZk _ZNSt8_LocinfoD2Ev <= _ZNSt8_LocinfoD1Ev libc _ZNSt8_LocinfoD1Ev_nid_postfix core/libs/prx/libc/src/LocaleSupport.cpp
+PAIR libSceLibcInternal X9D8WWSG3As _ZNSt8ios_baseD1Ev <= _ZNSt8ios_baseD2Ev libc _ZNSt8ios_baseD2Ev_nid_postfix core/libs/prx/libc/src/LocaleSupport.cpp
