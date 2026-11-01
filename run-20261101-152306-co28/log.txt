@@ -1,0 +1,66 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+cat > /tmp/probe2.cjs <<'EOF'
+const { chromium } = require(process.cwd() + '/node_modules/playwright');
+const { openApp, send, idle } = require(process.cwd() + '/tests/web/mock.cjs');
+(async () => {
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM, args: ['--no-sandbox'] });
+  const { page, errors } = await openApp(browser, { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: 'dark' }, { init: 'localStorage.setItem("inhouselearn.theme","dark")' });
+  await page.click('#model-menu-btn'); await page.waitForSelector('[data-thinking-level="ultra"]'); await page.click('[data-thinking-level="ultra"]'); await page.waitForTimeout(2800);
+  await page.evaluate(() => window.__replies.push(
+    { text: '', tools: [{ name: 'spawn_agents', args: { goal: 'Dossier', verify: false, agents: [{ id: 'src', name: 'Fuentes', role: 'explore', task: 'Busca tres fuentes fiables sobre la fotosíntesis y resume cada una con su enlace y lo más importante de cada una.' }, { id: 'esq', name: 'Esquema', effort: 'max', task: 'Escribe un esquema de la fotosíntesis en cinco puntos, con las fases y lo que entra y sale de cada una, para estudiar.' }] } }] },
+    { text: 'Fuentes: tres fuentes con su enlace.', chunk: 20, delay: 10 }, { text: 'Esquema: cinco puntos con las fases.', chunk: 20, delay: 10 }, { text: 'He juntado lo de los dos agentes.' }));
+  await send(page, 'Dossier');
+  await idle(page, 40000);
+  await page.waitForTimeout(500);
+  const board = await page.evaluate(() => ({ title: document.querySelector('.ua-title').textContent, roles: Array.from(document.querySelectorAll('.ua-role')).map((e) => e.textContent), note: !!document.querySelector('.ua-note:not([hidden])'), reqToolsMain: (window.__requests[0].tools || []).map((t) => t.function.name).filter((n) => /spawn|agent_report/.test(n)), steps: Array.from(document.querySelectorAll('#thread .message:last-child .tool-step-title')).map((e) => e.textContent) }));
+  console.log('BOARD', JSON.stringify(board));
+  // halted plan: computed style of the marks
+  await page.evaluate(() => window.__replies.push({ text: '', tools: [{ name: 'update_plan', args: { items: [{ text: 'A', status: 'done' }, { text: 'B', status: 'in_progress' }, { text: 'C', status: 'pending' }] } }] }, { text: 'Largo, largo, largo, largo, largo, largo, largo, largo.', chunk: 2, delay: 150 }));
+  await send(page, 'Plan');
+  await page.waitForFunction(() => document.querySelector('#thread .message:last-child .plan-card[data-state="live"]') && (getActiveChat().messages.slice(-1)[0].content || '').length > 6, null, { timeout: 15000 });
+  await page.click('#send-btn');
+  await page.waitForFunction(() => !appState.busy, null, { timeout: 15000 });
+  await page.waitForTimeout(300);
+  const marks = await page.evaluate(() => Array.from(document.querySelectorAll('#thread .message:last-child .plan-list li')).map((li) => { const m = li.querySelector('.plan-mark'); const cs = getComputedStyle(m); const af = getComputedStyle(m, '::after'); return { cls: li.className, w: cs.width, border: cs.borderTopColor, opacity: cs.opacity, anim: cs.animationName, after: af.content, afterBg: af.backgroundColor, color: getComputedStyle(li).color }; }));
+  console.log('MARKS', JSON.stringify(marks, null, 1));
+  console.log('errors', JSON.stringify(errors.filter((e) => !/initScript/.test(e))));
+  await browser.close();
+})();
+EOF
+CHROMIUM=$(which google-chrome) BASE_URL=http://127.0.0.1:8765/index.html OUT=/tmp node /tmp/probe2.cjs 2>&1 | head -60
+BOARD {"title":"2 agentes · 0 s","roles":["Exploramedio","Construyemáx"],"note":false,"reqToolsMain":["spawn_agents","agent_report"],"steps":[]}
+MARKS [
+ {
+  "cls": "done",
+  "w": "12px",
+  "border": "rgb(34, 197, 94)",
+  "opacity": "1",
+  "anim": "none",
+  "after": "\"\"",
+  "afterBg": "rgba(0, 0, 0, 0)",
+  "color": "rgb(141, 136, 124)"
+ },
+ {
+  "cls": "halted",
+  "w": "12px",
+  "border": "rgb(224, 122, 60)",
+  "opacity": "0.6",
+  "anim": "none",
+  "after": "\"\"",
+  "afterBg": "rgb(224, 122, 60)",
+  "color": "rgb(141, 136, 124)"
+ },
+ {
+  "cls": "pending",
+  "w": "12px",
+  "border": "rgba(255, 255, 255, 0.17)",
+  "opacity": "1",
+  "anim": "none",
+  "after": "none",
+  "afterBg": "rgba(0, 0, 0, 0)",
+  "color": "rgb(141, 136, 124)"
+ }
+]
+errors []
