@@ -1,0 +1,36 @@
++ set +e +o pipefail
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT
+for t in harness github approval-card steer-now cut-retry composer-fixes; do
+  echo "################ $t"
+  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1
+  echo "PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)"
+  grep -E '^FAIL' /tmp/$t.log | cut -c1-420
+  grep -E 'rror' /tmp/$t.log | grep -v initScript | head -3 | cut -c1-300
+done
+exit 0
+################ harness
+PASS: 21  FAIL: 0
+PASS …but rewrites its own file and accepts overwrite: true — {"s":[{"name":"write_file","status":"error","output":"codigo.js ya existe (42 caracteres) y no lo has leído tal como está ahora. Léelo con read_file y cámbialo con edit_file, o vuelve a llamar a write_file con overwrite: true si d
+errors []
+################ github
+PASS: 14  FAIL: 0
+errors []
+################ approval-card
+PASS: 11  FAIL: 0
+PASS no JavaScript errors — []
+################ steer-now
+PASS: 2  FAIL: 0
+errors []
+################ cut-retry
+PASS: 4  FAIL: 0
+PASS cut while the app is in the background: no error, a short note instead — {"content":"*(Se cortó al salir de la app. La repito en cuanto vuelvas.)*","retry":true,"alts":0,"status":""}
+PASS a cut turn that changed something keeps its error and is not repeated by itself — {"content":"Error: network error","retry":false,"alts":0,"status":"Hubo un error: network error"}
+PASS a network error with the app in front is still shown as an error — {"content":"Error: network error","retry":false,"alts":0,"status":"Hubo un error: network error"}
+################ composer-fixes
+PASS: 5  FAIL: 0
+PASS a turn that ends without any words says so (no blank answer) — {"error":"","content":"Error: El modelo ha terminado sin escribir ninguna respuesta. Vuelve a intentarlo.","shown":"          inhouse · 1/11/26, 15:55    Error: El modelo ha terminado sin escribir ninguna respuesta. Vuelve a inte
+PASS an answer that mentions an unclosed <thinking> tag keeps its text — {"content":"En LaTeX no existe la etiqueta <thinking> pero puedes definir un entorno propio.","error":""}
+errors []
