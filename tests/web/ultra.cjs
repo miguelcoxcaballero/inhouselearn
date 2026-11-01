@@ -77,7 +77,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     });
     const ccw = shell.querySelector(':scope > .ultra-sweep.ultra-ccw');
     return {
-      aura: !!aura, layers: shadow.split('), ').length, hues, animation: aura ? getComputedStyle(aura).animationName : '',
+      aura: !!aura, layers: (shadow.match(/rgba?\(/g) || []).length, hues, animation: aura ? getComputedStyle(aura).animationName : '',
       sweeps: shell.querySelectorAll(':scope > .ultra-sweep').length, halos: shell.querySelectorAll(':scope > .ultra-halo').length,
       ccwBackwards: ccw ? getComputedStyle(ccw, '::before').animationName : '', ccwRotate: ccw ? getComputedStyle(ccw, '::before').offsetRotate : ''
     };

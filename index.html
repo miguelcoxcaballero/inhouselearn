@@ -2797,7 +2797,7 @@
     // from the other benchmarks OpenRouter does publish for it (model-scores.js) and drawn with «~».
     function gaugeMarkup(score, estimated, entry) {
       const title = estimated
-        ? 'Índice de inteligencia estimado ≈ ' + score + (entry && entry.iqError ? ' (± ' + Math.max(1, Math.round(entry.iqError)) + ')' : '') + ': OpenRouter no publica el de este modelo; sale de ' + (IQ_BASIS_TEXT[entry && entry.iqBasis] || 'sus otros benchmarks') + ', comparado con los modelos que sí lo tienen'
+        ? 'Índice de inteligencia estimado ≈ ' + score + (entry && typeof entry.iqError === 'number' ? ' (± ' + Math.max(1, Math.round(entry.iqError)) + ')' : '') + ': OpenRouter no publica el de este modelo; sale de ' + (IQ_BASIS_TEXT[entry && entry.iqBasis] || 'sus otros benchmarks') + ', comparado con los modelos que sí lo tienen'
         : 'Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)';
       return '<span class="model-gauge' + (estimated ? ' est' : '') + '" title="' + title + '">' + gaugeSvg(score) +
         '<span class="model-gauge-num">' + (estimated ? '~' : '') + Math.round(score) + '</span></span>';
