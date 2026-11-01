@@ -1,0 +1,21 @@
+{
+  "id": "shot-20261101-154920-77cf",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v3",
+  "at": "2026-11-01T15:49:38.653Z",
+  "seconds": 6,
+  "shots": [
+    {
+      "name": "Después (arreglo): lista de modelos",
+      "file": "1-despues-arreglo-lista-de-modelos.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "Después (arreglo): la cola sin repetir la animación",
+      "file": "2-despues-arreglo-la-cola-sin-repetir-la-a.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
