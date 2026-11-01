@@ -1,0 +1,88 @@
++ bash analysis/run.sh 2>&1 | grep -v '^retry'
+== upstream main: f2d874c1fd
+NIDS {
+"FT_Atan2": "p90G4PB-rPc",
+"FT_Vector_Rotate": "6wJwUIVwAxg",
+"FT_Vector_Length": "1jmC2QcpRl0",
+"FT_Vector_Polarize": "HMcNe70D9TI",
+"FT_Vector_From_Polar": "2rmvbvOCyjY",
+"_ZNSt13bad_exceptionD0Ev": "lX9M5u0e48k",
+"_ZNSt13bad_exceptionD1Ev": "t6egllDqQ2M",
+"_ZNSt13bad_exceptionD2Ev": "iWNC2tkDgxw",
+"_ZNSt22_System_error_categoryD1Ev": "hVQgfGhJz3U",
+"_ZNSt23_Generic_error_categoryD1Ev": "MAalgQhejPc",
+"_ZNSt12future_errorD0Ev": "rNYLEsL7M0k",
+"_ZNSt24_Iostream_error_categoryD1Ev": "27Z-Cx1jbkU"
+}
+-- FT_Atan2 p90G4PB-rPc
+
+-- FT_Vector_Rotate 6wJwUIVwAxg
+core/libs/prx/libSceFreeTypeOt/Export.cpp:512:int APS5_VABI sceFreeTypeOtUnknown_6wJwUIVwAxg_nid_no_patch() {
+core/libs/prx/libSceFreeTypeOt/Export.cpp:515:APS5_EXPORT("6wJwUIVwAxg", sceFreeTypeOtUnknown_6wJwUIVwAxg_nid_no_patch);
+-- FT_Vector_Length 1jmC2QcpRl0
+core/libs/prx/libSceFreeTypeOt/Export.cpp:502:int APS5_VABI sceFreeTypeOtUnknown_1jmC2QcpRl0_nid_no_patch() {
+core/libs/prx/libSceFreeTypeOt/Export.cpp:505:APS5_EXPORT("1jmC2QcpRl0", sceFreeTypeOtUnknown_1jmC2QcpRl0_nid_no_patch);
+-- FT_Vector_Polarize HMcNe70D9TI
+core/libs/prx/libSceFreeTypeOt/Export.cpp:507:int APS5_VABI sceFreeTypeOtUnknown_HMcNe70D9TI_nid_no_patch() {
+core/libs/prx/libSceFreeTypeOt/Export.cpp:510:APS5_EXPORT("HMcNe70D9TI", sceFreeTypeOtUnknown_HMcNe70D9TI_nid_no_patch);
+-- FT_Vector_From_Polar 2rmvbvOCyjY
+core/libs/prx/libSceFreeTypeOt/Export.cpp:497:int APS5_VABI sceFreeTypeOtUnknown_2rmvbvOCyjY_nid_no_patch() {
+core/libs/prx/libSceFreeTypeOt/Export.cpp:500:APS5_EXPORT("2rmvbvOCyjY", sceFreeTypeOtUnknown_2rmvbvOCyjY_nid_no_patch);
+-- _ZNSt13bad_exceptionD0Ev lX9M5u0e48k
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:110:APS5_EXPORT("lX9M5u0e48k", libSceLibcInternalInventory_020_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:33:| `_ZNSt13bad_exceptionD0Ev` | `lX9M5u0e48k` |
+-- _ZNSt13bad_exceptionD1Ev t6egllDqQ2M
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:115:APS5_EXPORT("t6egllDqQ2M", libSceLibcInternalInventory_021_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:34:| `_ZNSt13bad_exceptionD1Ev` | `t6egllDqQ2M` |
+-- _ZNSt13bad_exceptionD2Ev iWNC2tkDgxw
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:120:APS5_EXPORT("iWNC2tkDgxw", libSceLibcInternalInventory_022_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:35:| `_ZNSt13bad_exceptionD2Ev` | `iWNC2tkDgxw` |
+-- _ZNSt22_System_error_categoryD1Ev hVQgfGhJz3U
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:290:APS5_EXPORT("hVQgfGhJz3U", libSceLibcInternalInventory_056_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:69:| `_ZNSt22_System_error_categoryD1Ev` | `hVQgfGhJz3U` |
+-- _ZNSt23_Generic_error_categoryD1Ev MAalgQhejPc
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:295:APS5_EXPORT("MAalgQhejPc", libSceLibcInternalInventory_057_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:70:| `_ZNSt23_Generic_error_categoryD1Ev` | `MAalgQhejPc` |
+-- _ZNSt12future_errorD0Ev rNYLEsL7M0k
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:95:APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:30:| `_ZNSt12future_errorD0Ev` | `rNYLEsL7M0k` |
+-- _ZNSt24_Iostream_error_categoryD1Ev 27Z-Cx1jbkU
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:300:APS5_EXPORT("27Z-Cx1jbkU", libSceLibcInternalInventory_058_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:71:| `_ZNSt24_Iostream_error_categoryD1Ev` | `27Z-Cx1jbkU` |
+libc header decls:
+core/libs/prx/libc/include/Api.hpp:1271:void APS5_VABI _ZNSt14error_categoryD2Ev_nid_postfix(LibcException::CategoryObject* self);
+core/libs/prx/libc/include/Api.hpp:1272:void APS5_VABI _ZNSt9exceptionD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+core/libs/prx/libc/include/Api.hpp:1273:void APS5_VABI _ZNSt9exceptionD2Ev_nid_postfix(LibcException::ExceptionObject* self);
+core/libs/prx/libc/include/Api.hpp:1274:void APS5_VABI _ZNSt9exceptionD0Ev_nid_postfix(LibcException::ExceptionObject* self);
+
+open PRs found: 1926 page says open: ? min 862 max 14722 has 11613: True
+not fetched: [13454]
+HITS (changed lines only): {
+ "6wJwUIVwAxg": [
+  10600
+ ],
+ "1jmC2QcpRl0": [
+  10600
+ ],
+ "HMcNe70D9TI": [
+  10600
+ ],
+ "2rmvbvOCyjY": [
+  10600
+ ],
+ "FT_Atan2": [
+  10600
+ ],
+ "FT_Vector_Rotate": [
+  10600
+ ],
+ "FT_Vector_Length": [
+  10600
+ ],
+ "FT_Vector_Polarize": [
+  10600
+ ],
+ "FT_Vector_From_Polar": [
+  10600
+ ]
+}
