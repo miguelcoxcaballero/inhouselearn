@@ -1,0 +1,49 @@
++ set +e
+echo "== PR 14240"
+curl -s https://api.github.com/repos/boykopovar/AnyPS5/pulls/14240 | python3 -c 'import json,sys;d=json.load(sys.stdin);print(d.get("state"),d.get("merged"),d.get("merged_at"),(d.get("merged_by") or {}).get("login"),d.get("closed_at"))'
+curl -s https://api.github.com/repos/boykopovar/AnyPS5/issues/14240/events | python3 -c 'import json,sys;[print(e.get("event"),(e.get("actor") or {}).get("login"),e.get("commit_id"),e.get("created_at")) for e in json.load(sys.stdin)]'
+echo "== commits touching AlignedNew.cpp"
+curl -s "https://api.github.com/repos/boykopovar/AnyPS5/commits?path=core/libs/prx/libSceLibcInternal/AlignedNew.cpp" | python3 -c 'import json,sys;[print(c["sha"][:10],c["commit"]["author"]["name"],c["commit"]["author"]["email"],(c.get("author") or {}).get("login"),"|",c["commit"]["committer"]["name"],"|",c["commit"]["message"].splitlines()[0]) for c in json.load(sys.stdin)]'
+echo "== merged PRs by user"
+curl -s "https://api.github.com/search/issues?q=repo:boykopovar/AnyPS5+is:pr+is:merged+author:miguelcoxcaballero" | python3 -c 'import json,sys;d=json.load(sys.stdin);print("total",d.get("total_count"))'
+echo "== where NID names live"
+grep -rIl "v09ZcAhZzSc" --exclude-dir=.git . | head -20
+echo "== NotImplemented count per file in libSceLibcInternal"
+grep -c "NotImplemented" core/libs/prx/libSceLibcInternal/*.cpp
+echo "== how do closed PRs get merged (recent main log)"
+git log -15 --format='%h %an | %cn | %s' 2>/dev/null
+== PR 14240
+closed True 2026-11-01T04:37:40Z oneandonlydean 2026-11-01T04:37:40Z
+labeled github-actions[bot] None 2026-11-01T03:36:25Z
+labeled github-actions[bot] None 2026-11-01T03:36:25Z
+labeled github-actions[bot] None 2026-11-01T03:36:25Z
+assigned oneandonlydean None 2026-11-01T04:23:48Z
+merged oneandonlydean a5d0655bee74c9f5fb6c939b68a76690f951182d 2026-11-01T04:37:40Z
+closed oneandonlydean None 2026-11-01T04:37:40Z
+== commits touching AlignedNew.cpp
+a675d0e45b Miguel Cox Caballero 75581010+miguelcoxcaballero@users.noreply.github.com miguelcoxcaballero | Miguel Cox Caballero | feat(libSceLibcInternal): implement the aligned nothrow array new and the aligned array delete
+== merged PRs by user
+total 1
+== where NID names live
+./core/libs/prx/libSceLibcInternal/AlignedNew.cpp
+./docs/dev/debt/libSceLibcInternal.md
+== NotImplemented count per file in libSceLibcInternal
+core/libs/prx/libSceLibcInternal/AlignedNew.cpp:0
+core/libs/prx/libSceLibcInternal/Directory.cpp:0
+core/libs/prx/libSceLibcInternal/Err.cpp:0
+core/libs/prx/libSceLibcInternal/Export.cpp:276
+core/libs/prx/libSceLibcInternal/FileTime.cpp:0
+core/libs/prx/libSceLibcInternal/Filesystem.cpp:0
+core/libs/prx/libSceLibcInternal/FilesystemStatistics.cpp:0
+core/libs/prx/libSceLibcInternal/Getopt.cpp:0
+core/libs/prx/libSceLibcInternal/Inet.cpp:0
+core/libs/prx/libSceLibcInternal/InitOnce.cpp:0
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:297
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:147
+core/libs/prx/libSceLibcInternal/Mutex.cpp:0
+core/libs/prx/libSceLibcInternal/PathStatistics.cpp:0
+core/libs/prx/libSceLibcInternal/SignalList.cpp:0
+core/libs/prx/libSceLibcInternal/Spawn.cpp:7
+core/libs/prx/libSceLibcInternal/UserContext.cpp:0
+== how do closed PRs get merged (recent main log)
+74ca823 Dean | GitHub | Merge pull request #8140 from tv7/fix/table-callee-getpc
