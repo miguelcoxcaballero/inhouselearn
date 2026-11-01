@@ -1,0 +1,55 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+curl -s --max-time 60 "https://openrouter.ai/api/v1/models?sort=top-weekly" -o /tmp/live.json
+export OUT=/tmp
+cat > /tmp/live.cjs <<'JS'
+process.env.MODELS_JSON = '/tmp/live.json';
+const { chromium } = require(process.cwd() + '/node_modules/playwright');
+const { openApp } = require(process.cwd() + '/tests/web/mock.cjs');
+(async () => {
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
+  const { page } = await openApp(browser, { viewport: { width: 1000, height: 1100 } });
+  await page.waitForFunction(() => modelCatalog.entries.length > 100, null, { timeout: 30000 });
+  const all = await page.evaluate(() => modelCatalog.entries.map((e) => ({ id: e.id, iq: e.intelligence, est: !!e.iqEstimated, basis: e.iqBasis || '', err: e.iqError || 0, arena: e.arena, coding: e.coding, agentic: e.agentic })));
+  const withNum = all.filter((e) => typeof e.iq === 'number');
+  console.log('MODELS', all.length, '| exact', withNum.filter((e) => !e.est).length, '| estimated', withNum.filter((e) => e.est).length, '| none', all.length - withNum.length);
+  const anyBench = (e) => [e.coding, e.agentic, e.arena].some((v) => typeof v === 'number');
+  const missed = all.filter((e) => typeof e.iq !== 'number' && anyBench(e));
+  console.log('WITH A BENCHMARK BUT NO NUMBER (out of range):', missed.length, JSON.stringify(missed.map((e) => e.id + ' arena=' + e.arena + ' coding=' + e.coding + ' agentic=' + e.agentic)));
+  const basisCount = {}; withNum.filter((e) => e.est).forEach((e) => { basisCount[e.basis] = (basisCount[e.basis] || 0) + 1; });
+  console.log('ESTIMATES BY BASIS', JSON.stringify(basisCount));
+  console.log('--- DeepSeek rows in the picker (what the user sees) ---');
+  await page.click('#model-menu-btn');
+  await page.waitForSelector('.model-card');
+  await page.fill('#model-search', 'deepseek').catch(() => {});
+  const searchSel = await page.evaluate(() => { const i = document.querySelector('#model-menu-popup input[type=search], #model-menu-popup input[type=text]'); return i ? (i.id || i.className) : ''; });
+  if (searchSel) { await page.evaluate(() => { const i = document.querySelector('#model-menu-popup input[type=search], #model-menu-popup input[type=text]'); i.value = 'deepseek'; i.dispatchEvent(new Event('input', { bubbles: true })); }); }
+  await page.waitForTimeout(400);
+  const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.model-card')).filter((c) => /deepseek/i.test(c.dataset.modelId)).map((c) => { const g = c.querySelector('.model-gauge'); return c.dataset.modelId.replace('deepseek/', '') + ' => ' + (g ? (g.classList.contains('none') ? 'SIN BENCHMARK (—)' : c.querySelector('.model-gauge-num').textContent + (g.classList.contains('est') ? '  [estimado: ' + g.title.replace(/^Índice de inteligencia estimado /, '').slice(0, 95) + '…]' : '  [exacto]')) : 'SIN FILA DE GAUGE'); }));
+  rows.forEach((r) => console.log('  ' + r));
+  console.log('search box found:', JSON.stringify(searchSel));
+  await browser.close();
+})();
+JS
+node /tmp/live.cjs
+MODELS 346 | exact 40 | estimated 120 | none 186
+WITH A BENCHMARK BUT NO NUMBER (out of range): 24 ["google/gemini-2.5-flash arena=1083.4 coding=null agentic=null","openai/gpt-4o-mini arena=null coding=11.4 agentic=null","nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free arena=null coding=13.8 agentic=null","deepseek/deepseek-chat-v3.1 arena=1075.6 coding=null agentic=null","qwen/qwen3-235b-a22b-2507 arena=1010.7 coding=null agentic=null","openai/gpt-4.1 arena=1014.2 coding=null agentic=null","meta-llama/llama-3.1-8b-instruct arena=null coding=5.4 agentic=null","openai/gpt-5-nano arena=1051 coding=null agentic=null","meta-llama/llama-3.3-70b-instruct arena=null coding=11.9 agentic=null","mistralai/mistral-small-3.2-24b-instruct arena=903.4 coding=null agentic=null","deepseek/deepseek-chat arena=1073 coding=null agentic=null","openai/gpt-4.1-nano arena=937.5 coding=11.1 agentic=null","openai/gpt-4o arena=866.7 coding=null agentic=null","liquid/lfm-2.5-2.6b:free arena=null coding=7.7 agentic=null","qwen/qwen3-coder-30b-a3b-instruct arena=1071 coding=null agentic=null","google/gemma-3-4b-it arena=null coding=2.7 agentic=null","qwen/qwen3-30b-a3b arena=939.4 coding=null agentic=null","moonshotai/kimi-k2 arena=1019.8 coding=null agentic=null","openai/gpt-5.1-codex-mini arena=1066.3 coding=null agentic=null","openai/o3 arena=1059.8 coding=null agentic=null","mistralai/mistral-medium-3 arena=1049 coding=null agentic=null","mistralai/codestral-2508 arena=1004.7 coding=null agentic=null","openai/gpt-4 arena=null coding=13.1 agentic=null","liquid/lfm-2.5-2.6b arena=null coding=7.7 agentic=null"]
+ESTIMATES BY BASIS {"arena":28,"agentic":77,"coding":15}
+--- DeepSeek rows in the picker (what the user sees) ---
+  deepseek-v4.1-flash-1017 => ~34  [estimado: ≈ 33.6 (± 8): OpenRouter no publica el de este modelo; sale de su puntuación en Design Arena, c…]
+  deepseek-v4.1-flash => SIN BENCHMARK (—)
+  deepseek-v4-flash-0731 => ~28  [estimado: ≈ 27.7 (± 7): OpenRouter no publica el de este modelo; sale de su índice de agentes (Artificial…]
+  deepseek-v4-flash => ~15  [estimado: ≈ 15.3 (± 7): OpenRouter no publica el de este modelo; sale de su índice de agentes (Artificial…]
+  deepseek-v4-pro-0813 => 23  [exacto]
+  deepseek-v4-pro => ~18  [estimado: ≈ 18 (± 7): OpenRouter no publica el de este modelo; sale de su índice de agentes (Artificial A…]
+  deepseek-v3.2 => ~12  [estimado: ≈ 11.8 (± 8): OpenRouter no publica el de este modelo; sale de su índice de código (Artificial …]
+  deepseek-v4-flash-vision-exp => ~32  [estimado: ≈ 32 (± 7): OpenRouter no publica el de este modelo; sale de su índice de agentes (Artificial A…]
+  deepseek-chat-v3.1 => SIN BENCHMARK (—)
+  deepseek-chat-v3-0324 => ~1  [estimado: ≈ 1.3 (± 7): OpenRouter no publica el de este modelo; sale de su índice de agentes (Artificial …]
+  deepseek-chat => SIN BENCHMARK (—)
+  deepseek-v3.2-exp => ~12  [estimado: ≈ 11.6 (± 8): OpenRouter no publica el de este modelo; sale de su puntuación en Design Arena, c…]
+  deepseek-r1-0528 => ~8  [estimado: ≈ 7.8 (± 8): OpenRouter no publica el de este modelo; sale de su puntuación en Design Arena, co…]
+  deepseek-v3.1-terminus => ~5  [estimado: ≈ 5.2 (± 7): OpenRouter no publica el de este modelo; sale de su índice de agentes (Artificial …]
+search box found: "model-search-input"
