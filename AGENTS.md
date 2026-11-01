@@ -288,7 +288,16 @@ Mandatory guidance for every AI and developer working in this repository.
   with only coding/agentic an estimate (`estimate`: least squares on the models that have them, needs ≥ 10 of
   them and R² ≥ 0.5, prefers the agentic fit unless both indices clearly help; the entry gets `iqEstimated`, is
   drawn fainter with «~», and counts for the «Más inteligentes» order and the minimum-intelligence filter). The
-  cached OpenRouter list is never changed by it. A model with none of the three shows no speedometer: nothing is
+  cached OpenRouter list is never changed by it. **Only OpenRouter's own data, so it is future-proof (2026-11-01):**
+    nothing is looked up by hand. `summarize` also keeps Design Arena's mean Elo (`arena`) and the `canonical_slug`;
+    `withSameModelScores` lets two entries of one model (a «:free» copy) share their exact scores; `estimate` also fits
+    the intelligence on `arena` when a model has no Artificial Analysis index (the entry gets `iqBasis` and `iqError`, the
+    fit's RMSE, both in the tooltip) and never outside the range its fit was made on (a line is not extended). A model
+    with a benchmark outside that range, or with none, gets a dotted dial and a «—» (`noGaugeMarkup`, two different
+    tooltips) and no number. A list cached without `arena` is fetched again. With the live list of 2026-11-01: 40 exact,
+    120 estimated, 186 without a number out of 346; DeepSeek V4.1 Flash has no benchmark at OpenRouter at all (its
+    snapshot 1017 gets ~34 from Design Arena). A model with none of the three used to show no speedometer, and still
+    gets no number: nothing is
   invented.
 - **Model popup «Modelo · Cuentas»** (`#model-menu-popup`, styles at the end of `model-picker.css`, dark in `theme.css`):
   two tabs (`setModelPopoverTab`). **Modelo**: a notice only when a key is missing or the list failed
@@ -428,6 +437,20 @@ Mandatory guidance for every AI and developer working in this repository.
   there is no light (never a still light in a corner); reduced motion shows the steady state only. All CSS in
   ultra.css, dark tokens in theme.css; `ultra.cjs` fails if a colour of the word, the light or its glow is not a
   violet hue. The agents board's running border orbits in lilac too.
+  - **Ultra code v4 (2026-11-01):** like Claude Code's ultracode, **fanning out is the default** for substantive work.
+    `ultraPromptText` says understand → change → verify (explore agents in parallel, build agents with their files,
+    `acceptance` checked by someone who did not write the change) and that only trivial work (a question, a one-line
+    change) is done directly; every turn's message ends with `ultraTurnText` (a one-line reminder, never saved); and the
+    engine's coach (`createToolCoach({ ultra })`, the page passes `ultra: ultraCodeOn(chat)`) adds a note to a tool result
+    after the 4th and the 12th call made without `spawn_agents` (`ULTRA_NUDGE_AT`; never for the agents, Guided Learning
+    or saved history). Before, the prompt said «do it yourself unless…», so models rarely fanned out. **The moment of
+    turning it on** (it replaces the single lap described above): `ignite` adds `.ultra-aura` (a three-layer lilac glow
+    outside the card only that blooms, peaks as the lights pass and decays into the steady halo; only opacity and scale
+    move), two comets that leave the tag in opposite directions at a constant speed and meet on the far side
+    (`.ultra-sweep` and `.ultra-sweep.ultra-ccw`, each with its blurred `.ultra-halo`), the word comes into focus and glows
+    while the shine crosses it, and `opts.haptic` (the page passes `haptic('success')`) gives a soft tick on a phone. Measured
+    on 1280×800 AMOLED: the glow reaches ~80 px with a smooth falloff, the lights cross at ~690 px/s and the composer's
+    inside does not change. Tests: `ultra.cjs`, `coach.mjs`.
 - **How the model is prompted and run** (index.html, engine/src/index.js): `stableSystemPrompt` is
   byte-identical across the turns of a chat (and a day) so providers with prompt caching reuse it;
   `turnContextText` (time, files, library, `InhouseStudy.brief`, visual events/variety, the course task or

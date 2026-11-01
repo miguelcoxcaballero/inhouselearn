@@ -2,7 +2,7 @@
 // results so the model does not repeat a failing call or skip checking its work.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createToolCoach, NOTE_MARK, COACH_NOTES, withoutNotes } from '../../engine/src/coach.js';
+import { createToolCoach, NOTE_MARK, COACH_NOTES, ULTRA_NUDGE_AT, withoutNotes } from '../../engine/src/coach.js';
 
 const call = (name, args, isError, text = isError ? 'Error: no existe' : 'ok') => ({
   toolCall: { id: 'c' + Math.random(), name, arguments: args },
@@ -61,6 +61,38 @@ test('never a note on Guided Learning and bookkeeping tools', async () => {
     assert.equal(await coach(call(name, { a: 1 }, false)), undefined, name + ' ok');
   }
   assert.equal(coach.errors, 0, 'silent tools do not count as errors');
+});
+
+test('Ultra code: a reminder to fan out after 4 calls made alone, and once more at 12', async () => {
+  const coach = createToolCoach({ ultra: true });
+  assert.deepEqual(ULTRA_NUDGE_AT, [4, 12]);
+  for (let calls = 1; calls <= 16; calls++) {
+    const note = noteOf(await coach(call('read_file', { path: 'f' + calls }, false)));
+    if (calls === 4 || calls === 12) {
+      assert.ok(note.includes(COACH_NOTES.ultra(calls)), 'reminder at call ' + calls + ': ' + note);
+      assert.ok(note.includes('spawn_agents') && note.includes('acceptance'));
+    } else assert.equal(note, '', 'no reminder at call ' + calls);
+  }
+});
+
+test('Ultra code: no reminder once it fanned out, none when Ultra is off, bookkeeping tools do not count', async () => {
+  const fanned = createToolCoach({ ultra: true });
+  await fanned(call('read_file', { path: 'a' }, false));
+  assert.equal(await fanned(call('spawn_agents', { agents: [] }, false)), undefined);
+  for (let i = 0; i < 20; i++) assert.equal(await fanned(call('read_file', { path: 'x' + i }, false)), undefined, 'after spawn_agents');
+  const off = createToolCoach();
+  for (let i = 0; i < 20; i++) assert.equal(await off(call('read_file', { path: 'y' + i }, false)), undefined, 'Ultra off');
+  const alone = createToolCoach({ ultra: true });
+  for (const name of ['update_plan', 'think', 'ask_user']) for (let i = 0; i < 6; i++) assert.equal(await alone(call(name, { i }, false)), undefined, name + ' does not count');
+  for (let i = 1; i <= 3; i++) assert.equal(await alone(call('read_file', { path: 'z' + i }, false)), undefined);
+  const fourth = await alone(call('web_search', { query: 'q' }, false));
+  assert.ok(noteOf(fourth).includes(COACH_NOTES.ultra(4)), 'the fourth real call');
+  // The reminder never reaches what the user sees, and a failing call keeps its own hints too.
+  assert.deepEqual(withoutNotes(fourth.content), [{ type: 'text', text: 'ok' }]);
+  const failing = createToolCoach({ ultra: true });
+  for (let i = 1; i <= 3; i++) await failing(call('read_file', { path: 'e' + i }, true));
+  const both = noteOf(await failing(call('read_file', { path: 'e4' }, true)));
+  assert.ok(both.includes(COACH_NOTES.ultra(4)) && both.includes(COACH_NOTES.manyErrors(4)));
 });
 
 test('withoutNotes removes only the notes', async () => {

@@ -1503,6 +1503,9 @@
     /* An estimate (OpenRouter gives no intelligence number for the model): a little fainter, with «~». */
     .model-gauge.est { opacity: 0.7; }
     .model-gauge.est .model-gauge-num { font-style: italic; }
+    /* No benchmark at all from OpenRouter: a dotted dial and a dash, fainter than an estimate. */
+    .model-gauge.none { opacity: 0.55; color: #a8a29e; }
+    .model-gauge.none .model-gauge-num { font-weight: 600; color: #a8a29e; }
     .model-price {
       flex: 0 0 auto; min-width: 34px; display: flex; flex-direction: column; align-items: center;
       font-size: 0.62rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums;
@@ -1773,8 +1776,8 @@
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
-  <link rel="stylesheet" href="ultra.css?v=20261101-lila1">
-  <link rel="stylesheet" href="theme.css?v=20261101-lila1">
+  <link rel="stylesheet" href="ultra.css?v=20261101-aura1">
+  <link rel="stylesheet" href="theme.css?v=20261101-aura1">
   <!-- After theme.css: the activity timeline uses the tokens, so it follows the theme. -->
   <link rel="stylesheet" href="activity.css?v=20261101-act1">
 </head>
@@ -2152,7 +2155,7 @@
   <script src="documents.js?v=20261025-preview"></script>
   <script src="latex.js?v=20261024-latex"></script>
   <!-- Motor de chat: pi-ai + pi-agent-core empaquetados (engine/, npm run build). -->
-  <script src="vendor/pi-engine.js?v=20261101-ultra3"></script>
+  <script src="vendor/pi-engine.js?v=20261101-iq4"></script>
   <script src="haptics.js?v=20261024-wait1"></script>
   <script src="motion.js?v=20261021-text-motion"></script>
   <script src="dictation.js?v=20261021-voice1"></script>
@@ -2163,14 +2166,14 @@
   <script src="explain.js?v=20261024-controls1"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="learning.js?v=20261024-wait1"></script>
-  <script src="model-scores.js?v=20261101-ultra3"></script>
+  <script src="model-scores.js?v=20261101-iq4"></script>
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261101-prwatch1"></script>
   <script src="composer-dock.js?v=20261101-prwatch1"></script>
   <script src="pr-watch.js?v=20261101-prwatch1"></script>
-  <script src="ultra.js?v=20261101-lila1"></script>
+  <script src="ultra.js?v=20261101-aura1"></script>
   <script>
     const APP_CONFIG = {
       GOOGLE_CLIENT_ID: '435784295430-cmug30o42f1vu4ijgor9sjb0ro4oo37o.apps.googleusercontent.com',
@@ -2783,14 +2786,35 @@
       return '<svg viewBox="0 0 40 22" aria-hidden="true">' + g + '</svg>';
     }
 
+    // What an estimate was worked out from (entry.iqBasis, set by model-scores.js).
+    const IQ_BASIS_TEXT = {
+      'agentic+coding': 'sus índices de código y de agentes (Artificial Analysis)',
+      agentic: 'su índice de agentes (Artificial Analysis)',
+      coding: 'su índice de código (Artificial Analysis)',
+      arena: 'su puntuación en Design Arena'
+    };
+
     // estimated: OpenRouter gives no intelligence number for this model; it is worked out
-    // from its coding and agentic indices (model-scores.js) and drawn with «~».
-    function gaugeMarkup(score, estimated) {
+    // from the other benchmarks OpenRouter does publish for it (model-scores.js) and drawn with «~».
+    function gaugeMarkup(score, estimated, entry) {
       const title = estimated
-        ? 'Índice de inteligencia estimado (≈ ' + score + '): OpenRouter no publica el de este modelo; sale de sus índices de código y de agentes (Artificial Analysis)'
+        ? 'Índice de inteligencia estimado ≈ ' + score + (entry && typeof entry.iqError === 'number' ? ' (± ' + Math.max(1, Math.round(entry.iqError)) + ')' : '') + ': OpenRouter no publica el de este modelo; sale de ' + (IQ_BASIS_TEXT[entry && entry.iqBasis] || 'sus otros benchmarks') + ', comparado con los modelos que sí lo tienen'
         : 'Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)';
       return '<span class="model-gauge' + (estimated ? ' est' : '') + '" title="' + title + '">' + gaugeSvg(score) +
         '<span class="model-gauge-num">' + (estimated ? '~' : '') + Math.round(score) + '</span></span>';
+    }
+
+    // A model OpenRouter publishes no usable benchmark for: a dotted dial and a dash, so the row is
+    // not mistaken for a bug (nothing is invented). The number appears by itself once OpenRouter has data.
+    function noGaugeMarkup(entry) {
+      // Two reasons: nothing at all, or some benchmark whose value is outside the range the estimates are made on.
+      const partial = !!entry && [entry.coding, entry.agentic, entry.arena].some((value) => typeof value === 'number');
+      const why = partial
+        ? 'OpenRouter publica algún benchmark de este modelo, pero queda fuera del rango de los modelos que sí tienen índice y no se puede estimar sin inventar'
+        : 'OpenRouter todavía no publica ningún benchmark de este modelo, así que no hay índice de inteligencia; saldrá solo cuando lo publique';
+      return '<span class="model-gauge none" title="' + why + '">' +
+        '<svg viewBox="0 0 40 22" aria-hidden="true"><path d="M6 20 A14 14 0 0 1 34 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="0.1 4.6"/></svg>' +
+        '<span class="model-gauge-num">—</span></span>';
     }
 
     // Price as a fraction: output (dearer) in red over input (cheaper) in green, per million tokens.
@@ -2841,7 +2865,9 @@
       openRouterEntries.forEach((entry) => { const direct = directClaudeId(entry.id); if (direct) twins.set(direct, entry); });
       const claude = claudeCatalogEntries().map((entry) => (window.ModelScores ? ModelScores.withTwinScores(entry, twins.get(entry.id)) : entry));
       const listed = claude.concat(claude.length ? openRouterEntries.filter((entry) => !directClaudeId(entry.id)) : openRouterEntries);
-      const entries = window.ModelScores ? ModelScores.estimate(listed) : listed;
+      // Two list entries of one model share their scores; then the rest get a marked estimate.
+      const shared = window.ModelScores && ModelScores.withSameModelScores ? ModelScores.withSameModelScores(listed) : listed;
+      const entries = window.ModelScores ? ModelScores.estimate(shared) : shared;
       modelCatalog.entries = entries;
       modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
       modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
@@ -2878,8 +2904,8 @@
     function loadModelCatalogFromCache() {
       try {
         const cached = JSON.parse(localStorage.getItem(MODELS_CACHE_KEY) || 'null');
-        // Entries cached before the engine kept modalities and scores are refetched.
-        if (cached && Array.isArray(cached.entries) && cached.entries.length && 'audio' in cached.entries[0]) {
+        // Entries cached before the engine kept modalities, scores and Design Arena are refetched.
+        if (cached && Array.isArray(cached.entries) && cached.entries.length && 'audio' in cached.entries[0] && 'arena' in cached.entries[0]) {
           setModelCatalog(cached.entries, Number(cached.fetchedAt) || 0);
         }
       } catch (_) {}
@@ -5927,7 +5953,7 @@
       const estimated = !!(entry && entry.iqEstimated);
       const isActive = modelId === activeId;
       const title = entry
-        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '') + (score !== null ? ' · inteligencia ' + (estimated ? '≈ ' : '') + score : '')
+        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '') + (score !== null ? ' · inteligencia ' + (estimated ? '≈ ' : '') + score : ' · sin benchmark de inteligencia')
         : modelId;
       return '<button type="button" class="model-card' + (isActive ? ' active' : '') + '" data-model-id="' + escapeHtml(modelId) + '" style="' + brandStyle(modelId) + '" title="' + escapeHtml(title) + '" role="option" aria-selected="' + (isActive ? 'true' : 'false') + '">' +
         '<span class="model-card-icon">' + brandIconSvg(modelId) + '</span>' +
@@ -5935,7 +5961,7 @@
           '<span class="model-card-name">' + escapeHtml(entry ? entry.name : modelId) + '</span>' +
           '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
         '</span>' +
-        (score !== null ? gaugeMarkup(score, estimated) : '') +
+        (score !== null ? gaugeMarkup(score, estimated, entry) : (entry ? noGaugeMarkup(entry) : '')) +
         priceMarkup(entry) +
         '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
         '</button>';
@@ -11340,6 +11366,7 @@
         visualVarietyText(chat),
         // Last, where models pay most attention: the course task, or the visuals reminder.
         guided ? guidedTaskPrompt(chat) : VISUALS_REMINDER,
+          ultraTurnText(chat),
         plain ? '' : '</contexto_app>'
       ].filter(Boolean).join('\n');
     }
@@ -11566,6 +11593,8 @@
         // A busy provider (429/5xx) is retried; repeated tool errors think harder.
         maxRetries: 2,
         escalate: !chat.guidedLearning,
+          // Ultra code: the coach reminds the model to fan out if it keeps working alone.
+          ultra: ultraCodeOn(chat) && !chat.guidedLearning,
         signal,
         sessionId: chat.id,
         steering: settings.steering,
@@ -12460,18 +12489,27 @@
         pill: document.querySelector('.thinking-pill.ultra-pill'),
         labels: [document.getElementById('thinking-current'), elements.modelTriggerMeta],
         delay: 320,
-        before: () => { if (typeof closeModelMenu === 'function') closeModelMenu(); }
+        before: () => { if (typeof closeModelMenu === 'function') closeModelMenu(); },
+          // A soft tick on the phone when the composer lights up (the device's haptics setting decides).
+          haptic: () => { if (typeof haptic === 'function') haptic('success'); }
       });
+    }
+
+    // Appended to the message of every turn while Ultra code is on, where models pay most attention:
+    // the system prompt alone left them doing the whole job themselves (what the user complained about).
+    function ultraTurnText(chat) {
+      if (!ultraCodeOn(chat) || chat.guidedLearning) return '';
+      return 'Ultra code está activo: si esta petición es sustancial, tu primer paso es planificar con spawn_agents (entender → cambiar → verificar) en vez de hacerla tú solo; solo si es trivial la haces directamente.';
     }
 
     function ultraPromptText(chat) {
       if (!ultraCodeOn(chat) || chat.guidedLearning) return '';
       return [
-        '- Modo Ultra code: razonas al máximo y, si compensa, repartes el trabajo entre agentes con spawn_agents (cada uno con el contexto limpio; a ti solo te llegan sus informes). Decide primero:',
-        '  · Hazlo tú, sin agentes ni plan, si es una pregunta, una conversación o un cambio pequeño: los agentes cuestan tokens y tiempo.',
-        '  · Reparte solo si hay 2 o más partes independientes (fuentes, archivos, ángulos), si el trabajo no cabe en una sola ventana de contexto o si conviene que otro compruebe lo que tú no has escrito.',
-        '  Formas que funcionan: (a) investigar en paralelo (role "explore", uno por fuente o ángulo) y sintetizar tú; (b) explorar → construir → verificar con depends_on; (c) verificación adversaria: acceptance medibles, y fix_rounds si falla; (d) por rondas: una llamada para descubrir y otra para actuar sobre lo hallado.',
-        '  Tamaño: lo justo, normalmente 2–6 agentes (hasta 12 solo en trabajos amplios). Un agente por parte del trabajo, no por paso. Cada agente empieza de cero: en context lo común (objetivo, repositorio, rama, convenciones) y en su tarea qué hacer, dónde y qué devolver; nunca «lo de arriba». files evita que dos pisen el mismo archivo.',
+        '- Modo Ultra code: el usuario lo ha activado para que repartas el trabajo entre agentes con spawn_agents (cada uno empieza con el contexto limpio; a ti solo te llegan sus informes). Es orquestación automática, como el ultracode de Claude Code: en cada tarea sustancial decides tú, sin que te lo pidan, y por defecto REPARTES.',
+        '  · Es sustancial (reparte) si hay que investigar, leer o tocar varios archivos, fuentes o partes; si hay que escribir o cambiar algo que luego conviene comprobar; si te saldrían más de 3 o 4 llamadas a herramientas; o si pide revisar, auditar, migrar, refactorizar, comparar, investigar o construir.',
+        '  · Lo haces tú, sin agentes ni plan, solo si es trivial: una pregunta o una conversación, algo que ya sabes, un cambio de una línea, un renombrado, un formato o un ajuste de configuración.',
+        '  · La forma de siempre es entender → cambiar → verificar. 1) Entender: agentes "explore" en paralelo, uno por área, fuente o ángulo. 2) Cambiar: agentes "build" con depends_on de los anteriores y cada uno con sus archivos (files). 3) Verificar: pon acceptance medibles para que lo compruebe alguien que no escribió el cambio e intente refutarlo (fix_rounds si falla). Un trabajo modesto pero sustancial lleva uno o dos agentes y esa verificación: lo que importa es que lo revise quien no lo hizo.',
+        '  · Empieza por ahí: tras mirar como mucho uno o dos archivos para orientarte, llama a spawn_agents. No hagas tú casi todo el trabajo para repartir el resto después, ni uses update_plan en lugar de repartir: los pasos que pueden ir en paralelo son agentes. Hasta 12 agentes, normalmente 2–6: uno por parte del trabajo, no por paso. Cada agente empieza de cero: en context lo común (objetivo, repositorio, rama, convenciones, lo ya decidido) y en su tarea qué hacer, dónde y qué devolver; nunca «lo de arriba». files evita que dos pisen el mismo archivo.',
         '  Coste: quien solo lee piensa menos (effort medium) que quien escribe; sube effort solo donde haga falta. Hay un tope de $8 entre todos los agentes de esta respuesta; fija budget_usd según el trabajo.',
         '  Al volver: lee primero el veredicto y lo que falló; si un informe viene recortado, agent_report con su id da el texto completo. Contrasta lo importante, arregla tú lo pequeño, relanza solo lo que falló y responde con lo hecho, los enlaces y lo que no se pudo.'
       ].join('\n');
@@ -12775,7 +12813,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.11.01.8';
+    const APP_VERSION = '2026.11.01.9';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

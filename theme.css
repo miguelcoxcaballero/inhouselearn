@@ -445,6 +445,11 @@ html[data-theme="dark"] {
   --ua-ring: rgba(167, 139, 250, 0.14);
   --ua-rest: 0 0 0 1px rgba(167, 139, 250, 0.05), 0 14px 42px -18px rgba(167, 139, 250, 0.6);
   --ua-accent-soft: rgba(167, 139, 250, 0.13);
+  /* The glow round the composer when Ultra code turns on: on black it can be brighter. */
+  --ua-hot: #f5f3ff;
+  --ua-aura-1: rgba(196, 181, 253, 0.62);
+  --ua-aura-2: rgba(167, 139, 250, 0.46);
+  --ua-aura-3: rgba(139, 92, 246, 0.34);
   --ua-read: #94a3b8;
   --ua-search: #2dd4bf;
   --ua-edit: #fb923c;
