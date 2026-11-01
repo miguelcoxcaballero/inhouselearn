@@ -1,0 +1,74 @@
++ set +e
+python3 - <<'EOF'
+import re,pathlib
+R=pathlib.Path('.')
+debt=(R/'docs/dev/debt/libSceLibcInternal.md').read_text()
+rows=re.findall(r"^\| `([^`]+)` \| `([^`]+)` \|",debt,re.M)
+bul=[(n,nid) for n,f,nid in re.findall(r"^- \[([^\]]+)\]\(\.\./\.\./\.\./core/libs/prx/libSceLibcInternal/(InventoryExports\d*\.cpp)\) \(libSceLibcInternal, NID `([^`]+)`\) - listed", debt, re.M)]
+print("table rows",len(rows),"bullets",len(bul))
+# which table header?
+i=debt.find('| `'); print("TABLE CONTEXT:", debt[max(0,i-900):i][-900:])
+def body_of(t,i):
+    i=t.find('{',i);d=0
+    for j in range(i,len(t)):
+        if t[j]=='{':d+=1
+        elif t[j]=='}':
+            d-=1
+            if d==0:return t[i:j+1]
+    return ''
+libc="\n".join(p.read_text(errors='ignore') for p in (R/'core/libs/prx/libc').rglob('*.cpp') if 'tests' not in p.parts)
+lci="\n".join(p.read_text(errors='ignore') for p in (R/'core/libs/prx/libSceLibcInternal').rglob('*.cpp') if 'tests' not in p.parts)
+def impl(name, src):
+    m=re.search(r"\bAPS5_VABI\s+"+re.escape(name)+r"(_nid_postfix|_nid_disambig\d+)\s*\(",src)
+    if not m:
+        m=re.search(r"APS5_VABI\s+"+re.escape(name)+r"(_nid_postfix|_nid_disambig\d+)\s*\(",src)
+    if not m: return None
+    b=body_of(src,m.start())
+    return 'stub' if 'NotImplemented' in b else 'impl'
+# is the NID still a stub in lci?
+EXP=re.compile(r'APS5_EXPORT\(\s*"([^"]+)"\s*,\s*(\w+)\s*\)')
+stubnids=set()
+for p in (R/'core/libs/prx/libSceLibcInternal').rglob('*.cpp'):
+    t=p.read_text(errors='ignore')
+    exp={fn:nid for nid,fn in EXP.findall(t)}
+    for m in re.finditer(r"APS5_VABI\s+(\w+)\s*\(([^;{]*)\)\s*\{",t):
+        if m.group(1) in exp and 'NotImplemented' in body_of(t,m.start()): stubnids.add(exp[m.group(1)])
+for name,nid in rows+bul:
+    if nid not in stubnids: continue
+    tags=[]
+    s=impl(name,libc)
+    if s: tags.append('SAME-'+s)
+    m=list(re.finditer(r"(C[12]|D[012])E",name))
+    if name.startswith('_ZN') and m:
+        m=m[-1]; t=m.group(1)
+        alts=[]
+        if t[0]=='C': alts=[t[0]+('2' if t[1]=='1' else '1')]
+        elif t=='D1': alts=['D2']
+        elif t=='D2': alts=['D1']
+        elif t=='D0': alts=['D1','D2']
+        for a in alts:
+            cp=name[:m.start()]+a+name[m.start()+2:]
+            s=impl(cp,libc)
+            if s: tags.append(f'{a}-libc-{s}')
+            s=impl(cp,lci)
+            if s: tags.append(f'{a}-lci-{s}')
+    if tags: print(nid,name,' '.join(tags))
+EOF
+table rows 308 bullets 147
+TABLE CONTEXT: ibcInternal/InventoryExports.cpp) - 297 entries observed in a 3.20-labelled image and a later 13.60-labelled image; 291 match the public 3.20 catalogue and 6 do not. These are declarations only; neither image label authenticates a retail firmware version. Signatures and behavior are unverified; parameterless `int` declarations are placeholders. Every entry throws through `NotImplemented_nid_no_patch`. All declarations use literal NID aliases; the table records candidate names where known. No runtime functionality is implemented; data exports need separate analysis. Identified candidate names match their NIDs in the [public symbol database](https://github.com/zecoxao/sce_symbols/blob/2883963a0a514ba6e77407a08ef4730a65e88254/aerolib.csv) or [supplemental catalog](https://github.com/claimore22/ps5rs/blob/2304be5131221bae0dac24b9767cabffda33f747/data/nids.csv).
+
+| Name | NID |
+| --- | --- |
+
+rNYLEsL7M0k _ZNSt12future_errorD0Ev D1-libc-impl
+XFh0C66aEms _ZNSt12future_errorD2Ev D1-libc-impl
+OypvNf3Uq3c _ZNSt14overflow_errorD2Ev D1-libc-impl
+xiqd+QkuYXc _ZNSt15underflow_errorD2Ev D1-libc-impl
+dsJKehuajH4 _ZNSt6locale7_LocimpC2ERKS0_ C1-libc-impl
+pN02FS5SPgg _ZNSt8_LocinfoC2EPKc C1-libc-impl
+I5jcbATyIWo _ZNSt8ios_baseD0Ev D2-libc-impl
+iHILAmwYRGY _ZNSt15underflow_errorD0Ev D1-libc-impl
+y1dYQsc67ys _ZNSt14overflow_errorD0Ev D1-libc-impl
+YXVCU6PdgZk _ZNSt8_LocinfoD2Ev D1-libc-impl
+XyJPhPqpzMw _ZNSt4_PadD1Ev D2-libc-impl
+X9D8WWSG3As _ZNSt8ios_baseD1Ev D2-libc-impl
