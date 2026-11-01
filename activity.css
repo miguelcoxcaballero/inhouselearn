@@ -1,0 +1,107 @@
+/* Activity of the model in the thread: reasoning, plan (update_plan), live steps
+   and the finished steps, drawn as a timeline: a rail with dots for the plan, the
+   steps done and «now», with the thought hanging from «now» in small italics.
+   The markup is .activity > .slot-reasoning + .slot-steps (index.html
+   renderMessageMarkup), so stream.js keeps patching the slots.
+   Every rule hangs from <html data-activity> (set in index.html): it gives these
+   rules the weight to win over composer-dock.css and is the off switch.
+   Loaded after theme.css and built only on tokens, so light and AMOLED work. */
+
+html[data-activity] .activity .live-target { font-family: inherit; font-size: inherit; color: var(--text-secondary); }
+html[data-activity] .activity .live-done-where { display: none; }
+html[data-activity] .activity .live-now { border: 0; border-radius: 0; background: none; }
+html[data-activity] .activity .reasoning-body { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+/* While it thinks: only the last lines, fading at the top. */
+html[data-activity] .reasoning.live:not([data-auto-closed]) .reasoning-body {
+  max-height: 4.9em; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 1.8em);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 1.8em);
+}
+html[data-activity] .reasoning.live .reasoning-body p { margin: 0 0 4px; }
+/* «Razonando…» shimmers instead of sitting still. */
+html[data-activity] .reasoning.live:not([data-auto-closed]) .reasoning-summary > span:last-child {
+  background: linear-gradient(90deg, var(--muted) 0%, var(--text) 45%, var(--muted) 90%) 0 0 / 220% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: act-shimmer 2.4s linear infinite;
+}
+@keyframes act-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+@keyframes act-ping { 0% { box-shadow: 0 0 0 0 var(--act-dot); } 80%, 100% { box-shadow: 0 0 0 7px transparent; } }
+
+/* The rail. */
+html[data-activity] .activity:has(.reasoning, .plan-card, .live-steps, .tool-steps) {
+  --act-dot: var(--orange-soft);
+  position: relative; display: flex; flex-direction: column; gap: 7px;
+  margin: 4px 0 12px; padding-left: 24px;
+}
+html[data-activity] .activity:has(.reasoning, .plan-card, .live-steps, .tool-steps)::before {
+  content: ''; position: absolute; left: 6px; top: 9px; bottom: 9px; width: 2px; border-radius: 2px; background: var(--border);
+}
+html[data-activity] .activity > .slot-reasoning,
+html[data-activity] .activity > .slot-steps,
+html[data-activity] .activity .live-steps { display: contents; }
+/* Plan first, then the steps done, «now», the thought and the finished steps. */
+html[data-activity] .activity .plan-card { order: 1; }
+html[data-activity] .activity .live-history { order: 2; }
+html[data-activity] .activity .live-now { order: 3; }
+html[data-activity] .activity .live-retry { order: 4; }
+html[data-activity] .activity .reasoning { order: 5; }
+html[data-activity] .activity .live-tally { order: 6; }
+html[data-activity] .activity .tool-steps { order: 7; }
+/* Every node is a dot on the rail (centre at x = 7px of the block). */
+html[data-activity] .activity .plan-card,
+html[data-activity] .activity .live-done,
+html[data-activity] .activity .live-now,
+html[data-activity] .activity .reasoning,
+html[data-activity] .activity .tool-steps { position: relative; }
+html[data-activity] .activity .plan-card::before,
+html[data-activity] .activity .reasoning:not(.live)::before,
+html[data-activity] .activity .tool-steps::before {
+  content: ''; position: absolute; left: -22px; top: 4px; width: 10px; height: 10px; box-sizing: border-box;
+  border-radius: 50%; border: 2px solid var(--border-strong); background: var(--bg);
+}
+
+/* Plan: no box, a small uppercase head and the list. */
+html[data-activity] .plan-card { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; }
+html[data-activity] .plan-head { justify-content: flex-start; gap: 8px; font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; }
+html[data-activity] .plan-card .plan-list { margin: 5px 0 2px !important; gap: 3px; }
+html[data-activity] .plan-list li { font-size: 0.84rem; }
+html[data-activity] .plan-list li.pending { color: var(--muted); }
+html[data-activity] .plan-mark { width: 12px; height: 12px; }
+
+/* Steps done: the last four, each a small dot on the rail. */
+html[data-activity] .live-history { margin: 0; padding: 0; gap: 5px; }
+html[data-activity] .live-history li:nth-last-child(n+5) { display: none; }
+html[data-activity] .live-done::before {
+  content: ''; position: absolute; left: -20px; top: calc(0.7em - 3px); width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong);
+}
+html[data-activity] .live-done.error::before { background: #dc2626; }
+html[data-activity] .live-done.web::before { background: #3b82f6; }
+html[data-activity] .live-done .live-mark { display: none; }
+
+/* «Now»: an orange dot that pings (red while it waits, blue on the internet). */
+html[data-activity] .live-now { padding: 1px 0; gap: 8px; font-size: 0.86rem; }
+html[data-activity] .live-now > .live-spin { display: none; }
+html[data-activity] .live-now::before {
+  content: ''; position: absolute; left: -23px; top: 50%; width: 12px; height: 12px; margin-top: -6px; box-sizing: border-box;
+  border-radius: 50%; background: var(--orange); border: 3px solid var(--bg);
+  outline: 1.5px solid var(--orange); animation: act-ping 1.6s ease-out infinite;
+}
+html[data-activity] .live-now.waiting::before { background: #dc2626; outline-color: #dc2626; --act-dot: rgba(220,38,38,0.25); }
+html[data-activity] .live-now.waiting.asking::before { background: var(--orange); outline-color: var(--orange); }
+html[data-activity] .live-now.web::before { background: #3b82f6; outline-color: #3b82f6; --act-dot: rgba(59,130,246,0.25); }
+html[data-activity] .live-retry { margin: 0; }
+
+/* The thought hangs from «now»: small, italic, no box. */
+html[data-activity] .activity .reasoning { margin: 0; font-size: 0.8rem; }
+html[data-activity] .activity .reasoning.live { margin-top: -3px; }
+html[data-activity] .reasoning-summary { font-size: 0.74rem; }
+html[data-activity] .reasoning-body { margin: 2px 0 0; padding: 0; border-left: 0; font-style: italic; max-height: 240px; }
+html[data-activity] .reasoning.live .reasoning-body { max-height: 3.3em; }
+html[data-activity] .live-tally { margin: 0; font-size: 0.7rem; }
+html[data-activity] .activity .tool-steps { margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-activity] .reasoning.live .reasoning-summary > span:last-child,
+  html[data-activity] .live-now::before { animation: none !important; }
+}

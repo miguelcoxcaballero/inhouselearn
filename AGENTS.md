@@ -89,6 +89,12 @@ Mandatory guidance for every AI and developer working in this repository.
   Ctrl/Cmd+Enter: pi's `agent.steer`, the message enters the running turn after the current
   tool, and the answer is split there into two messages). It also draws the live tool activity
   in the thread (`renderLiveSteps`).
+   **Activity as a timeline:** reasoning, plan and steps sit in one `.activity` wrapper
+   (`.slot-reasoning` + `.slot-steps`, still patched by stream.js). `activity.css` (after theme.css,
+   tokens only) draws them as a rail with dots: plan, last steps done, «now» (a pinging orange dot,
+   red while waiting, blue on the internet) and the thought in small italics under it. Its rules
+   hang from `<html data-activity>` in index.html (weight over composer-dock.css; removing the
+   attribute brings back the old boxed look). The user chose this look out of three proposals.
 - **Modo noche:** `theme.js` (en el `<head>`, antes del CSS) y `theme.css` (la
   última hoja) dan el tema oscuro a toda la app, y el oscuro es **AMOLED**:
   `--bg` es `#000` y las superficies son solo un pelín más claras, así que al
