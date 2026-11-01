@@ -1,0 +1,27 @@
+{
+  "id": "shot-20261101-150916-76mj",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v3",
+  "at": "2026-11-01T15:09:44.790Z",
+  "seconds": 16,
+  "shots": [
+    {
+      "name": "Plan en marcha",
+      "file": "1-plan-en-marcha.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Plan parado a medias",
+      "file": "2-plan-parado-a-medias.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Plan al terminar sin cerrar",
+      "file": "3-plan-al-terminar-sin-cerrar.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
