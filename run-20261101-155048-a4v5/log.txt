@@ -1,0 +1,193 @@
++ set +e
+grep -rn "GuestPad" core/libs/prx/libc/include | grep -v "APS5_VABI" | head
+grep -rn -A12 "^struct GuestPad" core/libs/prx/libc | head -30
+sed -n 1,130p core/libs/prx/libc/include/GuestLocale.hpp
+sed -n 680,700p core/libs/prx/libc/CMakeLists.txt
+grep -n "ApplicationHeapRegister" core/libs/tests/GuestLocale.cpp | head -3
+grep -n "AllocateFacetVector" -A8 core/libs/prx/libc/src/LocaleSupport.cpp | head -20
+core/libs/prx/libc/include/Api.hpp:59:struct GuestPad {
+core/libs/prx/libc/include/Api.hpp:59:struct GuestPad {
+core/libs/prx/libc/include/Api.hpp-60-    unsigned (APS5_VABI* const* vtable)(GuestPad*);
+core/libs/prx/libc/include/Api.hpp-61-    void* condition;
+core/libs/prx/libc/include/Api.hpp-62-    void* mutex;
+core/libs/prx/libc/include/Api.hpp-63-    bool started;
+core/libs/prx/libc/include/Api.hpp-64-};
+core/libs/prx/libc/include/Api.hpp-65-
+core/libs/prx/libc/include/Api.hpp-66-using Int128 = __int128;
+core/libs/prx/libc/include/Api.hpp-67-
+core/libs/prx/libc/include/Api.hpp-68-using LibcTerminateHandler = void(*)();
+core/libs/prx/libc/include/Api.hpp-69-
+core/libs/prx/libc/include/Api.hpp-70-struct MinMaxPointers {
+core/libs/prx/libc/include/Api.hpp-71-    const void* minimum;
+#ifndef CORE_LIBS_PRX_LIBC_INCLUDE_GUESTLOCALE_HPP
+#define CORE_LIBS_PRX_LIBC_INCLUDE_GUESTLOCALE_HPP
+
+#include <cstddef>
+#include <cstdint>
+#include "general/VabiMacros.hpp"
+
+struct GuestTm;
+
+namespace GuestLocale {
+
+struct LocinfoStorage {
+    alignas(std::uint64_t) unsigned char bytes[64];
+};
+
+struct SceV2Locinfo {
+    std::uint64_t reserved;
+    const char* name;
+    const char* classicName;
+};
+
+struct Facet;
+
+struct FacetVtable {
+    void (APS5_VABI *destroy)(Facet* self);
+    void (APS5_VABI *deleteObject)(Facet* self);
+    void (APS5_VABI *retain)(Facet* self);
+    Facet* (APS5_VABI *release)(Facet* self);
+};
+
+struct Facet {
+    const FacetVtable* vtable;
+    std::uint32_t references;
+    std::uint32_t reserved;
+};
+
+struct Implementation {
+    Facet base;
+    Facet** facets;
+    std::uint64_t facetCount;
+    std::uint32_t category;
+    bool transparent;
+    const char* name;
+};
+
+struct String {
+    std::uint64_t reserved;
+    union {
+        char buffer[16];
+        char* pointer;
+    };
+    std::uint64_t size;
+    std::uint64_t capacity;
+};
+
+void* AllocateStringStorage(std::size_t bytes);
+void ReleaseStringStorage(String& string);
+
+struct CollateFacet {
+    Facet base;
+    const void* collation;
+    const void* wideCollation;
+};
+
+struct CollateVtable {
+    FacetVtable facet;
+    int (APS5_VABI *compare)(const CollateFacet* self, const char* first1, const char* last1, const char* first2, const char* last2);
+    String* (APS5_VABI *transform)(String* result, const CollateFacet* self, const char* first, const char* last);
+    std::int64_t (APS5_VABI *hash)(const CollateFacet* self, const char* first, const char* last);
+};
+
+struct CodecvtVtable {
+    FacetVtable facet;
+    bool (APS5_VABI *alwaysNoconv)(const Facet* self);
+    int (APS5_VABI *maxLength)(const Facet* self);
+    int (APS5_VABI *encoding)(const Facet* self);
+    int (APS5_VABI *in)(Facet* self, std::uint64_t* state, const char* first1, const char* last1, const char** next1, char* first3, char* last3, char** next3);
+    int (APS5_VABI *out)(Facet* self, std::uint64_t* state, const char* first1, const char* last1, const char** next1, char* first3, char* last3, char** next3);
+    int (APS5_VABI *unshift)(Facet* self, std::uint64_t* state, char* first3, char* last3, char** next3);
+    std::size_t (APS5_VABI *length)(Facet* self, std::uint64_t* state, const char* first1, const char* last1, std::size_t count);
+};
+
+struct NumpunctFacet {
+    Facet base;
+    const char* grouping;
+    char decimalPoint;
+    char thousandsSep;
+    const char* falsename;
+    const char* truename;
+};
+
+struct NumpunctVtable {
+    FacetVtable facet;
+    char (APS5_VABI *decimalPoint)(const NumpunctFacet* self);
+    char (APS5_VABI *thousandsSep)(const NumpunctFacet* self);
+    String* (APS5_VABI *grouping)(String* result, const NumpunctFacet* self);
+    String* (APS5_VABI *falsename)(String* result, const NumpunctFacet* self);
+    String* (APS5_VABI *truename)(String* result, const NumpunctFacet* self);
+};
+
+struct IosBase {
+    const void* vtable;
+    std::int64_t standardStream;
+    std::int32_t state;
+    std::int32_t exceptions;
+    std::int32_t flags;
+    std::int32_t precision;
+    std::int32_t width;
+    std::uint32_t reserved;
+    void* storage;
+    void* callbacks;
+    Implementation** locale;
+};
+
+struct Streambuf;
+
+struct StreambufVtable {
+    const void* reserved[4];
+    int (APS5_VABI *overflow)(Streambuf* self, int character);
+};
+
+struct Streambuf {
+    const StreambufVtable* vtable;
+    const void* reserved[7];
+    char** putNext;
+    const void* reservedCounts[3];
+    char** putEnd;
+};
+
+struct OutputIterator {
+    endif()
+    add_test_executable(guest_bessel_tests ${LIBS_INCLUDE_DIR}/tests/GuestBessel.cpp)
+    target_include_directories(guest_bessel_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_bessel_tests PRIVATE libc)
+    configure_windows_unwind(guest_bessel_tests)
+    add_test(NAME guest_bessel COMMAND guest_bessel_tests)
+    if(WIN32)
+        set_tests_properties(guest_bessel PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
+    endif()
+    add_test_executable(guest_libc_threads_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcThreads.cpp)
+    target_include_directories(guest_libc_threads_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_libc_threads_tests PRIVATE libc libkernel)
+    configure_windows_unwind(guest_libc_threads_tests)
+    add_test(NAME guest_libc_threads COMMAND guest_libc_threads_tests)
+    set_tests_properties(guest_libc_threads PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_libc_threads PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
+    endif()
+    add_test_executable(guest_std_thread_hardware_concurrency_tests ${LIBS_INCLUDE_DIR}/tests/GuestStdThreadHardwareConcurrency.cpp)
+559:    ApplicationHeapRegister_nid_no_patch(heapApi.data());
+868:GuestLocale::Facet** AllocateFacetVector(std::size_t count) {
+869-    auto* vector = static_cast<GuestLocale::Facet**>(ApplicationHeapAllocate_nid_no_patch(count * sizeof(GuestLocale::Facet*)));
+870-    if (vector == nullptr) throw std::runtime_error("locale: facet vector allocation failed");
+871-    std::memset(vector, 0, count * sizeof(GuestLocale::Facet*));
+872-    return vector;
+873-}
+874-
+875-// _Locimp::_Locimp(const _Locimp&): the copy shares the source's facets; guest locales are never freed.
+876-void APS5_VABI _ZNSt6locale7_LocimpC1ERKS0__nid_postfix(GuestLocale::Implementation* self, const GuestLocale::Implementation* source) {
+--
+883:        self->facets = AllocateFacetVector(source->facetCount);
+884-        std::memcpy(self->facets, source->facets, source->facetCount * sizeof(GuestLocale::Facet*));
+885-    }
+886-}
+887-
+888-// _Locimp::_Addfac(facet*, size_t id): installs a facet at its id, growing the vector as needed.
+889-void APS5_VABI _ZNSt6locale7_Locimp7_AddfacEPNS_5facetEm_nid_postfix(GuestLocale::Implementation* self, GuestLocale::Facet* facet, std::size_t id) {
+890-    if (self == nullptr) throw std::invalid_argument("_Locimp::_Addfac: null object");
+891-    std::lock_guard<std::mutex> lock(g_localeInitMutex);
+--
