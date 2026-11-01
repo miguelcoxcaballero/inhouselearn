@@ -1773,12 +1773,12 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261026-ultra">
+  <link rel="stylesheet" href="composer-dock.css?v=20261101-card">
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
-  <link rel="stylesheet" href="theme.css?v=20261025-fixes">
+  <link rel="stylesheet" href="theme.css?v=20261101-card">
 </head>
 <body>
 
@@ -2168,8 +2168,8 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261101-run"></script>
-  <script src="composer-dock.js?v=20261101-run"></script>
+  <script src="approval.js?v=20261101-card"></script>
+  <script src="composer-dock.js?v=20261101-card"></script>
   <script src="ultra.js?v=20261026-polish3"></script>
   <script>
     const APP_CONFIG = {
@@ -5827,7 +5827,7 @@
         '  1. Antes de cambiar un repositorio lee su AGENTS.md (o README) y sigue sus reglas y su estilo.',
         '  2. Localiza con github_grep (búsqueda exacta, devuelve ruta:línea) y github_list_files. En archivos grandes lee solo los rangos que necesitas con from_line/to_line; nada se corta si pides rangos.',
         '  3. Prepara TODOS los cambios con github_edit_file (fragmento exacto y único) o github_write_files (archivos nuevos o completos). Preparar no sube nada ni pregunta nada, y las lecturas siguientes ya ven lo preparado.',
-        '  4. Cuando la tarea esté entera, súbela de una vez: github_create_pull_request (sube lo preparado de la rama y abre el PR) o github_push. Un solo commit por tarea, nunca uno por cambio. Por defecto trabaja en una rama nueva con PR; directamente a la rama principal solo si el usuario lo pide.',
+        '  4. Cuando la tarea esté entera, súbela de una vez: github_create_pull_request (sube lo preparado de la rama y abre el PR) o github_push. Un solo commit por tarea, nunca uno por cambio. Por defecto trabaja en una rama nueva con PR; directamente a la rama principal solo si el usuario lo pide. Pasa siempre changelog: lo que el usuario lee en la tarjeta de aprobación, 2–6 frases breves y claras en su idioma sobre lo que cambia para él (nada de detalles internos ni listas de archivos), con **negrita** solo para lo importante.',
         '  5. Si el repositorio tiene GitHub Actions, mira github_ci_status después de subir y arregla lo que falle.',
         '  - Compilar y ejecutar tests de verdad: github_run corre tus comandos (bash) en un runner de GitHub Actions (Linux por defecto; macOS o Windows si hace falta) sobre una rama o commit ya subidos de cualquier repositorio que el token lea, y devuelve el código de salida, las líneas con errores y el final del registro. Úsalo antes de decir que algo compila o pasa los tests (C/C++ con CMake, Rust, Java, Python, Node…), sobre todo si la CI del proyecto no la puedes lanzar tú; si falla, corrige, sube y repite hasta que pase. Instala dependencias con packages y usa ccache para que las siguientes compilaciones vayan rápidas.',
         '  - Contribuir a un proyecto ajeno (sin permiso de escritura): github_fork crea el fork en la cuenta del usuario (o reutiliza el suyo y lo pone al día); prepara y sube los cambios en una rama nueva del fork, pruébalos con github_run y abre el PR al original con github_create_pull_request (repo = original, head_repo = fork). Si GitHub no deja que el token abra el PR allí, la herramienta devuelve un enlace que lo abre ya relleno: dáselo al usuario. Sigue las normas de contribución del proyecto (CONTRIBUTING, plantilla de PR, declarar el uso de IA si lo piden).',
@@ -12678,7 +12678,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.11.01.1';
+    const APP_VERSION = '2026.11.01.2';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

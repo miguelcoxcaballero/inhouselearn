@@ -11,6 +11,7 @@ import { Type } from '@earendil-works/pi-ai';
 
 const API = 'https://api.github.com';
 const MAX_READ_CHARS = 40000;
+const CHANGELOG_HELP = 'What the user reads on the approval card instead of the raw commit message: 2-6 short, plain sentences in the user\'s language about what changes for them (not internals, no file lists), each under ~90 characters; **bold** only for something important (a risk, a breaking change, the version). Always pass it.';
 const MAX_GREP_FILES = 800;
 const MAX_GREP_BYTES = 30 * 1024 * 1024;
 const MAX_GREP_FILE_BYTES = 2 * 1024 * 1024;
@@ -267,6 +268,12 @@ export function createGithubTools(ctx) {
     return paths.length + (paths.length === 1 ? ' archivo preparado' : ' archivos preparados') + ' en ' + entry.repo + '@' + entry.branch + ': ' + paths.join(', ');
   }
 
+  // The approval card's changelog: at most 8 short sentences.
+  function cleanChangelog(value) {
+    const list = Array.isArray(value) ? value : (typeof value === 'string' && value.trim() ? value.split('\n') : []);
+    return list.map((line) => String(line == null ? '' : line).replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '').replace(/\s+/g, ' ').trim().slice(0, 220)).filter(Boolean).slice(0, 8);
+  }
+
   const STAGED_HINT = '\nTodavía NO está en GitHub. Sigue preparando todo lo que haga falta y súbelo junto al final con github_push (un solo commit) o con github_create_pull_request.';
 
   // One commit with any number of files (git data API): blobs → tree → commit → ref.
@@ -297,7 +304,13 @@ export function createGithubTools(ctx) {
         summary: repo + ' · rama ' + branch + (creating ? ' (nueva, desde ' + base + ')' : '') + (branch === main ? ' · ¡es la rama principal!' : '') + '\n«' + params.message + '»' + (params.extra ? '\n' + params.extra : ''),
         items: items.concat(extraItems || []),
         kind: 'commit',
-        mainBranch: branch === main
+        mainBranch: branch === main,
+        // The card draws these itself (repo, branch, a short changelog), so the
+        // user reads a few clear sentences instead of the raw commit message.
+        repo, branch, base, creating,
+        commitMessage: String(params.message || ''),
+        changelog: cleanChangelog(params.changelog),
+        extra: params.extra ? String(params.extra) : ''
       });
     }
     // Everything after the approval runs alone on this branch (another agent
@@ -390,7 +403,8 @@ export function createGithubTools(ctx) {
       message: String(message || '').trim() || (notes.length === 1 ? notes[0] : (notes[0] || 'Cambios') + (notes.length > 1 ? '\n\n' + notes.slice(1).map((note) => '- ' + note).join('\n') : '')),
       files: Object.keys(entry.files).map((path) => ({ path, content: entry.files[path] })),
       delete: entry.deletes || [],
-      title: options && options.title, extra: options && options.extra, preapproved: options && options.preapproved
+      title: options && options.title, extra: options && options.extra, preapproved: options && options.preapproved,
+      changelog: options && options.changelog
     }, options && options.extraItems);
     stage.remove(repo, branch);
     changed();
@@ -767,12 +781,13 @@ export function createGithubTools(ctx) {
       parameters: Type.Object({
         repo: repoParam,
         branch: Type.String(),
-        message: Type.String({ description: 'Commit message: a short title line, then optional details.' })
+        message: Type.String({ description: 'Commit message: a short title line, then optional details.' }),
+        changelog: Type.Optional(Type.Array(Type.String(), { maxItems: 8, description: CHANGELOG_HELP }))
       }),
       executionMode: 'sequential',
       execute: async (id, params) => {
         const repo = used(repoOf(params.repo));
-        const result = await pushStaged(repo, String(params.branch || '').trim(), params.message).catch((error) => {
+        const result = await pushStaged(repo, String(params.branch || '').trim(), params.message, { changelog: params.changelog }).catch((error) => {
           if (/no ha aprobado/.test(error.message)) throw new Error('El usuario no ha aprobado la subida. Los cambios siguen preparados (sin subir); pregúntale qué quiere cambiar.');
           throw error;
         });
@@ -792,6 +807,7 @@ export function createGithubTools(ctx) {
         title: Type.String(),
         body: Type.Optional(Type.String({ description: 'Description in Markdown.' })),
         commit_message: Type.Optional(Type.String({ description: 'Message for the commit of the prepared changes (the PR title if omitted).' })),
+        changelog: Type.Optional(Type.Array(Type.String(), { maxItems: 8, description: CHANGELOG_HELP })),
         draft: Type.Optional(Type.Boolean())
       }),
       executionMode: 'sequential',
@@ -806,7 +822,7 @@ export function createGithubTools(ctx) {
         const prLine = (cross ? headRepo + ' ' : '') + branch + ' → ' + (cross ? repo + ' ' : '') + base + ' · «' + params.title + '»' + (params.draft ? ' (borrador)' : '');
         let pushed = null;
         if (stageCount(stage.get(headRepo, branch))) {
-          pushed = await pushStaged(headRepo, branch, params.commit_message || params.title, { title: 'Subir y abrir pull request', extra: 'Pull request: ' + prLine });
+          pushed = await pushStaged(headRepo, branch, params.commit_message || params.title, { title: 'Subir y abrir pull request', extra: 'Pull request: ' + prLine, changelog: params.changelog });
         } else {
           const compare = await gh('GET', '/repos/' + repo + '/compare/' + encodeURIComponent(base) + '...' + (cross ? encodeURIComponent(headOwner) + ':' : '') + encodeURIComponent(branch))
             .catch((error) => { if (cross) return { files: [] }; throw error; });

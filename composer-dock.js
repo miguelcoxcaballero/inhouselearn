@@ -46,6 +46,8 @@ function dockIcon(name) {
     upload: '<path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/>',
     check: '<path d="M4 12.5 9.5 18 20 6.5"/>',
     branch: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 4-6 3-11 5.5"/>',
+    pr: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V10a3 3 0 0 0-3-3h-4M13 4.5 10.5 7 13 9.5"/>',
+    repo: '<path d="M5 19.5V5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12"/>',
     pause: '<path d="M8 5v14M16 5v14"/>',
     play: '<path d="M7 5l11 7-11 7z"/>'
   };
@@ -278,20 +280,147 @@ function dockApprovalQueueText() {
   return waiting ? '+' + waiting + ' en espera' : '';
 }
 
-function dockApprovalCardHtml(request) {
-  const items = Array.isArray(request.items) ? request.items : [];
+// **negrita** y `código` dentro de una frase (escapada antes).
+function dockInline(text) {
+  return escapeHtml(String(text == null ? '' : text))
+    .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+}
+
+// A changelog line short enough to read at a glance: cut at the last full
+// stop or semicolon before max, else at a space with «…». Bold and code stay
+// balanced. The whole commit message stays folded under the list.
+function dockShortLine(text, max) {
+  const line = String(text || '').replace(/\s+/g, ' ').trim();
+  if (line.length <= max) return line;
+  const head = line.slice(0, max);
+  let cut = -1;
+  const stops = /[.;:](?=\s)/g;
+  let match;
+  while ((match = stops.exec(head))) if (match.index >= 40) cut = match.index;
+  let out = cut > 0 ? head.slice(0, cut) : head.slice(0, Math.max(head.lastIndexOf(' '), 40)).replace(/[\s,;:·—-]+$/, '') + '…';
+  if ((out.match(/\*\*/g) || []).length % 2) out = out.replace(/\*\*(?!.*\*\*)/, '');
+  if ((out.match(/`/g) || []).length % 2) out = out.replace(/`(?!.*`)/, '');
+  return out;
+}
+
+// What the commit card needs. New engines pass it (request.github); older
+// ones only the summary «repo · rama X …\n«message»\nextra», read here.
+function dockCommitInfo(request) {
+  if (!request || request.kind !== 'commit') return null;
+  if (request.github && request.github.commitMessage != null) return Object.assign({}, request.github);
+  const found = String(request.message || '').match(/^([^\n]*)\n«([\s\S]*?)»(?:\n([\s\S]*))?$/);
+  if (!found) return null;
+  const head = found[1].match(/^(\S+) · rama (.+?)(?: \(nueva, desde (.+?)\))?(?: · ¡es la rama principal!)?$/);
+  return {
+    repo: head ? head[1] : '', branch: head ? head[2] : '', base: (head && head[3]) || '', creating: !!(head && head[3]),
+    mainBranch: /¡es la rama principal!/.test(found[1]), commitMessage: found[2], changelog: [], extra: found[3] || ''
+  };
+}
+
+// The changelog: the model's own sentences, or the commit body's bullets
+// (paragraphs if it has none), each shortened; at most 6 shown.
+function dockChangelog(info) {
+  const message = String(info.commitMessage || '').replace(/\r/g, '').trim();
+  const lines = message.split('\n');
+  const title = (lines.shift() || '').trim();
+  const body = lines.join('\n').trim();
+  const given = (Array.isArray(info.changelog) ? info.changelog : []).map((line) => String(line || '').trim()).filter(Boolean);
+  let items = given;
+  if (!items.length && body) {
+    const bullets = [];
+    let open = false;
+    body.split('\n').forEach((line) => {
+      const bullet = line.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/);
+      if (bullet) { bullets.push(bullet[1]); open = true; }
+      else if (!line.trim()) open = false;
+      else if (open) bullets[bullets.length - 1] += ' ' + line.trim();
+    });
+    items = bullets.length ? bullets : body.split(/\n\s*\n/).map((part) => part.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  }
+  const LIMIT = 6;
+  const shown = items.slice(0, LIMIT).map((line) => dockShortLine(line, given.length ? 160 : 96));
+  const shortened = shown.some((line, index) => line !== items[index].replace(/\s+/g, ' ').trim());
+  return { title, items: shown, more: Math.max(0, items.length - LIMIT), full: message, foldFull: !!body && (shortened || items.length > LIMIT || given.length > 0) };
+}
+
+function dockFileStatus(status) {
+  const text = String(status || '');
+  if (/^nuevo/.test(text)) return { cls: 'new', mark: 'N' };
+  if (/^borrad/.test(text)) return { cls: 'gone', mark: 'B' };
+  if (/^modific/.test(text)) return { cls: 'mod', mark: 'M' };
+  return { cls: 'other', mark: (text.trim()[0] || '·').toUpperCase() };
+}
+
+function dockFilesHtml(items) {
+  if (!items.length) return '';
+  return '<ul class="dock-approve-files">' + items.map((item) => {
+    const path = String(item.path || '');
+    const slash = path.lastIndexOf('/');
+    const st = dockFileStatus(item.status);
+    return '<li class="' + st.cls + '"><span class="st" title="' + escapeHtml(item.status || '') + '" aria-label="' + escapeHtml(item.status || '') + '">' + escapeHtml(st.mark) + '</span>' +
+      '<code>' + (slash >= 0 ? '<span class="dir">' + escapeHtml(path.slice(0, slash + 1)) + '</span>' : '') + escapeHtml(path.slice(slash + 1)) + '</code>' +
+      (item.added ? '<span class="add">+' + Number(item.added) + '</span>' : '') + (item.removed ? '<span class="del">−' + Number(item.removed) + '</span>' : '') + '</li>';
+  }).join('') + '</ul>';
+}
+
+function dockStatsHtml(items) {
+  if (!items.length) return '';
   const added = items.reduce((sum, item) => sum + (Number(item.added) || 0), 0);
   const removed = items.reduce((sum, item) => sum + (Number(item.removed) || 0), 0);
+  return '<span class="dock-approve-stats">' + items.length + (items.length === 1 ? ' archivo' : ' archivos') +
+    (added ? ' · <span class="add">+' + added + '</span>' : '') + (removed ? ' <span class="del">−' + removed + '</span>' : '') + '</span>';
+}
+
+function dockApprovalActionsHtml(request) {
+  return '<div class="dock-approve-actions"><button type="button" class="dock-btn" data-dock="reject">' + escapeHtml(request.cancelText || 'No') + '</button>' +
+    '<button type="button" class="dock-btn primary" data-dock="approve">' + escapeHtml(request.confirmText || 'Aprobar') + '</button></div>';
+}
+
+// A commit: where it goes (repo, branch, main branch flag), a few clear
+// sentences of what changes, the files with +/−; the raw message folded.
+function dockCommitCardHtml(request, info) {
+  const items = Array.isArray(request.items) ? request.items : [];
+  const queueText = dockApprovalQueueText();
+  const log = dockChangelog(info);
+  const repo = String(info.repo || '');
+  const slash = repo.indexOf('/');
+  const extra = String(info.extra || '').trim();
+  const pr = /^Pull request: /.test(extra) ? extra.replace(/^Pull request: /, '') : '';
+  const note = pr ? '' : extra;
+  const flag = info.mainBranch ? '<span class="dock-flag main">Rama principal</span>'
+    : info.creating ? '<span class="dock-flag">nueva' + (info.base ? ' desde ' + escapeHtml(info.base) : '') + '</span>' : '';
+  return '<div class="dock-card dock-approve dock-commit' + (info.mainBranch ? ' main' : '') + '" role="alertdialog" aria-live="assertive" aria-label="' + escapeHtml(request.title || 'Subir a GitHub') + '">' +
+    '<div class="dock-approve-head">' + dockAgentChip(request) + '<span class="dock-commit-icon" aria-hidden="true">' + dockIcon('upload') + '</span><b>' + escapeHtml(request.title || 'Subir a GitHub') + '</b>' +
+    '<span class="dock-approve-queue"' + (queueText ? '' : ' hidden') + '>' + queueText + '</span></div>' +
+    '<div class="dock-commit-meta">' +
+      (repo ? '<span class="dock-commit-repo">' + dockIcon('repo') + (slash > 0 ? '<span class="owner">' + escapeHtml(repo.slice(0, slash + 1)) + '</span>' : '') + '<span>' + escapeHtml(repo.slice(slash + 1)) + '</span></span>' : '') +
+      (info.branch ? '<span class="dock-commit-branch">' + dockIcon('branch') + '<span>' + escapeHtml(info.branch) + '</span></span>' : '') + flag +
+      dockStatsHtml(items) +
+    '</div>' +
+    (pr ? '<div class="dock-commit-pr">' + dockIcon('pr') + '<span>' + dockInline(pr) + '</span></div>' : '') +
+    '<div class="dock-approve-msg dock-changelog">' +
+      (log.title ? '<p class="dock-changelog-title">' + dockInline(log.title) + '</p>' : '') +
+      (log.items.length ? '<ul>' + log.items.map((line) => '<li>' + dockInline(line) + '</li>').join('') + '</ul>' : '') +
+      (log.more ? '<p class="dock-changelog-more">y ' + log.more + ' cambio' + (log.more === 1 ? '' : 's') + ' más</p>' : '') +
+      (note ? '<p class="dock-changelog-note">' + dockInline(note) + '</p>' : '') +
+    '</div>' +
+    (log.foldFull ? '<details class="dock-commit-full"><summary>Mensaje completo del commit</summary><pre>' + escapeHtml(log.full) + '</pre></details>' : '') +
+    dockFilesHtml(items) +
+    dockApprovalActionsHtml(request) + '</div>';
+}
+
+function dockApprovalCardHtml(request) {
+  const info = dockCommitInfo(request);
+  if (info) return dockCommitCardHtml(request, info);
+  const items = Array.isArray(request.items) ? request.items : [];
   const queueText = dockApprovalQueueText();
   return '<div class="dock-card dock-approve' + (request.danger ? ' danger' : '') + '" role="alertdialog" aria-live="assertive" aria-label="' + escapeHtml(request.title || 'Aprobar') + '">' +
-    '<div class="dock-approve-head">' + dockAgentChip(request) + '<b>' + escapeHtml(request.title || 'Aprobar') + '</b>' +
-    (items.length ? '<span class="dock-approve-stats">' + items.length + (items.length === 1 ? ' archivo' : ' archivos') + (added ? ' · <span class="add">+' + added + '</span>' : '') + (removed ? ' <span class="del">−' + removed + '</span>' : '') + '</span>' : '') +
+    '<div class="dock-approve-head">' + dockAgentChip(request) + '<b>' + escapeHtml(request.title || 'Aprobar') + '</b>' + dockStatsHtml(items) +
     '<span class="dock-approve-queue"' + (queueText ? '' : ' hidden') + '>' + queueText + '</span></div>' +
     (request.message ? '<p class="dock-approve-msg">' + escapeHtml(request.message) + '</p>' : '') +
-    (items.length ? '<ul class="dock-approve-files">' + items.map((item) => '<li><span class="st">' + escapeHtml(item.status || '') + '</span><code>' + escapeHtml(item.path || '') + '</code>' +
-      (item.added ? '<span class="add">+' + Number(item.added) + '</span>' : '') + (item.removed ? '<span class="del">−' + Number(item.removed) + '</span>' : '') + '</li>').join('') + '</ul>' : '') +
-    '<div class="dock-approve-actions"><button type="button" class="dock-btn" data-dock="reject">' + escapeHtml(request.cancelText || 'No') + '</button>' +
-    '<button type="button" class="dock-btn primary" data-dock="approve">' + escapeHtml(request.confirmText || 'Aprobar') + '</button></div></div>';
+    dockFilesHtml(items) +
+    dockApprovalActionsHtml(request) + '</div>';
 }
 
 // Only the «+N en espera» count changes while the same card is open.

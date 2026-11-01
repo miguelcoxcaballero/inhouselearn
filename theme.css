@@ -279,7 +279,6 @@ html[data-theme="dark"] .g-break-row.fail .g-break-num,
 html[data-theme="dark"] .g-break-row.fail .g-break-pct,
 html[data-theme="dark"] .confirm-detail .cd-del,
 html[data-theme="dark"] .dock-card .del,
-html[data-theme="dark"] .dock-approve.danger .dock-approve-msg,
 html[data-theme="dark"] .live-done.error .live-mark,
 html[data-theme="dark"] .live-done-note,
 html[data-theme="dark"] .tool-step-error,
@@ -450,6 +449,21 @@ html[data-theme="dark"] .ua-file.conflict { background: rgba(248, 113, 113, 0.1)
 html[data-theme="dark"] .ua-copy { background: rgba(255, 255, 255, 0.04); }
 html[data-theme="dark"] .dock-approve-head .dock-agent-chip,
 html[data-theme="dark"] .dock-approve-queue { background: rgba(255, 255, 255, 0.06); }
+
+/* The GitHub upload card (composer-dock.css): AMOLED surfaces, softer tints. */
+html[data-theme="dark"] .dock-approve-files,
+html[data-theme="dark"] .dock-commit-repo,
+html[data-theme="dark"] .dock-commit-branch,
+html[data-theme="dark"] .dock-changelog code,
+html[data-theme="dark"] .dock-commit-full pre { background: rgba(255, 255, 255, 0.05); }
+html[data-theme="dark"] .dock-approve.danger,
+html[data-theme="dark"] .dock-approve.main { border-color: rgba(248, 113, 113, 0.32); box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.06), var(--shadow); }
+html[data-theme="dark"] .dock-commit-icon { color: #f0a070; background: rgba(224, 122, 60, 0.14); }
+html[data-theme="dark"] .dock-commit.main .dock-commit-icon { color: #fca5a5; background: rgba(248, 113, 113, 0.12); }
+html[data-theme="dark"] .dock-flag.main { color: #fca5a5; border-color: rgba(248, 113, 113, 0.32); background: rgba(248, 113, 113, 0.08); }
+html[data-theme="dark"] .dock-approve-files li.new .st { color: #7ee2a8; background: rgba(74, 222, 128, 0.12); }
+html[data-theme="dark"] .dock-approve-files li.mod .st { color: #fcd34d; background: rgba(251, 191, 36, 0.12); }
+html[data-theme="dark"] .dock-approve-files li.gone .st { color: #fca5a5; background: rgba(248, 113, 113, 0.12); }
 
 /* The Claude API key state in the model picker. */
 html[data-theme="dark"] .claude-key-state { color: #4ade80; }

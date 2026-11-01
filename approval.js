@@ -181,7 +181,19 @@ async function approveChange(chat, request) {
     cancelText: options.cancelText || 'No',
     agent: options.agent ? String(options.agent) : '',
     agentHue: Number.isFinite(Number(options.agentHue)) && options.agentHue !== null && options.agentHue !== '' ? Number(options.agentHue) : undefined,
-    signal: options.signal || null
+    signal: options.signal || null,
+    kind: options.kind || '',
+    // A commit: the card shows repo, branch and a short changelog (composer-dock.js).
+    github: options.kind === 'commit' && options.commitMessage != null ? {
+      repo: String(options.repo || ''),
+      branch: String(options.branch || ''),
+      base: String(options.base || ''),
+      creating: !!options.creating,
+      mainBranch: !!options.mainBranch,
+      commitMessage: String(options.commitMessage),
+      changelog: Array.isArray(options.changelog) ? options.changelog : [],
+      extra: String(options.extra || '')
+    } : null
   };
   // onWait: the agent's lane says «esperando» while the card (or its place in
   // line) waits for the user. Never called when the change is auto-approved.

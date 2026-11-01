@@ -9,7 +9,7 @@
 }
 .dock-slot:empty { display: none; }
 .dock-slot { display: flex; flex-direction: column; gap: 6px; }
-.composer-dock:has(.dock-card) { margin-bottom: 8px; }
+.composer-dock:has(.dock-card) { margin-bottom: 14px; }
 
 .dock-card {
   background: var(--surface); border: 1px solid var(--border-strong);
@@ -74,20 +74,67 @@
 
 /* Aprobación */
 .dock-approve { border-color: rgba(224,122,60,0.55); box-shadow: 0 0 0 3px var(--orange-soft), var(--shadow); }
-.dock-approve.danger { border-color: rgba(185,28,28,0.5); box-shadow: 0 0 0 3px rgba(185,28,28,0.1), var(--shadow); }
-.dock-approve-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.dock-approve-head b { font-size: 0.92rem; }
-.dock-approve-stats { color: var(--muted); font-size: 0.78rem; }
+/* Un cambio delicado (rama principal, borrar): solo el borde lo dice; el texto
+   sigue en su color normal para que no parezca un error. */
+.dock-approve.danger, .dock-approve.main { border-color: rgba(185,28,28,0.38); box-shadow: 0 0 0 3px rgba(185,28,28,0.07), var(--shadow); }
+.dock-approve-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dock-approve-head b { font-size: 0.94rem; letter-spacing: -0.005em; }
+.dock-approve-stats { color: var(--muted); font-size: 0.76rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dock-approve-msg { margin: 4px 0 0; color: var(--text-secondary); white-space: pre-line; overflow-wrap: anywhere; line-height: 1.45; font-size: 0.8rem; }
-.dock-approve.danger .dock-approve-msg { color: #991b1b; }
-.dock-approve-files { list-style: none; margin: 8px 0 0; padding: 0; max-height: 132px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
-.dock-approve-files li { display: flex; align-items: baseline; gap: 8px; padding: 5px 9px; border-top: 1px solid var(--border); font-size: 0.78rem; }
-.dock-approve-files li:first-child { border-top: 0; }
-.dock-approve-files code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 0.76rem; }
-.dock-approve-files .st { flex: 0 0 auto; color: var(--muted); font-size: 0.72rem; }
+.dock-approve-files { list-style: none; margin: 10px 0 0; padding: 2px 0; max-height: 146px; overflow-y: auto; border-radius: 10px; background: var(--surface-hover); scrollbar-width: thin; }
+.dock-approve-files li { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 0.77rem; font-variant-numeric: tabular-nums; }
+.dock-approve-files code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.76rem; background: none; padding: 0; color: var(--text); }
+.dock-approve-files code .dir { color: var(--muted); }
+.dock-approve-files .st {
+  flex: 0 0 auto; width: 16px; height: 16px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.62rem; font-weight: 750; color: var(--muted); background: rgba(127,127,127,0.14);
+}
+.dock-approve-files li.new .st { color: #15803d; background: rgba(22,163,74,0.13); }
+.dock-approve-files li.mod .st { color: #b45309; background: rgba(217,119,6,0.13); }
+.dock-approve-files li.gone .st { color: #b91c1c; background: rgba(185,28,28,0.12); }
+.dock-approve-files li.gone code { text-decoration: line-through; text-decoration-color: rgba(127,127,127,0.6); }
 .dock-card .add { color: #15803d; flex: 0 0 auto; }
 .dock-card .del { color: #b91c1c; flex: 0 0 auto; }
-.dock-approve-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.dock-approve-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+/* Subir a GitHub: adónde va, un changelog corto y los archivos */
+.dock-commit-icon {
+  flex: none; width: 24px; height: 24px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+  color: #A84F1A; background: var(--orange-soft);
+}
+.dock-commit-icon svg { width: 13px; height: 13px; }
+.dock-commit.main .dock-commit-icon { color: #b91c1c; background: rgba(185,28,28,0.1); }
+.dock-commit-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; font-size: 0.76rem; }
+.dock-commit-repo, .dock-commit-branch {
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; height: 22px; padding: 0 8px;
+  border-radius: 999px; background: var(--surface-hover); color: var(--text); font-weight: 600;
+}
+.dock-commit-repo > span, .dock-commit-branch > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dock-commit-repo .owner { color: var(--muted); font-weight: 500; flex: 0 1 auto; }
+.dock-commit-branch > span { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.74rem; }
+.dock-commit-meta svg { flex: none; width: 12px; height: 12px; color: var(--muted); }
+.dock-flag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 650; color: var(--muted); border: 1px solid var(--border-strong); }
+.dock-flag.main { color: #b91c1c; border-color: rgba(185,28,28,0.35); background: rgba(185,28,28,0.07); }
+.dock-commit-meta .dock-approve-stats { margin-left: auto; }
+.dock-commit-pr { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; overflow-wrap: anywhere; }
+.dock-commit-pr svg { flex: none; width: 13px; height: 13px; margin-top: 2px; color: var(--muted); }
+.dock-changelog { white-space: normal; margin-top: 10px; color: var(--text); font-size: 0.83rem; line-height: 1.45; }
+.dock-changelog-title { margin: 0; font-weight: 650; }
+.dock-changelog ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.dock-changelog li { position: relative; padding-left: 15px; color: var(--text-secondary); }
+.dock-changelog li::before { content: ""; position: absolute; left: 3px; top: 0.6em; width: 5px; height: 5px; border-radius: 50%; background: var(--orange); }
+.dock-changelog strong { color: var(--text); font-weight: 700; }
+.dock-changelog code { font-size: 0.76rem; padding: 0 4px; border-radius: 4px; background: var(--surface-hover); }
+.dock-changelog-more, .dock-changelog-note { margin: 6px 0 0; font-size: 0.76rem; color: var(--muted); }
+.dock-commit-full { margin-top: 8px; font-size: 0.74rem; color: var(--muted); }
+.dock-commit-full summary { cursor: pointer; width: fit-content; list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.dock-commit-full summary::-webkit-details-marker { display: none; }
+.dock-commit-full summary::before { content: "›"; display: inline-block; transition: transform 0.15s var(--ease); }
+.dock-commit-full[open] summary::before { transform: rotate(90deg); }
+.dock-commit-full pre {
+  margin: 6px 0 0; max-height: 140px; overflow: auto; padding: 8px 10px; border-radius: 8px; background: var(--surface-hover);
+  white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.72rem; line-height: 1.45; color: var(--text-secondary);
+}
 
 /* Quién pide la aprobación (un agente de Ultra code) y cuántas esperan detrás */
 .dock-approve-head .dock-agent-chip {

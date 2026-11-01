@@ -76,7 +76,11 @@ Mandatory guidance for every AI and developer working in this repository.
   files are approved, GitHub uploads still ask) or «Acceso total» (nothing asks). It wraps the
   workspace tools and the GitHub `confirm` hook; every write still goes through it.
   `composer-dock.js` + `composer-dock.css` own what sits right above the composer: the approval
-  card (`dockApprove`, never a fullscreen dialog for tool approvals), the GitHub changes prepared
+  card (`dockApprove`, never a fullscreen dialog for tool approvals; a commit — `kind: 'commit'` — gets its own
+  layout from `dockCommitCardHtml`: repo and branch pills, a «Rama principal» flag, the model's `changelog` of
+  2–6 short sentences with **bold** (github_push / github_create_pull_request), files with N/M/B badges, and the
+  raw commit message folded; an older engine's summary text is parsed into the same card; a delicate change
+  is marked by the border, never by red text; test `tests/web/approval-card.cjs`), the GitHub changes prepared
   but not uploaded (`githubStageStore`: IndexedDB with a memory copy, never localStorage, which
   big files filled; test `tests/web/github-stage.cjs`), the message queue (Enter while the model works queues;
   each queued message goes out when the previous turn has fully ended) and steering («Ahora» or
