@@ -947,7 +947,10 @@ function renderLiveSteps(message, steps) {
     const time = stepTime(step);
     const firstLine = String(step.output || '').split('\n')[0].slice(0, 90);
     return '<li class="live-done' + (step.status === 'error' ? ' error' : '') + (isWebStep(step) ? ' web' : '') + '"><span class="live-mark">' + (step.status === 'error' ? '✕' : isWebStep(step) ? GLOBE : '✓') + '</span>' +
-      '<span class="live-done-title">' + escapeHtml(info ? info.title : (TOOL_LABELS[step.name] || step.name)) + '</span>' +
+      // Same text as info.title, with «where» in its own span (the activity styles hide it).
+      '<span class="live-done-title">' + (info
+        ? escapeHtml([info.verb, info.target].filter(Boolean).join(' ')) + (info.where ? '<span class="live-done-where"> · ' + escapeHtml(info.where) + '</span>' : '')
+        : escapeHtml(TOOL_LABELS[step.name] || step.name)) + '</span>' +
       (step.status === 'error' && firstLine ? '<span class="live-done-note">' + escapeHtml(firstLine) + '</span>' : '') +
       (time.end && time.end - time.start >= 1000 ? '<span class="live-done-time">' + formatSeconds(time.end - time.start) + '</span>' : '') + '</li>';
   }).join('');

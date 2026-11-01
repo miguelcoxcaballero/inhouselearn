@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-activity>
 <head>
   <meta charset="UTF-8">
   <script>
@@ -1773,12 +1773,14 @@
   <link rel="stylesheet" href="dictation.css?v=20261021-voice-ui3">
   <link rel="stylesheet" href="visuals.css?v=20261024-controls1">
   <link rel="stylesheet" href="approval.css?v=20261022-dock">
-  <link rel="stylesheet" href="composer-dock.css?v=20261101-card2">
+  <link rel="stylesheet" href="composer-dock.css?v=20261101-act1">
   <!-- The last sheet: the dark theme overrides everything above it. -->
   <link rel="stylesheet" href="chats-menu.css?v=20261025-version">
   <link rel="stylesheet" href="study.css?v=20261026-restore">
   <link rel="stylesheet" href="ultra.css?v=20261026-polish3">
   <link rel="stylesheet" href="theme.css?v=20261101-card2">
+  <!-- After theme.css: the activity timeline uses the tokens, so it follows the theme. -->
+  <link rel="stylesheet" href="activity.css?v=20261101-act1">
 </head>
 <body>
 
@@ -2169,7 +2171,7 @@
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
   <script src="approval.js?v=20261101-card"></script>
-  <script src="composer-dock.js?v=20261101-card2"></script>
+  <script src="composer-dock.js?v=20261101-act1"></script>
   <script src="ultra.js?v=20261026-polish3"></script>
   <script>
     const APP_CONFIG = {
@@ -7065,7 +7067,7 @@
         '  <div class="message-body">',
         '    <div class="message-meta">' + roleLabel + ' · ' + escapeHtml(formatWhen(message.createdAt)) + '</div>',
         '    <div class="bubble"><div class="bubble-content">' + (isUser ? '' : guidedChapterMarkup(message, chat)),
-        '<div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div>' +
+        '<div class="activity"><div class="slot-reasoning">' + thinkingMarkup + '</div><div class="slot-steps">' + stepsMarkup + '</div></div>' +
           // The Ultra code board (ultra.js), patched in place while agents work.
           (window.UltraAgents && !isUser ? '<div class="slot-agents">' + window.UltraAgents.markupAll(message) + '</div>' : ''),
         '<div class="md-root">' + body + '</div>' + attachmentMarkup + '<div class="slot-cards">' + cardsMarkup + '</div>' + (isUser ? '' : renderMessageDocuments(message) + renderMessageSources(message)) + quickMarkup,
@@ -7178,7 +7180,7 @@
       const isOpen = openState === null ? !!liveOpen : openState === '1';
       const label = message.pending ? 'Razonando...' : 'Razonamiento';
       return [
-        '<details class="reasoning"' + (isOpen ? ' open' : '') + ' data-reasoning-id="' + message.id + '">',
+        '<details class="reasoning' + (message.pending ? ' live' : '') + '"' + (isOpen ? ' open' : '') + ' data-reasoning-id="' + message.id + '">',
         '  <summary class="reasoning-summary">',
         '    <span class="reasoning-icon" aria-hidden="true">',
         '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.74V17h8v-2.26A7 7 0 0 0 12 2z"/></svg>',
@@ -7211,7 +7213,7 @@
       const items = last.args.items.filter((item) => item && String(item.text || '').trim()).slice(0, 20);
       if (!items.length) return '';
       const done = items.filter((item) => item.status === 'done').length;
-      return '<div class="plan-card" data-plan-for="' + escapeHtml(message.id) + '"><div class="plan-head"><span>Plan</span><span>' + done + '/' + items.length + '</span></div><ol class="plan-list">' +
+      return '<div class="plan-card" data-plan-for="' + escapeHtml(message.id) + '"><div class="plan-head"><span class="plan-title">Plan</span><span class="plan-count">' + done + '/' + items.length + '</span></div><ol class="plan-list">' +
         items.map((item) => { const status = ['done', 'in_progress'].includes(item.status) ? item.status : 'pending'; return '<li class="' + status + '"><span class="plan-mark" aria-hidden="true"></span><span class="plan-text">' + escapeHtml(String(item.text).slice(0, 160)) + '</span></li>'; }).join('') +
         '</ol></div>';
     }
@@ -12678,7 +12680,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.11.01.4';
+    const APP_VERSION = '2026.11.01.5';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');
