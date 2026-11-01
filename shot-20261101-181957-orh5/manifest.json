@@ -1,0 +1,45 @@
+{
+  "id": "shot-20261101-181957-orh5",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-11-01T18:20:24.888Z",
+  "seconds": 14,
+  "shots": [
+    {
+      "name": "Oscuro 0,3 s",
+      "file": "1-oscuro-0-3-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "Oscuro 0,75 s",
+      "file": "2-oscuro-0-75-s.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "Oscuro fijo",
+      "file": "3-oscuro-fijo.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "Claro 0,5 s",
+      "file": "4-claro-0-5-s.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "Claro fijo",
+      "file": "5-claro-fijo.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "Movil oscuro 0,5 s",
+      "file": "6-movil-oscuro-0-5-s.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
