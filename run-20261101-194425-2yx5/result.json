@@ -1,0 +1,94 @@
+{
+ "id": "run-20261101-194425-2yx5",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "",
+ "os": "ubuntu-24.04",
+ "sha": "ebf183863c9e624d94bb1efeb2239b213bb776e5",
+ "runner": "Linux X64",
+ "command": "npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport OUT=/tmp\nset +e\ngit log --oneline -1\necho '=== unit'\nnode --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nfor t in model-list ultra ultra-board theme composer-fixes harness prompt-cache claude-api github queue activity-state reasoning approval-card steer-now chat-url; do\n  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1\n  code=$?\n  echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\"\n  grep '^FAIL' /tmp/web-$t.log | cut -c1-300\ndone\nls tests/web | grep -i pr-watch\nif [ -f tests/web/pr-watch.cjs ]; then timeout 200 node tests/web/pr-watch.cjs > /tmp/web-pr-watch.log 2>&1; echo \"pr-watch: $(grep -c '^PASS' /tmp/web-pr-watch.log) PASS, $(grep -c '^FAIL' /tmp/web-pr-watch.log) FAIL\"; grep '^FAIL' /tmp/web-pr-watch.log | cut -c1-300; fi\nexit 0",
+ "exit_code": 0,
+ "seconds": 150,
+ "lines": 41,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 13,
+   "text": "echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\""
+  },
+  {
+   "line": 14,
+   "text": "grep '^FAIL' /tmp/web-$t.log | cut -c1-300"
+  },
+  {
+   "line": 17,
+   "text": "if [ -f tests/web/pr-watch.cjs ]; then timeout 200 node tests/web/pr-watch.cjs > /tmp/web-pr-watch.log 2>&1; echo \"pr-watch: $(grep -c '^PASS' /tmp/web-pr-watch.log) PASS, $(grep -c '^FAIL' /tmp/web-pr-watch.log) FAIL\"; grep '^FAIL' /tmp/web-pr-watch.log | cut -c1-300; fi"
+  },
+  {
+   "line": 24,
+   "text": "model-list: 13 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 25,
+   "text": "ultra: 18 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 26,
+   "text": "ultra-board: 39 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 27,
+   "text": "theme: 25 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 28,
+   "text": "composer-fixes: 5 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 29,
+   "text": "harness: 21 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 30,
+   "text": "prompt-cache: 6 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 31,
+   "text": "claude-api: 23 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 32,
+   "text": "github: 14 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 33,
+   "text": "queue: 9 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 34,
+   "text": "activity-state: 5 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 35,
+   "text": "reasoning: 10 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 36,
+   "text": "approval-card: 11 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 37,
+   "text": "steer-now: 2 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 38,
+   "text": "chat-url: 9 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 40,
+   "text": "pr-watch: 10 PASS, 0 FAIL"
+  }
+ ],
+ "errors_total": 19,
+ "tail": "+ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport OUT=/tmp\nset +e\ngit log --oneline -1\necho '=== unit'\nnode --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nfor t in model-list ultra ultra-board theme composer-fixes harness prompt-cache claude-api github queue activity-state reasoning approval-card steer-now chat-url; do\n  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1\n  code=$?\n  echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\"\n  grep '^FAIL' /tmp/web-$t.log | cut -c1-300\ndone\nls tests/web | grep -i pr-watch\nif [ -f tests/web/pr-watch.cjs ]; then timeout 200 node tests/web/pr-watch.cjs > /tmp/web-pr-watch.log 2>&1; echo \"pr-watch: $(grep -c '^PASS' /tmp/web-pr-watch.log) PASS, $(grep -c '^FAIL' /tmp/web-pr-watch.log) FAIL\"; grep '^FAIL' /tmp/web-pr-watch.log | cut -c1-300; fi\nexit 0\nebf1838 Inteligencia de los modelos solo con datos de OpenRouter, Ultra code reparte por defecto y nueva animación de encendido (2026.11.01.9)\n=== unit\n# tests 58\n# pass 58\n# fail 0\nmodel-list: 13 PASS, 0 FAIL, exit 0\nultra: 18 PASS, 0 FAIL, exit 0\nultra-board: 39 PASS, 0 FAIL, exit 0\ntheme: 25 PASS, 0 FAIL, exit 0\ncomposer-fixes: 5 PASS, 0 FAIL, exit 0\nharness: 21 PASS, 0 FAIL, exit 0\nprompt-cache: 6 PASS, 0 FAIL, exit 0\nclaude-api: 23 PASS, 0 FAIL, exit 0\ngithub: 14 PASS, 0 FAIL, exit 0\nqueue: 9 PASS, 0 FAIL, exit 0\nactivity-state: 5 PASS, 0 FAIL, exit 0\nreasoning: 10 PASS, 0 FAIL, exit 0\napproval-card: 11 PASS, 0 FAIL, exit 0\nsteer-now: 2 PASS, 0 FAIL, exit 0\nchat-url: 9 PASS, 0 FAIL, exit 0\npr-watch.cjs\npr-watch: 10 PASS, 0 FAIL\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41343241637"
+}

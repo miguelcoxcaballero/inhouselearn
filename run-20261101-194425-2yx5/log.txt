@@ -1,0 +1,40 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export OUT=/tmp
+set +e
+git log --oneline -1
+echo '=== unit'
+node --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'
+for t in model-list ultra ultra-board theme composer-fixes harness prompt-cache claude-api github queue activity-state reasoning approval-card steer-now chat-url; do
+  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1
+  code=$?
+  echo "$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code"
+  grep '^FAIL' /tmp/web-$t.log | cut -c1-300
+done
+ls tests/web | grep -i pr-watch
+if [ -f tests/web/pr-watch.cjs ]; then timeout 200 node tests/web/pr-watch.cjs > /tmp/web-pr-watch.log 2>&1; echo "pr-watch: $(grep -c '^PASS' /tmp/web-pr-watch.log) PASS, $(grep -c '^FAIL' /tmp/web-pr-watch.log) FAIL"; grep '^FAIL' /tmp/web-pr-watch.log | cut -c1-300; fi
+exit 0
+ebf1838 Inteligencia de los modelos solo con datos de OpenRouter, Ultra code reparte por defecto y nueva animación de encendido (2026.11.01.9)
+=== unit
+# tests 58
+# pass 58
+# fail 0
+model-list: 13 PASS, 0 FAIL, exit 0
+ultra: 18 PASS, 0 FAIL, exit 0
+ultra-board: 39 PASS, 0 FAIL, exit 0
+theme: 25 PASS, 0 FAIL, exit 0
+composer-fixes: 5 PASS, 0 FAIL, exit 0
+harness: 21 PASS, 0 FAIL, exit 0
+prompt-cache: 6 PASS, 0 FAIL, exit 0
+claude-api: 23 PASS, 0 FAIL, exit 0
+github: 14 PASS, 0 FAIL, exit 0
+queue: 9 PASS, 0 FAIL, exit 0
+activity-state: 5 PASS, 0 FAIL, exit 0
+reasoning: 10 PASS, 0 FAIL, exit 0
+approval-card: 11 PASS, 0 FAIL, exit 0
+steer-now: 2 PASS, 0 FAIL, exit 0
+chat-url: 9 PASS, 0 FAIL, exit 0
+pr-watch.cjs
+pr-watch: 10 PASS, 0 FAIL
