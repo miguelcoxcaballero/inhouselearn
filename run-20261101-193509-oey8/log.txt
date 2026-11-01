@@ -1,0 +1,36 @@
++ (cd engine && npm ci --silent && npm run build >/dev/null)
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 2
+export OUT=/tmp
+node --test tests/web/wiring.mjs 2>&1 | grep -E '^# (pass|fail)'
+fail=0
+for t in pr-watch github fork-run approval-card harness queue ultra; do
+  echo "=== $t"
+  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo "exit $?"
+  grep -E '^(FAIL|SKIP)|^errors' /tmp/$t.log | cut -c1-500
+  echo "PASS: $(grep -c '^PASS' /tmp/$t.log)"
+  grep -q '^FAIL' /tmp/$t.log && fail=1
+done
+exit $fail
+
+  ../vendor/pi-engine.js  1.0mb ⚠️
+
+⚡ Done in 193ms
+# pass 2
+# fail 0
+=== pr-watch
+exit 0
+errors []
+PASS: 10
+=== github
+exit 0
+errors []
+PASS: 14
+=== fork-run
+exit 0
+errors []
+PASS: 11
+=== approval-card
+exit 0

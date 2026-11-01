@@ -1,0 +1,26 @@
+{
+ "id": "run-20261101-193509-oey8",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "771b56f57df86d95a8a543e562fee760b1796578",
+ "os": "ubuntu-24.04",
+ "sha": "771b56f57df86d95a8a543e562fee760b1796578",
+ "runner": "Linux X64",
+ "command": "(cd engine && npm ci --silent && npm run build >/dev/null)\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 2\nexport OUT=/tmp\nnode --test tests/web/wiring.mjs 2>&1 | grep -E '^# (pass|fail)'\nfail=0\nfor t in pr-watch github fork-run approval-card harness queue ultra; do\n  echo \"=== $t\"\n  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo \"exit $?\"\n  grep -E '^(FAIL|SKIP)|^errors' /tmp/$t.log | cut -c1-500\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)\"\n  grep -q '^FAIL' /tmp/$t.log && fail=1\ndone\nexit $fail",
+ "exit_code": 1,
+ "seconds": 90,
+ "lines": 37,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 12,
+   "text": "grep -E '^(FAIL|SKIP)|^errors' /tmp/$t.log | cut -c1-500"
+  },
+  {
+   "line": 14,
+   "text": "grep -q '^FAIL' /tmp/$t.log && fail=1"
+  }
+ ],
+ "errors_total": 2,
+ "tail": "+ (cd engine && npm ci --silent && npm run build >/dev/null)\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 2\nexport OUT=/tmp\nnode --test tests/web/wiring.mjs 2>&1 | grep -E '^# (pass|fail)'\nfail=0\nfor t in pr-watch github fork-run approval-card harness queue ultra; do\n  echo \"=== $t\"\n  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; echo \"exit $?\"\n  grep -E '^(FAIL|SKIP)|^errors' /tmp/$t.log | cut -c1-500\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)\"\n  grep -q '^FAIL' /tmp/$t.log && fail=1\ndone\nexit $fail\n\n  ../vendor/pi-engine.js  1.0mb ⚠️\n\n⚡ Done in 193ms\n# pass 2\n# fail 0\n=== pr-watch\nexit 0\nerrors []\nPASS: 10\n=== github\nexit 0\nerrors []\nPASS: 14\n=== fork-run\nexit 0\nerrors []\nPASS: 11\n=== approval-card\nexit 0\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41342477955"
+}
