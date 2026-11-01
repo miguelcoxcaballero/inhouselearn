@@ -1,0 +1,192 @@
++ set +e
+find core/libs/prx/libSceFreeTypeOt -type f | sort
+grep -rn "sceFreeTypeOtSin\|sceFreeTypeOtTan\|sceFreeTypeOtVectorUnit\|6wJwUIVwAxg\|1jmC2QcpRl0\|HMcNe70D9TI\|2rmvbvOCyjY" --include=*.cpp --include=*.hpp --include=*.md --include=*.txt --include=*.py --include=*.json . | grep -v "^./3rdparty" | head -20
+grep -n "NotImplemented_nid_no_patch" core/libs/prx/libc/include/*.hpp | head -3
+sed -n 1,12p core/libs/prx/libSceFreeTypeOt/src/Memory.cpp
+git ls-remote https://github.com/freetype/freetype.git refs/tags/VER-2-4-11 refs/tags/VER-2-4-11^{} refs/tags/VER-2-4-12^{}
+cd /tmp
+curl -sL -o ft.tgz https://download.savannah.gnu.org/releases/freetype/freetype-old/freetype-2.4.11.tar.gz && tar xzf ft.tgz
+(cd freetype-2.4.11 && ./configure --prefix=/tmp/ftA --without-zlib --without-bzip2 -q >/dev/null 2>&1 && make -j4 -s >/dev/null 2>&1 && make install -s >/dev/null 2>&1) && echo A-ok
+cat > gen.c <<'EOF'
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_TRIGONOMETRY_H
+#include <stdio.h>
+#include <stdint.h>
+#define P(v) printf("%lld", (long long)(v))
+int main(void){
+  long long A[] = {0, 1, -1, 0x8000, 30LL<<16, 45LL<<16, 60LL<<16, 89LL<<16, 90LL<<16, 91LL<<16, 135LL<<16, 180LL<<16, -(90LL<<16), -(180LL<<16), 270LL<<16, 359LL<<16, 360LL<<16, -(360LL<<16), (720LL<<16)+12345, -(1000LL<<16)-7, 0x123456789LL, -0x123456789LL, 1LL<<40};
+  printf("ANGLES\n");
+  for (unsigned i = 0; i < sizeof A / sizeof *A; i++) { FT_Vector u; FT_Vector_Unit(&u, A[i]);
+    printf("    {"); P(A[i]); printf(", "); P(FT_Sin(A[i])); printf(", "); P(FT_Cos(A[i])); printf(", "); P(FT_Tan(A[i])); printf(", "); P(u.x); printf(", "); P(u.y); printf("},\n"); }
+  long long V[][2] = {{1,0},{0,-5},{3,4},{-3,4},{-7,-9},{65536,65536},{1LL<<20,-(1LL<<18)},{0x7FFFFFFF,1},{1LL<<40,3},{-(1LL<<35),1LL<<34},{123456789,-987654}};
+  long long R[] = {30LL<<16, -(45LL<<16), 180LL<<16, 0x123456};
+  printf("VECTORS\n");
+  for (unsigned i = 0; i < sizeof V / sizeof *V; i++) { FT_Vector v = {V[i][0], V[i][1]}; FT_Fixed len = -1; FT_Angle an = -1; FT_Vector_Polarize(&v, &len, &an);
+    printf("    {"); P(V[i][0]); printf(", "); P(V[i][1]); printf(", "); P(FT_Vector_Length(&v)); printf(", "); P(len); printf(", "); P(an); printf(", "); P(FT_Atan2(V[i][0], V[i][1])); printf("},\n"); }
+  printf("ROTATIONS\n");
+  for (unsigned i = 0; i < sizeof V / sizeof *V; i++) for (unsigned j = 0; j < 4; j++) { FT_Vector v = {V[i][0], V[i][1]}; FT_Vector_Rotate(&v, R[j]);
+    printf("    {"); P(V[i][0]); printf(", "); P(V[i][1]); printf(", "); P(R[j]); printf(", "); P(v.x); printf(", "); P(v.y); printf("},\n"); }
+  long long L[] = {65536, 1LL<<20, 3, 0x7FFFFFFF, 1LL<<40}; long long PA[] = {0, 30LL<<16, -(120LL<<16), 0x123456};
+  printf("POLAR\n");
+  for (unsigned i = 0; i < 5; i++) for (unsigned j = 0; j < 4; j++) { FT_Vector v; FT_Vector_From_Polar(&v, L[i], PA[j]);
+    printf("    {"); P(L[i]); printf(", "); P(PA[j]); printf(", "); P(v.x); printf(", "); P(v.y); printf("},\n"); }
+  long long D[][2] = {{0,10LL<<16},{10LL<<16,0},{0,190LL<<16},{0,-(190LL<<16)},{350LL<<16,10LL<<16},{1LL<<40,5},{-(1LL<<40),1LL<<40}};
+  printf("DIFFS\n");
+  for (unsigned i = 0; i < 7; i++) { printf("    {"); P(D[i][0]); printf(", "); P(D[i][1]); printf(", "); P(FT_Angle_Diff(D[i][0], D[i][1])); printf("},\n"); }
+  return 0;
+}
+EOF
+gcc -O2 -o gen gen.c -I/tmp/ftA/include -I/tmp/ftA/include/freetype2 /tmp/ftA/lib/libfreetype.a -lm && ./gen
+core/libs/prx/libSceFreeTypeOt/CMakeLists.txt
+core/libs/prx/libSceFreeTypeOt/Export.cpp
+core/libs/prx/libSceFreeTypeOt/Stream.cmake
+core/libs/prx/libSceFreeTypeOt/Stream.cpp
+core/libs/prx/libSceFreeTypeOt/include/Calc.hpp
+core/libs/prx/libSceFreeTypeOt/include/Memory.hpp
+core/libs/prx/libSceFreeTypeOt/include/Stream.hpp
+core/libs/prx/libSceFreeTypeOt/libSceFreeTypeOt.hpp
+core/libs/prx/libSceFreeTypeOt/src/Memory.cpp
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:387:int APS5_VABI sceFreeTypeOtSin_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:390:APS5_EXPORT("L1uHkWTazkI", sceFreeTypeOtSin_nid_no_patch);
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:472:int APS5_VABI sceFreeTypeOtTan_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:475:APS5_EXPORT("dojyaLKzKN0", sceFreeTypeOtTan_nid_no_patch);
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:497:int APS5_VABI sceFreeTypeOtUnknown_2rmvbvOCyjY_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:500:APS5_EXPORT("2rmvbvOCyjY", sceFreeTypeOtUnknown_2rmvbvOCyjY_nid_no_patch);
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:502:int APS5_VABI sceFreeTypeOtUnknown_1jmC2QcpRl0_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:505:APS5_EXPORT("1jmC2QcpRl0", sceFreeTypeOtUnknown_1jmC2QcpRl0_nid_no_patch);
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:507:int APS5_VABI sceFreeTypeOtUnknown_HMcNe70D9TI_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:510:APS5_EXPORT("HMcNe70D9TI", sceFreeTypeOtUnknown_HMcNe70D9TI_nid_no_patch);
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:512:int APS5_VABI sceFreeTypeOtUnknown_6wJwUIVwAxg_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:515:APS5_EXPORT("6wJwUIVwAxg", sceFreeTypeOtUnknown_6wJwUIVwAxg_nid_no_patch);
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:517:int APS5_VABI sceFreeTypeOtVectorUnit_nid_no_patch() {
+./core/libs/prx/libSceFreeTypeOt/Export.cpp:520:APS5_EXPORT("3WpTQrvGUcU", sceFreeTypeOtVectorUnit_nid_no_patch);
+core/libs/prx/libc/include/General.hpp:15:extern "C" [[noreturn]] void NotImplemented_nid_no_patch(const char* funcName);
+core/libs/prx/libc/include/General.hpp:110:    NotImplemented_nid_no_patch(__func__); \
+core/libs/prx/libc/include/WindowsScanning.hpp:51:            NotImplemented_nid_no_patch("vsscanf format conversion");
+#include "prx/libSceFreeTypeOt/include/Memory.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+
+namespace {
+
+constexpr std::int32_t InvalidArgument = 0x06;
+constexpr std::int32_t ArrayTooLarge = 0x0A;
+constexpr std::int32_t OutOfMemory = 0x40;
+constexpr std::int64_t IntMax = 0x7FFFFFFF;
+0b8ba05d65127163044d24715fa754d6c0b117f1	refs/tags/VER-2-4-11
+c6a66b49e64e9a21c013f23c867d238cf1aa98cb	refs/tags/VER-2-4-11^{}
+cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9	refs/tags/VER-2-4-12^{}
+A-ok
+ANGLES
+    {0, 0, 65536, 0, 65536, -1},
+    {1, 0, 65536, 0, 65536, 0},
+    {-1, 0, 65536, 0, 65536, 0},
+    {32768, 571, 65533, 572, 65533, 571},
+    {1966080, 32768, 56755, 37837, 56755, 32768},
+    {2949120, 46340, 46340, 65536, 46340, 46340},
+    {3932160, 56755, 32768, 113512, 32768, 56755},
+    {5832704, 65526, 1143, 3754679, 1143, 65526},
+    {5898240, 65536, 0, -2147483647, -1, 65536},
+    {5963776, 65526, -1143, -3754679, -1144, 65526},
+    {8847360, 46340, -46340, -65536, -46341, 46340},
+    {11796480, 0, -65536, 0, -65537, 0},
+    {-5898240, -65536, 0, -2147483647, 0, -65537},
+    {-11796480, 0, -65536, 0, -65537, 0},
+    {17694720, -65536, 0, -2147483647, 0, -65537},
+    {23527424, -1143, 65526, -1144, 65526, -1144},
+    {23592960, 0, 65536, 0, 65536, -1},
+    {-23592960, 0, 65536, 0, 65536, -1},
+    {47198265, 215, 65535, 215, 65535, 215},
+    {-65536007, 64540, 11380, 371670, 11380, 64540},
+    {4886718345, 46666, 46012, 66468, 46012, 46666},
+    {-4886718345, -46666, 46012, -66468, 46012, -46667},
+    {1099511627776, 45525, -47142, -63287, -47143, 45525},
+VECTORS
+    {1, 0, 1, 1, 0, 0},
+    {0, -5, 5, 5, -5898240, -5898240},
+    {3, 4, 5, 5, 3481920, 3481920},
+    {-3, 4, 5, 5, 8314560, 8314560},
+    {-7, -9, 11, 11, -8380416, -8380416},
+    {65536, 65536, 92682, 92681, 2949120, 2949120},
+    {1048576, -262144, 1080847, 1080847, -919872, -919872},
+    {2147483647, 1, 2147483640, 2147483640, 0, 0},
+    {1099511627776, 3, 14528925312, 14528925312, 0, 0},
+    {-34359738368, 17179869184, 38414306768, 38414306768, 10055520, 10055520},
+    {123456789, -987654, 123460741, 123460740, -30048, -30048},
+ROTATIONS
+    {1, 0, 1966080, 1, 1},
+    {1, 0, -2949120, 1, -1},
+    {1, 0, 11796480, -1, 0},
+    {1, 0, 1193046, 1, 0},
+    {0, -5, 1966080, 3, -4},
+    {0, -5, -2949120, -4, -4},
+    {0, -5, 11796480, 0, 5},
+    {0, -5, 1193046, 2, -5},
+    {3, 4, 1966080, 1, 5},
+    {3, 4, -2949120, 5, 1},
+    {3, 4, 11796480, -3, -4},
+    {3, 4, 1193046, 2, 5},
+    {-3, 4, 1966080, -5, 2},
+    {-3, 4, -2949120, 1, 5},
+    {-3, 4, 11796480, 3, -4},
+    {-3, 4, 1193046, -4, 3},
+    {-7, -9, 1966080, -2, -11},
+    {-7, -9, -2949120, -11, -1},
+    {-7, -9, 11796480, 7, 9},
+    {-7, -9, 1193046, -4, -11},
+    {65536, 65536, 1966080, 23988, 89524},
+    {65536, 65536, -2949120, 92682, 0},
+    {65536, 65536, 11796480, -65536, -65536},
+    {65536, 65536, 1193046, 41782, 82730},
+    {1048576, -262144, 1966080, 1039165, 297265},
+    {1048576, -262144, -2949120, 556091, -926819},
+    {1048576, -262144, 11796480, -1048576, 262144},
+    {1048576, -262144, 1193046, 1077989, 78561},
+    {2147483647, 1, 1966080, 1859775336, 1073741880},
+    {2147483647, 1, -2949120, 1518500312, -1518500192},
+    {2147483647, 1, 11796480, -2147483672, 424},
+    {2147483647, 1, 1193046, 2039997520, 670892104},
+    {1099511627776, 3, 1966080, 34142699616, 7264488768},
+    {1099511627776, 3, -2949120, 26329232864, -26329184176},
+    {1099511627776, 3, 11796480, -14528925360, 209280},
+    {1099511627776, 3, 1193046, 1226117408, 9655939408},
+    {-34359738368, 17179869184, 1966080, -38345292240, -2301667040},
+    {-34359738368, 17179869184, -2949120, -12148003104, 36442956976},
+    {-34359738368, 17179869184, 11796480, 34359735056, -17179875712},
+    {-34359738368, 17179869184, 1193046, -38007096864, 5585705792},
+    {123456789, -987654, 1966080, 107410541, 60873065},
+    {123456789, -987654, -2949120, 86598759, -87995507},
+    {123456789, -987654, 11796480, -123456789, 987678},
+    {123456789, -987654, 1193046, 117586066, 37630728},
+POLAR
+    {65536, 0, 65536, 0},
+    {65536, 1966080, 56756, 32768},
+    {65536, -7864320, -32768, -56756},
+    {65536, 1193046, 62256, 20474},
+    {1048576, 0, 1048576, 0},
+    {1048576, 1966080, 908093, 524288},
+    {1048576, -7864320, -524288, -908093},
+    {1048576, 1193046, 996093, 327584},
+    {3, 0, 3, 0},
+    {3, 1966080, 3, 2},
+    {3, -7864320, -2, -3},
+    {3, 1193046, 3, 1},
+    {2147483647, 0, 2147483647, 0},
+    {2147483647, 1966080, 1859775336, 1073741880},
+    {2147483647, -7864320, -1073741856, -1859775368},
+    {2147483647, 1193046, 2039997520, 670892104},
+    {1099511627776, 0, 1099511627776, 0},
+    {1099511627776, 1966080, 34142699616, 7264488768},
+    {1099511627776, -7864320, -7264488736, -34142699664},
+    {1099511627776, 1193046, 1226117408, 9655939408},
+DIFFS
+    {0, 655360, 655360},
+    {655360, 0, -655360},
+    {0, 12451840, -11141120},
+    {0, -12451840, 11141120},
+    {22937600, 655360, 1310720},
+    {1099511627776, 5, -8912891},
+    {-1099511627776, 1099511627776, -5767168},
