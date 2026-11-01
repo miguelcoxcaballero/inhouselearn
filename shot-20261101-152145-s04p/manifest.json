@@ -1,0 +1,21 @@
+{
+  "id": "shot-20261101-152145-s04p",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v3",
+  "at": "2026-11-01T15:22:20.696Z",
+  "seconds": 20,
+  "shots": [
+    {
+      "name": "Tablero trabajando",
+      "file": "1-tablero-trabajando.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Tablero terminado",
+      "file": "2-tablero-terminado.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
