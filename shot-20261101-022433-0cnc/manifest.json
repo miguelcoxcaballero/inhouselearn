@@ -1,0 +1,33 @@
+{
+  "id": "shot-20261101-022433-0cnc",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-claude",
+  "at": "2026-11-01T02:25:20.879Z",
+  "seconds": 29,
+  "shots": [
+    {
+      "name": "Tablero trabajando, claro",
+      "file": "1-tablero-trabajando-claro.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Tablero trabajando, oscuro",
+      "file": "2-tablero-trabajando-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Tablero terminado, carril abierto",
+      "file": "3-tablero-terminado-carril-abierto.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Encender Ultra (destello)",
+      "file": "4-encender-ultra-destello.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
