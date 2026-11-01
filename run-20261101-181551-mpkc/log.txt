@@ -1,0 +1,78 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/index.html && break; sleep 0.2; done
+export OUT=/tmp
+node --test tests/web/wiring.mjs 2>&1 | tail -5
+fail=0
+for t in ultra ultra-board composer-fixes theme activity-state; do
+  echo "== $t"
+  timeout 300 node tests/web/$t.cjs > /tmp/$t.log 2>&1; code=$?
+  grep -E '^(PASS|FAIL)' /tmp/$t.log | cut -c1-260
+  grep -E '^errors' /tmp/$t.log | cut -c1-300
+  if grep -q '^FAIL' /tmp/$t.log || [ $code -ne 0 ]; then fail=1; echo "exit $code"; tail -5 /tmp/$t.log; fi
+done
+exit $fail
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 67.526124
+== ultra
+PASS reasoning is one row of pills ending in «Ultra», which is not on until it is chosen — {"labels":["Normal","Ultra"],"active":"Normal","current":"Normal","rainbowOn":false}
+PASS only lilac: the word, the light and its blurred glow are all violet hues (no rainbow), and the light follows the border — {"hues":[253,263,258,255,262,255,255],"glow":true,"path":"inset(0px round 24px)"}
+PASS choosing «Ultra»: one band of light runs around the composer and its «Ultra code» tag settles; no sparks — {"flag":true,"mode":"on","igniting":true,"popupClosed":true,"sweep":true,"sweepAnimation":"ultra-sweep, ultra-beam-fade","tag":"Ultra code","t
+PASS …and the labels read «Ultra code» (over the pills and on the model button) — {"flag":true,"mode":"on","igniting":true,"popupClosed":true,"sweep":true,"sweepAnimation":"ultra-sweep, ultra-beam-fade","tag":"Ultra code","tagLit":true,"sparks":0,"curren
+PASS afterwards only the steady state stays: violet border and tag, nothing left running — {"sweep":0,"lit":0,"mode":"on","tag":true,"border":"color(srgb 0.47782 0.316255 0.845638 / 0.479137)"}
+PASS while they work, the board shows each agent running and its live cost — {"title":"Trabajando · 0 de 2","rows":["running:Fuentes:0.000036","running:Esquema:0.000019999999999999998"],"live":0.0005839999999999998}
+PASS lanes are patched in place while agents work (the same DOM node survives)
+PASS when they finish the board says so, both done — {"content":"He juntado lo de los dos agentes.","cost":0.002,"title":"2 agentes · 2 s","done":["done","done"],"mainTools":["search_library","read_library","list_library","view_library_image","delete_librar
+PASS the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents — {"main":["search_library","read_library","list_library","view_library_image","delete_library","web_search","web_fetch","doc_view","doc_edit","latex_compile","run
+PASS the main model gets both results to integrate — "Avisos del plan:\n- La tarea de «Fuentes» es muy corta (105 caracteres): cada agente empieza de cero; di qué hacer, dónde y qué devolver.\n- La tarea de «Esquema» es muy corta (118 caracteres): cad
+PASS the agents' cost is part of the answer's cost (4 requests) — 0.002
+PASS an agent's row includes what its web searches cost (and so does the answer) — {"agent":0.008,"answer":0.009000000000000001}
+PASS a read-only agent cannot write (run_js aliasing included) and has no write tools — {"files":[],"tools":["search_library","read_library","list_library","view_library_image","web_search","web_fetch","doc_view","run_js","read_file","list_files","search_fil
+PASS choosing another level turns Ultra code off — {"flag":false,"prompt":"","meta":"","label":"Normal","mode":""}
+PASS …and the composer goes back to normal: no violet mode, the tag fades out and leaves — {"off":{"flag":false,"prompt":"","meta":"","label":"Normal","mode":""},"gone":{"mode":"","tag":0}}
+PASS with reduced motion: the violet border and the tag, no band of light and nothing animating — {"mode":"on","tag":true,"sweep":0,"igniting":false,"moving":"none"}
+errors []
+== ultra-board
+PASS queued: one card, every lane «queued», the verifier pinned last — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"","running":"1","statuses":["step-1:a1=queued","step-1:a2=queued","step-1:a3=queued","step-1:a4=queued","step-1:v=queued
+PASS two waves: «Oleada 1», «Oleada 2» and «Verificación» headers — ["Oleada 1","Oleada 2","Verificación"]
+PASS one segment, one orb and one constellation node per agent — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"","running":"1","statuses":["step-1:a1=queued","step-1:a2=queued","step-1:a3=queued","step-1:a4=queued","step-1:v=queued"],"orde
+PASS running: data-status running / waiting, the title counts and names the wave — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"1 min 6 s","running":"1","statuses":["step-1:a1=running","step-1:a2=running","step-1:a3=waiting","step-1:a4=qu
+PASS patched in place: same card, same lane, same orb node — {"lane":true,"orb":true,"card":true}
+PASS the live clock ticks (data-live-since) — {"clock":"1 min 6 s","lane":"1 min 6 s"}
+PASS the rail has one tick per trail item; stop buttons only on live lanes — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"1 min 6 s","running":"1","statuses":["step-1:a1=running","step-1:a2=running","step-1:a3=waiting","step-1:a4=queued",
+PASS a running orb spins in its colour — "ua-spin"
+PASS a lane's stop button calls ultraStopAgent(stepId, agentId) — ["step-1/a2"]
+PASS stop button hit area is 32 px — [32,32]
+PASS finished: done / error / stopped statuses — ["step-1:a1=done","step-1:a2=error","step-1:a3=stopped","step-1:a4=done","step-1:v=done"]
+PASS finished title: agents, waves, duration and «verificado ✓»; clock stops — {"cards":1,"title":"5 agentes · 2 oleadas · 1 min 4 s · verificado ✓","clock":"","running":"0","statuses":["step-1:a1=done","step-1:a2=error","step-1:a3=stopped","step-1:
+PASS still the same lane and orb nodes after three patches — {"lane":true,"orb":true,"glow":true,"haptics":1}
+PASS the completion moment: one glow and one haptic(«success») — {"lane":true,"orb":true,"glow":true,"haptics":1}
+PASS …only once per step — 1
+PASS files row with the conflict highlighted — ["fuentes.md","!dossier.md (choque)!"]
+PASS the verifier lane lists its criteria ✓ / ✕ — ["1:✓","0:✕"]
+PASS budget bar over 80% turns to the warning colour — {"budget":"87% de $0.01","warn":true}
+PASS a lane opens lazily: task, steps, result rendered as markdown, report chips — {"expanded":"true","hidden":false,"h2":true,"strong":true,"task":"Busca tres fuentes sobre la fotosíntesis.","chips":["fuentes.md","fuentes.md","Falta una fuente en castellan
+PASS «Copiar» copies the result and says «Copiado» (no toast) — {"text":"## Fuentes\n\n1. **Campbell**, Biología.\n2. Khan Academy.\n\n`clorofila`","label":"Copiado","toasts":0}
+PASS …and back to «Copiar» after 1.2 s — "Copiar"
+PASS no horizontal overflow at 390 px — {"doc":390,"win":390,"card":0}
+PASS prefers-reduced-motion: animationName none everywhere — {"names":[],"before":"none"}
+PASS …and turning Ultra code on plays nothing: the steady state only (violet border, tag) — {"sweep":0,"mode":"on","tag":true,"igniting":false}
+PASS turning it on: ONE light around the composer with ONE glow (even if asked twice), the tag, and no sparks — {"sweeps":1,"halos":1,"mode":"on","tag":true,"igniting":true,"animation":"ultra-sweep, ultra-beam-fade","sparks":0}
+PASS …and the light is gone after about two seconds, nothing left lit — {"sweeps":0,"lit":0,"igniting":false}
+PASS turning it off while it plays ends the moment at once (no light left going round) — {"overlays":0,"lit":0,"igniting":false,"mode":""}
+PASS dark theme tokens differ from light ones (all ten) — {"light":["#7c3aed","#16a34a","#dc2626","#d97706","rgba(0, 0, 0, 0.022)","#64748b","#0d9488","#c2410c","#2563eb","rgba(124, 58, 237, 0.09)"],"dark":["#a78bfa","#4ade80","#f87171","#fbbf24","rgba(255, 
+PASS one agent: no constellation and no wave headers — {"nodes":0,"lanes":1,"heads":0}
+PASS two approvals at once: the second waits; agent chip and «+1 en espera» — {"title":"Guardar archivo del chat","chip":"Fuentes","waiting":"+1 en espera","cards":1}
+PASS approving the first shows the second (still unresolved), approving it resolves both true — {"shown1":{"title":"Guardar archivo del chat","chip":"Fuentes","waiting":"+1 en espera","cards":1},"r1":true,"shown2":{"title":"Editar archivo del chat","chip":"E
+PASS dockApprovalClear answers «no» to the shown and the queued one — [false,false]
+PASS a queued request whose signal aborts leaves the line («no») — {"shown1":{"title":"Guardar archivo del chat","chip":"Fuentes","waiting":"+1 en espera","cards":1},"r1":true,"shown2":{"title":"Editar archivo del chat","chip":"Esquema","waitingHidden":tru
+PASS approveChange: agent chip on the card, onWait(true) then onWait(false) — {"chip":"Redacción","during":[true],"waits":[true,false],"ok":true,"auto":true,"autoWaits":[],"toolChip":"Ejemplos","seen":[true,false]}
+PASS auto-approved changes never call onWait — {"chip":"Redacción","during":[true],"waits":[true,false],"ok":true,"auto":true,"autoWaits":[],"toolChip":"Ejemplos","seen":[true,false]}
+PASS approvalWorkspaceTools forwards meta (agent, onWait) into its approvals — {"chip":"Redacción","during":[true],"waits":[true,false],"ok":true,"auto":true,"autoWaits":[],"toolChip":"Ejemplos","seen":[true,false]}
+PASS live row: «Coordinando 5 agentes» with 5 mini orbs and «Reintentando (1/2)…» — {"during":{"text":"Coordinando 5 agentes","orbs":5,"retry":"Reintentando (1/2)…"},"after":"Integrando lo de 5 agentes","retryAfter":false}
+PASS …then «Integrando lo de 5 agentes», no retry line — {"during":{"text":"Coordinando 5 agentes","orbs":5,"retry":"Reintentando (1/2)…"},"after":"Integrando lo de 5 agentes","retryAfter":false}
+PASS no JavaScript errors — []
