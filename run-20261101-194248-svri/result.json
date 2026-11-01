@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-194248-svri",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "ebf1838",
+ "os": "ubuntu-24.04",
+ "sha": "",
+ "runner": "",
+ "command": "npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport OUT=/tmp\nset +e\necho '=== unit'\nnode --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nfor t in model-list ultra ultra-board theme composer-fixes harness prompt-cache claude-api github queue activity-state reasoning approval-card steer-now chat-url; do\n  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1\n  code=$?\n  echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\"\n  grep '^FAIL' /tmp/web-$t.log | cut -c1-300\ndone\nif [ -f tests/web/pr-watch.cjs ]; then timeout 200 node tests/web/pr-watch.cjs > /tmp/web-pr-watch.log 2>&1; echo \"pr-watch: $(grep -c '^PASS' /tmp/web-pr-watch.log) PASS, $(grep -c '^FAIL' /tmp/web-pr-watch.log) FAIL\"; grep '^FAIL' /tmp/web-pr-watch.log | cut -c1-300; fi\nexit 0",
+ "exit_code": "setup",
+ "seconds": null,
+ "lines": 0,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41343112394"
+}
