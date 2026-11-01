@@ -1,0 +1,34 @@
+{
+ "id": "run-20261101-150048-t7uj",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v3",
+ "os": "ubuntu-24.04",
+ "sha": "725d3628215c0f1de06a1e9eabb8b6e0dc40392f",
+ "runner": "Linux X64",
+ "command": "node --version\ngit log --oneline -5\necho \"=== unit tests (stub, as in CI) ===\"\nnode --test tests/web/agents-plan.mjs tests/web/wiring.mjs 2>&1 | grep -E \"^(not ok|ok|# (tests|pass|fail))|error:|Error|expected|actual|message\" | head -80\necho \"=== engine build ===\"\ncd engine && npm ci --silent && npx esbuild src/index.js --bundle --format=iife --global-name=InhousePi --platform=browser --target=es2020 --outfile=/tmp/pi-test.js --log-level=warning && node -e \"require('vm').runInThisContext(require('fs').readFileSync('/tmp/pi-test.js','utf8')); console.log('bundle ok', typeof InhousePi.createAgentTools, typeof InhousePi.pickLevel, InhousePi.pickLevel(['low','medium','high'],'explore'))\"\necho \"=== unit tests with the real pi-ai ===\"\ncd .. && node --test tests/web/agents-plan.mjs 2>&1 | grep -E \"^(not ok|ok|# (tests|pass|fail))|error:|Error\" | head -40",
+ "exit_code": 1,
+ "seconds": 4,
+ "lines": 47,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 4,
+   "text": "node --test tests/web/agents-plan.mjs tests/web/wiring.mjs 2>&1 | grep -E \"^(not ok|ok|# (tests|pass|fail))|error:|Error|expected|actual|message\" | head -80"
+  },
+  {
+   "line": 8,
+   "text": "cd .. && node --test tests/web/agents-plan.mjs 2>&1 | grep -E \"^(not ok|ok|# (tests|pass|fail))|error:|Error\" | head -40"
+  },
+  {
+   "line": 23,
+   "text": "error: |-"
+  },
+  {
+   "line": 24,
+   "text": "name: 'AssertionError'"
+  }
+ ],
+ "errors_total": 4,
+ "tail": "+ node --version\ngit log --oneline -5\necho \"=== unit tests (stub, as in CI) ===\"\nnode --test tests/web/agents-plan.mjs tests/web/wiring.mjs 2>&1 | grep -E \"^(not ok|ok|# (tests|pass|fail))|error:|Error|expected|actual|message\" | head -80\necho \"=== engine build ===\"\ncd engine && npm ci --silent && npx esbuild src/index.js --bundle --format=iife --global-name=InhousePi --platform=browser --target=es2020 --outfile=/tmp/pi-test.js --log-level=warning && node -e \"require('vm').runInThisContext(require('fs').readFileSync('/tmp/pi-test.js','utf8')); console.log('bundle ok', typeof InhousePi.createAgentTools, typeof InhousePi.pickLevel, InhousePi.pickLevel(['low','medium','high'],'explore'))\"\necho \"=== unit tests with the real pi-ai ===\"\ncd .. && node --test tests/web/agents-plan.mjs 2>&1 | grep -E \"^(not ok|ok|# (tests|pass|fail))|error:|Error\" | head -40\nv22.23.4\n725d362 Motor: recompila vendor/pi-engine.js (6ab55d7)\n=== unit tests (stub, as in CI) ===\n# Subtest: plan: unknown dependency and cycles are refused with a clear message\nok 1 - plan: unknown dependency and cycles are refused with a clear message\nok 2 - plan: automatic ids, waves by longest path, lint warnings\nok 3 - the tools: spawn_agents and agent_report\nok 4 - effort: explore reads at medium and 25 steps, build writes at high and 40; the model can override\nok 5 - jobs and rows carry the effort and the step cap of the role\nok 6 - policy: rounds, parallel limit, start verdict, verifier, failing key\nok 7 - a plan that cannot work is refused once, before anything starts; then it runs\nok 8 - the verifier runs when something is written, with criteria or with 3+ agents; two readers do not need one\nok 9 - scheduler: at most 6 at a time out of 8, everything done\nnot ok 10 - a provider that limits requests halves how many agents start at once\n  error: |-\n  name: 'AssertionError'\n  expected: 0\n  actual: 3\nok 11 - scheduler: dependency results reach the downstream task; a failure skips dependants\nok 12 - scheduler: on_failure stop skips everything not started\nok 13 - scheduler: the budget stops the most expensive agent and skips the queue\nok 14 - an agent that the rest of the budget could not finish is not started\nok 15 - scheduler: step cap, stop by the user and transient retries\nok 16 - scheduler: a reader is cut at its own, lower step cap\nok 17 - scheduler: no retry after the agent wrote something\nok 18 - touched files: the second agent is warned and the result lists the conflict\nok 19 - reports and the verifier with one round of fixes\nok 20 - fix rounds: as many as asked, stopping when the same checks keep failing\nok 21 - no report: one is made from the text; long texts are clipped\nok 22 - many agents: results come back trimmed and agent_report reads one in full\nok 23 - the answer as a whole has a spending cap shared by every spawn_agents call\nok 24 - submit_result tool\nok 25 - a parent abort settles every agent as stopped before rethrowing\nok 26 - the engine bundle exports what index.html feature-checks\nok 27 - index.html keeps the tools, Estudio and persistence wiring\n# tests 27\n# pass 26\n# fail 1\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41319018983"
+}
