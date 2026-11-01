@@ -1,0 +1,141 @@
++ set +e
+grep -rn "sceLibcInternalUnknown6_081\|sceLibcInternalUnknown6_048\|sceLibcInternalUnknown6_084" --include=*.hpp --include=*.cpp --include=*.txt --include=*.py --include=*.md --include=*.json . | cut -c1-200
+grep -rn "libSceLibcInternalInventory_018\b\|libSceLibcInternalInventory_018_" --include=* -r . 2>/dev/null | grep -v "^./.git" | cut -c1-200
+echo ===HPP
+sed -n 1,25p core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+grep -c . core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+tail -5 core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+sed -n 100,115p core/libs/prx/libSceLibcInternal/include/Api.hpp
+echo ===DEBTLINES
+sed -n 340,350p docs/dev/debt/libSceLibcInternal.md | cut -c1-200
+sed -n 412,420p docs/dev/debt/libSceLibcInternal.md | cut -c1-120
+sed -n 445,455p docs/dev/debt/libSceLibcInternal.md | cut -c1-120
+grep -n "^#" docs/dev/debt/libSceLibcInternal.md
+echo ===CONV
+grep -n "debt\|inventory\|Inventory" tools/check_conventions.py | head -60
+./core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:282:int APS5_VABI sceLibcInternalUnknown6_048_YXVCU6PdgZk_nid_no_patch() {
+./core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:286:APS5_EXPORT("YXVCU6PdgZk", sceLibcInternalUnknown6_048_YXVCU6PdgZk_nid_no_patch);
+./core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:474:int APS5_VABI sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch() {
+./core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:478:APS5_EXPORT("XyJPhPqpzMw", sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch);
+./core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:492:int APS5_VABI sceLibcInternalUnknown6_084_X9D8WWSG3As_nid_no_patch() {
+./core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:496:APS5_EXPORT("X9D8WWSG3As", sceLibcInternalUnknown6_084_X9D8WWSG3As_nid_no_patch);
+./core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:25:int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch();
+./core/libs/prx/libSceLibcInternal/InventoryExports.cpp:97:int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch() {
+./core/libs/prx/libSceLibcInternal/InventoryExports.cpp:100:APS5_EXPORT("XFh0C66aEms", libSceLibcInternalInventory_018_nid_no_patch);
+===HPP
+#pragma once
+
+#include "SceTypes.hpp"
+
+extern "C" {
+
+int APS5_VABI libSceLibcInternalInventory_000_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_001_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_002_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_003_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_004_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_005_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_006_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_007_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_008_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_009_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_010_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_011_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_012_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_013_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_014_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_015_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_016_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch();
+301
+int APS5_VABI libSceLibcInternalUnknown_f9LVyN8Ky8g_nid_no_patch();
+int APS5_VABI libSceLibcInternalUnknown_o1Ez0fsXvhI_nid_no_patch();
+int APS5_VABI libSceLibcInternalUnknown_wUqJ0psUjDo_nid_no_patch();
+
+}
+void* APS5_VABI _ZNSt10filesystem9_Open_dirERA260_cPKcRiRNS_9file_typeE_nid_postfix(char* target, const char* path, int* error, int* type);
+int APS5_VABI _ZNSt10filesystem10_Close_dirEPv_nid_postfix(void* handle);
+int APS5_VABI __std_init_once_begin_initialize_clr_nid_postfix(void** once, unsigned long flags, int* pending, void** context);
+int APS5_VABI __std_init_once_complete_clr_nid_postfix(void** once, unsigned long flags, void* context);
+[[noreturn]] void APS5_VABI __std_init_once_link_alternate_names_and_abort_nid_postfix();
+int APS5_VABI _Mtxinit_nid_postfix(PthreadMutex* mutex, const char* name);
+int APS5_VABI _Mtxlock_nid_postfix(PthreadMutex* mutex);
+int APS5_VABI _Mtxunlock_nid_postfix(PthreadMutex* mutex);
+int APS5_VABI _Mtxdst_nid_postfix(PthreadMutex* mutex);
+void* APS5_VABI sceLibcInternalAlignedArrayNewNothrow_nid_no_patch(std::size_t size, std::size_t alignment, const void* tag) noexcept;
+void APS5_VABI sceLibcInternalAlignedArrayDelete_nid_no_patch(void* pointer, std::size_t alignment);
+
+int APS5_VABI sceLibcMspaceSetMallocCallback();
+int APS5_VABI sceLibcPafMspaceReportMemoryBlocks();
+int APS5_VABI sceLibcHeapSetAddressRangeCallback();
+int APS5_VABI sceLibcPafMspaceTrim();
+===DEBTLINES
+- [posix_spawn and posix_spawnp](../../../core/libs/prx/libSceLibcInternal/Spawn.cpp) (libSceLibcInternal) create a native child running the requested program's converted image, which must be under `/
+- [getopt, getopt_long](../../../core/libs/prx/libSceLibcInternal/Getopt.cpp) (libSceLibcInternal) follow FreeBSD 11 [getopt.c](https://github.com/freebsd/freebsd-src/blob/8c639945a44588f6cfdddfb057bb
+- [posix_spawnattr_getflags, getpgroup, getschedparam, getschedpolicy, getsigdefault, getsigmask, setpgroup, setschedparam, setschedpolicy and setsigmask](../../../core/libs/prx/libSceLibcInternal/Spa
+- [sys_siglist and sys_nsig](../../../core/libs/prx/libSceLibcInternal/SignalList.cpp) (libSceLibcInternal) hold the 32 descriptions and the count of [FreeBSD 11.4](https://github.com/freebsd/freebsd-
+- [_err, _warn](../../../core/libs/prx/libSceLibcInternal/Err.cpp) and [_getprogname](../../../core/libs/prx/libSceLibcInternal/Export.cpp) (libSceLibcInternal) are assumed to be the same functions as
+- [inet_aton, inet_addr, inet_ntoa and inet_ntoa_r](../../../core/libs/prx/libSceLibcInternal/Inet.cpp) (libSceLibcInternal) follow the FreeBSD code in the console's `libSceLibcInternal.sprx` (SDK 4.5
+- [__inet_ntoa_r](../../../core/libs/prx/libSceLibcInternal/Inet.cpp) (libSceLibcInternal) was not measured on the console: it runs `inet_ntoa_r`, as FreeBSD 11.4 names the function `__inet_ntoa_r` ([
+- [_ZnamSt11align_val_tRKSt9nothrow_t and _ZdaPvSt11align_val_t](../../../core/libs/prx/libSceLibcInternal/AlignedNew.cpp) (libSceLibcInternal, NIDs `s2eGsgUF9vk` and `v09ZcAhZzSc`) take the standard 
+- [_Mtxinit, _Mtxlock, _Mtxunlock, _Mtxdst](../../../core/libs/prx/libSceLibcInternal/Mutex.cpp) (libSceLibcInternal) follow the PS4 code of [shadPS4](https://github.com/shadps4-emu/shadPS4/blob/860d7
+
+### Additional PS5 3.20 imports (xdCloudy #9498)
+- [_ZNSt15underflow_errorD0Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID
+- [sceLibcMspaceGetAddressRanges](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, 
+- [_ZNSt14overflow_errorD0Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID 
+- [_ZNSt6locale7_LocimpC1Eb](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `
+- [malloc_report_memory_blocks](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NI
+- [_ZNSt8_LocinfoD2Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `YXVCU6
+- [_ZNSt8numpunctIwE5_InitERKSt8_Locinfob](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcI
+- [_reclaim_telldir](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `7ZFy2m9r
+- [_ZNSt13basic_filebufIwSt11char_traitsIwEE9_EndwriteEv](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cp
+- [_ZNSt7_MpunctIcED0Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `Lzj4
+- [_ZSt11setiosflagsNSt5_IosbIiE9_FmtflagsE](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLib
+- [__atomic_load_n](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `Q6oqEnefZ
+- [_ZNSt8ios_base4InitC2Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `b
+- [_ZNSt4_PadD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `XyJPhPqpzM
+- [_malloc_thread_cleanup](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `So
+- [_ZNSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEED1Ev](../../../core/libs/prx/libSceLibcInternal/Inventor
+- [_ZNSt8ios_baseD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `X9D8WW
+- [_ZSt9_LStrcollIwEiPKT_S2_S2_S2_PKSt8_Collvec](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSc
+- [_ZNSt9money_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEEC1Em](../../../core/libs/prx/libSceLibcInternal/Invento
+- [_ZNSt8messagesIwED0Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `gMw
+1:# libSceLibcInternal technical debt
+3:### Additional callable exports
+311:### Unknown function info
+332:### Functional
+350:### Additional PS5 3.20 imports (xdCloudy #9498)
+369:### Additional PS5 3.20 imports (round 6)
+519:### Additional PS5 3.20 import declarations
+===CONV
+21:    "comment": ("error", "docs/dev/CONVENTIONS.md", "Comments are only for technical debt, so they need a change to docs/dev/TechnicalDebt.md or docs/dev/debt/ in the same pull request; #endif and namespace ends are always allowed"),
+22:    "silent-stub": ("error", "CONTRIBUTING.md#code", "Unimplemented exports call NotImplemented_nid_no_patch(__func__); silent stubs are listed under Silent stubs in docs/dev/debt/<library>.md, by their file or by name with a path in their library"),
+23:    "debt-file": ("error", "CONTRIBUTING.md#documentation", "Technical debt about one library or component goes in docs/dev/debt/<name>.md, named after the first core/ path it links: <library> for core/libs/prx/<library>, otherwise <component> for core/<component>; entries that link neither stay in docs/dev/TechnicalDebt.md"),
+38:    "debt-length": ("warning", "CONTRIBUTING.md#documentation", "Technical debt entry over 1000 characters: state the gap first (what differs from the console, what is unverified, what throws) and keep only the behaviour it needs"),
+49:DEBT_DIR = "docs/dev/debt/"
+142:        self.read([path for path in sorted(self.tree) if is_debt(path)] +
+176:        debt = [entry for path in sorted(self.tree) if is_debt(path) for entry in silent_stub_debt(self.show(path), path)]
+213:                    if match.group(1).startswith("sce") and STUB_BODY.match(body) and not listed(debt, match.group(1), path):
+225:        if any(is_debt(path) for path in self.status):
+283:        if any(is_debt(path) for path in self.status):
+324:            entries = debt_entries(source) if is_debt(path) else {}
+326:                if is_debt(path) and text.startswith("- "):
+327:                    name = debt_name(entries.get(number, text))
+330:                        self.report("debt-file", path, number, expected)
+337:    def debt_entries(self):
+338:        for path, lines in self.files(lambda p: is_debt(p.as_posix())):
+340:                if long_debt_entry(text):
+341:                    self.report("debt-length", path, number, f"{len(text)} characters")
+454:def is_debt(path):
+458:def long_debt_entry(text):
+462:def debt_entries(text):
+481:def debt_name(text):
+489:def silent_stub_debt(text, path=DEBT):
+490:    debt = []
+501:            debt.append((line, links(path, line)))
+502:    return debt
+580:def listed(debt, name, path):
+582:    for text, targets in debt:
+840:    check.debt_entries()
