@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-134055-47n7",
+ "repo": "boykopovar/AnyPS5",
+ "ref": "",
+ "os": "ubuntu-24.04",
+ "sha": "f1a7b02028ae50adaf6c5aaaef892a51841b25bf",
+ "runner": "Linux X64",
+ "command": "cat > /tmp/a.py <<'EOF'\nimport re,glob,hashlib,base64,os,json,collections\nKEY=bytes.fromhex('518d64a635ded8c1e6b039b1c3e55230')\ndef nid(n):\n    h=hashlib.sha1(n.encode()+KEY).digest()[:8][::-1]\n    return base64.b64encode(h[::-1] if False else h).decode().rstrip('=').replace('/','-')\ndef nid2(n):\n    h=hashlib.sha1(n.encode()+KEY).digest()[:8]\n    v=int.from_bytes(h,'little').to_bytes(8,'big')\n    return base64.b64encode(v).decode().rstrip('=').replace('/','-')\nfor f in (nid,nid2): print(f.__name__, f('_ZnamSt11align_val_tRKSt9nothrow_t'), 'want s2eGsgUF9vk')\nEOF\npython3 /tmp/a.py",
+ "exit_code": 0,
+ "seconds": 0,
+ "lines": 16,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ cat > /tmp/a.py <<'EOF'\nimport re,glob,hashlib,base64,os,json,collections\nKEY=bytes.fromhex('518d64a635ded8c1e6b039b1c3e55230')\ndef nid(n):\n    h=hashlib.sha1(n.encode()+KEY).digest()[:8][::-1]\n    return base64.b64encode(h[::-1] if False else h).decode().rstrip('=').replace('/','-')\ndef nid2(n):\n    h=hashlib.sha1(n.encode()+KEY).digest()[:8]\n    v=int.from_bytes(h,'little').to_bytes(8,'big')\n    return base64.b64encode(v).decode().rstrip('=').replace('/','-')\nfor f in (nid,nid2): print(f.__name__, f('_ZnamSt11align_val_tRKSt9nothrow_t'), 'want s2eGsgUF9vk')\nEOF\npython3 /tmp/a.py\nnid s2eGsgUF9vk want s2eGsgUF9vk\nnid2 s2eGsgUF9vk want s2eGsgUF9vk\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41312433092"
+}

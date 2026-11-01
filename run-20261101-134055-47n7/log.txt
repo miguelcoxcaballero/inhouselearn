@@ -1,0 +1,15 @@
++ cat > /tmp/a.py <<'EOF'
+import re,glob,hashlib,base64,os,json,collections
+KEY=bytes.fromhex('518d64a635ded8c1e6b039b1c3e55230')
+def nid(n):
+    h=hashlib.sha1(n.encode()+KEY).digest()[:8][::-1]
+    return base64.b64encode(h[::-1] if False else h).decode().rstrip('=').replace('/','-')
+def nid2(n):
+    h=hashlib.sha1(n.encode()+KEY).digest()[:8]
+    v=int.from_bytes(h,'little').to_bytes(8,'big')
+    return base64.b64encode(v).decode().rstrip('=').replace('/','-')
+for f in (nid,nid2): print(f.__name__, f('_ZnamSt11align_val_tRKSt9nothrow_t'), 'want s2eGsgUF9vk')
+EOF
+python3 /tmp/a.py
+nid s2eGsgUF9vk want s2eGsgUF9vk
+nid2 s2eGsgUF9vk want s2eGsgUF9vk
