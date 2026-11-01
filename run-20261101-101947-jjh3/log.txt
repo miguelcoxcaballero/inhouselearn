@@ -1,0 +1,72 @@
++ set +e +o pipefail
+git fetch -q origin main 2>/dev/null
+git diff --stat HEAD~1 HEAD
+git diff HEAD~1 HEAD | head -250
+echo ---- nid name sources
+ls tools | head -80
+grep -rl "s2eGsgUF9vk" --include=* . 2>/dev/null | grep -v '^./3rdparty' | head
+fatal: ambiguous argument 'HEAD~1': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+fatal: ambiguous argument 'HEAD~1': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+---- nid name sources
+ab_split.py
+agc_test_split.py
+annotate_module.py
+audit_dump.py
+audit_nid_names.py
+build_changed_guest_tests.py
+build_mingw_host_only_tests.py
+build_web.py
+check_compile.py
+check_configure_seed.py
+check_conventions.py
+check_main_sync.py
+check_skips.py
+check_test_registration.py
+compare_configure_checks.py
+compile_database_inventory.py
+compile_slot.sh
+configure_seed.py
+debt_split.py
+env_reference.py
+hw-oracle
+import_audit.py
+input-mapper
+inspect_self.py
+nid_names.py
+package_headers.py
+package_release.py
+pad_input.py
+pad_timeline.py
+pe_symbol_inventory.py
+performance_compare.py
+performance_csv.py
+pr_labels.py
+pr_overlap.py
+prepare_release_notes.py
+preview_pad_timeline.py
+progress.py
+progress_history.py
+public_headers_manifest.py
+rdna_isa.txt
+relinker_fuzz_seeds.py
+requirements-run-report.txt
+run_job_manager_reference.py
+sanitizer_report.py
+select_tests.py
+stubgen.py
+suggest_patches.py
+symbolize_samples.py
+test_web.py
+tests
+trace_digest.py
+trace_intervals_csv.py
+tsan-suppressions.txt
+unwrap_self.py
+validate_patch_catalog.py
+vulkan_validation_gate.py
+./core/libs/prx/libSceLibcInternal/AlignedNew.cpp
+./docs/dev/debt/libSceLibcInternal.md
