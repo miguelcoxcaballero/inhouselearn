@@ -48,7 +48,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     const style = word && getComputedStyle(word);
     return { visible: !meta.classList.contains('hidden'), text: meta.textContent, word: !!word, gradient: style ? /gradient/.test(style.backgroundImage) : false, clip: style ? (style.webkitBackgroundClip || style.backgroundClip) : '', chipBg: getComputedStyle(meta).backgroundColor, chipClass: meta.classList.contains('ultra-text') };
   });
-  check('with Ultra code the chip shows the rainbow word «Ultra code» (gradient on the word, not hidden by the chip)', chip.visible && chip.text === 'Ultra code' && chip.word && chip.gradient && chip.clip === 'text' && !chip.chipClass && /rgba\(0, 0, 0, 0\)|transparent/.test(chip.chipBg), chip);
+  check('with Ultra code the chip shows the rainbow word «Ultra code» (gradient on the word, not hidden by the chip)', chip.visible && chip.text === 'Ultra code' && chip.word && chip.gradient && /^text(, text)*$/.test(chip.clip) && !chip.chipClass && /rgba\(0, 0, 0, 0\)|transparent/.test(chip.chipBg), chip);
   await page.evaluate(() => { const chat = getActiveChat(); chat.ultraCode = false; updateConfigUi(); });
 
   // 3. Empty answers and unclosed tags.
