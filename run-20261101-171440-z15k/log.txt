@@ -1,0 +1,115 @@
++ bash analysis/run.sh 2>&1
+== upstream main: f2d874c1fd
+== candidates
+libc exports: 260 implemented: 260
+libSceLibcInternal exports: 670 stubs: 656
+CANDIDATES 2
+{"kind": "same-nid", "nid": "V23qt24VPVs", "name": "_ZSt17iostream_categoryv", "stub": "sceLibcInternalExport6_062_V23qt24VPVs_nid_no_patch", "stub_file": "core/libs/prx/libSceLibcInternal/InventoryExports6.cpp", "libc_fn": "_ZSt17iostream_categoryv_nid_postfix", "libc_file": "core/libs/prx/libc/src/CxxAbiSupport.cpp", "demangled": "std::iostream_category()"}
+{"kind": "deleting-from-D1", "nid": "rNYLEsL7M0k", "name": "_ZNSt12future_errorD0Ev", "twin": "_ZNSt12future_errorD1Ev", "stub": "libSceLibcInternalInventory_017_nid_no_patch", "stub_file": "core/libs/prx/libSceLibcInternal/InventoryExports.cpp", "libc_fn": "_ZNSt12future_errorD1Ev_nid_postfix", "libc_file": "core/libs/prx/libc/src/exception/StandardExceptions.cpp", "libc_has_D0": false, "demangled": "std::future_error::~future_error()"}
+== overlap
+open PRs found: 974 [12673, 12678, 12682, 12683, 12688] ... [14706, 14707, 14708, 14709, 14710]
+11613 open: False
+no ref 13266
+no ref 13270
+no ref 13273
+no ref 13274
+no ref 13275
+no ref 13276
+no ref 13277
+no ref 13285
+no ref 13286
+no ref 13291
+no ref 13303
+no ref 13304
+no ref 13305
+no ref 13306
+no ref 13307
+no ref 13308
+no ref 13310
+no ref 13311
+no ref 13312
+no ref 13313
+no ref 13314
+no ref 13315
+no ref 13316
+no ref 13317
+no ref 13318
+no ref 13319
+no ref 13320
+no ref 13327
+no ref 13331
+no ref 13336
+no ref 13347
+no ref 13378
+no ref 13379
+no ref 13380
+no ref 13381
+no ref 13382
+no ref 13383
+no ref 13385
+no ref 13386
+no ref 13387
+no ref 13389
+no ref 13390
+no ref 13391
+no ref 13392
+no ref 13393
+no ref 13394
+no ref 13395
+no ref 13400
+no ref 13417
+no ref 13435
+no ref 13449
+no ref 13454
+no ref 13464
+no ref 13468
+no ref 13472
+no ref 13473
+no ref 13474
+no ref 13475
+no ref 13477
+no ref 13482
+no ref 13486
+no ref 13491
+no ref 13495
+no ref 13504
+no ref 13506
+no ref 13515
+no ref 13516
+no ref 13517
+no ref 13518
+no ref 13536
+no ref 13542
+no ref 13546
+no ref 13547
+no ref 13551
+no ref 13560
+no ref 13572
+no ref 13573
+no ref 13578
+no ref 13582
+no ref 13585
+OVERLAP HITS: {
+ "shader_scan": [
+  13801,
+  14707
+ ],
+ "rdna2_isa_forms": [
+  13801
+ ],
+ "V23qt24VPVs": [
+  14212
+ ],
+ "_ZSt17iostream_categoryv": [
+  14212
+ ],
+ "rNYLEsL7M0k": [
+  14659
+ ],
+ "_ZNSt12future_errorD0Ev": [
+  14659
+ ],
+ "SCbranchCdbg": [
+  14707
+ ]
+}
