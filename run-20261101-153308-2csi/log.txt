@@ -1,0 +1,149 @@
++ git log --oneline -5
+echo ===FILES
+git ls-files | grep -i freetypeot
+echo ===DEBT
+cat docs/dev/debt/libSceFreeTypeOt.md
+echo ===NOTIMPL
+D=$(git ls-files | grep -i 'libSceFreeTypeOt/' | grep -i export | head -5); echo $D
+for f in $D; do grep -n "NotImplemented" $f | head -200; done
+echo ===OUTLINE
+grep -rn "FT_Outline\|FT_Vector_Transform\|FT_Matrix\|FT_MulFix\|FT_DivFix\|FT_MulDiv" $(git ls-files | grep -i 'libSceFreeTypeOt/') | head -80
+4d201a3 fix(libSceFreeTypeOt): export the trigonometry calls under explicit NIDs
+===FILES
+core/libs/prx/libSceFreeTypeOt/CMakeLists.txt
+core/libs/prx/libSceFreeTypeOt/Export.cpp
+core/libs/prx/libSceFreeTypeOt/Stream.cmake
+core/libs/prx/libSceFreeTypeOt/Stream.cpp
+core/libs/prx/libSceFreeTypeOt/include/Calc.hpp
+core/libs/prx/libSceFreeTypeOt/include/Memory.hpp
+core/libs/prx/libSceFreeTypeOt/include/Stream.hpp
+core/libs/prx/libSceFreeTypeOt/include/Trigonometry.hpp
+core/libs/prx/libSceFreeTypeOt/libSceFreeTypeOt.hpp
+core/libs/prx/libSceFreeTypeOt/src/Memory.cpp
+core/libs/prx/libSceFreeTypeOt/src/Trigonometry.cpp
+core/libs/tests/GuestFreeTypeOtMemory.cpp
+core/libs/tests/GuestFreeTypeOtTrigonometry.cpp
+docs/dev/debt/libSceFreeTypeOt.md
+===DEBT
+# libSceFreeTypeOt technical debt
+
+- The FT_Outline_Get_Orientation, FT_Request_Size, FT_New_Size, FT_Outline_Copy, FT_Outline_Decompose, FT_Stroker_New, FT_Stroker_Done, FT_Stroker_GetCounts, FT_Stroker_BeginSubPath, FT_Stroker_LineTo, FT_Stroker_EndSubPath, FT_Stroker_Set, FT_Stroker_Rewind, FT_Stroker_GetBorderCounts, FT_Stroker_ConicTo and FT_Stroker_CubicTo NIDs in [Export.cpp](../../../core/libs/prx/libSceFreeTypeOt/Export.cpp) are identified, but their provider-specific prototypes and behavior remain unverified. Their named helpers retain the explicit inventory aliases and throw; the separate libSceFreeType implementations do not supply this provider.
+- The 69 `sceFreeTypeOtUnknown_*_nid_no_patch` exports in [Export.cpp](../../../core/libs/prx/libSceFreeTypeOt/Export.cpp) are present in the PS5 3.20 export inventory from [PS5-3.20_Libs](https://github.com/DNNDHH/PS5-3.20_Libs). Their prototypes and behavior are unverified. Each uses the no-parameter import-resolution convention and throws through `NotImplemented_nid_no_patch`; these declarations make no ABI or behavior claim.
+### Unknown function info
+
+- [FT_Cos, FT_Sin, FT_Tan, FT_Atan2, FT_Vector_Unit, FT_Vector_Rotate, FT_Vector_Length, FT_Vector_Polarize, FT_Vector_From_Polar, FT_Angle_Diff](../../../core/libs/prx/libSceFreeTypeOt/src/Trigonometry.cpp) (libSceFreeTypeOt) - console prototypes are unverified. The LP64 calls follow FreeType 2.4.11 [fttrigon.c](https://github.com/freetype/freetype/blob/c6a66b49e64e9a21c013f23c867d238cf1aa98cb/src/base/fttrigon.c) with its 32-bit `FT_DivFix`: the [PS5 3.20 inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceFreeTypeOt.c) has `FT_Sqrt32` but not `FT_MSB` or `FT_Hypot`, which 2.4.12 adds to ftcalc.c with a CORDIC rewrite that returns other values. A null vector, or a null output of a nonzero vector in FT_Vector_Polarize, throws where FreeType dereferences it; FT_Angle_Diff throws where its signed subtraction overflows.
+
+- [FT_Outline_GetInsideBorder, FT_Outline_GetOutsideBorder](../../../core/libs/prx/libSceFreeTypeOt/CMakeLists.txt) (libSceFreeTypeOl, libSceFreeTypeOt) - console prototypes, enum/layout equivalence, FreeType configuration and module/library versions are unverified. The existing LP64 outline layout and unsigned 16-bit counts follow bundled FreeType 2.13.3; border selection follows [ftstroke.c](https://github.com/freetype/freetype/blob/42608f77f20749dd6ddc9e0536788eaad70ea4b5/src/base/ftstroke.c), with the shifted polygon area from [ftoutln.c](https://github.com/freetype/freetype/blob/42608f77f20749dd6ddc9e0536788eaad70ea4b5/src/base/ftoutln.c) accumulated in 64 bits. Null positive-count arrays and out-of-range or non-increasing contour endpoints throw when reached; their console behavior is unknown. Tags and flags are not read, and input arrays remain caller-owned.
+
+- [FT_Stream calls](../../../core/libs/prx/libSceFreeTypeOt/Stream.cpp) (libSceFreeTypeOt) - console signatures and FreeType version are unverified. The [PS5 3.20 inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceFreeTypeOt.c) has both the signed readers FreeType removed in 2.4.5 and their unsigned replacements; the 36 calls follow 2.4.12 [ftstream.c](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/src/base/ftstream.c) and [ftobjs.c](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/src/base/ftobjs.c#L205-L219), the signed readers 2.4.4, on the 80-byte LP64 record with guest callbacks. A null pointer FreeType would dereference throws before any allocation, read or frame is left behind, as does `FT_Stream_ReadFields` with a null stream, whose error changed in 2.5.4. `FT_Stream_New` and `FT_Stream_Open` still throw.
+
+- The import-resolution helpers in [Export.cpp](../../../core/libs/prx/libSceFreeTypeOt/Export.cpp) retain the PS5 3.20 NIDs from [PS5-3.20_Libs](https://github.com/DNNDHH/PS5-3.20_Libs), including identified names and still-unidentified exports. Their provider-specific prototypes and behavior are unverified. Each uses the no-parameter import-resolution convention and throws through `NotImplemented_nid_no_patch`; these declarations make no ABI or behavior claim.
+
+- [ft_corner_is_flat, ft_corner_orientation](../../../core/libs/prx/libSceFreeTypeOt/Export.cpp) (libSceFreeTypeOt) - console prototypes and FreeType version equivalence are unverified. The LP64 signatures and 64-bit coordinate calculations follow bundled [FreeType 2.13.3](https://github.com/freetype/freetype/blob/42608f77f20749dd6ddc9e0536788eaad70ea4b5/src/base/ftcalc.c): orientation returns +1 for counter-clockwise turns, -1 for clockwise turns and 0 for collinear inputs using 64-bit coordinate cross-products; flatness compares hypotenuse approximations via the alpha-max-plus-beta-min metric and returns 1 when the corner angle deviation does not exceed the threshold, 0 otherwise.
+
+- [FT_MulDiv_No_Round, FT_Matrix_Multiply_Scaled, FT_Vector_Transform_Scaled, ft_highpow2](../../../core/libs/prx/libSceFreeTypeOt/Export.cpp) (libSceFreeTypeOt) - console prototypes and the FT_LONG64 build option are unverified. FT_Property_Set and ft_highpow2 date this FreeType to 2.4.11-2.5.3, whose stock [ftconfig.h](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/include/freetype/config/ftconfig.h#L289-L306) drops FT_LONG64 under `__STDC__` and compiles the 32-bit [FT_MulDiv](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/src/base/ftcalc.c#L411-L479). Inputs where that build, the FT_LONG64 build and bundled 2.13.3 can differ throw without writing: an operand above 0x7FFFFFFF in magnitude, a zero divisor with a zero factor, or a quotient above 0xFFFFFFFF. The scaled calls divide each term by 0x10000 * scaling, so |scaling| > 32767 throws; a null matrix or vector is a no-op unless that product overflows.
+
+- [FT_SqrtFixed, FT_Sqrt32](../../../core/libs/prx/libSceFreeTypeOt/Export.cpp) (libSceFreeTypeOt) - the exports carry the NIDs of these FreeType names; console prototypes and FreeType version equivalence are unverified. `FT_Property_Set` and `FT_Sqrt32` (`FT_CONFIG_OPTION_OLD_INTERNALS`, removed in 2.5.0) narrow this FreeType to 2.4.11-2.4.12 [ftcalc.c](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/src/base/ftcalc.c#L155-L186). Both take and return 32-bit `FT_Int32` regardless of `FT_LONG64`: [FT_SqrtFixed](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/src/base/ftcalc.c#L855-L885) returns 0 for non-positive inputs and floors `sqrt(x << 16)` for positive `x` (unlike the unsigned rounding `FT_SqrtFixed` in bundled 2.13.3), and `FT_Sqrt32` floors the square root of `x` cast to `FT_UInt32`.
+
+- [ft_mem_alloc, ft_mem_qalloc, ft_mem_realloc, ft_mem_qrealloc, ft_mem_free, ft_mem_dup, ft_mem_strdup, ft_mem_strcpyn](../../../core/libs/prx/libSceFreeTypeOt/src/Memory.cpp) (libSceFreeTypeOt) - the exports carry the NIDs of these FreeType names; console prototypes and FreeType version equivalence are unverified. The LP64 signatures, the guest `FT_MemoryRec` callbacks and the error codes (Invalid_Argument 0x06, Array_Too_Large 0x0A, Out_Of_Memory 0x40) follow FreeType 2.4.12 [ftutil.c](https://github.com/freetype/freetype/blob/cecf93ef90c660a8b0b45e5adbbfb5ea443fb6b9/src/base/ftutil.c#L49-L221). Bundled FreeType 2.13.3 differs only in `ft_mem_qrealloc` from a count of 0, which it does not zero. As in a release build, `ft_mem_qrealloc` does not check the `FT_ASSERT` that a block with no current items is null. The current byte size passed to `realloc` wraps where the source's signed product would overflow.
+===NOTIMPL
+core/libs/prx/libSceFreeTypeOt/Export.cpp
+22:        NotImplemented_nid_no_patch(function);
+26:        NotImplemented_nid_no_patch(function);
+34:        NotImplemented_nid_no_patch(function);
+63:    NotImplemented_nid_no_patch(__func__);
+68:    NotImplemented_nid_no_patch(__func__);
+73:    NotImplemented_nid_no_patch(__func__);
+78:    NotImplemented_nid_no_patch(__func__);
+83:    NotImplemented_nid_no_patch(__func__);
+88:    NotImplemented_nid_no_patch(__func__);
+93:    NotImplemented_nid_no_patch(__func__);
+98:    NotImplemented_nid_no_patch(__func__);
+103:    NotImplemented_nid_no_patch(__func__);
+108:    NotImplemented_nid_no_patch(__func__);
+113:    NotImplemented_nid_no_patch(__func__);
+118:    NotImplemented_nid_no_patch(__func__);
+123:    NotImplemented_nid_no_patch(__func__);
+128:    NotImplemented_nid_no_patch(__func__);
+133:    NotImplemented_nid_no_patch(__func__);
+138:    NotImplemented_nid_no_patch(__func__);
+143:    NotImplemented_nid_no_patch(__func__);
+148:    NotImplemented_nid_no_patch(__func__);
+153:    NotImplemented_nid_no_patch(__func__);
+158:    NotImplemented_nid_no_patch(__func__);
+163:    NotImplemented_nid_no_patch(__func__);
+168:    NotImplemented_nid_no_patch(__func__);
+173:    NotImplemented_nid_no_patch(__func__);
+178:    NotImplemented_nid_no_patch(__func__);
+183:    NotImplemented_nid_no_patch(__func__);
+188:    NotImplemented_nid_no_patch(__func__);
+193:    NotImplemented_nid_no_patch(__func__);
+198:    NotImplemented_nid_no_patch(__func__);
+203:    NotImplemented_nid_no_patch(__func__);
+208:    NotImplemented_nid_no_patch(__func__);
+213:    NotImplemented_nid_no_patch(__func__);
+218:    NotImplemented_nid_no_patch(__func__);
+223:    NotImplemented_nid_no_patch(__func__);
+228:    NotImplemented_nid_no_patch(__func__);
+233:    NotImplemented_nid_no_patch(__func__);
+238:    NotImplemented_nid_no_patch(__func__);
+243:    NotImplemented_nid_no_patch(__func__);
+248:    NotImplemented_nid_no_patch(__func__);
+253:    NotImplemented_nid_no_patch(__func__);
+258:    NotImplemented_nid_no_patch(__func__);
+263:    NotImplemented_nid_no_patch(__func__);
+268:    NotImplemented_nid_no_patch(__func__);
+273:    NotImplemented_nid_no_patch(__func__);
+278:    NotImplemented_nid_no_patch(__func__);
+283:    NotImplemented_nid_no_patch(__func__);
+288:    NotImplemented_nid_no_patch(__func__);
+293:    NotImplemented_nid_no_patch(__func__);
+298:    NotImplemented_nid_no_patch(__func__);
+303:    NotImplemented_nid_no_patch(__func__);
+308:    NotImplemented_nid_no_patch(__func__);
+313:    NotImplemented_nid_no_patch(__func__);
+318:    NotImplemented_nid_no_patch(__func__);
+323:    NotImplemented_nid_no_patch(__func__);
+328:    NotImplemented_nid_no_patch(__func__);
+333:    NotImplemented_nid_no_patch(__func__);
+338:    NotImplemented_nid_no_patch(__func__);
+343:    NotImplemented_nid_no_patch(__func__);
+348:    NotImplemented_nid_no_patch(__func__);
+353:    NotImplemented_nid_no_patch(__func__);
+358:    NotImplemented_nid_no_patch(__func__);
+363:    NotImplemented_nid_no_patch(__func__);
+368:    NotImplemented_nid_no_patch(__func__);
+373:    NotImplemented_nid_no_patch(__func__);
+378:    NotImplemented_nid_no_patch(__func__);
+383:    NotImplemented_nid_no_patch(__func__);
+388:    NotImplemented_nid_no_patch(__func__);
+393:    NotImplemented_nid_no_patch(__func__);
+398:    NotImplemented_nid_no_patch(__func__);
+403:    NotImplemented_nid_no_patch(__func__);
+408:    NotImplemented_nid_no_patch(__func__);
+413:    NotImplemented_nid_no_patch(__func__);
+418:    NotImplemented_nid_no_patch(__func__);
+423:    NotImplemented_nid_no_patch(__func__);
+428:    NotImplemented_nid_no_patch(__func__);
+433:    NotImplemented_nid_no_patch(__func__);
+438:    NotImplemented_nid_no_patch(__func__);
+443:    NotImplemented_nid_no_patch(__func__);
+448:    NotImplemented_nid_no_patch(__func__);
+453:    NotImplemented_nid_no_patch(__func__);
+458:    NotImplemented_nid_no_patch(__func__);
+463:    NotImplemented_nid_no_patch(__func__);
+468:    NotImplemented_nid_no_patch(__func__);
+473:    NotImplemented_nid_no_patch(__func__);
+478:    NotImplemented_nid_no_patch(__func__);
+483:    NotImplemented_nid_no_patch(__func__);
+556:    NotImplemented_nid_no_patch(__func__);
+561:    NotImplemented_nid_no_patch(__func__);
+566:    NotImplemented_nid_no_patch(__func__);
+571:    NotImplemented_nid_no_patch(__func__);
+===OUTLINE
+core/libs/prx/libSceFreeTypeOt/Export.cpp:513:std::int64_t APS5_VABI FT_MulDiv_No_Round_nid_postfix(std::int64_t a, std::int64_t b, std::int64_t c) {
+core/libs/prx/libSceFreeTypeOt/Export.cpp:517:void APS5_VABI FT_Matrix_Multiply_Scaled_nid_postfix(const FreeType::GuestMatrix* a, FreeType::GuestMatrix* b, std::int64_t scaling) {
+core/libs/prx/libSceFreeTypeOt/Export.cpp:531:void APS5_VABI FT_Vector_Transform_Scaled_nid_postfix(FreeType::GuestVector* vector, const FreeType::GuestMatrix* matrix, std::int64_t scaling) {
+core/libs/prx/libSceFreeTypeOt/include/Calc.hpp:10:std::int64_t APS5_VABI FT_MulDiv_No_Round_nid_postfix(std::int64_t a, std::int64_t b, std::int64_t c);
+core/libs/prx/libSceFreeTypeOt/include/Calc.hpp:11:void APS5_VABI FT_Matrix_Multiply_Scaled_nid_postfix(const FreeType::GuestMatrix* a, FreeType::GuestMatrix* b, std::int64_t scaling);
+core/libs/prx/libSceFreeTypeOt/include/Calc.hpp:12:void APS5_VABI FT_Vector_Transform_Scaled_nid_postfix(FreeType::GuestVector* vector, const FreeType::GuestMatrix* matrix, std::int64_t scaling);
