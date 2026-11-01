@@ -1,0 +1,170 @@
++ set +e +o pipefail
+cd core/libs/prx
+echo ---- NotImplemented counts per lib
+for d in */; do c=$(grep -r NotImplemented_nid_no_patch "$d" 2>/dev/null | wc -l); echo "$c ${d%/}"; done | sort -n | awk '$1>0' | head -80
+echo ---- libSceLibcInternal unimplemented names
+grep -rn -B3 NotImplemented_nid_no_patch libSceLibcInternal | grep -E 'APS5_VABI|nid|_Z' | head -80
+---- NotImplemented counts per lib
+1 libSceAvPlayer
+1 libSceCustomMusicSysCallWrapper
+1 libSceGameUpdate
+1 libSceGic
+1 libSceImeDialog
+1 libSceJpegDec
+1 libSceLoginService
+1 libSceNKWebCdlgInjectedBundle
+1 libSceNpPartner001
+1 libScePlayGo
+1 libScePngDec
+1 libSceRnpsNKInjectedBundle
+1 libSceRtc
+1 libSceSystemGesture
+1 libSceVdecsw
+1 libSceVideodec
+2 libSceAvPlayer.native
+2 libSceDiscId
+2 libSceGameCustomDataDialog
+2 libSceInvitationDialog
+2 libSceNgs2
+2 libSceNpFriendListDialog
+2 libSceNpPartnerSubscription
+2 libSceOpusCeltDec
+2 libSceProprietaryVoiceChatHelperPrx
+2 libSceRudp
+2 libSceSystemLogger2Game
+2 libSceVideoOutSecondary
+2 ulobjmgr
+3 libSceAjm
+3 libSceAmpr
+3 libSceAppChecker
+3 libSceDiscMap
+3 libSceFreeType
+3 libSceFrontPanelDisplay
+3 libSceHubAppUtil
+3 libSceNpEntitlementAccess
+3 libSceSystemLogger
+3 libSceVideoArbitration
+3 libSceVorbisDec
+4 libSceAudioLatencyEstimation
+4 libSceDseehx
+4 libSceNotification
+4 libScePsmUtil
+4 libSceS3da
+4 libSceVdecCore.native
+4 libSceVdecSavc
+4 libSceVdecSavc2
+4 libSceVideoCoreInterface
+4 libSceVideoDecoderArbitration
+4 libSceVideoStreamingEngineAudioOnly
+4 libSceWebBrowserDialog
+5 libSceAt9Enc
+5 libSceJpegParser
+5 libSceNKWeb
+5 libSceOpusDec
+5 libScePadTracker
+5 libSceWebRtc
+5 libSceWkFontConfig
+6 libSceAutoMounterClient
+6 libSceContentDelete
+6 libSceFontGs
+6 libSceFontGs.native
+6 libSceNpTus
+6 libSceScreenShot
+6 libSceShare
+6 libSceShareFactoryUtil
+6 libSceTextToSpeech2
+6 libSceVideoNativeExtEssential
+6 libSceVoice
+7 libSceAc3Enc
+7 libSceAgc
+7 libSceCdlgAdIdClient
+7 libSceConnectAccountDialog
+7 libSceDtsEnc
+7 libSceEditMp4
+7 libSceFontFt
+7 libSceGifParser
+7 libSceJxrParser
+7 libSceNpSnsYouTubeDialog
+---- libSceLibcInternal unimplemented names
+libSceLibcInternal/Spawn.cpp:104:    if (!relative.starts_with(ApplicationRoot)) NotImplemented_nid_no_patch((std::string(function) + ": executables outside /app0 (" + guest + ")").c_str());
+libSceLibcInternal/Spawn.cpp:110:        if (component.empty() || component == "." || component == "..") NotImplemented_nid_no_patch((std::string(function) + ": a path with an empty, . or .. component (" + guest + ")").c_str());
+libSceLibcInternal/Spawn.cpp:146:        NotImplemented_nid_no_patch((std::string(function) + ": " + guest + " without its converted executable; relink with --executable " + std::string(guest.substr(ApplicationRoot.size()))).c_str());
+libSceLibcInternal/Spawn.cpp:249:            NotImplemented_nid_no_patch(("posix_spawn: a child descriptor " + std::to_string(action.newDescriptor) + " beyond the standard streams").c_str());
+libSceLibcInternal/Spawn.cpp:259:            NotImplemented_nid_no_patch(("posix_spawn: a child descriptor " + std::to_string(action.descriptor) + " beyond the standard streams").c_str());
+libSceLibcInternal/Spawn.cpp:318:        NotImplemented_nid_no_patch(("posix_spawn: the attribute flags " + HexFlag(attributes_flags) + " on this host").c_str());
+libSceLibcInternal/Spawn.cpp:392:        NotImplemented_nid_no_patch(("posix_spawn: the attribute flags " + HexFlag(flags)).c_str());
+libSceLibcInternal/InventoryExports.cpp-7-int APS5_VABI libSceLibcInternalInventory_000_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:8:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-10-APS5_EXPORT("ww3UUl317Ng", libSceLibcInternalInventory_000_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-12-int APS5_VABI libSceLibcInternalInventory_001_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:13:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-15-APS5_EXPORT("dXy+lFOiaQA", libSceLibcInternalInventory_001_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-17-int APS5_VABI libSceLibcInternalInventory_002_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:18:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-20-APS5_EXPORT("HpAlvhNKb2Y", libSceLibcInternalInventory_002_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-22-int APS5_VABI libSceLibcInternalInventory_003_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:23:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-25-APS5_EXPORT("5bQqdR3hTZw", libSceLibcInternalInventory_003_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-27-int APS5_VABI libSceLibcInternalInventory_004_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:28:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-30-APS5_EXPORT("1kvQkOSaaVo", libSceLibcInternalInventory_004_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-32-int APS5_VABI libSceLibcInternalInventory_005_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:33:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-35-APS5_EXPORT("bBGvmspg3Xs", libSceLibcInternalInventory_005_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-37-int APS5_VABI libSceLibcInternalInventory_006_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:38:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-40-APS5_EXPORT("95MaQlRbfC8", libSceLibcInternalInventory_006_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-42-int APS5_VABI libSceLibcInternalInventory_007_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:43:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-45-APS5_EXPORT("ki5SQPsB4m4", libSceLibcInternalInventory_007_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-47-int APS5_VABI libSceLibcInternalInventory_008_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:48:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-50-APS5_EXPORT("6F1JfiING18", libSceLibcInternalInventory_008_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-52-int APS5_VABI libSceLibcInternalInventory_009_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:53:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-55-APS5_EXPORT("HmcMLz3cPkM", libSceLibcInternalInventory_009_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-57-int APS5_VABI libSceLibcInternalInventory_010_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:58:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-60-APS5_EXPORT("pyBabUesXN4", libSceLibcInternalInventory_010_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-62-int APS5_VABI libSceLibcInternalInventory_011_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:63:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-65-APS5_EXPORT("uROsAczW6OU", libSceLibcInternalInventory_011_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-67-int APS5_VABI libSceLibcInternalInventory_012_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:68:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-70-APS5_EXPORT("X69UlAXF-Oc", libSceLibcInternalInventory_012_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-72-int APS5_VABI libSceLibcInternalInventory_013_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:73:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-75-APS5_EXPORT("GS1AvxBwVgY", libSceLibcInternalInventory_013_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-77-int APS5_VABI libSceLibcInternalInventory_014_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:78:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-80-APS5_EXPORT("sTaUDDnGOpE", libSceLibcInternalInventory_014_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-82-int APS5_VABI libSceLibcInternalInventory_015_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:83:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-85-APS5_EXPORT("OM0FnA7Tldk", libSceLibcInternalInventory_015_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-87-int APS5_VABI libSceLibcInternalInventory_016_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:88:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-90-APS5_EXPORT("uVOxy7dQTFc", libSceLibcInternalInventory_016_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-92-int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:93:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-95-APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-97-int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:98:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-100-APS5_EXPORT("XFh0C66aEms", libSceLibcInternalInventory_018_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-102-int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:103:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-105-APS5_EXPORT("oly3wSwEJ2A", libSceLibcInternalInventory_019_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-107-int APS5_VABI libSceLibcInternalInventory_020_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:108:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-110-APS5_EXPORT("lX9M5u0e48k", libSceLibcInternalInventory_020_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-112-int APS5_VABI libSceLibcInternalInventory_021_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:113:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-115-APS5_EXPORT("t6egllDqQ2M", libSceLibcInternalInventory_021_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-117-int APS5_VABI libSceLibcInternalInventory_022_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:118:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-120-APS5_EXPORT("iWNC2tkDgxw", libSceLibcInternalInventory_022_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-122-int APS5_VABI libSceLibcInternalInventory_023_nid_no_patch() {
+libSceLibcInternal/InventoryExports.cpp:123:    NotImplemented_nid_no_patch(__func__);
+libSceLibcInternal/InventoryExports.cpp-125-APS5_EXPORT("VNaqectsZNs", libSceLibcInternalInventory_023_nid_no_patch);
+libSceLibcInternal/InventoryExports.cpp-127-int APS5_VABI libSceLibcInternalInventory_024_nid_no_patch() {
+grep: write error: Broken pipe
+grep: write error: Broken pipe
