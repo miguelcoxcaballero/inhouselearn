@@ -1,0 +1,16 @@
++ git grep -n "y1dYQsc67ys\|iHILAmwYRGY\|rNYLEsL7M0k\|future_errorD0Ev\|overflow_errorD0Ev\|underflow_errorD0Ev" > /tmp/a.txt || true; cat /tmp/a.txt | cut -c1-200; echo ---; git grep -n "Unknown6_045\|Unknown6_043" > /tmp/b.txt || true; cat /tmp/b.txt | cut -c1-200; echo ---; git grep -n "ExceptionDestructors" -- docs | cut -c1-300 > /tmp/c.txt || true; cat /tmp/c.txt
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:95:APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:252:int APS5_VABI sceLibcInternalUnknown6_043_iHILAmwYRGY_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:256:APS5_EXPORT("iHILAmwYRGY", sceLibcInternalUnknown6_043_iHILAmwYRGY_nid_no_patch);
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:264:int APS5_VABI sceLibcInternalUnknown6_045_y1dYQsc67ys_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:268:APS5_EXPORT("y1dYQsc67ys", sceLibcInternalUnknown6_045_y1dYQsc67ys_nid_no_patch);
+docs/dev/debt/libSceLibcInternal.md:30:| `_ZNSt12future_errorD0Ev` | `rNYLEsL7M0k` |
+docs/dev/debt/libSceLibcInternal.md:410:- [_ZNSt15underflow_errorD0Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `iHILAmwYRGY`) - listed in the [PS5 3.2
+docs/dev/debt/libSceLibcInternal.md:412:- [_ZNSt14overflow_errorD0Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `y1dYQsc67ys`) - listed in the [PS5 3.20
+---
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:252:int APS5_VABI sceLibcInternalUnknown6_043_iHILAmwYRGY_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:256:APS5_EXPORT("iHILAmwYRGY", sceLibcInternalUnknown6_043_iHILAmwYRGY_nid_no_patch);
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:264:int APS5_VABI sceLibcInternalUnknown6_045_y1dYQsc67ys_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:268:APS5_EXPORT("y1dYQsc67ys", sceLibcInternalUnknown6_045_y1dYQsc67ys_nid_no_patch);
+---
+docs/dev/debt/libSceLibcInternal.md:345:- [_ZNSt12future_errorD2Ev, _ZNSt14overflow_errorD2Ev and _ZNSt15underflow_errorD2Ev](../../../core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp) (libSceLibcInternal, NIDs `XFh0C66aEms`, `OypvNf3Uq3c` and `xiqd+QkuYXc`) are the base-object destructors 
