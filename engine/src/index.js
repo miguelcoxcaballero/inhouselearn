@@ -24,7 +24,7 @@ export { createToolCoach, NOTE_MARK, ageToolResults, estimateContextChars };
 export { createDriveTools } from './gdrive.js';
 export { createGmailTools, googleProblem } from './gmail.js';
 export { createWebTools } from './web.js';
-export { createAgentTools, createSubAgentReportTool, planAgents, ownsPath } from './agents.js';
+export { createAgentTools, createSubAgentReportTool, planAgents, ownsPath, pickLevel } from './agents.js';
 export { createDocumentTools } from './documents.js';
 export { createInteractTools } from './interact.js';
 export { createStudyTools } from './study.js';
@@ -486,7 +486,7 @@ function deeperLevel(model, level) {
 // budget, verification and touched files, copied from the tool's details.
 function copyBoard(step, details) {
   step.agents = details.agents;
-  ['waves', 'budget', 'verify', 'files', 'warnings'].forEach((key) => { if (details[key] !== undefined) step[key] = details[key]; });
+  ['waves', 'budget', 'verify', 'files', 'warnings', 'rounds', 'notice'].forEach((key) => { if (details[key] !== undefined) step[key] = details[key]; else delete step[key]; });
 }
 
 // Coach notes help the model inside the turn; saved history never keeps them

@@ -1,7 +1,10 @@
-// spawn_agents v2 (engine/src/agents.js) without a browser or a model: the
-// plan (ids, dependencies, cycles, waves, lint) and the scheduler with a fake
-// runSubAgent (concurrency cap, dependency results in the downstream task,
-// skips on failure, the budget, the verifier and a parent abort).
+// spawn_agents v3 (engine/src/agents.js and engine/src/agents/*) without a browser
+// or a model: the plan (ids, dependencies, cycles, waves, lint, the gate), the
+// effort per role, the scheduler with a fake runSubAgent (concurrency cap and its
+// adaptive limit, dependency results in the downstream task, skips on failure, the
+// budget and not starting what cannot finish, the verifier and its rounds of fixes,
+// the trimmed digest with agent_report, the cap of the whole answer) and a parent
+// abort.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
@@ -20,7 +23,9 @@ try {
   register('data:text/javascript,' + encodeURIComponent(hooks), import.meta.url);
   agents = await import('../../engine/src/agents.js?stub');
 }
-const { planAgents, createAgentTools, createSubAgentReportTool } = agents;
+const { planAgents, createAgentTools, createSubAgentReportTool, pickLevel } = agents;
+// The decision rules are pure modules of their own.
+const policy = await import('../../engine/src/agents/policy.js');
 
 const LONG = ' Lee los archivos que hagan falta, haz el cambio completo con cuidado y devuelve qué archivos cambiaste y cómo lo comprobaste.';
 const agent = (name, extra) => Object.assign({ name, task: 'Tarea de ' + name + '.' + LONG }, extra);
@@ -66,6 +71,99 @@ test('plan: automatic ids, waves by longest path, lint warnings', () => {
   assert.doesNotMatch(all, /«Tres»/, 'a dependant naming the same file is fine');
 });
 
+test('the tools: spawn_agents and agent_report', () => {
+  assert.deepEqual(createAgentTools({ runSubAgent() {} }).map((tool) => tool.name), ['spawn_agents', 'agent_report']);
+});
+
+test('effort: explore reads at medium and 25 steps, build writes at high and 40; the model can override', () => {
+  const plan = planAgents([
+    agent('Lector', { id: 'r', role: 'explore' }),
+    agent('Autor', { id: 'w' }),
+    agent('Profundo', { id: 'p', role: 'explore', effort: 'max' }),
+    agent('Raro', { id: 'x', effort: 'ultra' })
+  ]);
+  const by = Object.fromEntries(plan.nodes.map((node) => [node.id, node]));
+  assert.deepEqual([by.r.effort, by.r.maxSteps], ['medium', 25]);
+  assert.deepEqual([by.w.effort, by.w.maxSteps], ['high', 40]);
+  assert.equal(by.p.effort, 'max');
+  assert.equal(by.x.effort, 'high', 'an unknown effort falls back to the role\'s');
+  const ladder = ['minimal', 'low', 'medium', 'high', 'xhigh'];
+  assert.equal(pickLevel(ladder, 'explore'), 'medium');
+  assert.equal(pickLevel(ladder, 'build'), 'high');
+  assert.equal(pickLevel(ladder, 'build', 'max'), 'xhigh');
+  assert.equal(pickLevel(ladder, 'explore', 'low'), 'low');
+  assert.equal(pickLevel(['off', 'low', 'medium', 'high'], 'build'), 'high');
+  assert.equal(pickLevel([], 'build'), '', 'a model that does not reason has no level');
+});
+
+test('jobs and rows carry the effort and the step cap of the role', async () => {
+  const jobs = {};
+  const tool = spawnTool(async (job) => { jobs[job.id] = job; return { text: 'ok', cost: 0 }; });
+  const result = await tool.execute('e1', { verify: false, agents: [agent('Lector', { id: 'r', role: 'explore' }), agent('Autor', { id: 'w', effort: 'max' })] });
+  assert.deepEqual([jobs.r.effort, jobs.r.maxSteps], ['medium', 25]);
+  assert.deepEqual([jobs.w.effort, jobs.w.maxSteps], ['max', 40]);
+  const rows = Object.fromEntries(result.details.agents.map((row) => [row.id, row]));
+  assert.deepEqual([rows.r.effort, rows.r.maxSteps, rows.w.effort, rows.w.maxSteps], ['medium', 25, 'max', 40]);
+});
+
+test('policy: rounds, parallel limit, start verdict, verifier, failing key', () => {
+  assert.equal(policy.fixRoundsFrom(undefined), 1);
+  assert.equal(policy.fixRoundsFrom(0), 0);
+  assert.equal(policy.fixRoundsFrom(9), 3);
+  assert.equal(policy.fixRoundsFrom(-2), 0);
+  assert.equal(policy.fixRoundsFrom('2'), 2);
+  let state = { limit: 6, calm: 0, max: 6 };
+  state = policy.nextParallel(state, 'limit');
+  assert.equal(state.limit, 3);
+  state = policy.nextParallel(state, 'limit');
+  assert.equal(state.limit, 2);
+  state = policy.nextParallel(state, 'limit');
+  assert.equal(state.limit, 2, 'never below two');
+  state = policy.nextParallel(state, 'ok');
+  assert.equal(state.limit, 2);
+  state = policy.nextParallel(state, 'ok');
+  assert.equal(state.limit, 3, 'two calm finishes give one back');
+  assert.deepEqual(policy.startVerdict({ spent: 0.3, budget: 1, finishedCosts: [] }), { ok: true });
+  assert.equal(policy.startVerdict({ spent: 0.95, budget: 1, finishedCosts: [] }).near, true);
+  assert.equal(policy.startVerdict({ spent: 0.9, budget: 1, finishedCosts: [0.45, 0.45] }).ok, false);
+  assert.equal(policy.startVerdict({ spent: 1.2, budget: 1, finishedCosts: [] }).ok, false);
+  assert.equal(policy.shouldVerify([{ role: 'explore' }, { role: 'explore' }], []), false);
+  assert.equal(policy.shouldVerify([{ role: 'explore' }, { role: 'build' }], []), true);
+  assert.equal(policy.failingKey([{ criterion: 'b', ok: false }, { criterion: 'a', ok: false }, { criterion: 'c', ok: true }]), 'a|b');
+});
+
+test('a plan that cannot work is refused once, before anything starts; then it runs', async () => {
+  let started = 0;
+  const tool = spawnTool(async () => { started++; return { text: 'hecho', cost: 0 }; });
+  const bad = { verify: false, agents: [{ name: 'Corto', task: 'Arregla eso.' }, agent('Otro', { task: 'Mira lo de arriba y sigue con ello sin más dudas.' + LONG })] };
+  const first = await tool.execute('g1', bad);
+  assert.equal(started, 0, 'nobody started');
+  assert.equal(first.details.refused, true);
+  assert.match(textOf(first), /^Plan NO ejecutado: no ha empezado ningún agente y no se ha gastado nada/);
+  assert.match(textOf(first), /«Corto» tiene \d+ caracteres y no hay context/);
+  assert.match(textOf(first), /«Otro» dice «arriba»/);
+  const second = await tool.execute('g2', bad);
+  assert.equal(started, 2, 'the same plan goes through the second time');
+  assert.equal(second.details.agents.length, 2);
+  // With a shared context a short task is fine, and «antes» alone is just a word.
+  const withContext = await spawnTool(async () => ({ text: 'ok', cost: 0 })).execute('g3', { verify: false, context: 'Repositorio demo, rama main.', agents: [{ name: 'Corto', task: 'Lee README.md antes de nada.' }] });
+  assert.equal(withContext.details.refused, undefined);
+  assert.equal(withContext.details.agents.length, 1);
+  const word = await spawnTool(async () => ({ text: 'ok', cost: 0 })).execute('g4', { verify: false, agents: [agent('Largo', { task: 'Antes de empezar, lee con calma los apuntes del tema y resume lo importante para repasarlos.' + LONG })] });
+  assert.equal(word.details.refused, undefined);
+});
+
+test('the verifier runs when something is written, with criteria or with 3+ agents; two readers do not need one', async () => {
+  const run = (list, extra) => spawnTool(async () => ({ text: 'ok', cost: 0 })).execute('v', Object.assign({ agents: list }, extra));
+  const has = (result) => result.details.agents.some((row) => row.id === 'verify');
+  assert.equal(has(await run([agent('A', { role: 'explore' }), agent('B', { role: 'explore' })])), false, 'two readers');
+  assert.equal(has(await run([agent('A'), agent('B', { role: 'explore' })])), true, 'one writes');
+  assert.equal(has(await run([agent('A', { role: 'explore' }), agent('B', { role: 'explore' }), agent('C', { role: 'explore' })])), true, 'three agents');
+  assert.equal(has(await run([agent('A', { role: 'explore' })], { acceptance: ['Algo comprobable'] })), true, 'criteria');
+  assert.equal(has(await run([agent('A')])), false, 'a single writer');
+  assert.equal(has(await run([agent('A'), agent('B')], { verify: false })), false, 'verify:false');
+});
+
 test('scheduler: at most 6 at a time out of 8, everything done', async () => {
   let running = 0;
   let peak = 0;
@@ -86,6 +184,35 @@ test('scheduler: at most 6 at a time out of 8, everything done', async () => {
   assert.ok(updates.some((u) => u.details.agents.some((row) => row.status === 'queued' && row.doing === 'En cola')));
   assert.match(textOf(result), /\(8 agentes en 1 oleada: 8 ok, 0 fallidos, 0 sin empezar, \$0\.0160\)/);
   assert.match(textOf(result), /## Agente 1 \[done\]\nHecho por Agente 1/);
+  assert.match(textOf(result), /Gasto de Ultra code en esta respuesta: \$0\.0160 de \$8\.00\./);
+});
+
+test('a provider that limits requests halves how many agents start at once', async () => {
+  let running = 0;
+  let limited = false;
+  let violations = 0;
+  const tries = {};
+  const tool = spawnTool(async (job) => {
+    tries[job.id] = (tries[job.id] || 0) + 1;
+    // After the first 429 no NEW agent may start while three are already running
+    // (a retry of the same agent is not a new start).
+    if (limited && tries[job.id] === 1 && running >= 3) violations++;
+    running++;
+    try {
+      await sleep(20);
+      if (job.id === 'a1' && tries[job.id] === 1) { limited = true; throw new Error('OpenRouter 429: rate limit'); }
+      return { text: 'ok', cost: 0 };
+    } finally {
+      running--;
+    }
+  });
+  const updates = [];
+  const result = await tool.execute('p1', { verify: false, agents: Array.from({ length: 9 }, (_, i) => agent('Agente ' + (i + 1), { id: 'a' + (i + 1) })) }, undefined, (u) => updates.push(u));
+  assert.ok(result.details.agents.every((row) => row.status === 'done'), JSON.stringify(result.details.agents.map((row) => [row.id, row.status])));
+  assert.equal(violations, 0);
+  assert.ok(updates.some((u) => u.details.notice && /limita las peticiones: ahora van 3 agentes a la vez/.test(u.details.notice)), 'the board was told while it lasted');
+  assert.equal(result.details.notice, undefined, 'and the finished card carries no stale notice');
+  assert.equal(tries.a1, 2);
 });
 
 test('scheduler: dependency results reach the downstream task; a failure skips dependants', async () => {
@@ -151,8 +278,21 @@ test('scheduler: the budget stops the most expensive agent and skips the queue',
   assert.equal(rows.caro.doing, 'Parado: presupuesto agotado ($0.20)');
   assert.match(rows.caro.result, /Llevaba \d+ pasos/);
   assert.equal(rows.luego.status, 'skipped');
-  assert.ok(['No empieza: presupuesto agotado', 'No empieza: falló «Barato»'].includes(rows.luego.doing), rows.luego.doing);
+  assert.match(rows.luego.doing, /^No empieza: (presupuesto (casi )?agotado|falló «Barato»)$/, rows.luego.doing);
   assert.equal(result.details.budget, 0.2);
+});
+
+test('an agent that the rest of the budget could not finish is not started', async () => {
+  const tool = spawnTool(async (job) => { job.onUpdate({ cost: 0.45, steps: 1 }); await sleep(5); return { text: 'ok', cost: 0.45 }; });
+  const result = await tool.execute('b1', { verify: false, budget_usd: 1, agents: [
+    agent('A', { id: 'a' }), agent('B', { id: 'b', depends_on: ['a'] }), agent('C', { id: 'c', depends_on: ['b'] })
+  ] });
+  const rows = Object.fromEntries(result.details.agents.map((row) => [row.id, row]));
+  assert.equal(rows.a.status, 'done');
+  assert.equal(rows.b.status, 'done');
+  assert.equal(rows.c.status, 'skipped');
+  assert.equal(rows.c.doing, 'No empieza: presupuesto casi agotado');
+  assert.match(textOf(result), /1 sin empezar/);
 });
 
 test('scheduler: step cap, stop by the user and transient retries', async () => {
@@ -188,6 +328,15 @@ test('scheduler: step cap, stop by the user and transient retries', async () => 
   assert.equal(controls, 'gone');
 });
 
+test('scheduler: a reader is cut at its own, lower step cap', async () => {
+  const tool = spawnTool(async (job) => {
+    for (let i = 1; i <= 40 && !job.signal.aborted; i++) { job.onUpdate({ steps: i }); await sleep(1); }
+    throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+  });
+  const result = await tool.execute('s5b', { verify: false, agents: [agent('Lector', { id: 'r', role: 'explore' })] });
+  assert.equal(result.details.agents[0].doing, 'Parado: límite de 25 pasos');
+});
+
 test('scheduler: no retry after the agent wrote something', async () => {
   let tries = 0;
   const tool = spawnTool(async (job) => {
@@ -218,7 +367,7 @@ test('reports and the verifier with one round of fixes', async () => {
   const seen = [];
   let verifierRuns = 0;
   const tool = spawnTool(async (job) => {
-    seen.push({ id: job.id, role: job.role, readOnly: job.readOnly, task: job.task });
+    seen.push({ id: job.id, role: job.role, readOnly: job.readOnly, task: job.task, effort: job.effort });
     if (job.id === 'verify') {
       verifierRuns++;
       const passed = verifierRuns > 1;
@@ -243,16 +392,59 @@ test('reports and the verifier with one round of fixes', async () => {
   assert.equal(verifier.length, 2);
   assert.equal(verifier[0].readOnly, true);
   assert.equal(verifier[0].role, 'verify');
+  assert.equal(verifier[0].effort, 'high');
   assert.match(verifier[0].task, /Objetivo: Una API con tests/);
   assert.match(verifier[0].task, /1\. Hay tests\n2\. La API responde/);
   assert.match(verifier[0].task, /### API \(id api, done\)/);
+  assert.match(verifier[0].task, /intentar refutar lo hecho/);
   assert.match(verifier[0].task, /submit_result con data/);
   const fix = seen.filter((item) => item.id === 'api');
   assert.equal(fix.length, 2);
   assert.match(fix[1].task, /El verificador encontró: Añade la ruta \/hola\. Corrige solo eso\./);
   assert.equal(result.details.verify.passed, true);
   assert.equal(result.details.verify.checks.length, 2);
+  assert.equal(result.details.rounds, 1);
+  assert.match(text, /1 ronda de arreglos tras la verificación\./);
   assert.ok(result.details.agents.find((row) => row.id === 'verify'));
+});
+
+test('fix rounds: as many as asked, stopping when the same checks keep failing', async () => {
+  const run = async (rounds, failing) => {
+    const seen = { verify: 0, api: 0 };
+    const tool = spawnTool(async (job) => {
+      seen[job.id] = (seen[job.id] || 0) + 1;
+      if (job.id === 'verify') {
+        const check = failing(seen.verify);
+        job.onReport({ summary: 'Revisado', status: 'done', data: {
+          passed: !check,
+          checks: [{ criterion: check || 'Todo bien', ok: !check, evidence: 'x', owner_id: 'api' }],
+          fixes: check ? [{ owner_id: 'api', instruction: 'Arregla ' + check }] : []
+        } });
+        return { text: 'v', cost: 0 };
+      }
+      job.onReport({ summary: 'Hecho', status: 'done' });
+      return { text: 'ok', cost: 0 };
+    });
+    const result = await tool.execute('f', { goal: 'g', acceptance: ['Algo'], fix_rounds: rounds, agents: [agent('API', { id: 'api' }), agent('Tests', { id: 'tests' })] });
+    return { seen, result };
+  };
+  // A different failure each time: the three rounds are used and the fourth check passes.
+  const progressing = await run(3, (n) => (n <= 3 ? 'criterio ' + n : ''));
+  assert.equal(progressing.seen.api, 4, 'the original run and three fixes');
+  assert.equal(progressing.seen.verify, 4);
+  assert.equal(progressing.result.details.rounds, 3);
+  assert.equal(progressing.result.details.verify.passed, true);
+  // The same check failing again: it stops after the first fix.
+  const stuck = await run(3, () => 'siempre lo mismo');
+  assert.equal(stuck.seen.api, 2);
+  assert.equal(stuck.seen.verify, 2);
+  assert.equal(stuck.result.details.rounds, 1);
+  assert.match(textOf(stuck.result), /1 ronda de arreglos/);
+  // fix_rounds 0: the verdict is reported and nobody is sent back.
+  const none = await run(0, () => 'falla');
+  assert.equal(none.seen.api, 1);
+  assert.equal(none.seen.verify, 1);
+  assert.equal(none.result.details.rounds, undefined);
 });
 
 test('no report: one is made from the text; long texts are clipped', async () => {
@@ -262,6 +454,43 @@ test('no report: one is made from the text; long texts are clipped', async () =>
   assert.match(textOf(result), /\(texto completo en el panel del agente\)/);
   assert.equal(result.details.agents[0].report.synthesized, true);
   assert.ok(result.details.agents[0].result.length <= 4000);
+});
+
+test('many agents: results come back trimmed and agent_report reads one in full', async () => {
+  const summary = (id) => 'Resumen largo del agente ' + id + '. ' + 'detalle '.repeat(380);
+  const tools = createAgentTools({ timing: TIMING, runSubAgent: async (job) => { job.onReport({ summary: summary(job.id), status: 'done' }); return { text: 'fin ' + job.id, cost: 0 }; } });
+  const spawn = tools.find((tool) => tool.name === 'spawn_agents');
+  const reader = tools.find((tool) => tool.name === 'agent_report');
+  const none = await reader.execute('d0', { agent: 'a1' });
+  assert.equal(none.isError, true, 'nothing to read before any run');
+  const result = await spawn.execute('d1', { verify: false, agents: Array.from({ length: 12 }, (_, i) => agent('Agente ' + (i + 1), { id: 'a' + (i + 1) })) });
+  const text = textOf(result);
+  assert.match(text, /recortado; agent_report con «a1» da el texto completo/);
+  assert.match(text, /Hay informes recortados: agent_report/);
+  assert.ok(text.length < 40000, 'the digest is bounded: ' + text.length);
+  const full = await reader.execute('d2', { agent: 'a1' });
+  assert.ok(!full.isError);
+  assert.ok(full.content[0].text.includes(summary('a1').slice(0, 2500)), 'the whole report is there');
+  assert.match(full.content[0].text, /Texto final:\nfin a1/);
+  const byName = await reader.execute('d3', { agent: 'agente 2', part: 'report' });
+  assert.match(byName.content[0].text, /^## Agente 2 \(a2, build, done\)/);
+  const task = await reader.execute('d4', { agent: 'a3', part: 'task' });
+  assert.match(task.content[0].text, /Tu tarea:\nTarea de Agente 3\./);
+  const unknown = await reader.execute('d5', { agent: 'nadie' });
+  assert.equal(unknown.isError, true);
+  assert.match(unknown.content[0].text, /No hay ningún agente «nadie» en esta respuesta\. Agentes: a1 \(Agente 1\)/);
+});
+
+test('the answer as a whole has a spending cap shared by every spawn_agents call', async () => {
+  const tools = createAgentTools({ turnBudget: 0.3, timing: TIMING, runSubAgent: async (job) => { job.onUpdate({ cost: 0.09 }); return { text: 'ok', cost: 0.09 }; } });
+  const spawn = tools.find((tool) => tool.name === 'spawn_agents');
+  const first = await spawn.execute('t1', { verify: false, budget_usd: 5, agents: [agent('A'), agent('B'), agent('C')] });
+  assert.equal(first.details.budget, 0.3, 'the call\'s budget is clamped to what the answer may still spend');
+  assert.match(textOf(first), /Gasto de Ultra code en esta respuesta: \$0\.2700 de \$0\.30\./);
+  const second = await spawn.execute('t2', { verify: false, agents: [agent('D')] });
+  assert.equal(second.details.refused, true);
+  assert.match(textOf(second), /^Tope de gasto de Ultra code en esta respuesta alcanzado \(\$0\.2700 de \$0\.30\)/);
+  assert.equal(second.details.agents, undefined, 'nothing started');
 });
 
 test('submit_result tool', async () => {

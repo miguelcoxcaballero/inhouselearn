@@ -28,6 +28,12 @@ const NEEDED = {
   'escalate:': 'raising the reasoning after tool errors',
   'subAgentSystemPrompt(': 'the shared prompt of the parallel agents',
   'settleAgentSteps(': 'agents never left running',
+  'settleTurnSteps(': 'tool steps and plans never left turning after a stop, an error or a reload',
+  'planCardState(': 'the plan card that spins only while the answer is written',
+  'sweepStaleRemoteTurns(': 'a quiet turn from another device does not spin for ever',
+  'agentThinkingLevel(': 'each parallel agent thinks as deep as its role needs',
+  'UltraAgents.setMode(': 'the composer carries the Ultra code mode',
+  'UltraAgents.ignite(': 'the moment Ultra code is turned on',
   'src="ultra.js': 'the Ultra code board',
   'createSubAgentReportTool': 'submit_result for the parallel agents',
   'githubTurnText(': 'GitHub state in the per-turn block (not the cached prompt)',
@@ -39,7 +45,7 @@ const NEEDED = {
 
 test('the engine bundle exports what index.html feature-checks', () => {
   const engine = readFileSync(new URL('../../engine/src/index.js', import.meta.url), 'utf8');
-  for (const name of ['createSubAgentReportTool', 'planAgents', 'ownsPath', 'configureSandbox', 'globToRegExp', 'createInteractTools', 'createStudyTools']) {
+  for (const name of ['createSubAgentReportTool', 'planAgents', 'ownsPath', 'pickLevel', 'configureSandbox', 'globToRegExp', 'createInteractTools', 'createStudyTools']) {
     assert.ok(new RegExp('export \\{[^}]*\\b' + name + '\\b').test(engine), 'engine/src/index.js does not export ' + name + ' (index.html checks it and silently goes without).');
   }
   for (const name of ['claudeApiModels', 'claudeWebSearch', 'quickComplete', 'isClaudeApiModel']) {

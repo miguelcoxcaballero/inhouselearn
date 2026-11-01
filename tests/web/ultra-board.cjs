@@ -181,11 +181,22 @@ let failed = 0;
     return { names, before };
   });
   check('prefers-reduced-motion: animationName none everywhere', !reduced.names.length && reduced.before === 'none', reduced);
-  const burst = await page.evaluate(() => { window.UltraAgents.burst(document.querySelector('.ua-badge')); return document.querySelectorAll('.ua-spark, .ua-burst-ring').length; });
-  check('…and the activation burst draws nothing', burst === 0, burst);
+  const quiet = await page.evaluate(() => { window.UltraAgents.ignite({}); const shell = document.querySelector('.composer-shell'); return { sweep: document.querySelectorAll('.ultra-sweep').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), igniting: shell.classList.contains('ultra-igniting') }; });
+  check('…and turning Ultra code on plays nothing: the steady state only (violet border, tag)', quiet.sweep === 0 && quiet.mode === 'on' && quiet.tag && !quiet.igniting, quiet);
+  await page.evaluate(() => { window.UltraAgents.setMode(false); document.querySelectorAll('.ultra-tag').forEach((el) => el.remove()); });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  const sparks = await page.evaluate(() => { window.UltraAgents.burst(document.querySelector('.ua-badge')); return { sparks: document.querySelectorAll('.ua-spark').length, ring: document.querySelectorAll('.ua-burst-ring').length }; });
-  check('the activation burst: a ring and 14 sparks', sparks.sparks === 14 && sparks.ring === 1, sparks);
+  const lit = await page.evaluate(() => {
+    window.UltraAgents.ignite({});
+    const shell = document.querySelector('.composer-shell');
+    const sweep = shell.querySelector(':scope > .ultra-sweep');
+    window.UltraAgents.ignite({});
+    return { sweeps: document.querySelectorAll('.ultra-sweep').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), igniting: shell.classList.contains('ultra-igniting'), animation: sweep ? getComputedStyle(sweep, '::before').animationName : '', sparks: document.querySelectorAll('.ultra-spark, .ua-spark, .ua-burst-ring').length };
+  });
+  check('turning it on: ONE band of light around the composer (even if asked twice), the tag, and no sparks', lit.sweeps === 1 && lit.mode === 'on' && lit.tag && lit.igniting && /ultra-sweep/.test(lit.animation) && lit.sparks === 0, lit);
+  await page.waitForTimeout(2400);
+  const after = await page.evaluate(() => ({ sweeps: document.querySelectorAll('.ultra-sweep').length, igniting: document.querySelector('.composer-shell').classList.contains('ultra-igniting') }));
+  check('…and the band is gone after about two seconds', after.sweeps === 0 && !after.igniting, after);
+  await page.evaluate(() => { window.UltraAgents.setMode(false); document.querySelectorAll('.ultra-tag').forEach((el) => el.remove()); });
 
   // Dark theme: the same tokens, AMOLED values.
   const tokens = () => page.evaluate(() => { const cs = getComputedStyle(document.documentElement); return ['--ua-accent', '--ua-ok', '--ua-err', '--ua-wait', '--ua-lane-bg', '--ua-read', '--ua-search', '--ua-edit', '--ua-web', '--ua-accent-soft'].map((name) => cs.getPropertyValue(name).trim()); });

@@ -95,6 +95,14 @@ Mandatory guidance for every AI and developer working in this repository.
   red while waiting, blue on the internet) and the thought in small italics under it. Its rules
   hang from `<html data-activity>` in index.html (weight over composer-dock.css; removing the
   attribute brings back the old boxed look). The user chose this look out of three proposals.
+  **Nothing turns once the turn is over:** `renderStepPlanCard` draws `data-state` (live · complete ·
+  halted · open) from `planCardState`, and only `live` spins its step. A turn that is stopped, fails, is
+  cut or reloaded mid-way sets `message.interrupted` and settles its `running` steps to `stopped`
+  (`settleTurnSteps`: the `finally` of `runAssistantTurn` and `regenerateMessage`, and `loadState`, which
+  also heals older saves). A plan step left in progress is then a still ring with a dash and the plan
+  says «interrumpido» (interrupted), or a plain empty ring when the answer simply ended.
+  `sweepStaleRemoteTurns` ends a turn another device was answering that went quiet (3 min). The model is
+  told to send the plan once more with everything done before its final answer. Test: `activity-state.cjs`.
 - **Modo noche:** `theme.js` (en el `<head>`, antes del CSS) y `theme.css` (la
   última hoja) dan el tema oscuro a toda la app, y el oscuro es **AMOLED**:
   `--bg` es `#000` y las superficies son solo un pelín más claras, así que al
@@ -364,9 +372,28 @@ Mandatory guidance for every AI and developer working in this repository.
   header with title, clock, cost, budget bar and status segments, a constellation, waves, a pinned verifier
   lane, expandable lanes (task, steps, result through `renderMarkdown`, «Copiar»), a completion glow once,
   tokens with AMOLED versions in theme.css, everything off under reduced motion. The live row says
-  «Coordinando N agentes» / «Integrando lo de N agentes». Turning Ultra code on plays the burst
-  (`UltraAgents.burst`). Tests: `tests/web/ultra.cjs`, `ultra-board.cjs`, `agents-plan.mjs`,
+  «Coordinando N agentes» / «Integrando lo de N agentes». Tests: `tests/web/ultra.cjs`, `ultra-board.cjs`, `agents-plan.mjs`,
   `github-concurrent.cjs`.
+  **Ultra code v3 (2026-11-01):** `engine/src/agents.js` is the façade and tool factory over
+  `engine/src/agents/`: `plan.js` (ids, waves, lint, `blockers`), `policy.js` (pure rules: `shouldVerify`,
+  `startVerdict`, `nextParallel`, `fixRoundsFrom`, `failingKey`), `effort.js` (`pickLevel`), `report.js`
+  (reports, the trimmed digest, `agent_report`) and `run.js` (the stateful runtime). Agents reason by
+  role (`explore` medium and 25 steps, `build` high and 40, the verifier high and 30; `effort` per agent;
+  `agentThinkingLevel` places it on the model's own ladder, the main agent stays at the deepest). A plan
+  whose tasks cannot work (a few words and no `context`, or «lo de arriba») is refused ONCE before anything
+  starts (`details.refused`). The verifier runs by default only when something is written, with criteria or
+  with 3+ agents, tries to refute, and `fix_rounds` (0–3, default 1) repeats fix → verify until it passes,
+  the same checks keep failing or the budget is out. An agent is not started when what is left of
+  `budget_usd` could not finish it; a provider answering 429 halves how many run at once (`details.notice`,
+  shown on the card while it lasts, never on a finished one); one answer has a cap for all its
+  spawn_agents (`turnBudget`, `ULTRA_TURN_BUDGET` = $8; state of the tool instance, which is built per
+  turn). Results come back as a digest bounded by `RESULT_BUDGET` and `agent_report(agent, part)` reads one
+  agent in full. `ultraPromptText` says when NOT to fan out. **Turning it on:** the composer carries the
+  mode (`UltraAgents.setMode`: `data-ultra="on"` → violet border and the «Ultra code» tag on its top edge)
+  and `UltraAgents.ignite` plays ONE calm moment (a band of light once around the border, the tag settling,
+  the words lighting up left to right, the rainbow crossing them): all CSS in ultra.css, nothing but the
+  steady state under reduced motion, no sparks. `.ultra-text` is violet with a rainbow glint every few
+  seconds.
 - **How the model is prompted and run** (index.html, engine/src/index.js): `stableSystemPrompt` is
   byte-identical across the turns of a chat (and a day) so providers with prompt caching reuse it;
   `turnContextText` (time, files, library, `InhouseStudy.brief`, visual events/variety, the course task or

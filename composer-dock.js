@@ -796,7 +796,8 @@ const STEP_TEXT = {
   extra_gmail_read: ['Leyendo un correo de la otra cuenta', 'Correo leído de la otra cuenta'],
   web_search: ['Buscando en internet', 'Buscado en internet'],
   web_fetch: ['Leyendo en internet', 'Leído en internet'],
-  spawn_agents: ['Agentes trabajando en paralelo', 'Agentes terminados']
+  spawn_agents: ['Agentes trabajando en paralelo', 'Agentes terminados'],
+  agent_report: ['Leyendo el informe de', 'Informe leído de']
 };
 
 const GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.7 3.9 5.9 3.9 9.5s-1.3 6.8-3.9 9.5c-2.6-2.7-3.9-5.9-3.9-9.5S9.4 5.2 12 2.5z"/></svg>';
@@ -880,6 +881,9 @@ function describeToolStep(step) {
     case 'read_library':
     case 'view_library_image':
       target = args.ref || '';
+      break;
+    case 'agent_report':
+      target = args.agent ? '«' + String(args.agent).slice(0, 40) + '»' : '';
       break;
     default:
       break;
