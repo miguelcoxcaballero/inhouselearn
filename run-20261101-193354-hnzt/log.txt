@@ -1,0 +1,34 @@
++ pip install pillow -q 2>&1 | tail -1
+cat > /tmp/prof.py <<'PY'
+import urllib.request, io
+from PIL import Image
+base = 'https://raw.githubusercontent.com/miguelcoxcaballero/inhouselearn/screenshots/shot-20261101-193250-teyv/'
+for f, label in (('3-encendido-claro-0-65-s.png', 'LIGHT desktop 0.65s'), ('4-encendido-movil-oscuro-0-65-s.png', 'DARK phone 0.65s'), ('5-encendido-movil-oscuro-fijo.png', 'DARK phone settled')):
+    im = Image.open(io.BytesIO(urllib.request.urlopen(base + f).read())).convert('RGB'); W, H = im.size; px = im.load()
+    print('=====', label, im.size)
+    cx = W // 2
+    print(' centre column, bottom 230px, every 10px (r,g,b):')
+    print('  ', ' '.join('%d,%d,%d' % px[cx, y] for y in range(H - 230, H, 10)))
+    # strongest violet-ish drop: rows where mean (b - g) over the width is highest (borders/glow)
+    rows = sorted(((sum(max(0, px[x, y][2] - px[x, y][1]) for x in range(0, W, 4)) / (W / 4), y) for y in range(int(H * 0.5), H)), reverse=True)[:4]
+    print(' rows with most violet (mean b-g, y):', [(round(a, 1), y) for a, y in rows])
+    # glow above the top-most strong row: profile of (b-g) every 6px going up from it
+    ytop = min(y for a, y in rows[:3]) if rows else H // 2
+    print(' above that row at centre (b-g, every 6px, near->far):', [px[cx, y][2] - px[cx, y][1] for y in range(ytop, max(0, ytop - 96), -6)])
+PY
+python3 /tmp/prof.py
+===== LIGHT desktop 0.65s (1280, 800)
+ centre column, bottom 230px, every 10px (r,g,b):
+   245,245,240 245,245,240 245,245,240 245,245,240 243,243,240 242,241,239 240,238,239 236,232,238 230,223,238 222,212,238 212,198,239 199,183,240 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 185,161,239
+ rows with most violet (mean b-g, y): [(52.9, 783), (46.2, 686), (41.3, 784), (39.0, 785)]
+ above that row at centre (b-g, every 6px, near->far): [94, 57, 49, 38, 30, 22, 15, 9, 5, 2, 0, -2, -3, -4, -5, -5]
+===== DARK phone 0.65s (780, 1688)
+ centre column, bottom 230px, every 10px (r,g,b):
+   110,91,168 129,107,191 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 22,21,23 14,14,14 13,13,12 13,13,12 13,13,12 13,13,12 132,109,197 112,92,172
+ rows with most violet (mean b-g, y): [(77.4, 1664), (76.6, 1665), (75.7, 1663), (75.7, 1662)]
+ above that row at centre (b-g, every 6px, near->far): [16, -1, -1, -1, -1, -1, -1, -1, 1, 2, 1, -1, -1, -1, -1, -1]
+===== DARK phone settled (780, 1688)
+ centre column, bottom 230px, every 10px (r,g,b):
+   2,2,4 4,3,7 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 13,13,12 38,32,58 29,24,44
+ rows with most violet (mean b-g, y): [(40.4, 1662), (39.9, 1663), (27.3, 1664), (27.1, 1665)]
+ above that row at centre (b-g, every 6px, near->far): [46, -1, -1, -1, -1, -1, -1, -1, 2, -1, -1, -1, -1, -1, -1, -1]
