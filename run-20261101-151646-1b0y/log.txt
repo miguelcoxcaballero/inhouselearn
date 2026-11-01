@@ -1,0 +1,31 @@
++ git log --oneline -3
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT
+for t in ultra ultra-board composer-fixes harness reasoning theme; do
+  echo "################ $t"
+  timeout 280 node tests/web/$t.cjs 2>&1 | cut -c1-420 | grep -E "^(PASS|FAIL|errors|ultra-board)|Error|rror:" | grep -vE "^PASS" | head -30 || true
+  echo "(PASS lines: $(timeout 1 true; true))"
+done 2>&1 | head -150
+true
+6cfefc9 Test de Ultra code: abrir el desplegable solo si está cerrado
+################ ultra
+errors []
+(PASS lines: )
+################ ultra-board
+FAIL turning it on: ONE band of light around the composer (even if asked twice), the tag, and no sparks — {"sweeps":1,"mode":"on","tag":true,"igniting":true,"animation":"","sparks":0}
+ultra-board: 1 FAILED
+(PASS lines: )
+################ composer-fixes
+errors []
+(PASS lines: )
+################ harness
+FAIL update_plan draws its latest checklist in the thread (no step box for it) — {"head":"PLAN\n2/3","items":["done:Leer los apuntes","done:Escribir el resumen","pending:Revisarlo"],"steps":false}
+errors []
+(PASS lines: )
+################ reasoning
+errors []
+(PASS lines: )
+################ theme
+(PASS lines: )
