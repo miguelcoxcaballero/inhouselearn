@@ -1,0 +1,74 @@
++ git fetch --unshallow origin || true; git fetch origin main feat/actividad-3-estilos; echo "== main commits not in branch"; git log --oneline origin/feat/actividad-3-estilos..origin/main; echo "== branch commits not in main"; git log --oneline origin/main..origin/feat/actividad-3-estilos; echo "== files"; git diff --stat origin/main...origin/feat/actividad-3-estilos; echo "== merge test"; git checkout -q origin/main; git -c user.email=a@b -c user.name=x merge --no-edit origin/feat/actividad-3-estilos && echo MERGE_OK; git diff --stat origin/main HEAD
+From https://github.com/miguelcoxcaballero/inhouselearn
+ * [new branch]      claude/inhouselearn-browser-chat-6xve0g -> origin/claude/inhouselearn-browser-chat-6xve0g
+ * [new branch]      claude/screenshots-fail-fast -> origin/claude/screenshots-fail-fast
+ * [new branch]      feat/compositor-capsula -> origin/feat/compositor-capsula
+ * [new branch]      feat/modo-noche         -> origin/feat/modo-noche
+ * [new branch]      feat/ultra-claude       -> origin/feat/ultra-claude
+ * [new branch]      feature/approval-final  -> origin/feature/approval-final
+ * [new branch]      feature/approval-final-2 -> origin/feature/approval-final-2
+ * [new branch]      feature/approval-final-3 -> origin/feature/approval-final-3
+ * [new branch]      feature/approval-final-4 -> origin/feature/approval-final-4
+ * [new branch]      feature/approval-sync-1 -> origin/feature/approval-sync-1
+ * [new branch]      feature/approval-sync-10 -> origin/feature/approval-sync-10
+ * [new branch]      feature/approval-sync-2 -> origin/feature/approval-sync-2
+ * [new branch]      feature/approval-sync-3 -> origin/feature/approval-sync-3
+ * [new branch]      feature/approval-sync-4 -> origin/feature/approval-sync-4
+ * [new branch]      feature/approval-sync-5 -> origin/feature/approval-sync-5
+ * [new branch]      feature/approval-sync-6 -> origin/feature/approval-sync-6
+ * [new branch]      feature/approval-sync-7 -> origin/feature/approval-sync-7
+ * [new branch]      feature/approval-sync-8 -> origin/feature/approval-sync-8
+ * [new branch]      feature/approval-sync-9 -> origin/feature/approval-sync-9
+ * [new branch]      feature/approval-wiring -> origin/feature/approval-wiring
+ * [new branch]      feature/approval-wiring-12 -> origin/feature/approval-wiring-12
+ * [new branch]      feature/approval-wiring-13 -> origin/feature/approval-wiring-13
+ * [new branch]      feature/approval-wiring-14 -> origin/feature/approval-wiring-14
+ * [new branch]      feature/approval-wiring-15 -> origin/feature/approval-wiring-15
+ * [new branch]      feature/approval-wiring-2 -> origin/feature/approval-wiring-2
+ * [new branch]      feature/approval-wiring-3 -> origin/feature/approval-wiring-3
+ * [new branch]      feature/approval-wiring-4 -> origin/feature/approval-wiring-4
+ * [new branch]      feature/approval-wiring-5 -> origin/feature/approval-wiring-5
+ * [new branch]      feature/approval-wiring-6 -> origin/feature/approval-wiring-6
+ * [new branch]      feature/approval-wiring-7 -> origin/feature/approval-wiring-7
+ * [new branch]      feature/approval-wiring-8 -> origin/feature/approval-wiring-8
+ * [new branch]      feature/approval-wiring-9 -> origin/feature/approval-wiring-9
+ * [new branch]      main                    -> origin/main
+ * [new branch]      prop/compositor         -> origin/prop/compositor
+ * [new branch]      runs                    -> origin/runs
+ * [new branch]      screenshots             -> origin/screenshots
+ * [new tag]         android-v1.0.0          -> android-v1.0.0
+ * [new tag]         android-v1.0.1          -> android-v1.0.1
+ * [new tag]         android-v1.0.2          -> android-v1.0.2
+ * [new tag]         android-v1.0.3          -> android-v1.0.3
+ * [new tag]         android-v1.0.4          -> android-v1.0.4
+ * [new tag]         android-v1.0.5          -> android-v1.0.5
+ * [new tag]         android-v1.0.6          -> android-v1.0.6
+ * [new tag]         android-v1.0.7          -> android-v1.0.7
+ * [new tag]         v0.1.3                  -> v0.1.3
+From https://github.com/miguelcoxcaballero/inhouselearn
+ * branch            main       -> FETCH_HEAD
+ * branch            feat/actividad-3-estilos -> FETCH_HEAD
+== main commits not in branch
+== branch commits not in main
+02fc60a Activity of the model as a timeline
+== files
+ AGENTS.md        |   6 ++++
+ activity.css     | 107 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ composer-dock.js |   5 ++-
+ index.html       |  16 +++++----
+ 4 files changed, 126 insertions(+), 8 deletions(-)
+== merge test
+Updating 05d979d..02fc60a
+Fast-forward
+ AGENTS.md        |   6 ++++
+ activity.css     | 107 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ composer-dock.js |   5 ++-
+ index.html       |  16 +++++----
+ 4 files changed, 126 insertions(+), 8 deletions(-)
+ create mode 100644 activity.css
+MERGE_OK
+ AGENTS.md        |   6 ++++
+ activity.css     | 107 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ composer-dock.js |   5 ++-
+ index.html       |  16 +++++----
+ 4 files changed, 126 insertions(+), 8 deletions(-)
