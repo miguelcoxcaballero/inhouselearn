@@ -1,0 +1,239 @@
++ set +e
+grep -rn "struct GuestPad\b\|struct GuestPad {\|struct ExceptionObject\|struct FutureErrorObject\|struct LocinfoStorage\|struct IosBase\|struct Implementation\b\|struct Implementation {" core/libs/prx/libc/include | head
+grep -n "#include" core/libs/prx/libc/include/Api.hpp | head -40
+ls core/libs/prx/libSceLibcInternal/
+echo ===TESTLOCALE; sed -n 1,40p core/libs/tests/GuestLocale.cpp; sed -n 130,210p core/libs/tests/GuestLocale.cpp
+echo ===PADTEST; sed -n 380,410p core/libs/tests/GuestAmprThreads.cpp; sed -n 530,560p core/libs/tests/GuestAmprThreads.cpp
+grep -n "_ZNSt4_PadC\|_Launch" core/libs/prx/libc/include/Api.hpp
+grep -n "guest_locale\b\|GuestLocale.cpp\|GuestAmprThreads\|GuestLibcThreads.cpp" -r core/libs --include=CMakeLists.txt | head
+core/libs/prx/libc/include/Api.hpp:59:struct GuestPad {
+core/libs/prx/libc/include/Api.hpp:95:struct ExceptionObject { const void* vtable; const char* message; };
+core/libs/prx/libc/include/Api.hpp:101:struct FutureErrorObject { const void* vtable; GuestLocale::String message; ErrorCode code; };
+core/libs/prx/libc/include/GuestLocale.hpp:12:struct LocinfoStorage {
+core/libs/prx/libc/include/GuestLocale.hpp:37:struct Implementation {
+core/libs/prx/libc/include/GuestLocale.hpp:101:struct IosBase {
+3:#include "prx/libc/include/specifics/linux/ElfTypes.hpp"
+4:#include "prx/libc/include/specifics/itanium/UnwindAbi.hpp"
+5:#include "prx/libc/include/MallocManagedSize.hpp"
+6:#include "prx/libc/include/GuestTime.hpp"
+7:#include "prx/libc/include/GuestLocale.hpp"
+8:#include "prx/libc/include/GuestDirectory.hpp"
+9:#include "prx/libc/include/FileStream.hpp"
+10:#include "prx/libc/include/exceptions/Unwind.hpp"
+11:#include "prx/libc/include/exceptions/Runtime.hpp"
+12:#include "SceTypes.hpp"
+13:#include <future>
+14:#include <regex>
+AlignedNew.cpp
+CMakeLists.txt
+Directory.cpp
+Err.cpp
+Export.cpp
+FileTime.cpp
+Filesystem.cpp
+FilesystemStatistics.cpp
+Getopt.cpp
+Inet.cpp
+InitOnce.cpp
+InventoryExports.cpp
+InventoryExports6.cpp
+Mutex.cpp
+PathStatistics.cpp
+SignalList.cpp
+Spawn.cpp
+UserContext.cpp
+include
+libSceLibcInternal.hpp
+===TESTLOCALE
+#include "prx/libc/include/ApplicationHeap.hpp"
+#include "prx/libc/include/Api.hpp"
+#include "prx/libc/include/GuestLocale.hpp"
+#include <array>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <cwchar>
+#include <climits>
+#include <iostream>
+#include <iterator>
+#include <stdexcept>
+#include <thread>
+#include <limits>
+#include <string>
+#include <vector>
+
+extern "C" {
+extern GuestLocale::Implementation* _ZSt21_sceLibcClassicLocale_nid_postfix;
+extern std::uint64_t _ZNSt8numpunctIcE2idE_nid_postfix;
+
+extern std::uint64_t _ZNSt7num_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE2idE_nid_postfix;
+extern std::uint64_t _ZNSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE2idE_nid_postfix;
+extern std::uint64_t _ZNSt8time_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE2idE_nid_postfix;
+extern std::uintptr_t _ZTVSt7num_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE_nid_postfix[17];
+extern std::uintptr_t _ZTVSt7codecvtIwc9_MbstatetE_nid_postfix[13];
+extern std::uintptr_t _ZTVSt7num_putIwSt19ostreambuf_iteratorIwSt11char_traitsIwEEE_nid_postfix[14];
+extern std::uintptr_t _ZTVSt7collateIcE_nid_postfix[9];
+extern std::uintptr_t _ZTVSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE_nid_postfix[13];
+extern std::uintptr_t _ZTVSt8time_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE_nid_postfix[13];
+extern std::uintptr_t _ZTVSt7num_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE_nid_postfix[17];
+extern std::uintptr_t _ZTVSt7num_putIcSt19ostreambuf_iteratorIcSt11char_traitsIcEEE_nid_postfix[14];
+extern std::uintptr_t _ZTVSt5ctypeIcE_nid_postfix[14];
+
+}
+
+static void Require(bool condition) {
+    if (!condition) throw std::runtime_error("Guest locale check failed");
+}
+
+            }
+        });
+    }
+    for (auto& thread : threads) thread.join();
+    Require(locale->base.references == initial);
+    Require(locale->facetCount == 1 && locale->facets[0] == nullptr);
+    Require(std::strcmp(locale->name, "C") == 0 && !locale->transparent);
+}
+
+static void CheckLocinfoAlignment() {
+    alignas(16) std::array<std::byte, 80> bytes;
+    bytes.fill(std::byte{0x5a});
+    auto* storage = reinterpret_cast<GuestLocale::LocinfoStorage*>(bytes.data() + 8);
+    _ZNSt8_LocinfoC1EPKc_nid_postfix(storage, "C");
+
+    for (std::size_t index = 0; index < bytes.size(); ++index) Require(bytes[index] == (index >= 8 && index < 72 ? std::byte{} : std::byte{0x5a}));
+    _ZNSt8_LocinfoD1Ev_nid_postfix(storage);
+
+    RequireException([&] { _ZNSt8_LocinfoC1EPKc_nid_postfix(storage, "unknown-locale"); });
+    RequireException([] { _ZNSt8_LocinfoC1EPKc_nid_postfix(nullptr, "C"); });
+}
+
+static void CheckCharacterTables() {
+    const auto* classification = _Getpctype_nid_postfix();
+    const auto* lower = _Getptolower_nid_postfix();
+    const auto* upper = _Getptoupper_nid_postfix();
+    Require(classification[-1] == 0 && lower[-1] == -1 && upper[-1] == -1);
+    Require(classification['A'] == 0x03 && classification['a'] == 0x11);
+    Require(classification['G'] == 0x02 && classification['0'] == 0x21);
+    Require(classification[' '] == 0x04 && classification['\t'] == 0x4c0);
+    Require(classification['\n'] == 0xc0 && classification['!'] == 0x08);
+    for (int value = 0; value < 256; ++value) {
+        Require(lower[value] == (value >= 'A' && value <= 'Z' ? value + 32 : value));
+        Require(upper[value] == (value >= 'a' && value <= 'z' ? value - 32 : value));
+        if (value >= 128) Require(classification[value] == 0);
+    }
+}
+
+static void CheckCharacterConversions() {
+    const auto* classification = _Getpctype_nid_postfix();
+    for (std::uint16_t value = 0; value < 128; ++value) {
+        std::array<char, MB_LEN_MAX + 1> bytes{};
+        bytes.fill('!');
+        std::mbstate_t encodeState{};
+        Require(_Wctombx_nid_postfix(bytes.data(), value, &encodeState) == 1);
+        Require(bytes[0] == static_cast<char>(value) && bytes[1] == '!');
+        std::array<std::uint16_t, 2> wide{0xffff, 0x1234};
+        std::mbstate_t decodeState{};
+        Require(_Mbtowcx_nid_postfix(wide.data(), bytes.data(), 2, &decodeState) == (value == 0 ? 0 : 1));
+        Require(wide[0] == value && wide[1] == 0x1234);
+        const bool alnum = (value >= '0' && value <= '9') || (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+        Require(((classification[static_cast<unsigned char>(bytes[0])] & 0x232) != 0) == alnum);
+    }
+    std::mbstate_t state{};
+    char byte{};
+    std::uint16_t wide{};
+    RequireException([&] { _Mbtowcx_nid_postfix(&wide, "]", 0, &state); });
+    RequireException([&] { _Mbtowcx_nid_postfix(nullptr, "]", 1, &state); });
+    RequireException([&] { _Mbtowcx_nid_postfix(&wide, nullptr, 1, &state); });
+    RequireException([&] { _Mbtowcx_nid_postfix(&wide, "]", 1, nullptr); });
+    RequireException([&] { _Wctombx_nid_postfix(nullptr, ']', &state); });
+    RequireException([&] { _Wctombx_nid_postfix(&byte, ']', nullptr); });
+}
+
+static void CheckStreamDestruction() {
+    struct GuardedStream {
+        std::uint64_t before = 0x12345678;
+        GuestLocale::IosBase stream{};
+        std::uint64_t after = 0x87654321;
+    } object;
+    object.stream.locale = &_ZSt21_sceLibcClassicLocale_nid_postfix;
+    _ZNSt8ios_baseD2Ev_nid_postfix(&object.stream);
+
+    Require(object.stream.locale == nullptr && object.before == 0x12345678 && object.after == 0x87654321);
+    object.stream.locale = &_ZSt21_sceLibcClassicLocale_nid_postfix;
+    object.stream.callbacks = &object;
+    RequireException([&] { _ZNSt8ios_baseD2Ev_nid_postfix(&object.stream); });
+    Require(object.stream.locale == &_ZSt21_sceLibcClassicLocale_nid_postfix);
+}
+
+static void CheckStreamWidth() {
+===PADTEST
+    }
+    return false;
+}
+
+static void ConstructPad(TestPad& pad, std::atomic<int>& order, std::atomic<bool>& destroyed, int index, unsigned exitCode) {
+    std::memset(&pad, 0xCD, sizeof(pad));
+    pad.vtable = PadVtable.data();
+    _ZNSt4_PadC2Ev_nid_postfix(&pad);
+
+    Require(pad.vtable == PadVtable.data());
+    Require(pad.condition && pad.mutex && !pad.started);
+    pad.target = {&order, &destroyed, 2 * index + 1, 2 * index + 2, exitCode};
+}
+
+static void TestPadLaunch() {
+    std::atomic<int> order{0};
+    std::atomic<bool> destroyed{false};
+    TestPad pad;
+    ConstructPad(pad, order, destroyed, 0, 0);
+    Pthread thread = nullptr;
+    _ZNSt4_Pad7_LaunchEPP7pthread_nid_postfix(&pad, reinterpret_cast<void**>(&thread));
+
+    Require(thread != nullptr);
+    Require(pad.started);
+    Require(order.load() == 1);
+    _ZNSt4_PadD2Ev_nid_postfix(&pad);
+
+    Require(!pad.condition && !pad.mutex);
+    Require(order.load() == 1);
+    destroyed = true;
+    int code = -1;
+}
+#endif
+
+static void TestPadErrors() {
+    Require(Throws<std::invalid_argument>([] { _ZNSt4_PadC2Ev_nid_postfix(nullptr); }));
+    Require(Throws<std::invalid_argument>([] { _ZNSt4_PadD2Ev_nid_postfix(nullptr); }));
+    Require(Throws<std::invalid_argument>([] { _ZNSt4_Pad8_ReleaseEv_nid_postfix(nullptr); }));
+    Pthread thread = nullptr;
+    Require(Throws<std::invalid_argument>([&] { _ZNSt4_Pad7_LaunchEPP7pthread_nid_postfix(nullptr, reinterpret_cast<void**>(&thread)); }));
+
+    std::atomic<int> order{0};
+    std::atomic<bool> destroyed{true};
+    TestPad pad;
+    ConstructPad(pad, order, destroyed, 0, 0);
+    Require(Throws<std::invalid_argument>([&] { _ZNSt4_Pad7_LaunchEPP7pthread_nid_postfix(&pad, nullptr); }));
+    Require(!pad.started && order.load() == 0);
+#ifndef _WIN32
+    Require(TerminateExitCode(ExitWithSystemErrorCode, [&] { _ZNSt4_Pad8_ReleaseEv_nid_postfix(&pad); }) == GuestEbusy);
+#endif
+    Require(!pad.started);
+
+    ForeignDestroy context{&pad, false};
+    Require(_Thrd_join_nid_postfix(Start(DestroyPad, &context), nullptr) == ThrdSuccess);
+    Require(context.rejected);
+    Require(pad.condition && pad.mutex);
+    _ZNSt4_PadD2Ev_nid_postfix(&pad);
+
+    Require(!pad.condition && !pad.mutex);
+    Require(Throws<std::invalid_argument>([&] { _ZNSt4_PadD2Ev_nid_postfix(&pad); }));
+}
+
+1115:void APS5_VABI _ZNSt4_PadC2Ev_nid_postfix(GuestPad* pad);
+1118:void APS5_VABI _ZNSt4_Pad7_LaunchEPP7pthread_nid_postfix(GuestPad* pad, void** thread);
+1119:void APS5_VABI _ZNSt4_Pad7_LaunchEPP12pthread_attrPP7pthread_nid_postfix(GuestPad* pad, void** attrSlot, void** thread);
+core/libs/prx/libc/CMakeLists.txt:690:    add_test_executable(guest_libc_threads_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcThreads.cpp)
+core/libs/prx/libc/CMakeLists.txt:1383:add_test_executable(guest_locale_tests EXCLUDE_FROM_ALL ${LIBS_INCLUDE_DIR}/tests/GuestLocale.cpp)
+core/libs/prx/libc/CMakeLists.txt:1390:    add_test(NAME guest_locale COMMAND guest_locale_tests)
+core/libs/prx/libc/CMakeLists.txt:1392:        set_tests_properties(guest_locale PROPERTIES ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
+core/libs/prx/libSceAmpr/CMakeLists.txt:38:    add_test_executable(guest_ampr_threads_tests ${LIBS_INCLUDE_DIR}/tests/GuestAmprThreads.cpp)
