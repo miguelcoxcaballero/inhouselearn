@@ -2167,8 +2167,9 @@
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
-  <script src="approval.js?v=20261101-card"></script>
-  <script src="composer-dock.js?v=20261101-ultra3"></script>
+  <script src="approval.js?v=20261101-prwatch1"></script>
+  <script src="composer-dock.js?v=20261101-prwatch1"></script>
+  <script src="pr-watch.js?v=20261101-prwatch1"></script>
   <script src="ultra.js?v=20261101-lila1"></script>
   <script>
     const APP_CONFIG = {
@@ -5143,7 +5144,7 @@
     async function connectGithub() {
       const token = await confirmDialog({
         title: 'Conectar GitHub',
-        message: 'Pega un token de GitHub (github.com → Settings → Developer settings → Fine-grained tokens). Dale acceso solo a los repositorios que quieras, con Contents y Pull requests en lectura y escritura (e Issues si quieres que comente). Para que la app publique su propia APK, dale además Actions en lectura y escritura en inhouselearn y en youtube-calma.\nSe guarda solo en este navegador. Cada cambio que el modelo quiera hacer te lo enseño antes y lo apruebas tú.',
+        message: 'Pega un token de GitHub (github.com → Settings → Developer settings → Fine-grained tokens). Dale acceso solo a los repositorios que quieras, con Contents y Pull requests en lectura y escritura (e Issues si quieres que comente). Para que la app publique su propia APK, dale además Actions en lectura y escritura en inhouselearn y en youtube-calma.\nPara contribuir solo a proyectos de otros (abrir PR, responder a revisores), usa en su lugar un token classic (Tokens (classic)) con los permisos «repo» y «workflow»: los fine-grained no pueden escribir en repositorios ajenos.\nSe guarda solo en este navegador. Cada cambio que el modelo quiera hacer te lo enseño antes y lo apruebas tú.',
         input: { placeholder: 'github_pat_…', type: 'password' },
         confirmText: 'Conectar'
       });
@@ -5231,7 +5232,14 @@
         stage: meta && meta.agent ? agentGithubStage(chat, meta) : githubStageStore(chat),
         onStage: () => renderComposerDock(),
         onRepo: (repo) => { chat.githubRepo = repo; },
-        confirm: (request) => approveChange(chat, Object.assign({}, request, approvalMeta(meta)))
+        confirm: (request) => approveChange(chat, Object.assign({}, request, approvalMeta(meta))),
+        // Seguimiento de PR (pr-watch.js): solo el agente principal lo usa.
+        watch: window.InhousePrWatch && !(meta && meta.agent) ? {
+          add: (repo, number) => window.InhousePrWatch.add(chat.id, repo, number),
+          remove: (repo, number) => window.InhousePrWatch.remove(repo, number),
+          list: () => window.InhousePrWatch.list(chat.id),
+          auto: () => window.InhousePrWatch.autoFor(chat)
+        } : null
       };
     }
 
@@ -5845,7 +5853,8 @@
         '  4. Cuando la tarea esté entera, súbela de una vez: github_create_pull_request (sube lo preparado de la rama y abre el PR) o github_push. Un solo commit por tarea, nunca uno por cambio. Por defecto trabaja en una rama nueva con PR; directamente a la rama principal solo si el usuario lo pide. Pasa siempre changelog: lo que el usuario lee en la tarjeta de aprobación, 2–6 frases breves y claras en su idioma sobre lo que cambia para él (nada de detalles internos ni listas de archivos), con **negrita** solo para lo importante.',
         '  5. Si el repositorio tiene GitHub Actions, mira github_ci_status después de subir y arregla lo que falle.',
         '  - Compilar y ejecutar tests de verdad: github_run corre tus comandos (bash) en un runner de GitHub Actions (Linux por defecto; macOS o Windows si hace falta) sobre una rama o commit ya subidos de cualquier repositorio que el token lea, y devuelve el código de salida, las líneas con errores y el final del registro. Úsalo antes de decir que algo compila o pasa los tests (C/C++ con CMake, Rust, Java, Python, Node…), sobre todo si la CI del proyecto no la puedes lanzar tú; si falla, corrige, sube y repite hasta que pase. Instala dependencias con packages y usa ccache para que las siguientes compilaciones vayan rápidas.',
-        '  - Contribuir a un proyecto ajeno (sin permiso de escritura): github_fork crea el fork en la cuenta del usuario (o reutiliza el suyo y lo pone al día); prepara y sube los cambios en una rama nueva del fork, pruébalos con github_run y abre el PR al original con github_create_pull_request (repo = original, head_repo = fork). Si GitHub no deja que el token abra el PR allí, la herramienta devuelve un enlace que lo abre ya relleno: dáselo al usuario. Sigue las normas de contribución del proyecto (CONTRIBUTING, plantilla de PR, declarar el uso de IA si lo piden).',
+        '  - Contribuir a un proyecto ajeno (sin permiso de escritura): github_fork crea el fork en la cuenta del usuario (o reutiliza el suyo y lo pone al día); prepara y sube los cambios en una rama nueva del fork, pruébalos con github_run y abre el PR al original con github_create_pull_request (repo = original, head_repo = fork). Si GitHub no deja que el token abra el PR allí, la herramienta devuelve un enlace que lo abre ya relleno: dáselo al usuario y dile que, para que lo hagas tú solo, conecte un token classic con «repo» y «workflow». Sigue las normas de contribución del proyecto (CONTRIBUTING, plantilla de PR, límite de PR abiertos, declarar el uso de IA si lo piden) y no abras PR que dupliquen otros abiertos.',
+          '  - Seguimiento autónomo: justo después de abrir un PR, síguelo con github_watch_prs. La app lo mira cada 10 minutos mientras está abierta; cuando lo fusionan o lo cierran avisa al usuario, y si el chat está en «Acceso total», cuando un revisor comenta o pide cambios te abre un turno automático para que lo resuelvas tú, sin el usuario. Para eso: github_pr_activity lee revisiones, comentarios del código (con su id) y checks; github_comment con reply_to responde a un comentario del código; github_update_pull_request cambia título, descripción o estado.',
         '  - Si una herramienta falla, prueba otra vía (github_grep si falla github_search_code, rangos más pequeños si una lectura es grande) antes de decir que no puedes. Lee lo justo, decide pronto y escribe: no repases varias veces lo mismo.',
         '  - Al terminar da el enlace del commit o del PR.',
         '  - Esta misma app es el repositorio miguelcoxcaballero/inhouselearn: si el usuario te pide cambiar la app, trabaja ahí (lee primero su AGENTS.md). Lo de la web (index.html, *.js, *.css) llega a todos sus dispositivos en cuanto está en main. Si cambia la app de Android (android/), sube también versionCode y versionName en android/app/build.gradle.kts, súbelo a main, mira github_ci_status y, cuando el build esté en verde y el usuario quiera la APK, usa github_release_android con un changelog en inglés de 2–10 palabras: firma, publica en el canal A y lo comprueba (el usuario lo confirma siempre). Nunca el canal B.',
@@ -5860,6 +5869,7 @@
       const staged = githubStageStore(chat).list().filter((entry) => Object.keys(entry.files || {}).length || (entry.deletes || []).length);
       return [
         chat.githubRepo ? 'Repositorio de GitHub de este chat: ' + chat.githubRepo + '.' : '',
+        window.InhousePrWatch && window.InhousePrWatch.list(chat.id).length ? 'PR en seguimiento desde este chat: ' + window.InhousePrWatch.list(chat.id).map((item) => item.repo + '#' + item.number).join(', ') + '.' : '',
         staged.length ? 'Cambios de GitHub preparados sin subir: ' + staged.map((entry) => entry.repo + '@' + entry.branch + ' (' + Object.keys(entry.files || {}).concat((entry.deletes || []).map((path) => path + ' borrar')).join(', ') + ')').join('; ') + '.' : ''
       ].filter(Boolean).join('\n');
     }
@@ -12498,7 +12508,7 @@
     });
 
     const NETWORK_ERROR = /network|failed to fetch|load failed|fetch failed|err_|connection|terminated|socket|aborted by the browser|no se pudo conectar/i;
-    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_(gmail_search|gmail_read|drive_(search|list|read|shared_drives))|web_|github_(list|read|grep|search|ci_status)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$|update_plan$|ask_user$|study_overview$|recall$|think$|agent_report$)/;
+    const READ_ONLY_TOOL = /^(list_|read_|search_|view_|get_|drive_(search|list|read|shared_drives)|extra_(gmail_search|gmail_read|drive_(search|list|read|shared_drives))|web_|github_(list|read|grep|search|ci_status|pr_activity)|set_course_plan$|quiz$|final_exam$|check_diagram$|run_js$|doc_view$|update_plan$|ask_user$|study_overview$|recall$|think$|agent_report$)/;
 
     // Reads that may run at the same time as other reads. A tool that sets its
     // own mode keeps it; pi runs a batch in parallel only when every call in it
@@ -12765,7 +12775,7 @@
     // APK que la envuelve (el shell se identifica con InhouseLearnApp/<versión>
     // en el User-Agent). Pequeñita, bajo la cuenta de Google del panel de chats.
     // CADA commit a main la sube: la fecha del día y el número de cambio de ese día.
-    const APP_VERSION = '2026.11.01.7';
+    const APP_VERSION = '2026.11.01.8';
 
     function apkVersion() {
       const match = /InhouseLearnApp\/([\w.-]+)/.exec(navigator.userAgent || '');

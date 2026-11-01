@@ -868,9 +868,9 @@ export function createGithubTools(ctx) {
           const refPart = (value) => encodeURIComponent(value).replace(/%2F/gi, '/');
           const headSpec = encodeURIComponent(headOwner) + ':' + (headName.toLowerCase() === repoName.toLowerCase() ? '' : encodeURIComponent(headName) + ':') + refPart(branch);
           const link = 'https://github.com/' + repo + '/compare/' + refPart(base) + '...' + headSpec + '?expand=1&title=' + encodeURIComponent(params.title) + (params.body ? '&body=' + encodeURIComponent(String(params.body).slice(0, 6000)) : '');
-          return textResult((pushed ? pushed.text + '\n' : '') + 'GitHub no deja que este token abra el PR en ' + repo + ' (' + error.message + '). Los tokens fine-grained solo escriben en los repositorios de su propia cuenta; la rama ya está en ' + headRepo + '. Dale al usuario este enlace: abre el PR con el título y la descripción ya puestos y solo tiene que pulsar «Create pull request»:\n' + link, { repo, headRepo, branch, link });
+          return textResult((pushed ? pushed.text + '\n' : '') + 'GitHub no deja que este token abra el PR en ' + repo + ' (' + error.message + '). Los tokens fine-grained solo escriben en los repositorios de su propia cuenta; la rama ya está en ' + headRepo + '. Dale al usuario este enlace: abre el PR con el título y la descripción ya puestos y solo tiene que pulsar «Create pull request»:\n' + link + '\nPara que lo hagas tú solo la próxima vez (abrir PR, responder a revisores y editar descripciones en proyectos ajenos), el usuario tiene que conectar en + → Cuenta de GitHub un token classic con los permisos «repo» y «workflow».', { repo, headRepo, branch, link });
         }
-        return textResult((pushed ? pushed.text + '\n' : '') + 'PR #' + pr.number + ' abierta: ' + pr.html_url, { repo, number: pr.number });
+        return textResult((pushed ? pushed.text + '\n' : '') + 'PR #' + pr.number + ' abierta: ' + pr.html_url + (ctx.watch ? '\nSíguela con github_watch_prs para que la app te avise de revisiones y de cuando la fusionen.' : ''), { repo, number: pr.number });
       }
     },
     {
@@ -1300,14 +1300,104 @@ export function createGithubTools(ctx) {
     {
       name: 'github_comment',
       label: 'GitHub: comentar',
-      description: 'Post a comment on an issue or pull request. The user approves it.',
-      parameters: Type.Object({ repo: repoParam, number: Type.Number(), body: Type.String({ description: 'Comment in Markdown.' }) }),
+      description: 'Post a comment on an issue or pull request, or (reply_to) answer one review comment on the code of a pull request in its own thread. The user approves it.',
+      parameters: Type.Object({
+        repo: repoParam,
+        number: Type.Number(),
+        body: Type.String({ description: 'Comment in Markdown.' }),
+        reply_to: Type.Optional(Type.Number({ description: 'Id of a review comment on the code (from github_pr_activity) to answer in its thread.' }))
+      }),
       executionMode: 'sequential',
       execute: async (id, params) => {
         const repo = used(repoOf(params.repo));
-        await ask({ title: 'Comentar en GitHub', summary: repo + ' #' + params.number + '\n\n' + String(params.body).slice(0, 600), items: [], kind: 'comment' });
-        const comment = await gh('POST', '/repos/' + repo + '/issues/' + Number(params.number) + '/comments', { body: params.body });
+        const number = Number(params.number);
+        await ask({ title: params.reply_to ? 'Responder en el código' : 'Comentar en GitHub', summary: repo + ' #' + number + '\n\n' + String(params.body).slice(0, 600), items: [], kind: 'comment' });
+        const comment = params.reply_to
+          ? await gh('POST', '/repos/' + repo + '/pulls/' + number + '/comments/' + Number(params.reply_to) + '/replies', { body: params.body })
+          : await gh('POST', '/repos/' + repo + '/issues/' + number + '/comments', { body: params.body });
         return textResult('Comentario publicado: ' + comment.html_url);
+      }
+    },
+    {
+      name: 'github_pr_activity',
+      label: 'GitHub: revisiones del PR',
+      description: 'Everything that happened on a pull request: state (open, merged, closed), its branch, the reviews (approved, changes requested…), the comments on the code with their id, file and line, the conversation comments, and the checks of its last commit. Optional since (ISO date) keeps only what is newer.',
+      parameters: Type.Object({
+        repo: Type.String({ description: 'Repository of the pull request, "owner/name" (the original project, not the fork).' }),
+        number: Type.Number(),
+        since: Type.Optional(Type.String({ description: 'ISO date: only reviews and comments after it.' }))
+      }),
+      execute: async (id, params) => {
+        const repo = used(repoOf(params.repo));
+        const number = Number(params.number);
+        const since = params.since && !isNaN(Date.parse(params.since)) ? new Date(params.since).toISOString() : '';
+        const newer = (date) => !since || (!!date && new Date(date).toISOString() > since);
+        const when = (date) => String(date || '').slice(0, 16).replace('T', ' ');
+        const [pr, reviews, codeComments, comments] = await Promise.all([
+          gh('GET', '/repos/' + repo + '/pulls/' + number),
+          gh('GET', '/repos/' + repo + '/pulls/' + number + '/reviews?per_page=100'),
+          gh('GET', '/repos/' + repo + '/pulls/' + number + '/comments?per_page=100'),
+          gh('GET', '/repos/' + repo + '/issues/' + number + '/comments?per_page=100')
+        ]);
+        const checks = await gh('GET', '/repos/' + repo + '/commits/' + pr.head.sha + '/check-runs?per_page=50').catch(() => ({ check_runs: [] }));
+        const state = pr.merged ? 'FUSIONADO' + (pr.merged_by ? ' por @' + pr.merged_by.login : '') + ' el ' + when(pr.merged_at)
+          : pr.state === 'closed' ? 'CERRADO sin fusionar el ' + when(pr.closed_at)
+            : 'abierto' + (pr.draft ? ' (borrador)' : '') + (pr.mergeable_state ? ' · mergeable: ' + pr.mergeable_state : '');
+        const lines = ['#' + pr.number + ' ' + pr.title + ' · ' + state, 'Rama: ' + pr.head.label + ' → ' + pr.base.ref + ' · último commit ' + pr.head.sha.slice(0, 7) + ' · ' + pr.html_url];
+        const runs = ((checks && checks.check_runs) || []).map((run) => run.name + ': ' + (run.conclusion || run.status));
+        if (runs.length) lines.push('Checks: ' + runs.join(' · '));
+        const shown = (reviews || []).filter((review) => newer(review.submitted_at) && (review.state !== 'COMMENTED' || review.body));
+        if (shown.length) lines.push('', 'Revisiones:', ...shown.map((review) => '— @' + review.user.login + ' · ' + review.state + ' · ' + when(review.submitted_at) + (review.body ? ':\n' + review.body : '')));
+        const code = (codeComments || []).filter((comment) => newer(comment.created_at));
+        if (code.length) lines.push('', 'Comentarios en el código (responde con github_comment y reply_to = id):', ...code.map((comment) => '— id ' + comment.id + (comment.in_reply_to_id ? ' (respuesta a ' + comment.in_reply_to_id + ')' : '') + ' · @' + comment.user.login + ' · ' + comment.path + ':' + (comment.line || comment.original_line || '?') + ':\n' + comment.body));
+        const talk = (comments || []).filter((comment) => newer(comment.created_at));
+        if (talk.length) lines.push('', 'Conversación:', ...talk.map((comment) => '— @' + comment.user.login + (comment.user.type === 'Bot' ? ' (bot)' : '') + ' · ' + when(comment.created_at) + ':\n' + comment.body));
+        if (!shown.length && !code.length && !talk.length) lines.push('', since ? 'Nada nuevo desde ' + since + '.' : 'Sin revisiones ni comentarios.');
+        return textResult(clip(lines.join('\n'), MAX_READ_CHARS), { repo, number, merged: !!pr.merged, state: pr.state });
+      }
+    },
+    {
+      name: 'github_update_pull_request',
+      label: 'GitHub: editar PR',
+      description: 'Change the title, the description or the state (close, reopen) of a pull request, e.g. to keep the description true after addressing a review. The user approves it.',
+      parameters: Type.Object({
+        repo: Type.String({ description: 'Repository of the pull request, "owner/name".' }),
+        number: Type.Number(),
+        title: Type.Optional(Type.String()),
+        body: Type.Optional(Type.String({ description: 'The whole new description in Markdown.' })),
+        state: Type.Optional(Type.String({ description: '"open" or "closed".' }))
+      }),
+      executionMode: 'sequential',
+      execute: async (id, params) => {
+        const repo = used(repoOf(params.repo));
+        const number = Number(params.number);
+        const patch = {};
+        if (params.title) patch.title = params.title;
+        if (typeof params.body === 'string') patch.body = params.body;
+        if (params.state === 'open' || params.state === 'closed') patch.state = params.state;
+        if (!Object.keys(patch).length) throw new Error('Nada que cambiar: pasa title, body o state.');
+        const what = [patch.title ? 'título' : '', 'body' in patch ? 'descripción' : '', patch.state ? (patch.state === 'closed' ? 'cerrar' : 'reabrir') : ''].filter(Boolean).join(', ');
+        await ask({ title: 'Editar pull request', summary: repo + ' #' + number + ' · ' + what + (patch.title ? '\n«' + patch.title + '»' : '') + ('body' in patch ? '\n\n' + patch.body.slice(0, 600) : ''), items: [], kind: 'pr' });
+        const pr = await gh('PATCH', '/repos/' + repo + '/pulls/' + number, patch);
+        return textResult('PR #' + pr.number + ' actualizada (' + what + '): ' + pr.html_url);
+      }
+    },
+    {
+      name: 'github_watch_prs',
+      label: 'GitHub: seguir PR',
+      description: 'Follow pull requests on their own: while the app is open it looks at them every 10 minutes; when one is merged or closed it tells the user, and when a reviewer comments or asks for changes it starts a turn in this chat so you address it (only in «Acceso total»; otherwise it just tells the user). Call it right after opening a PR. remove stops following.',
+      parameters: Type.Object({
+        add: Type.Optional(Type.Array(Type.Object({ repo: Type.String(), number: Type.Number() }), { description: 'PRs to follow (repo = the original project).' })),
+        remove: Type.Optional(Type.Array(Type.Object({ repo: Type.String(), number: Type.Number() })))
+      }),
+      execute: async (id, params) => {
+        if (!ctx.watch) throw new Error('El seguimiento de PR no está disponible aquí.');
+        (params.add || []).forEach((item) => ctx.watch.add(repoOf(item.repo), Number(item.number)));
+        (params.remove || []).forEach((item) => ctx.watch.remove(repoOf(item.repo), Number(item.number)));
+        const list = ctx.watch.list();
+        return textResult(list.length
+          ? 'En seguimiento (' + list.length + '): ' + list.map((item) => item.repo + '#' + item.number).join(', ') + '.\n' + (ctx.watch.auto() ? 'Este chat está en «Acceso total»: las revisiones te llegarán como un turno automático para que las resuelvas tú.' : 'Este chat no está en «Acceso total»: la app solo avisará al usuario de las revisiones; para que las resuelvas tú solo tiene que poner «Acceso total».') + ' Cuando se fusione, la app avisa al usuario y deja de seguirlo.'
+          : 'No hay ningún PR en seguimiento.', { watched: list.length });
       }
     }
   ];
