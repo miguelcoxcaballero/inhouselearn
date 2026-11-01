@@ -1,0 +1,45 @@
+{
+  "id": "shot-20261101-150400-kaa3",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v3",
+  "at": "2026-11-01T15:04:32.282Z",
+  "seconds": 20,
+  "shots": [
+    {
+      "name": "Encender · 0,4 s (oscuro)",
+      "file": "1-encender-0-4-s-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Encender · 0,9 s (oscuro)",
+      "file": "2-encender-0-9-s-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Encender · 1,5 s (oscuro)",
+      "file": "3-encender-1-5-s-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Estado fijo (oscuro)",
+      "file": "4-estado-fijo-oscuro.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Encender · 0,9 s (claro)",
+      "file": "5-encender-0-9-s-claro.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "Estado fijo (claro)",
+      "file": "6-estado-fijo-claro.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
