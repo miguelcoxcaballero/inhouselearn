@@ -1,0 +1,15 @@
+{
+  "id": "shot-20261101-154817-a6u7",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-11-01T15:48:41.127Z",
+  "seconds": 11,
+  "shots": [
+    {
+      "name": "Antes (main): lista de modelos",
+      "file": "1-antes-main-lista-de-modelos.png",
+      "device": "desktop",
+      "theme": "dark"
+    }
+  ]
+}
