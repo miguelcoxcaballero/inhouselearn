@@ -742,29 +742,45 @@
     return was !== !!on;
   }
 
-  // options: { pill (the «Ultra» button of the popup), labels ([elements that read «Ultra code»]) }
+  // options: { pill (the «Ultra» button of the popup), labels ([elements that read «Ultra code»]),
+  //            before (called when the composer is about to light up: the app closes the model
+  //            popup, which covers it, all of it on a phone), delay (ms the button pops alone first) }
   function ignite(options) {
     const opts = options || {};
     const shell = composerShell();
     setMode(true);
-    if (!shell || reducedMotion()) return;
+    const before = () => { if (typeof opts.before === 'function') opts.before(); };
+    if (!shell || reducedMotion()) { before(); return; }
     window.clearTimeout(igniteTimer);
-    shell.querySelectorAll(':scope > .ultra-sweep').forEach((el) => el.remove());
-    const sweep = document.createElement('span');
-    sweep.className = 'ultra-sweep';
-    sweep.setAttribute('aria-hidden', 'true');
-    shell.appendChild(sweep);
-    const lit = [shell, shell.querySelector(':scope > .ultra-tag'), opts.pill].concat(opts.labels || []).filter(Boolean);
-    shell.classList.remove('ultra-igniting');
-    lit.forEach((el) => el.classList.remove('ultra-lit'));
-    void shell.offsetWidth;
-    shell.classList.add('ultra-igniting');
-    lit.forEach((el) => el.classList.add('ultra-lit'));
-    igniteTimer = window.setTimeout(() => {
-      sweep.remove();
+    // The button of the popup pops at once…
+    if (opts.pill) {
+      opts.pill.classList.remove('ultra-lit');
+      void opts.pill.offsetWidth;
+      opts.pill.classList.add('ultra-lit');
+    }
+    // …and then the composer, uncovered, lights up.
+    const light = () => {
+      before();
+      shell.querySelectorAll(':scope > .ultra-sweep').forEach((el) => el.remove());
+      const sweep = document.createElement('span');
+      sweep.className = 'ultra-sweep';
+      sweep.setAttribute('aria-hidden', 'true');
+      shell.appendChild(sweep);
+      const lit = [shell, shell.querySelector(':scope > .ultra-tag'), opts.pill].concat(opts.labels || []).filter(Boolean);
       shell.classList.remove('ultra-igniting');
       lit.forEach((el) => el.classList.remove('ultra-lit'));
-    }, IGNITE_MS);
+      void shell.offsetWidth;
+      shell.classList.add('ultra-igniting');
+      lit.forEach((el) => el.classList.add('ultra-lit'));
+      igniteTimer = window.setTimeout(() => {
+        sweep.remove();
+        shell.classList.remove('ultra-igniting');
+        lit.forEach((el) => el.classList.remove('ultra-lit'));
+      }, IGNITE_MS);
+    };
+    const delay = Number(opts.delay) || 0;
+    if (delay > 0) igniteTimer = window.setTimeout(light, delay);
+    else light();
   }
 
   window.UltraAgents = { markupAll, patch, bind, ignite, setMode };

@@ -12423,13 +12423,17 @@
 
     // Turning Ultra code on: the composer lights up. A band of light runs once
     // around its border, the «Ultra code» tag settles on the edge and the labels
-    // come on letter by letter: a calm moment, no sparks. The look lives in
-    // ultra.js (UltraAgents.ignite) and ultra.css.
+    // come on letter by letter: a calm moment, no sparks. The model popup covers the
+    // composer (all of it on a phone), so its button pops first and then the popup
+    // closes to let the composer light up. The look lives in ultra.js
+    // (UltraAgents.ignite) and ultra.css.
     function playUltraCodeBurst() {
       if (!window.UltraAgents || typeof window.UltraAgents.ignite !== 'function') return;
       window.UltraAgents.ignite({
         pill: document.querySelector('.thinking-pill.ultra-pill'),
-        labels: [document.getElementById('thinking-current'), elements.modelTriggerMeta]
+        labels: [document.getElementById('thinking-current'), elements.modelTriggerMeta],
+        delay: 320,
+        before: () => { if (typeof closeModelMenu === 'function') closeModelMenu(); }
       });
     }
 

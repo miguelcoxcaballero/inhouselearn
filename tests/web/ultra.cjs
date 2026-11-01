@@ -23,12 +23,14 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
   const pills = await page.evaluate(() => ({ labels: Array.from(document.querySelectorAll('.thinking-pill')).map((el) => el.textContent), active: document.querySelector('.thinking-pill.active').textContent, current: document.getElementById('thinking-current').textContent, rainbowOn: document.querySelector('.thinking-pill.ultra-pill').classList.contains('active') }));
   check('reasoning is one row of pills ending in «Ultra», which is not on until it is chosen', pills.labels.includes('Ultra') && pills.labels[pills.labels.length - 1] === 'Ultra' && !pills.rainbowOn && pills.current !== 'Ultra code', pills);
   await page.click('[data-thinking-level="ultra"]');
+  // The button pops first; then the popup (which covers the composer) closes and the composer lights up.
+  await page.waitForSelector('.composer-shell > .ultra-sweep', { timeout: 3000 });
   const on = await page.evaluate(() => {
     const shell = document.querySelector('.composer-shell');
     const sweep = shell.querySelector(':scope > .ultra-sweep');
     const tag = shell.querySelector(':scope > .ultra-tag');
     return {
-      flag: getActiveChat().ultraCode, mode: shell.dataset.ultra, igniting: shell.classList.contains('ultra-igniting'),
+      flag: getActiveChat().ultraCode, mode: shell.dataset.ultra, igniting: shell.classList.contains('ultra-igniting'), popupClosed: document.getElementById('model-menu-popup').classList.contains('hidden'),
       sweep: !!sweep, sweepAnimation: sweep ? getComputedStyle(sweep, '::before').animationName : '',
       tag: tag ? tag.textContent : '', tagLit: !!(tag && tag.classList.contains('ultra-lit')),
       sparks: document.querySelectorAll('.ultra-spark, .ua-spark, .ua-burst-ring, .ultra-burst').length,
@@ -38,7 +40,7 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
     };
   });
   await page.screenshot({ path: SCRATCH + '/ultra-ignite.png' });
-  check('choosing «Ultra»: one band of light runs around the composer and its «Ultra code» tag settles; no sparks', on.flag && on.mode === 'on' && on.igniting && on.sweep && /ultra-sweep/.test(on.sweepAnimation) && on.tag === 'Ultra code' && on.tagLit && on.pillLit && on.sparks === 0, on);
+  check('choosing «Ultra»: one band of light runs around the composer and its «Ultra code» tag settles; no sparks', on.flag && on.mode === 'on' && on.popupClosed && on.igniting && on.sweep && /ultra-sweep/.test(on.sweepAnimation) && on.tag === 'Ultra code' && on.tagLit && on.pillLit && on.sparks === 0, on);
   check('…and the labels read «Ultra code» (over the pills and on the model button)', on.current === 'Ultra code' && on.currentRainbow && on.active === 'ultra' && on.meta === 'Ultra code' && on.rainbow, on);
   await page.waitForTimeout(2600);
   const settled = await page.evaluate(() => { const shell = document.querySelector('.composer-shell'); return { sweep: document.querySelectorAll('.ultra-sweep').length, lit: document.querySelectorAll('.ultra-lit, .ultra-igniting').length, mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), border: getComputedStyle(shell).borderTopColor }; });
