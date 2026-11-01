@@ -1,0 +1,107 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+node --test tests/web/agents-plan.mjs 2>&1 | tail -40
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export OUT=/tmp
+for t in ultra-board ultra composer-fixes; do echo "=== $t"; timeout 240 node tests/web/$t.cjs 2>&1 | grep -E '^(PASS|FAIL)|rror|all PASS|FAILED' | cut -c1-700; done
+  ...
+# Subtest: effort: medium to explore, high to build, medium to verify; the model can ask for another
+ok 13 - effort: medium to explore, high to build, medium to verify; the model can ask for another
+  ---
+  duration_ms: 5.99573
+  type: 'test'
+  ...
+# Subtest: verifier by default only with criteria or with builders: research-only runs skip it
+ok 14 - verifier by default only with criteria or with builders: research-only runs skip it
+  ---
+  duration_ms: 10.811484
+  type: 'test'
+  ...
+# Subtest: read cache: one fetch for the same read (also while in flight), a write empties it, failures are not kept
+ok 15 - read cache: one fetch for the same read (also while in flight), a write empties it, failures are not kept
+  ---
+  duration_ms: 39.876374
+  type: 'test'
+  ...
+# Subtest: spawn: agents get the same read cache; its hits are counted in the result
+ok 16 - spawn: agents get the same read cache; its hits are counted in the result
+  ---
+  duration_ms: 10.950802
+  type: 'test'
+  ...
+# Subtest: a parent abort settles every agent as stopped before rethrowing
+ok 17 - a parent abort settles every agent as stopped before rethrowing
+  ---
+  duration_ms: 40.444049
+  type: 'test'
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 487.000975
+=== ultra-board
+PASS queued: one card, every lane «queued», the verifier pinned last — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"","running":"1","statuses":["step-1:a1=queued","step-1:a2=queued","step-1:a3=queued","step-1:a4=queued","step-1:v=queued"],"order":["a1","a2","a3","a4","v"],"waveHeads":["Oleada 1","Oleada 2","Verificación"],"progress":1,"progressWidth":"0%","glyphs":1,"orbs":5,"old":0,"counts":["","","","",""],"stops":5,"budget":"0% de $0.01","doing":["En cola","En cola","En cola","En cola","En cola"]}
+PASS two waves: «Oleada 1», «Oleada 2» and «Verificación» headers — ["Oleada 1","Oleada 2","Verificación"]
+PASS Claude style: the spark in the header, one status dot per agent, a progress line at 0 %, no constellation, segments, ticks or badge — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"","running":"1","statuses":["step-1:a1=queued","step-1:a2=queued","step-1:a3=queued","step-1:a4=queued","step-1:v=queued"],"order":["a1","a2","a3","a4","v"],"waveHeads":["Oleada 1","Oleada 2","Verificación"],"progress":1,"progressWidth":"0%","glyphs":1,"orbs":5,"old":0,"counts":["","","","",""],"stops":5,"budget":"0% de $0.01","doing":["En cola","En cola","En cola","En cola","En cola"]}
+PASS running: data-status running / waiting, the title counts and names the wave — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"1 min 6 s","running":"1","statuses":["step-1:a1=running","step-1:a2=running","step-1:a3=waiting","step-1:a4=queued","step-1:v=queued"],"order":["a1","a2","a3","a4","v"],"waveHeads":["Oleada 1","Oleada 2","Verificación"],"progress":1,"progressWidth":"0%","glyphs":1,"orbs":5,"old":0,"counts":["2 pasos","1 paso","1 paso","",""],"stops":5,"budget":"20% de $0.01","laneTime":"1 min 6 s","doing":["Buscando «fotosíntesis»","Leyendo apuntes.m
+PASS patched in place: same card, same lane, same orb node — {"lane":true,"orb":true,"card":true}
+PASS the live clock ticks (data-live-since) — {"clock":"1 min 6 s","lane":"1 min 6 s"}
+PASS «⎿ doing · N pasos» under each lane; stop buttons only on live lanes — {"cards":1,"title":"Trabajando · 0 de 5 · oleada 1/2","clock":"1 min 6 s","running":"1","statuses":["step-1:a1=running","step-1:a2=running","step-1:a3=waiting","step-1:a4=queued","step-1:v=queued"],"order":["a1","a2","a3","a4","v"],"waveHeads":["Oleada 1","Oleada 2","Verificación"],"progress":1,"progressWidth":"0%","glyphs":1,"orbs":5,"old":0,"counts":["2 pasos","1 paso","1 paso","",""],"stops":5,"budget":"20% de $0.01","laneTime":"1 min 6 s","doing":["Buscando «fotosíntesis»","Leyendo apuntes.m
+PASS running: the dot breathes with a ripple, the spark turns, a light runs across the title — {"ring":"ua-ripple","dot":"ua-blink","spark":"ua-spark","title":"ua-shimmer","elbow":"⎿"}
+PASS a lane's stop button calls ultraStopAgent(stepId, agentId) — ["step-1/a2"]
+PASS stop button hit area is 32 px — [32,32]
+PASS finished: done / error / stopped statuses — ["step-1:a1=done","step-1:a2=error","step-1:a3=stopped","step-1:a4=done","step-1:v=done"]
+PASS finished title: agents, waves, duration and «verificado ✓»; clock stops — {"cards":1,"title":"5 agentes · 2 oleadas · 1 min 4 s · verificado ✓","clock":"","running":"0","statuses":["step-1:a1=done","step-1:a2=error","step-1:a3=stopped","step-1:a4=done","step-1:v=done"],"order":["a1","a2","a3","a4","v"],"waveHeads":["Oleada 1","Oleada 2","Verificación"],"progress":1,"progressWidth":"100%","glyphs":1,"orbs":5,"old":0,"counts":["4 pasos","1 paso","1 paso","",""],"stops":0,"budget":"87% de $0.01","doing":["Fuentes 1. Campbell , Biología. 2. Khan Academy. clorofila","No te
+PASS still the same lane and orb nodes after three patches — {"lane":true,"orb":true,"glow":true,"haptics":1}
+PASS the completion moment: one glow and one haptic(«success») — {"lane":true,"orb":true,"glow":true,"haptics":1}
+PASS …only once per step — 1
+PASS files row with the conflict highlighted — ["fuentes.md","!dossier.md (choque)!"]
+PASS the verifier lane lists its criteria ✓ / ✕ — ["1:✓","0:✕"]
+PASS budget bar over 80% turns to the warning colour — {"budget":"87% de $0.01","warn":true}
+PASS a lane opens lazily: task, steps, result rendered as markdown, report chips — {"expanded":"true","hidden":false,"h2":true,"strong":true,"task":"Busca tres fuentes sobre la fotosíntesis.","chips":["fuentes.md","fuentes.md","Falta una fuente en castellano"],"steps":4}
+PASS «Copiar» copies the result and says «Copiado» (no toast) — {"text":"## Fuentes\n\n1. **Campbell**, Biología.\n2. Khan Academy.\n\n`clorofila`","label":"Copiado","toasts":0}
+PASS …and back to «Copiar» after 1.2 s — "Copiar"
+PASS no horizontal overflow at 390 px — {"doc":390,"win":390,"card":0}
+PASS prefers-reduced-motion: animationName none everywhere — {"names":[],"before":"none"}
+PASS …and the activation glint draws nothing — 0
+PASS the activation: one glint that runs around the edge with a halo, no sparks — {"glints":1,"edge":true,"halo":true,"run":"ua-glint-run","sparks":0}
+PASS …and it removes itself — 0
+PASS dark theme tokens differ from light ones (all ten) — {"light":["#c96442","#3f8f5a","#c2410c","#b7791f","rgba(31, 30, 29, 0.035)","#78716c","#0f766e","#b45309","#2563eb","rgba(201, 100, 66, 0.1)"],"dark":["#e3896b","#6fcf8e","#f4845f","#f2c14e","rgba(255, 255, 255, 0.04)","#a8a29e","#2dd4bf","#fb923c","#60a5fa","rgba(227, 137, 107, 0.14)"]}
+PASS one agent: no wave headers; reads shared between agents are counted in the footer — {"lanes":1,"heads":0,"shared":"3 lecturas compartidas"}
+PASS two approvals at once: the second waits; agent chip and «+1 en espera» — {"title":"Guardar archivo del chat","chip":"Fuentes","waiting":"+1 en espera","cards":1}
+PASS approving the first shows the second (still unresolved), approving it resolves both true — {"shown1":{"title":"Guardar archivo del chat","chip":"Fuentes","waiting":"+1 en espera","cards":1},"r1":true,"shown2":{"title":"Editar archivo del chat","chip":"Esquema","waitingHidden":true,"secondDoneBefore":false},"r2":true,"empty":true,"cleared":[false,false],"waitingBefore":"+1 en espera","aborted":false,"waitingAfter":true,"d1r":true,"afterAll":""}
+PASS dockApprovalClear answers «no» to the shown and the queued one — [false,false]
+PASS a queued request whose signal aborts leaves the line («no») — {"shown1":{"title":"Guardar archivo del chat","chip":"Fuentes","waiting":"+1 en espera","cards":1},"r1":true,"shown2":{"title":"Editar archivo del chat","chip":"Esquema","waitingHidden":true,"secondDoneBefore":false},"r2":true,"empty":true,"cleared":[false,false],"waitingBefore":"+1 en espera","aborted":false,"waitingAfter":true,"d1r":true,"afterAll":""}
+PASS approveChange: agent chip on the card, onWait(true) then onWait(false) — {"chip":"Redacción","during":[true],"waits":[true,false],"ok":true,"auto":true,"autoWaits":[],"toolChip":"Ejemplos","seen":[true,false]}
+PASS auto-approved changes never call onWait — {"chip":"Redacción","during":[true],"waits":[true,false],"ok":true,"auto":true,"autoWaits":[],"toolChip":"Ejemplos","seen":[true,false]}
+PASS approvalWorkspaceTools forwards meta (agent, onWait) into its approvals — {"chip":"Redacción","during":[true],"waits":[true,false],"ok":true,"auto":true,"autoWaits":[],"toolChip":"Ejemplos","seen":[true,false]}
+PASS live row: «Coordinando 5 agentes» with 5 mini orbs and «Reintentando (1/2)…» — {"during":{"text":"Coordinando 5 agentes","orbs":5,"retry":"Reintentando (1/2)…"},"after":"Integrando lo de 5 agentes","retryAfter":false}
+PASS …then «Integrando lo de 5 agentes», no retry line — {"during":{"text":"Coordinando 5 agentes","orbs":5,"retry":"Reintentando (1/2)…"},"after":"Integrando lo de 5 agentes","retryAfter":false}
+PASS no JavaScript errors — []
+ultra-board: all PASS
+=== ultra
+PASS reasoning is one row of pills ending in «Ultra», which is not on until it is chosen — {"labels":["Normal","Ultra"],"active":"Normal","current":"Normal","rainbowOn":false}
+PASS choosing «Ultra»: a glint around the pill (no sparks), then the rainbow label (over the pills and on the model button) — {"flag":true,"sparks":0,"glint":1,"burst":true,"current":"Ultra code","currentRainbow":true,"active":"ultra","meta":"Ultra code","rainbow":true}
+PASS while they work, the board shows each agent running and its live cost — {"title":"Trabajando · 0 de 2","rows":["running:Fuentes:0.000039999999999999996","running:Esquema:0.000024"],"live":0.0005799999999999998}
+PASS lanes are patched in place while agents work (the same DOM node survives)
+PASS when they finish the board says so, both done — {"content":"He juntado lo de los dos agentes.","cost":0.002,"title":"2 agentes · 2 s","done":["done","done"],"mainTools":["search_library","read_library","list_library","view_library_image","delete_library","web_search","web_fetch","doc_view","doc_edit","latex_compile","run_js","write_file","read_file","edit_file","list_files","search_files","delete_file","update_plan","think","ask_user","memory_s
+PASS the main model has spawn_agents and the Ultra prompt; the agents do not have spawn_agents — {"main":["search_library","read_library","list_library","view_library_image","delete_library","web_search","web_fetch","doc_view","doc_edit","latex_compile","run_js","write_file","read_file","edit_file","list_files","search_files","delete_file","update_plan","think","ask_user","memory_save","memory_forget","study_overview","study_space","study_result","recall","spawn_agents"],"sub":["search_librar
+PASS the main model gets both results to integrate — "Avisos del plan:\n- La tarea de «Fuentes» es muy corta (105 caracteres): cada agente empieza de cero; di qué hacer, dónde y qué devolver.\n- La tarea de «Esquema» es muy corta (118 caracteres): cada agente empieza de cero; di qué hacer, dónde y qué devolver.\n\n## Fuentes [done]\nResultado de un agente, "
+PASS the agents' cost is part of the answer's cost (4 requests) — 0.002
+PASS an agent's row includes what its web searches cost (and so does the answer) — {"agent":0.008,"answer":0.009000000000000001}
+PASS a read-only agent cannot write (run_js aliasing included) and has no write tools — {"files":[],"tools":["search_library","read_library","list_library","view_library_image","web_search","web_fetch","doc_view","run_js","read_file","list_files","search_files","submit_result"]}
+PASS choosing another level turns Ultra code off — {"flag":false,"prompt":"","meta":"","label":"Normal"}
+errors []
+=== composer-fixes
+PASS the files strip overflows and the mouse wheel scrolls it sideways — {"before":{"left":0,"overflow":true,"fade":true},"afterWheel":240}
+PASS dragging it with the mouse scrolls it and does not open the file under the pointer — {"left":220,"preview":false,"dragging":false}
+FAIL with Ultra code the chip shows the rainbow word «Ultra code» (gradient on the word, not hidden by the chip) — {"visible":true,"text":"Ultra code","word":true,"gradient":true,"clip":"text, text","chipBg":"rgba(0, 0, 0, 0)","chipClass":false}
+PASS a turn that ends without any words says so (no blank answer) — {"error":"","content":"Error: El modelo ha terminado sin escribir ninguna respuesta. Vuelve a intentarlo.","shown":"          inhouse · 1/11/26, 2:23    Error: El modelo ha terminado sin escribir ninguna respuesta. Vuelve a intentarlo.\n    V4.1 Flash$0.0000  "}
+PASS an answer that mentions an unclosed <thinking> tag keeps its text — {"content":"En LaTeX no existe la etiqueta <thinking> pero puedes definir un entorno propio.","error":""}
+errors []
