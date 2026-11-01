@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-142114-0htb",
+ "repo": "boykopovar/AnyPS5",
+ "ref": "",
+ "os": "ubuntu-24.04",
+ "sha": "ac26e59d9abf03805477b593f4d31294c185f442",
+ "runner": "Linux X64",
+ "command": "set +e\ncat > /tmp/x.py <<'EOF'\nimport re, glob, collections\ndefs = {}\nexports = []\nfor f in glob.glob(\"core/libs/prx/**/*.cpp\", recursive=True):\n    if \"/tests/\" in f: continue\n    txt = open(f, errors=\"ignore\").read()\n    lib = f.split(\"/\")[3]\n    for m in re.finditer(r'\\b(\\w+)\\s*\\(([^;{)]*)\\)\\s*(?:noexcept\\s*)?\\{', txt):\n        name = m.group(1)\n        i = m.end(); depth = 1\n        while i < len(txt) and depth:\n            c = txt[i]; depth += (c == '{') - (c == '}'); i += 1\n        body = txt[m.end():i]\n        defs[(lib, name)] = (\"NotImplemented\" in body, len(body), f)\n    for m in re.finditer(r'APS5_EXPORT\\(\"([^\"]+)\",\\s*(\\w+)\\)', txt):\n        exports.append((lib, m.group(1), m.group(2), f))\nby = collections.defaultdict(list)\nfor lib, nid, fn, f in exports:\n    d = defs.get((lib, fn))\n    if d is None: continue\n    by[nid].append((lib, fn, d[0], d[1], f))\nfor nid, lst in by.items():\n    stub = [x for x in lst if x[2]]\n    real = [x for x in lst if not x[2] and x[3] > 40]\n    libs_s = {x[0] for x in stub}; libs_r = {x[0] for x in real}\n    if stub and real and libs_s - libs_r:\n        for s in stub:\n            if s[0] in libs_r: continue\n            print(\"CAND\", s[0], nid, s[1], \"<=\", real[0][0], real[0][1], real[0][4])\nEOF\npython3 /tmp/x.py | sort | tee /tmp/cands.txt | awk '{print $2}' | sort | uniq -c | sort -rn | head -40\necho; wc -l /tmp/cands.txt\ngrep -v \"libSceFreeTypeOt\\|libSceAgcVsh\" /tmp/cands.txt | head -120",
+ "exit_code": 1,
+ "seconds": 4,
+ "lines": 38,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ set +e\ncat > /tmp/x.py <<'EOF'\nimport re, glob, collections\ndefs = {}\nexports = []\nfor f in glob.glob(\"core/libs/prx/**/*.cpp\", recursive=True):\n    if \"/tests/\" in f: continue\n    txt = open(f, errors=\"ignore\").read()\n    lib = f.split(\"/\")[3]\n    for m in re.finditer(r'\\b(\\w+)\\s*\\(([^;{)]*)\\)\\s*(?:noexcept\\s*)?\\{', txt):\n        name = m.group(1)\n        i = m.end(); depth = 1\n        while i < len(txt) and depth:\n            c = txt[i]; depth += (c == '{') - (c == '}'); i += 1\n        body = txt[m.end():i]\n        defs[(lib, name)] = (\"NotImplemented\" in body, len(body), f)\n    for m in re.finditer(r'APS5_EXPORT\\(\"([^\"]+)\",\\s*(\\w+)\\)', txt):\n        exports.append((lib, m.group(1), m.group(2), f))\nby = collections.defaultdict(list)\nfor lib, nid, fn, f in exports:\n    d = defs.get((lib, fn))\n    if d is None: continue\n    by[nid].append((lib, fn, d[0], d[1], f))\nfor nid, lst in by.items():\n    stub = [x for x in lst if x[2]]\n    real = [x for x in lst if not x[2] and x[3] > 40]\n    libs_s = {x[0] for x in stub}; libs_r = {x[0] for x in real}\n    if stub and real and libs_s - libs_r:\n        for s in stub:\n            if s[0] in libs_r: continue\n            print(\"CAND\", s[0], nid, s[1], \"<=\", real[0][0], real[0][1], real[0][4])\nEOF\npython3 /tmp/x.py | sort | tee /tmp/cands.txt | awk '{print $2}' | sort | uniq -c | sort -rn | head -40\necho; wc -l /tmp/cands.txt\ngrep -v \"libSceFreeTypeOt\\|libSceAgcVsh\" /tmp/cands.txt | head -120\n\n0 /tmp/cands.txt\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41315775420"
+}
