@@ -1,0 +1,45 @@
+{
+  "id": "shot-20261101-152026-a2nu",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v3",
+  "at": "2026-11-01T15:21:02.494Z",
+  "seconds": 20,
+  "shots": [
+    {
+      "name": "1 · El botón hace pop",
+      "file": "1-1-el-boton-hace-pop.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "2 · La franja de luz sube",
+      "file": "2-2-la-franja-de-luz-sube.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "3 · Da la vuelta",
+      "file": "3-3-da-la-vuelta.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "4 · Se queda el tinte y la etiqueta",
+      "file": "4-4-se-queda-el-tinte-y-la-etiqueta.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "5 · Claro, a mitad",
+      "file": "5-5-claro-a-mitad.png",
+      "device": "phone",
+      "theme": "light"
+    },
+    {
+      "name": "6 · Claro, ya fijo",
+      "file": "6-6-claro-ya-fijo.png",
+      "device": "phone",
+      "theme": "light"
+    }
+  ]
+}
