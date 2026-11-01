@@ -1,0 +1,134 @@
+{
+ "id": "run-20261101-192639-oox3",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v4",
+ "os": "ubuntu-24.04",
+ "sha": "740bab2c7dc2dc3a66ccb96ebb1d499ec82d3ea1",
+ "runner": "Linux X64",
+ "command": "npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport OUT=/tmp\nset +e\necho '=== unit'\nnode --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nfor t in activity-state model-list theme visuals library github github-stage approval-card claude-api composer-fixes harness prompt-cache ultra ultra-board queue reasoning steer-now cost-history chats-menu chat-composer websearch cut-retry state-reload chat-url extra-account; do\n  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1\n  code=$?\n  echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\"\n  grep '^FAIL' /tmp/web-$t.log | cut -c1-320\ndone\nexit 0",
+ "exit_code": 0,
+ "seconds": 288,
+ "lines": 47,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 12,
+   "text": "echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\""
+  },
+  {
+   "line": 13,
+   "text": "grep '^FAIL' /tmp/web-$t.log | cut -c1-320"
+  },
+  {
+   "line": 20,
+   "text": "activity-state: 5 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 21,
+   "text": "model-list: 13 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 22,
+   "text": "theme: 25 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 23,
+   "text": "visuals: 12 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 24,
+   "text": "library: 6 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 25,
+   "text": "github: 14 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 26,
+   "text": "github-stage: 5 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 27,
+   "text": "approval-card: 11 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 28,
+   "text": "claude-api: 23 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 29,
+   "text": "composer-fixes: 5 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 30,
+   "text": "harness: 21 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 31,
+   "text": "prompt-cache: 6 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 32,
+   "text": "ultra: 18 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 33,
+   "text": "ultra-board: 39 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 34,
+   "text": "queue: 9 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 35,
+   "text": "reasoning: 10 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 36,
+   "text": "steer-now: 2 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 37,
+   "text": "cost-history: 12 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 38,
+   "text": "chats-menu: 10 PASS, 2 FAIL, exit 1"
+  },
+  {
+   "line": 39,
+   "text": "FAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\"renamed\":{\"title\":\"Historia moderna\",\"custom\":\"Historia moderna\"},\"editor\":{\"value\":\"Revolución francesa causas\",\"focused\":true,\"editable\":\"plaintext-only\",\"field\":true,\"collapsed\":true,\"caret\":1,\"mark\":true}"
+  },
+  {
+   "line": 40,
+   "text": "FAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"topEditor\":null,\"topRenamed\":{\"title\":\"Historia contemporánea\",\"custom\":\"Historia contemporánea\",\"top\":\"Historia contemporánea\",\"list\":\"Historia contemporánea\"}}"
+  },
+  {
+   "line": 41,
+   "text": "chat-composer: 7 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 42,
+   "text": "websearch: 9 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 43,
+   "text": "cut-retry: 4 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 44,
+   "text": "state-reload: 5 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 45,
+   "text": "chat-url: 9 PASS, 0 FAIL, exit 0"
+  },
+  {
+   "line": 46,
+   "text": "extra-account: 21 PASS, 0 FAIL, exit 0"
+  }
+ ],
+ "errors_total": 29,
+ "tail": "+ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport OUT=/tmp\nset +e\necho '=== unit'\nnode --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nfor t in activity-state model-list theme visuals library github github-stage approval-card claude-api composer-fixes harness prompt-cache ultra ultra-board queue reasoning steer-now cost-history chats-menu chat-composer websearch cut-retry state-reload chat-url extra-account; do\n  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1\n  code=$?\n  echo \"$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code\"\n  grep '^FAIL' /tmp/web-$t.log | cut -c1-320\ndone\nexit 0\n=== unit\n# tests 58\n# pass 58\n# fail 0\nactivity-state: 5 PASS, 0 FAIL, exit 0\nmodel-list: 13 PASS, 0 FAIL, exit 0\ntheme: 25 PASS, 0 FAIL, exit 0\nvisuals: 12 PASS, 0 FAIL, exit 0\nlibrary: 6 PASS, 0 FAIL, exit 0\ngithub: 14 PASS, 0 FAIL, exit 0\ngithub-stage: 5 PASS, 0 FAIL, exit 0\napproval-card: 11 PASS, 0 FAIL, exit 0\nclaude-api: 23 PASS, 0 FAIL, exit 0\ncomposer-fixes: 5 PASS, 0 FAIL, exit 0\nharness: 21 PASS, 0 FAIL, exit 0\nprompt-cache: 6 PASS, 0 FAIL, exit 0\nultra: 18 PASS, 0 FAIL, exit 0\nultra-board: 39 PASS, 0 FAIL, exit 0\nqueue: 9 PASS, 0 FAIL, exit 0\nreasoning: 10 PASS, 0 FAIL, exit 0\nsteer-now: 2 PASS, 0 FAIL, exit 0\ncost-history: 12 PASS, 0 FAIL, exit 0\nchats-menu: 10 PASS, 2 FAIL, exit 1\nFAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\"renamed\":{\"title\":\"Historia moderna\",\"custom\":\"Historia moderna\"},\"editor\":{\"value\":\"Revolución francesa causas\",\"focused\":true,\"editable\":\"plaintext-only\",\"field\":true,\"collapsed\":true,\"caret\":1,\"mark\":true}\nFAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"topEditor\":null,\"topRenamed\":{\"title\":\"Historia contemporánea\",\"custom\":\"Historia contemporánea\",\"top\":\"Historia contemporánea\",\"list\":\"Historia contemporánea\"}}\nchat-composer: 7 PASS, 0 FAIL, exit 0\nwebsearch: 9 PASS, 0 FAIL, exit 0\ncut-retry: 4 PASS, 0 FAIL, exit 0\nstate-reload: 5 PASS, 0 FAIL, exit 0\nchat-url: 9 PASS, 0 FAIL, exit 0\nextra-account: 21 PASS, 0 FAIL, exit 0\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41341756178"
+}

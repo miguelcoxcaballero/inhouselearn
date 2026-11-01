@@ -1,0 +1,46 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export OUT=/tmp
+set +e
+echo '=== unit'
+node --test tests/web/wiring.mjs tests/web/context-aging.mjs tests/web/coach.mjs tests/web/agents-plan.mjs tests/web/text-quality.mjs tests/web/learning.mjs tests/web/model-scores.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'
+for t in activity-state model-list theme visuals library github github-stage approval-card claude-api composer-fixes harness prompt-cache ultra ultra-board queue reasoning steer-now cost-history chats-menu chat-composer websearch cut-retry state-reload chat-url extra-account; do
+  timeout 280 node tests/web/$t.cjs > /tmp/web-$t.log 2>&1
+  code=$?
+  echo "$t: $(grep -c '^PASS' /tmp/web-$t.log) PASS, $(grep -c '^FAIL' /tmp/web-$t.log) FAIL, exit $code"
+  grep '^FAIL' /tmp/web-$t.log | cut -c1-320
+done
+exit 0
+=== unit
+# tests 58
+# pass 58
+# fail 0
+activity-state: 5 PASS, 0 FAIL, exit 0
+model-list: 13 PASS, 0 FAIL, exit 0
+theme: 25 PASS, 0 FAIL, exit 0
+visuals: 12 PASS, 0 FAIL, exit 0
+library: 6 PASS, 0 FAIL, exit 0
+github: 14 PASS, 0 FAIL, exit 0
+github-stage: 5 PASS, 0 FAIL, exit 0
+approval-card: 11 PASS, 0 FAIL, exit 0
+claude-api: 23 PASS, 0 FAIL, exit 0
+composer-fixes: 5 PASS, 0 FAIL, exit 0
+harness: 21 PASS, 0 FAIL, exit 0
+prompt-cache: 6 PASS, 0 FAIL, exit 0
+ultra: 18 PASS, 0 FAIL, exit 0
+ultra-board: 39 PASS, 0 FAIL, exit 0
+queue: 9 PASS, 0 FAIL, exit 0
+reasoning: 10 PASS, 0 FAIL, exit 0
+steer-now: 2 PASS, 0 FAIL, exit 0
+cost-history: 12 PASS, 0 FAIL, exit 0
+chats-menu: 10 PASS, 2 FAIL, exit 1
+FAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {"renamed":{"title":"Historia moderna","custom":"Historia moderna"},"editor":{"value":"Revolución francesa causas","focused":true,"editable":"plaintext-only","field":true,"collapsed":true,"caret":1,"mark":true}
+FAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {"topEditor":null,"topRenamed":{"title":"Historia contemporánea","custom":"Historia contemporánea","top":"Historia contemporánea","list":"Historia contemporánea"}}
+chat-composer: 7 PASS, 0 FAIL, exit 0
+websearch: 9 PASS, 0 FAIL, exit 0
+cut-retry: 4 PASS, 0 FAIL, exit 0
+state-reload: 5 PASS, 0 FAIL, exit 0
+chat-url: 9 PASS, 0 FAIL, exit 0
+extra-account: 21 PASS, 0 FAIL, exit 0
