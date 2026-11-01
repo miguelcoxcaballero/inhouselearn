@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-184240-bj8s",
+ "repo": "miguelcoxcaballero/AnyPS5",
+ "ref": "feat/libc-internal-exception-base-destructors",
+ "os": "ubuntu-24.04",
+ "sha": "8bb5e09df8eaf393dff7c732f591dddd26a24bf6",
+ "runner": "Linux X64",
+ "command": "git grep -n \"_ZdlPv_nid_postfix\\|_Znwm_nid_postfix\" -- core | head -15; echo ---; git grep -n \"y1dYQsc67ys\\|iHILAmwYRGY\\|rNYLEsL7M0k\\|future_errorD0Ev\\|overflow_errorD0Ev\\|underflow_errorD0Ev\" | head -20; echo ---; git grep -n \"Unknown6_045\\|Unknown6_043\" | head",
+ "exit_code": 141,
+ "seconds": 0,
+ "lines": 17,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ git grep -n \"_ZdlPv_nid_postfix\\|_Znwm_nid_postfix\" -- core | head -15; echo ---; git grep -n \"y1dYQsc67ys\\|iHILAmwYRGY\\|rNYLEsL7M0k\\|future_errorD0Ev\\|overflow_errorD0Ev\\|underflow_errorD0Ev\" | head -20; echo ---; git grep -n \"Unknown6_045\\|Unknown6_043\" | head\ncore/libs/prx/libc/include/Api.hpp:947:void* APS5_VABI _Znwm_nid_postfix(std::size_t size);\ncore/libs/prx/libc/include/Api.hpp:960:void APS5_VABI _ZdlPv_nid_postfix(void* pointer);\ncore/libs/prx/libc/src/LocaleSupport.cpp:107:    _ZdlPv_nid_postfix(self);\ncore/libs/prx/libc/src/LocaleSupport.cpp:363:    if (onHeap) _ZdlPv_nid_postfix(value.capacity + 1 < GuestStringLargeAllocation ? static_cast<void*>(value.pointer) : reinterpret_cast<void**>(value.pointer)[-1]);\ncore/libs/prx/libc/src/LocaleSupport.cpp:565:    if (bytes < GuestStringLargeAllocation) return _Znwm_nid_postfix(bytes);\ncore/libs/prx/libc/src/LocaleSupport.cpp:567:    auto* raw = static_cast<unsigned char*>(_Znwm_nid_postfix(bytes + GuestLargeAllocationPadding));\ncore/libs/prx/libc/src/LocaleSupport.cpp:577:        _ZdlPv_nid_postfix(storage);\ncore/libs/prx/libc/src/LocaleSupport.cpp:726:        auto* collate = static_cast<GuestLocale::CollateFacet*>(_Znwm_nid_postfix(sizeof(GuestLocale::CollateFacet)));\ncore/libs/prx/libc/src/LocaleSupport.cpp:736:        auto* collate = static_cast<GuestLocale::CollateFacet*>(_Znwm_nid_postfix(sizeof(GuestLocale::CollateFacet)));\ncore/libs/prx/libc/src/LocaleSupport.cpp:745:        auto* object = static_cast<GuestLocale::Facet*>(_Znwm_nid_postfix(sizeof(GuestLocale::Facet)));\ncore/libs/prx/libc/src/LocaleSupport.cpp:754:        auto* punct = static_cast<GuestLocale::NumpunctFacet*>(_Znwm_nid_postfix(sizeof(GuestLocale::NumpunctFacet)));\ncore/libs/prx/libc/src/LocaleSupport.cpp:763:        auto* object = static_cast<GuestLocale::Facet*>(_Znwm_nid_postfix(sizeof(GuestLocale::Facet)));\ncore/libs/prx/libc/src/LocaleSupport.cpp:772:        auto* object = static_cast<GuestLocale::Facet*>(_Znwm_nid_postfix(GuestTimePutFacetSize));\ncore/libs/prx/libc/src/MemoryResource.cpp:57:    _ZdlPv_nid_postfix(self);\ncore/libs/prx/libc/src/MemoryResource.cpp:66:    return _Znwm_nid_postfix(bytes);\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41338002569"
+}
