@@ -1,0 +1,27 @@
+{
+  "id": "shot-20261101-025634-t8xt",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "main",
+  "at": "2026-11-01T02:56:54.786Z",
+  "seconds": 6,
+  "shots": [
+    {
+      "name": "A · Compacto",
+      "file": "1-a-compacto.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "B · Tarjeta única",
+      "file": "2-b-tarjeta-unica.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "C · Línea de tiempo",
+      "file": "3-c-linea-de-tiempo.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
