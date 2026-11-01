@@ -1,0 +1,330 @@
++ set +e
+cat core/libs/prx/libSceLibcInternal/AlignedNew.cpp
+echo ===H; grep -rn "AlignedArray" core/libs/prx/libSceLibcInternal --include=*.hpp --include=*.txt --include=*.cmake
+cat core/libs/prx/libSceLibcInternal/libSceLibcInternal.hpp
+echo ===CMAKE; cat core/libs/prx/libSceLibcInternal/CMakeLists.txt
+echo ===TESTS; grep -rln "AlignedArray\|s2eGsgUF9vk" core/libs/tests core/libs/CMakeLists.txt core/libs/prx/libSceLibcInternal/CMakeLists.txt
+echo ===DEBT; grep -n "aligned\|Aligned\|nothrow" docs/dev/debt/libSceLibcInternal.md
+wc -c docs/dev/debt/libSceLibcInternal.md
+echo ===INVHPP; grep -n "_018_\|_044_\|_051_\|_080_\|_141_" core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+grep -n "_081_\|_048_\|_084_" core/libs/prx/libSceLibcInternal/include/*.hpp
+echo ===INV6; sed -n 280,290p core/libs/prx/libSceLibcInternal/InventoryExports6.cpp; sed -n 474,500p core/libs/prx/libSceLibcInternal/InventoryExports6.cpp
+grep -n "XyJPhPqpzMw\|YXVCU6PdgZk\|X9D8WWSG3As\|dsJKehuajH4\|pN02FS5SPgg\|XFh0C66aEms\|OypvNf3Uq3c\|xiqd+QkuYXc\|_PadD1\|ios_baseD1\|_LocinfoD2\|_LocinfoC2\|_LocimpC2\|future_errorD2\|overflow_errorD2\|underflow_errorD2" docs/dev/debt/*.md | cut -c1-300
+#include "prx/libSceLibcInternal/include/Api.hpp"
+#include "prx/libc/include/Api.hpp"
+#include "prx/libc/include/General.hpp"
+#include "SceTypes.hpp"
+#include <cstddef>
+
+extern "C" {
+
+void* APS5_VABI sceLibcInternalAlignedArrayNewNothrow_nid_no_patch(std::size_t size, std::size_t alignment, const void* tag) noexcept {
+    return _ZnamSt11align_val_tRKSt9nothrow_t_nid_postfix(size, alignment, tag);
+}
+APS5_EXPORT("s2eGsgUF9vk", sceLibcInternalAlignedArrayNewNothrow_nid_no_patch);
+
+void APS5_VABI sceLibcInternalAlignedArrayDelete_nid_no_patch(void* pointer, std::size_t alignment) {
+    _ZdaPvSt11align_val_t_nid_postfix(pointer, alignment);
+}
+APS5_EXPORT("v09ZcAhZzSc", sceLibcInternalAlignedArrayDelete_nid_no_patch);
+
+}
+===H
+core/libs/prx/libSceLibcInternal/include/Api.hpp:109:void* APS5_VABI sceLibcInternalAlignedArrayNewNothrow_nid_no_patch(std::size_t size, std::size_t alignment, const void* tag) noexcept;
+core/libs/prx/libSceLibcInternal/include/Api.hpp:110:void APS5_VABI sceLibcInternalAlignedArrayDelete_nid_no_patch(void* pointer, std::size_t alignment);
+#pragma once
+
+#include "prx/libSceLibcInternal/include/RuntimeInternals.hpp"
+#include "prx/libSceLibcInternal/include/Api.hpp"
+#include "prx/libSceLibcInternal/include/InventoryExports.hpp"
+===CMAKE
+add_library(libSceLibcInternal SHARED EXCLUDE_FROM_ALL Export.cpp FileTime.cpp Getopt.cpp SignalList.cpp Spawn.cpp UserContext.cpp)
+target_include_directories(libSceLibcInternal PRIVATE ${LIBS_INCLUDE_DIR})
+set_source_files_properties(UserContext.cpp PROPERTIES COMPILE_OPTIONS -fno-omit-frame-pointer)
+target_link_libraries(libSceLibcInternal PRIVATE ${CMAKE_DL_LIBS})
+target_sources(libSceLibcInternal PRIVATE Directory.cpp)
+target_sources(libSceLibcInternal PRIVATE InventoryExports.cpp)
+target_sources(libSceLibcInternal PRIVATE InitOnce.cpp)
+target_sources(libSceLibcInternal PRIVATE Mutex.cpp)
+target_sources(libSceLibcInternal PRIVATE AlignedNew.cpp)
+if(BUILD_TESTING)
+    add_test_executable(guest_libc_internal_aligned_new_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcInternalAlignedNew.cpp)
+    target_include_directories(guest_libc_internal_aligned_new_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_libc_internal_aligned_new_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_libc_internal_aligned_new_tests)
+    add_test(NAME guest_libc_internal_aligned_new COMMAND guest_libc_internal_aligned_new_tests)
+    set_tests_properties(guest_libc_internal_aligned_new PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_libc_internal_aligned_new PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+if(BUILD_TESTING)
+    add_test_executable(guest_libc_internal_mtx_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcInternalMtx.cpp)
+    target_include_directories(guest_libc_internal_mtx_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_libc_internal_mtx_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_libc_internal_mtx_tests)
+    add_test(NAME guest_libc_internal_mtx COMMAND guest_libc_internal_mtx_tests)
+    set_tests_properties(guest_libc_internal_mtx PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_libc_internal_mtx PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+if(BUILD_TESTING)
+    add_test_executable(guest_init_once_tests ${LIBS_INCLUDE_DIR}/tests/GuestInitOnce.cpp)
+    target_include_directories(guest_init_once_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_init_once_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_init_once_tests)
+    add_test(NAME guest_init_once COMMAND guest_init_once_tests)
+    set_tests_properties(guest_init_once PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_init_once PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+target_sources(libSceLibcInternal PRIVATE Err.cpp)
+configure_windows_unwind(libSceLibcInternal)
+target_sources(libSceLibcInternal PRIVATE FilesystemStatistics.cpp PathStatistics.cpp)
+target_sources(libSceLibcInternal PRIVATE Inet.cpp)
+target_sources(libSceLibcInternal PRIVATE InventoryExports6.cpp)
+target_sources(libSceLibcInternal PRIVATE Filesystem.cpp)
+
+if(BUILD_TESTING)
+    add_test_executable(guest_statvfs_tests ${LIBS_INCLUDE_DIR}/tests/GuestStatvfs.cpp)
+    target_include_directories(guest_statvfs_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_statvfs_tests PRIVATE libSceLibcInternal libc)
+    configure_windows_unwind(guest_statvfs_tests)
+    add_test(NAME guest_statvfs COMMAND guest_statvfs_tests)
+    set_tests_properties(guest_statvfs PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_statvfs PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_fstatvfs_conversion_tests ${LIBS_INCLUDE_DIR}/tests/GuestFstatvfsConversion.cpp FilesystemStatistics.cpp)
+    target_include_directories(guest_fstatvfs_conversion_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    configure_windows_unwind(guest_fstatvfs_conversion_tests)
+    add_test(NAME guest_fstatvfs_conversion COMMAND guest_fstatvfs_conversion_tests)
+    set_tests_properties(guest_fstatvfs_conversion PROPERTIES TIMEOUT 20)
+    add_test_executable(guest_fstatvfs_tests ${LIBS_INCLUDE_DIR}/tests/GuestFstatvfs.cpp)
+    target_include_directories(guest_fstatvfs_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_fstatvfs_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_fstatvfs_tests)
+    add_test(NAME guest_fstatvfs COMMAND guest_fstatvfs_tests)
+    set_tests_properties(guest_fstatvfs PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_fstatvfs PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_fdopendir_tests ${LIBS_INCLUDE_DIR}/tests/GuestFdopendir.cpp)
+    target_include_directories(guest_fdopendir_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_fdopendir_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_fdopendir_tests)
+    add_test(NAME guest_fdopendir COMMAND guest_fdopendir_tests)
+    if(WIN32)
+        set_tests_properties(guest_fdopendir PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_opendir2_tests ${LIBS_INCLUDE_DIR}/tests/GuestOpendir2.cpp)
+    target_include_directories(guest_opendir2_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_opendir2_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_opendir2_tests)
+    add_test(NAME guest_opendir2 COMMAND guest_opendir2_tests)
+    if(WIN32)
+        set_tests_properties(guest_opendir2 PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_utime_forwarding_tests ${LIBS_INCLUDE_DIR}/tests/GuestUtimeForwarding.cpp FileTime.cpp)
+    target_include_directories(guest_utime_forwarding_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    configure_windows_unwind(guest_utime_forwarding_tests)
+    add_test(NAME guest_utime_forwarding COMMAND guest_utime_forwarding_tests)
+    set_tests_properties(guest_utime_forwarding PROPERTIES TIMEOUT 20)
+    add_test_executable(guest_utime_tests ${LIBS_INCLUDE_DIR}/tests/GuestUtime.cpp)
+    target_include_directories(guest_utime_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_utime_tests PRIVATE libSceLibcInternal libc)
+    configure_windows_unwind(guest_utime_tests)
+    add_test(NAME guest_utime COMMAND guest_utime_tests)
+    set_tests_properties(guest_utime PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_utime PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_posix_spawn_tests ${LIBS_INCLUDE_DIR}/tests/GuestPosixSpawn.cpp)
+    target_include_directories(guest_posix_spawn_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_posix_spawn_tests PRIVATE libSceLibcInternal libc libkernel)
+    configure_windows_unwind(guest_posix_spawn_tests)
+    add_test(NAME guest_posix_spawn COMMAND guest_posix_spawn_tests)
+    set_tests_properties(guest_posix_spawn PROPERTIES TIMEOUT 20)
+    add_asan_test_options(guest_posix_spawn handle_sigbus=0)
+    if(WIN32)
+        set_tests_properties(guest_posix_spawn PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_program_name_tests ${LIBS_INCLUDE_DIR}/tests/GuestProgramName.cpp)
+    target_include_directories(guest_program_name_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_program_name_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_program_name_tests)
+    add_test(NAME guest_program_name COMMAND guest_program_name_tests)
+    set_tests_properties(guest_program_name PROPERTIES TIMEOUT 20)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_test_executable(guest_posix_spawn_flags_tests ${LIBS_INCLUDE_DIR}/tests/GuestPosixSpawnFlags.cpp)
+        target_include_directories(guest_posix_spawn_flags_tests PRIVATE ${LIBS_INCLUDE_DIR})
+        target_link_libraries(guest_posix_spawn_flags_tests PRIVATE libSceLibcInternal libc libkernel ${CMAKE_DL_LIBS})
+        file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/spawn-flags)
+        add_test(NAME guest_posix_spawn_flags COMMAND guest_posix_spawn_flags_tests)
+        set_tests_properties(guest_posix_spawn_flags PROPERTIES TIMEOUT 20
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/spawn-flags)
+    endif()
+    if(WIN32)
+        set_tests_properties(guest_program_name PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_thread_atexit_tests ${LIBS_INCLUDE_DIR}/tests/GuestThreadAtexit.cpp)
+    target_include_directories(guest_thread_atexit_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_thread_atexit_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_thread_atexit_tests)
+    add_test(NAME guest_thread_atexit COMMAND guest_thread_atexit_tests)
+    set_tests_properties(guest_thread_atexit PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_thread_atexit PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_err_tests ${LIBS_INCLUDE_DIR}/tests/GuestErr.cpp)
+    target_include_directories(guest_err_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_err_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_err_tests)
+    add_test(NAME guest_err COMMAND guest_err_tests)
+    set_tests_properties(guest_err PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_err PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_getopt_tests ${LIBS_INCLUDE_DIR}/tests/GuestGetopt.cpp)
+    target_include_directories(guest_getopt_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_getopt_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_getopt_tests)
+    add_test(NAME guest_getopt COMMAND guest_getopt_tests)
+    set_tests_properties(guest_getopt PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_getopt PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_inet_address_tests ${LIBS_INCLUDE_DIR}/tests/GuestInetAddress.cpp)
+    target_include_directories(guest_inet_address_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_inet_address_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_inet_address_tests)
+    add_test(NAME guest_inet_address COMMAND guest_inet_address_tests)
+    set_tests_properties(guest_inet_address PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_inet_address PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_force_tls_destructor_tests ${LIBS_INCLUDE_DIR}/tests/GuestForceTlsDestructor.cpp)
+    target_include_directories(guest_force_tls_destructor_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_force_tls_destructor_tests PRIVATE libSceLibcInternal libkernel libc ${CMAKE_DL_LIBS})
+    configure_windows_unwind(guest_force_tls_destructor_tests)
+    add_test(NAME guest_force_tls_destructor COMMAND guest_force_tls_destructor_tests)
+    set_tests_properties(guest_force_tls_destructor PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_force_tls_destructor PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_fminf_tests ${LIBS_INCLUDE_DIR}/tests/GuestFminf.cpp)
+    target_include_directories(guest_fminf_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_fminf_tests PRIVATE libSceLibcInternal libc)
+    configure_windows_unwind(guest_fminf_tests)
+    add_test(NAME guest_fminf COMMAND guest_fminf_tests)
+    set_tests_properties(guest_fminf PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_fminf PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+    add_test_executable(guest_signal_list_tests ${LIBS_INCLUDE_DIR}/tests/GuestSignalList.cpp)
+    target_include_directories(guest_signal_list_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_signal_list_tests PRIVATE libSceLibcInternal)
+    configure_windows_unwind(guest_signal_list_tests)
+    add_test(NAME guest_signal_list COMMAND guest_signal_list_tests)
+    set_tests_properties(guest_signal_list PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_signal_list PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+
+if(BUILD_TESTING)
+    add_test_executable(guest_libc_filesystem_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcFilesystem.cpp)
+    target_include_directories(guest_libc_filesystem_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_libc_filesystem_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_libc_filesystem_tests)
+    add_test(NAME guest_libc_filesystem COMMAND guest_libc_filesystem_tests)
+    if(WIN32)
+        set_tests_properties(guest_libc_filesystem PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+===TESTS
+core/libs/tests/GuestLibcInternalAlignedNew.cpp
+===DEBT
+347:- [_ZnamSt11align_val_tRKSt9nothrow_t and _ZdaPvSt11align_val_t](../../../core/libs/prx/libSceLibcInternal/AlignedNew.cpp) (libSceLibcInternal, NIDs `s2eGsgUF9vk` and `v09ZcAhZzSc`) take the standard C++17 signatures their mangled names give, the aligned `nothrow` array `operator new` and the aligned array `operator delete`, and run the same code as the `libc` exports of those names, on the same application heap and new handler. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether it allocates from the same heap as `libc.prx` is unverified
+400:- [_ZdaPvmRKSt9nothrow_t](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `7lCihI18N9I`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+405:- [_ZdlPvmRKSt9nothrow_t](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `7VPIYFpwU2A`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+144084 docs/dev/debt/libSceLibcInternal.md
+===INVHPP
+25:int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch();
+51:int APS5_VABI libSceLibcInternalInventory_044_nid_no_patch();
+58:int APS5_VABI libSceLibcInternalInventory_051_nid_no_patch();
+87:int APS5_VABI libSceLibcInternalInventory_080_nid_no_patch();
+148:int APS5_VABI libSceLibcInternalInventory_141_nid_no_patch();
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:55:int APS5_VABI libSceLibcInternalInventory_048_nid_no_patch();
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:88:int APS5_VABI libSceLibcInternalInventory_081_nid_no_patch();
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:91:int APS5_VABI libSceLibcInternalInventory_084_nid_no_patch();
+===INV6
+APS5_EXPORT("0F08WOP8G3s", sceLibcInternalUnknown6_047_0F08WOP8G3s_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_048_YXVCU6PdgZk_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+}
+APS5_EXPORT("YXVCU6PdgZk", sceLibcInternalUnknown6_048_YXVCU6PdgZk_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_049_uiRALKOdAZk_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+int APS5_VABI sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+}
+APS5_EXPORT("XyJPhPqpzMw", sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_082_Sopthb9ztZI_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+}
+APS5_EXPORT("Sopthb9ztZI", sceLibcInternalUnknown6_082_Sopthb9ztZI_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_083_hpc9OSfCAEg_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+}
+APS5_EXPORT("h+c9OSfCAEg", sceLibcInternalUnknown6_083_hpc9OSfCAEg_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_084_X9D8WWSG3As_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+}
+APS5_EXPORT("X9D8WWSG3As", sceLibcInternalUnknown6_084_X9D8WWSG3As_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_085_m6uU37mb27s_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+docs/dev/debt/libSceLibcInternal.md:31:| `_ZNSt12future_errorD2Ev` | `XFh0C66aEms` |
+docs/dev/debt/libSceLibcInternal.md:57:| `_ZNSt14overflow_errorD2Ev` | `OypvNf3Uq3c` |
+docs/dev/debt/libSceLibcInternal.md:64:| `_ZNSt15underflow_errorD2Ev` | `xiqd+QkuYXc` |
+docs/dev/debt/libSceLibcInternal.md:93:| `_ZNSt6locale7_LocimpC2ERKS0_` | `dsJKehuajH4` |
+docs/dev/debt/libSceLibcInternal.md:154:| `_ZNSt8_LocinfoC2EPKc` | `pN02FS5SPgg` |
+docs/dev/debt/libSceLibcInternal.md:155:| `_ZNSt8_LocinfoC2ERKSs` | `ReK9U6EUWuU` |
+docs/dev/debt/libSceLibcInternal.md:156:| `_ZNSt8_LocinfoC2EiPKc` | `i180MNC9p4c` |
+docs/dev/debt/libSceLibcInternal.md:417:- [_ZNSt8_LocinfoD2Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `YXVCU6PdgZk`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/li
+docs/dev/debt/libSceLibcInternal.md:437:- [_ZNSt6locale7_LocimpC2Eb](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `zrmR88ClfOs`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a1326
+docs/dev/debt/libSceLibcInternal.md:449:- [_ZNSt4_PadD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `XyJPhPqpzMw`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSce
+docs/dev/debt/libSceLibcInternal.md:452:- [_ZNSt8ios_baseD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `X9D8WWSG3As`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/li
