@@ -1,0 +1,93 @@
++ git fetch --unshallow -q || true
+echo "== AlignedNew history"; git log --format='%h %an %ad %s' --date=short -- core/libs/prx/libSceLibcInternal/AlignedNew.cpp | head
+echo "== NotImplemented in LibcInternal"; grep -rn "NotImplemented" core/libs/prx/libSceLibcInternal/*.cpp | wc -l
+grep -rn -B3 "NotImplemented" core/libs/prx/libSceLibcInternal/Export.cpp | head -60
+echo "== libc postfix names"; grep -rhoE "[A-Za-z0-9_]+_nid_postfix" core/libs/prx/libc/include/*.hpp | sort -u > /tmp/libc.txt; wc -l /tmp/libc.txt
+echo "== LibcInternal throwing exports with names"
+python3 - <<'EOF'
+import re,glob,subprocess
+libc=set(l.strip()[:-len('_nid_postfix')] for l in open('/tmp/libc.txt'))
+src=""
+for f in glob.glob('core/libs/prx/libSceLibcInternal/*.cpp'):
+    src+=open(f,errors='ignore').read()
+# find functions that throw and their export NID + name
+funcs=re.findall(r'(\w+)_nid_no_patch\s*\([^)]*\)[^{]*\{([^}]*)\}',src)
+thr=[n for n,b in funcs if 'NotImplemented' in b]
+print("throwing:",len(thr))
+hit=[n for n in thr if n in libc]
+print("throwing with libc impl:",len(hit))
+for n in hit: print(" ",n)
+print("sample throwing:",thr[:80])
+EOF
+ls docs/dev/debt | head -300 | tr '\n' ' '
+== AlignedNew history
+a675d0e45b Miguel Cox Caballero 2026-11-01 feat(libSceLibcInternal): implement the aligned nothrow array new and the aligned array delete
+== NotImplemented in LibcInternal
+727
+21-extern "C" {
+22-
+23-int APS5_VABI sceLibcInternalPending4_002_nid_no_patch() {
+24:    NotImplemented_nid_no_patch(__func__);
+--
+27-APS5_EXPORT("F27xQUBtNdU", sceLibcInternalPending4_002_nid_no_patch);
+28-
+29-int APS5_VABI sceLibcInternalPending4_003_nid_no_patch() {
+30:    NotImplemented_nid_no_patch(__func__);
+--
+33-APS5_EXPORT("XxsPrrWJ52I", sceLibcInternalPending4_003_nid_no_patch);
+34-
+35-int APS5_VABI sceLibcInternalPending4_004_nid_no_patch() {
+36:    NotImplemented_nid_no_patch(__func__);
+--
+39-APS5_EXPORT("U2t+WvMQj8A", sceLibcInternalPending4_004_nid_no_patch);
+40-
+41-int APS5_VABI sceLibcInternalPending4_005_nid_no_patch() {
+42:    NotImplemented_nid_no_patch(__func__);
+--
+45-APS5_EXPORT("EeBQ7253LkE", sceLibcInternalPending4_005_nid_no_patch);
+46-
+47-int APS5_VABI sceLibcInternalPending4_006_nid_no_patch() {
+48:    NotImplemented_nid_no_patch(__func__);
+--
+51-APS5_EXPORT("vbgCuYKySLI", sceLibcInternalPending4_006_nid_no_patch);
+52-
+53-int APS5_VABI sceLibcInternalPending4_007_nid_no_patch() {
+54:    NotImplemented_nid_no_patch(__func__);
+--
+57-APS5_EXPORT("HeBwePMtuFs", sceLibcInternalPending4_007_nid_no_patch);
+58-
+59-int APS5_VABI sceLibcInternalPending4_008_nid_no_patch() {
+60:    NotImplemented_nid_no_patch(__func__);
+--
+63-APS5_EXPORT("rRmMX83UL1E", sceLibcInternalPending4_008_nid_no_patch);
+64-
+65-int APS5_VABI sceLibcInternalPending4_009_nid_no_patch() {
+66:    NotImplemented_nid_no_patch(__func__);
+--
+69-APS5_EXPORT("Ea+awuQ5Bm8", sceLibcInternalPending4_009_nid_no_patch);
+70-
+71-int APS5_VABI sceLibcInternalPending4_010_nid_no_patch() {
+72:    NotImplemented_nid_no_patch(__func__);
+--
+75-APS5_EXPORT("TPq0HfoACeI", sceLibcInternalPending4_010_nid_no_patch);
+76-
+77-int APS5_VABI sceLibcInternalPending4_011_nid_no_patch() {
+78:    NotImplemented_nid_no_patch(__func__);
+--
+81-APS5_EXPORT("GGoH7e6SZSY", sceLibcInternalPending4_011_nid_no_patch);
+82-
+83-int APS5_VABI sceLibcInternalPending4_012_nid_no_patch() {
+84:    NotImplemented_nid_no_patch(__func__);
+--
+87-APS5_EXPORT("UM6rGQxnEMg", sceLibcInternalPending4_012_nid_no_patch);
+88-
+89-int APS5_VABI sceLibcInternalPending4_013_nid_no_patch() {
+90:    NotImplemented_nid_no_patch(__func__);
+--
+== libc postfix names
+1517 /tmp/libc.txt
+== LibcInternal throwing exports with names
+throwing: 688
+throwing with libc impl: 0
+sample throwing: ['NotImplemented', 'RegisterChildProcess', 'libSceLibcInternalInventory_000', 'libSceLibcInternalInventory_001', 'libSceLibcInternalInventory_002', 'libSceLibcInternalInventory_003', 'libSceLibcInternalInventory_004', 'libSceLibcInternalInventory_005', 'libSceLibcInternalInventory_006', 'libSceLibcInternalInventory_007', 'libSceLibcInternalInventory_008', 'libSceLibcInternalInventory_009', 'libSceLibcInternalInventory_010', 'libSceLibcInternalInventory_011', 'libSceLibcInternalInventory_012', 'libSceLibcInternalInventory_013', 'libSceLibcInternalInventory_014', 'libSceLibcInternalInventory_015', 'libSceLibcInternalInventory_016', 'libSceLibcInternalInventory_017', 'libSceLibcInternalInventory_018', 'libSceLibcInternalInventory_019', 'libSceLibcInternalInventory_020', 'libSceLibcInternalInventory_021', 'libSceLibcInternalInventory_022', 'libSceLibcInternalInventory_023', 'libSceLibcInternalInventory_024', 'libSceLibcInternalInventory_025', 'libSceLibcInternalInventory_026', 'libSceLibcInternalInventory_027', 'libSceLibcInternalInventory_028', 'libSceLibcInternalInventory_029', 'libSceLibcInternalInventory_030', 'libSceLibcInternalInventory_031', 'libSceLibcInternalInventory_032', 'libSceLibcInternalInventory_033', 'libSceLibcInternalInventory_034', 'libSceLibcInternalInventory_035', 'libSceLibcInternalInventory_036', 'libSceLibcInternalInventory_037', 'libSceLibcInternalInventory_038', 'libSceLibcInternalInventory_039', 'libSceLibcInternalInventory_040', 'libSceLibcInternalInventory_041', 'libSceLibcInternalInventory_042', 'libSceLibcInternalInventory_043', 'libSceLibcInternalInventory_044', 'libSceLibcInternalInventory_045', 'libSceLibcInternalInventory_046', 'libSceLibcInternalInventory_047', 'libSceLibcInternalInventory_048', 'libSceLibcInternalInventory_049', 'libSceLibcInternalInventory_050', 'libSceLibcInternalInventory_051', 'libSceLibcInternalInventory_052', 'libSceLibcInternalInventory_053', 'libSceLibcInternalInventory_054', 'libSceLibcInternalInventory_055', 'libSceLibcInternalInventory_056', 'libSceLibcInternalInventory_057', 'libSceLibcInternalInventory_058', 'libSceLibcInternalInventory_059', 'libSceLibcInternalInventory_060', 'libSceLibcInternalInventory_061', 'libSceLibcInternalInventory_062', 'libSceLibcInternalInventory_063', 'libSceLibcInternalInventory_064', 'libSceLibcInternalInventory_065', 'libSceLibcInternalInventory_066', 'libSceLibcInternalInventory_067', 'libSceLibcInternalInventory_068', 'libSceLibcInternalInventory_069', 'libSceLibcInternalInventory_070', 'libSceLibcInternalInventory_071', 'libSceLibcInternalInventory_072', 'libSceLibcInternalInventory_073', 'libSceLibcInternalInventory_074', 'libSceLibcInternalInventory_075', 'libSceLibcInternalInventory_076', 'libSceLibcInternalInventory_077']
+libCprm.md libSceAbstractStorage.md libSceAbstractTcs.md libSceAbstractYoutube.md libSceAc3Enc.md libSceAcm.md libSceAddressSanitizer.md libSceAgc.md libSceAgcDriver.md libSceAgcVsh.md libSceAjm.md libSceAjm.native.md libSceAjmi.md libSceAmpr.md libSceAppChecker.md libSceAppContent.md libSceAppDbShellCoreClient.md libSceAppInstUtil.md libSceAsyncStorageInternal.md libSceAt9Enc.md libSceAudio3d.md libSceAudioIn.md libSceAudioLatencyEstimation.md libSceAudioOut.md libSceAudioPropagation.md libSceAudioSystem.md libSceAudiodec.md libSceAudiodec.native.md libSceAudiodecCpu.md libSceAutoMounterClient.md libSceAvPlayer.md libSceAvPlayer.native.md libSceAvPlayerStreaming.md libSceAvSetting.md libSceAvcap2.md libSceAvcap2mvr.md libSceBackupRestoreUtil.md libSceBeisobmf.md libSceBemp2sys.md libSceBgft.md libSceBgsStorage.md libSceBluetoothHid.md libSceCamera.md libSceCdlgAdIdClient.md libSceCdlgG2P.md libSceCdlgPlayerReview.md libSceCdlgUtilServer.md libSceCesCs.md libSceCffMgr.md libSceCommonDialog.md libSceCompanionHttpd.md libSceCompanionUtil.md libSceComposite.md libSceCompositeExt.md libSceConnectAccountDialog.md libSceContentDelete.md libSceContentExport.md libSceContentListController.md libSceContentSearch.md libSceConvertKeycode.md libSceCustomMusicAudioOut.md libSceCustomMusicCore.md libSceCustomMusicPlayReady4.md libSceCustomMusicSysCallWrapper.md libSceDataTransfer.md libSceDbgThreadSanitizer.md libSceDepth.md libSceDepth2.md libSceDipsw.md libSceDiscId.md libSceDiscMap.md libSceDseehx.md libSceDtsEnc.md libSceEditMp4.md libSceErrorDialog.md libSceEsvm.md libSceEsvmEngine.md libSceFiber.md libSceFios2.md libSceFlexContent.md libSceFont.md libSceFontFt.md libSceFontGs.md libSceFontGs.native.md libSceFreeType.md libSceFreeTypeOl.md libSceFreeTypeOptOl.md libSceFreeTypeOt.md libSceFrontPanelDisplay.md libSceFsInternalForVsh.md libSceGLSlimVSH.md libSceGameCustomDataDialog.md libSceGameLiveStreaming.md libSceGameUpdate.md libSceGic.md libSceGifParser.md libSceGnmDriverForNeoMode.md libSceGvMp4Parser.md libSceHidControl.md libSceHmd.md libSceHmd2.md libSceHmdSetupDialog.md libSceHttp.md libSceHttp2.md libSceHttpCache.md libSceHubAppUtil.md libSceIcu.md libSceIdu.md libSceImageUtil.md libSceIme.md libSceImeBackend.md libSceImeDialog.md libSceInvitationDialog.md libSceIpmi.md libSceJemspace.md libSceJobManager.md libSceJpegDec.md libSceJpegEnc.md libSceJpegParser.md libSceJsc.md libSceJson.md libSceJson2.md libSceJxr.md libSceJxrParser.md libSceKeyboard.md libSceLibcInternal.md libSceLibreSsl.md libSceLibreSsl3.md libSceLoginDialog.md libSceLoginMgrServer.md libSceLoginService.md libSceM4aacEnc.md libSceMbus.md libSceMediaFrameworkInterface.md libSceMediaFrameworkUtil.md libSceMetadataReaderWriter.md libSceMouse.md libSceMove.md libSceMoveTracker.md libSceMsgDialog.md libSceMsgDialog.native.md libSceMusicCoreInterface.md libSceMusicFrameworkInterface.md libSceNKWeb.md libSceNKWebCdlgInjectedBundle.md libSceNKWebKit.md libSceNKWebKitRequirements.md libSceNet.md libSceNetCtl.md libSceNetCtlAp.md libSceNetCtlApDialog.md libSceNgs2.md libSceNgs2.native.md libSceNotification.md libSceNpAuth.md libSceNpAuthAuthorizedAppDialog.md libSceNpCommerce.md libSceNpCommon.md libSceNpCppWebApi.md libSceNpEntitlementAccess.md libSceNpEulaDialog.md libSceNpFriendListDialog.md libSceNpGameIntent.md libSceNpManager.md libSceNpMatching2.md libSceNpPartner001.md libSceNpPartnerSubscription.md libSceNpParty.md libSceNpProfileDialog.md libSceNpRemotePlaySessionSignaling.md libSceNpScoreRanking.md libSceNpSessionSignaling.md libSceNpSessionSignalingCrossplay.md libSceNpSignaling.md libSceNpSns.md libSceNpSnsFacebookDialog.md libSceNpSnsYouTubeDialog.md libSceNpSpeechToText.md libSceNpTcs.md libSceNpTextToSpeech.md libSceNpTrophy.md libSceNpTrophy2.md libSceNpTus.md libSceNpUniversalDataSystem.md libSceNpUtility.md libSceNpWebApi.md libSceNpWebApi2.md libSceOpusCeltDec.md libSceOpusCeltEnc.md libSceOpusDec.md libSceOpusSilkEnc.md libScePSNowGkp.md libScePad.md libScePadTracker.md libScePatchCheckerClient.md libScePfs.md libScePlayGo.md libScePlayGoDialog.md libScePlayReady.md libScePlayReady2.md libScePlayReady4.md libScePlayReady4L.md libScePlayerInvitationDialog.md libScePlayerSelectionDialog.md libScePngDec.md libScePngEnc.md libScePngParser.md libScePosixForWebKit.md libSceProprietaryVoiceChatHelperPrx.md libScePs2EmuMenuDialog.md libScePsm.md libScePsmUtil.md libScePsml_debug.md libSceRandom.md libSceRazorCpu.md libSceRegMgr.md libSceRemotePlayClientIpc.md libSceRemoteplay.md libSceResourceArbitrator.md libSceRnpsAppMgr.md libSceRnpsBundle.md libSceRnpsNKInjectedBundle.md libSceRtc.md libSceRudp.md libSceS3da.md libSceSaveData.md libSceSaveData.native.md libSceSaveDataDialog.native.md libSceScreenShot.md libSceSdma.md libSceShare.md libSceShareFactoryUtil.md libSceShareInternal.native.md libSceSharePlay.md libSceShareUtility.md libSceShellUIUtil.md libSceSigninDialog.md libSceSocialScreen.md libSceSocialScreenDialog.md libSceSrcUtl.md libSceSsl.md libSceSulphaDrv.md libSceSysCore.md libSceSysUtil.md libSceSysmodule.md libSceSystemGesture.md libSceSystemLogger.md libSceSystemLogger2.md libSceSystemLogger2Delivery.md libSceSystemLogger2Game.md libSceSystemLogger2NativeQueueClient.md libSceSystemService.md libSceSystemTts.md libSceTEEClient.md libSceTextToSpeech.md libSceTextToSpeech2.md libSceTtsCoreG3Bc.md libSceTtsEngine.md libSceUgcBgUploaderClient.md libSceUgcServiceS3.md libSceUlt.md libSceUpdateService.md libSceUrlConfigResolver.md libSceUsbStorage.md libSceUsbStorageDialog.md libSceUsbd.md libSceUserService.md libSceVcodec.md libSceVdecCore.md libSceVdecCore.native.md libSceVdecSavc.md libSceVdecSavc2.md libSceVdecSavc2.native.md libSceVdecShevc.md libSceVdecShevc.native.md libSceVdecSvp9.md libSceVdecsw.md libSceVdecwrap.md libSceVenc.md libSceVideoArbitration.md libSceVideoCoreInterface.md libSceVideoCoreServerInterface.md libSceVideoDecoderArbitration.md libSceVideoNativeExtEssential.md libSceVideoOut.md libSceVideoOutSecondary.md libSceVideoRecording.native.md libSceVideoRecordingP.md libSceVideoStreamingEngine.md libSceVideoStreamingEngineAudioOnly.md libSceVideoStreamingEngine_sys.md libSceVideodec.md libSceVideodec2.md libSceVisionManager.md libSceVnaInternal.md libSceVnaWebsocket.md libSceVoice.md libSceVoiceChat.md libSceVoiceCommand.md libSceVoiceQoS.md 
