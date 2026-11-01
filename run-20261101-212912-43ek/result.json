@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-212912-43ek",
+ "repo": "miguelcoxcaballero/AnyPS5",
+ "ref": "feat/libc-internal-locale-base-objects",
+ "os": "ubuntu-24.04",
+ "sha": "71b2057767cd497b5e1e516d5bc37b1dd4e6873c",
+ "runner": "Linux X64",
+ "command": "git remote add upstream https://github.com/boykopovar/AnyPS5.git && git fetch -q upstream main && git fetch -q --unshallow origin || true; git fetch -q upstream main; python3 tools/check_conventions.py --base upstream/main",
+ "exit_code": 0,
+ "seconds": 28,
+ "lines": 3,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ git remote add upstream https://github.com/boykopovar/AnyPS5.git && git fetch -q upstream main && git fetch -q --unshallow origin || true; git fetch -q upstream main; python3 tools/check_conventions.py --base upstream/main\nAll conventions checks passed.\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41352243596"
+}

@@ -1,0 +1,2 @@
++ git remote add upstream https://github.com/boykopovar/AnyPS5.git && git fetch -q upstream main && git fetch -q --unshallow origin || true; git fetch -q upstream main; python3 tools/check_conventions.py --base upstream/main
+All conventions checks passed.
