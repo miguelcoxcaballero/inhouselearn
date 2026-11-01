@@ -1,0 +1,149 @@
++ set +e
+for p in 10113 10226 12053; do curl -s https://api.github.com/repos/boykopovar/AnyPS5/pulls/$p | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['number'],d['user']['login'],d['state'],d['title'],d['changed_files'])"; curl -sL "https://patch-diff.githubusercontent.com/raw/boykopovar/AnyPS5/pull/$p.diff" | grep '^diff --git' | head -12; curl -sL "https://patch-diff.githubusercontent.com/raw/boykopovar/AnyPS5/pull/$p.diff" | grep -n -- "_PadD1\|ios_baseD1\|XyJPhPqpzMw" | head -5; done
+echo ===libc_stdexcept
+grep -n "future_error\|overflow_error\|underflow_error" core/libs/prx/libc/src/exception/StandardExceptions.cpp | head -40
+grep -rn "future_errorD1Ev\|overflow_errorD1Ev\|underflow_errorD1Ev" core/libs/prx/libc --include=*.hpp | head
+echo ===INV
+sed -n 85,110p core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+sed -n 1,30p core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+echo ===FORWARD_EXAMPLES
+grep -rn "s2eGsgUF9vk\|v09ZcAhZzSc" core/libs/prx/libSceLibcInternal | head
+grep -rln "_ZnamSt11align_val_tRKSt9nothrow_t" core/libs | head
+10113 JJenkx open fix(libc): compute expf with FreeBSD msun's algorithm, as titles' libc.prx does 1331
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+diff --git a/.github/workflows/web-tests.yml b/.github/workflows/web-tests.yml
+diff --git a/.gitignore b/.gitignore
+diff --git a/3rdparty/freetype b/3rdparty/freetype
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+diff --git a/cmake/Opus.cmake b/cmake/Opus.cmake
+diff --git a/cmake/SystemDeps.cmake b/cmake/SystemDeps.cmake
+diff --git a/core/libs/CMakeLists.txt b/core/libs/CMakeLists.txt
+diff --git a/core/libs/nid/src/MachONidPatcher.cpp b/core/libs/nid/src/MachONidPatcher.cpp
+grep: write error: Broken pipe
+33918:+int APS5_VABI sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch() {
+33922:+APS5_EXPORT("XyJPhPqpzMw", sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch);
+98343:+- [_ZNSt4_PadD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `XyJPhPqpzMw`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+98346:+- [_ZNSt8ios_baseD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `X9D8WWSG3As`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+10226 JJenkx open fix(libc): compute erff and erfcf with fdlibm's algorithm, as titles' libc.prx does 1331
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+diff --git a/.github/workflows/web-tests.yml b/.github/workflows/web-tests.yml
+diff --git a/.gitignore b/.gitignore
+diff --git a/3rdparty/freetype b/3rdparty/freetype
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+diff --git a/cmake/Opus.cmake b/cmake/Opus.cmake
+diff --git a/cmake/SystemDeps.cmake b/cmake/SystemDeps.cmake
+diff --git a/core/libs/CMakeLists.txt b/core/libs/CMakeLists.txt
+diff --git a/core/libs/nid/src/MachONidPatcher.cpp b/core/libs/nid/src/MachONidPatcher.cpp
+grep: write error: Broken pipe
+33918:+int APS5_VABI sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch() {
+33922:+APS5_EXPORT("XyJPhPqpzMw", sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch);
+98659:+- [_ZNSt4_PadD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `XyJPhPqpzMw`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+98662:+- [_ZNSt8ios_baseD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `X9D8WWSG3As`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+12053 JJenkx open fix(libc): compute _FSinh as titles do 1331
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+diff --git a/.github/workflows/web-tests.yml b/.github/workflows/web-tests.yml
+diff --git a/.gitignore b/.gitignore
+diff --git a/3rdparty/freetype b/3rdparty/freetype
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+diff --git a/cmake/Opus.cmake b/cmake/Opus.cmake
+diff --git a/cmake/SystemDeps.cmake b/cmake/SystemDeps.cmake
+diff --git a/core/libs/CMakeLists.txt b/core/libs/CMakeLists.txt
+diff --git a/core/libs/nid/src/MachONidPatcher.cpp b/core/libs/nid/src/MachONidPatcher.cpp
+grep: write error: Broken pipe
+33918:+int APS5_VABI sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch() {
+33922:+APS5_EXPORT("XyJPhPqpzMw", sceLibcInternalUnknown6_081_XyJPhPqpzMw_nid_no_patch);
+98404:+- [_ZNSt4_PadD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `XyJPhPqpzMw`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+98407:+- [_ZNSt8ios_baseD1Ev](../../../core/libs/prx/libSceLibcInternal/InventoryExports6.cpp) (libSceLibcInternal, NID `X9D8WWSG3As`) - listed in the [PS5 3.20 export inventory](https://github.com/DNNDHH/PS5-3.20_Libs/blob/b2a77c09cd71c01f34c790cfbe98c751a13262ad/libSceLibcInternal.c); signature and behavior are unverified, so this parameterless declaration is for import resolution only and throws through `NotImplemented_nid_no_patch`
+===libc_stdexcept
+536:LibcException::TypeRecord _ZTISt14overflow_error_nid_postfix {LibcException::SingleTypeVtable + 2, "St14overflow_error", &_ZTISt13runtime_error_nid_postfix};
+537:LibcException::ExceptionVtable _ZTVSt14overflow_error_nid_postfix {0, &_ZTISt14overflow_error_nid_postfix, LibcException::GuestDestroyMessage_nid_no_patch, LibcException::GuestDeleteMessage_nid_no_patch, LibcException::GuestMessageWhat_nid_no_patch};
+538:void APS5_VABI _ZNSt14overflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DestroyMessage(self); }
+540:LibcException::TypeRecord _ZTISt15underflow_error_nid_postfix {LibcException::SingleTypeVtable + 2, "St15underflow_error", &_ZTISt13runtime_error_nid_postfix};
+541:LibcException::ExceptionVtable _ZTVSt15underflow_error_nid_postfix {0, &_ZTISt15underflow_error_nid_postfix, LibcException::GuestDestroyMessage_nid_no_patch, LibcException::GuestDeleteMessage_nid_no_patch, LibcException::GuestMessageWhat_nid_no_patch};
+542:void APS5_VABI _ZNSt15underflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DestroyMessage(self); }
+602:const TypeRecord OverflowErrorType {SingleTypeVtable + 2, "NSt8__sce_v214overflow_errorE", &RuntimeErrorType};
+653:[[noreturn]] void APS5_VABI _ZNSt8__sce_v216_Xoverflow_errorEPKc_nid_postfix(const char* message) { LibcException::ThrowMessage(LibcException::SceV2::OverflowError, message); }
+697:LibcException::TypeRecord _ZTISt12future_error_nid_postfix {LibcException::SingleTypeVtable + 2, "St12future_error", &_ZTISt11logic_error_nid_postfix};
+732:    __cxa_throw_nid_postfix(object, reinterpret_cast<std::type_info*>(&_ZTISt12future_error_nid_postfix),
+735:LibcException::FutureErrorVtable _ZTVSt12future_error_nid_postfix {
+736:    0, &_ZTISt12future_error_nid_postfix,
+739:[[noreturn]] void APS5_VABI _ZSt19_Throw_future_errorRKSt10error_code_nid_postfix(const LibcException::ErrorCode* code) {
+741:    object->vtable = &_ZTVSt12future_error_nid_postfix.destroy;
+745:    __cxa_throw_nid_postfix(object, reinterpret_cast<std::type_info*>(&_ZTISt12future_error_nid_postfix),
+751:void APS5_VABI _ZNSt12future_errorD1Ev_nid_postfix(LibcException::FutureErrorObject* self) {
+core/libs/prx/libc/include/Api.hpp:1373:void APS5_VABI _ZNSt12future_errorD1Ev_nid_postfix(LibcException::FutureErrorObject* self);
+core/libs/prx/libc/include/Api.hpp:1390:void APS5_VABI _ZNSt14overflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+core/libs/prx/libc/include/Api.hpp:1391:void APS5_VABI _ZNSt15underflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+===INV
+APS5_EXPORT("OM0FnA7Tldk", libSceLibcInternalInventory_015_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_016_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("uVOxy7dQTFc", libSceLibcInternalInventory_016_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("XFh0C66aEms", libSceLibcInternalInventory_018_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("oly3wSwEJ2A", libSceLibcInternalInventory_019_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_020_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("lX9M5u0e48k", libSceLibcInternalInventory_020_nid_no_patch);
+#include "prx/libc/include/general/ExportMacros.hpp"
+#include "prx/libSceLibcInternal/include/InventoryExports.hpp"
+#include "prx/libc/include/General.hpp"
+
+extern "C" {
+
+int APS5_VABI libSceLibcInternalInventory_000_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("ww3UUl317Ng", libSceLibcInternalInventory_000_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_001_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("dXy+lFOiaQA", libSceLibcInternalInventory_001_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_002_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("HpAlvhNKb2Y", libSceLibcInternalInventory_002_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_003_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("5bQqdR3hTZw", libSceLibcInternalInventory_003_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_004_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("1kvQkOSaaVo", libSceLibcInternalInventory_004_nid_no_patch);
+===FORWARD_EXAMPLES
+core/libs/prx/libSceLibcInternal/AlignedNew.cpp:12:APS5_EXPORT("s2eGsgUF9vk", sceLibcInternalAlignedArrayNewNothrow_nid_no_patch);
+core/libs/prx/libSceLibcInternal/AlignedNew.cpp:17:APS5_EXPORT("v09ZcAhZzSc", sceLibcInternalAlignedArrayDelete_nid_no_patch);
+core/libs/prx/libSceLibcInternal/AlignedNew.cpp
+core/libs/prx/libc/include/Api.hpp
+core/libs/prx/libc/src/StdioExtras.cpp
+core/libs/tests/GuestNewHandler.cpp
