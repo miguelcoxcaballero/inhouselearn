@@ -1,0 +1,39 @@
+{
+  "id": "shot-20261101-193250-teyv",
+  "target": "miguelcoxcaballero/inhouselearn",
+  "ref": "feat/ultra-v4",
+  "at": "2026-11-01T19:33:24.793Z",
+  "seconds": 21,
+  "shots": [
+    {
+      "name": "Lista DeepSeek, oscuro",
+      "file": "1-lista-deepseek-oscuro.png",
+      "device": "desktop",
+      "theme": "dark"
+    },
+    {
+      "name": "Lista DeepSeek, claro",
+      "file": "2-lista-deepseek-claro.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "Encendido, claro, 0,65 s",
+      "file": "3-encendido-claro-0-65-s.png",
+      "device": "desktop",
+      "theme": "light"
+    },
+    {
+      "name": "Encendido, móvil oscuro, 0,65 s",
+      "file": "4-encendido-movil-oscuro-0-65-s.png",
+      "device": "phone",
+      "theme": "dark"
+    },
+    {
+      "name": "Encendido, móvil oscuro, fijo",
+      "file": "5-encendido-movil-oscuro-fijo.png",
+      "device": "phone",
+      "theme": "dark"
+    }
+  ]
+}
