@@ -1,0 +1,17 @@
++ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null
+npx playwright install --with-deps chromium >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 2
+st=0
+for t in pr-watch github fork-run approval-card wiring; do
+  if [ -f tests/web/$t.cjs ]; then f=tests/web/$t.cjs; node $f > /tmp/$t.log 2>&1 || true; else node --test tests/web/$t.mjs > /tmp/$t.log 2>&1 || st=1; fi
+  echo "== $t: $(grep -c '^PASS' /tmp/$t.log) PASS, $(grep -c '^FAIL' /tmp/$t.log) FAIL"
+  grep -E '^(FAIL|SKIP)' /tmp/$t.log | cut -c1-300 || true
+  grep -q '^FAIL' /tmp/$t.log && st=1
+done
+exit $st
+== pr-watch: 10 PASS, 0 FAIL
+== github: 14 PASS, 0 FAIL
+== fork-run: 11 PASS, 0 FAIL
+== approval-card: 11 PASS, 0 FAIL
+== wiring: 0 PASS, 0 FAIL

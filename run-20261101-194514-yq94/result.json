@@ -1,0 +1,50 @@
+{
+ "id": "run-20261101-194514-yq94",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "main",
+ "os": "ubuntu-24.04",
+ "sha": "ebf183863c9e624d94bb1efeb2239b213bb776e5",
+ "runner": "Linux X64",
+ "command": "npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 2\nst=0\nfor t in pr-watch github fork-run approval-card wiring; do\n  if [ -f tests/web/$t.cjs ]; then f=tests/web/$t.cjs; node $f > /tmp/$t.log 2>&1 || true; else node --test tests/web/$t.mjs > /tmp/$t.log 2>&1 || st=1; fi\n  echo \"== $t: $(grep -c '^PASS' /tmp/$t.log) PASS, $(grep -c '^FAIL' /tmp/$t.log) FAIL\"\n  grep -E '^(FAIL|SKIP)' /tmp/$t.log | cut -c1-300 || true\n  grep -q '^FAIL' /tmp/$t.log && st=1\ndone\nexit $st",
+ "exit_code": 0,
+ "seconds": 69,
+ "lines": 18,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 8,
+   "text": "echo \"== $t: $(grep -c '^PASS' /tmp/$t.log) PASS, $(grep -c '^FAIL' /tmp/$t.log) FAIL\""
+  },
+  {
+   "line": 9,
+   "text": "grep -E '^(FAIL|SKIP)' /tmp/$t.log | cut -c1-300 || true"
+  },
+  {
+   "line": 10,
+   "text": "grep -q '^FAIL' /tmp/$t.log && st=1"
+  },
+  {
+   "line": 13,
+   "text": "== pr-watch: 10 PASS, 0 FAIL"
+  },
+  {
+   "line": 14,
+   "text": "== github: 14 PASS, 0 FAIL"
+  },
+  {
+   "line": 15,
+   "text": "== fork-run: 11 PASS, 0 FAIL"
+  },
+  {
+   "line": 16,
+   "text": "== approval-card: 11 PASS, 0 FAIL"
+  },
+  {
+   "line": 17,
+   "text": "== wiring: 0 PASS, 0 FAIL"
+  }
+ ],
+ "errors_total": 8,
+ "tail": "+ npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null\nnpx playwright install --with-deps chromium >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 2\nst=0\nfor t in pr-watch github fork-run approval-card wiring; do\n  if [ -f tests/web/$t.cjs ]; then f=tests/web/$t.cjs; node $f > /tmp/$t.log 2>&1 || true; else node --test tests/web/$t.mjs > /tmp/$t.log 2>&1 || st=1; fi\n  echo \"== $t: $(grep -c '^PASS' /tmp/$t.log) PASS, $(grep -c '^FAIL' /tmp/$t.log) FAIL\"\n  grep -E '^(FAIL|SKIP)' /tmp/$t.log | cut -c1-300 || true\n  grep -q '^FAIL' /tmp/$t.log && st=1\ndone\nexit $st\n== pr-watch: 10 PASS, 0 FAIL\n== github: 14 PASS, 0 FAIL\n== fork-run: 11 PASS, 0 FAIL\n== approval-card: 11 PASS, 0 FAIL\n== wiring: 0 PASS, 0 FAIL\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41343312484"
+}
