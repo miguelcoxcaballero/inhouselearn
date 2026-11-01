@@ -221,7 +221,8 @@ const lastTool = (page) => page.evaluate(() => { const tools = window.__requests
   mark = dispatches.length;
   await page.evaluate((args) => window.__replies.push({ text: '', tools: [{ name: 'github_screenshot', args }] }, { text: 'Hechas.' }), { repo: SECRET, shots: [{ name: 'Inicio' }] });
   await send(page, 'Captura de mi web privada');
-  const installCard = await page.waitForSelector('.dock-approve', { timeout: 20000 }).then(() => page.evaluate(() => document.querySelector('.dock-approve').innerText), () => '');
+  // The file list is folded on the commit card: read it with textContent.
+  const installCard = await page.waitForSelector('.dock-approve', { timeout: 20000 }).then(() => page.evaluate(() => document.querySelector('.dock-approve').textContent), () => '');
   await page.click('.dock-approve [data-dock="approve"]');
   await idle(page, 120000);
   other = dispatches.slice(mark);
