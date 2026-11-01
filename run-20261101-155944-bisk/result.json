@@ -1,0 +1,38 @@
+{
+ "id": "run-20261101-155944-bisk",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "main",
+ "os": "ubuntu-24.04",
+ "sha": "3311d424086f896e5338f9691e29d855120e243d",
+ "runner": "Linux X64",
+ "command": "set +e +o pipefail\ngit fetch -q --deepen=8 origin main 2>&1 | tail -1\ngit log --oneline -8\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\nfor sha in $(git log --format=%h -8 | sed -n '2p;4p;6p'); do\n  git checkout -q $sha 2>/dev/null\n  fuser -k 8765/tcp >/dev/null 2>&1\n  python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\n  sleep 1\n  echo \"################ chats-menu at $sha: $(git log -1 --format=%s | cut -c1-70)\"\n  timeout 200 node tests/web/chats-menu.cjs > /tmp/cm-$sha.log 2>&1\n  echo \"PASS: $(grep -c '^PASS' /tmp/cm-$sha.log)  FAIL: $(grep -c '^FAIL' /tmp/cm-$sha.log)\"\n  grep -E '^FAIL' /tmp/cm-$sha.log | cut -c1-110\ndone\nexit 0",
+ "exit_code": 0,
+ "seconds": 141,
+ "lines": 39,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 13,
+   "text": "echo \"PASS: $(grep -c '^PASS' /tmp/cm-$sha.log)  FAIL: $(grep -c '^FAIL' /tmp/cm-$sha.log)\""
+  },
+  {
+   "line": 14,
+   "text": "grep -E '^FAIL' /tmp/cm-$sha.log | cut -c1-110"
+  },
+  {
+   "line": 26,
+   "text": "PASS: 10  FAIL: 2"
+  },
+  {
+   "line": 27,
+   "text": "FAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {"
+  },
+  {
+   "line": 28,
+   "text": "FAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"to"
+  }
+ ],
+ "errors_total": 11,
+ "tail": "+ set +e +o pipefail\ngit fetch -q --deepen=8 origin main 2>&1 | tail -1\ngit log --oneline -8\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\nfor sha in $(git log --format=%h -8 | sed -n '2p;4p;6p'); do\n  git checkout -q $sha 2>/dev/null\n  fuser -k 8765/tcp >/dev/null 2>&1\n  python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\n  sleep 1\n  echo \"################ chats-menu at $sha: $(git log -1 --format=%s | cut -c1-70)\"\n  timeout 200 node tests/web/chats-menu.cjs > /tmp/cm-$sha.log 2>&1\n  echo \"PASS: $(grep -c '^PASS' /tmp/cm-$sha.log)  FAIL: $(grep -c '^FAIL' /tmp/cm-$sha.log)\"\n  grep -E '^FAIL' /tmp/cm-$sha.log | cut -c1-110\ndone\nexit 0\n3311d42 Activity of the model as a timeline (2026.11.01.5)\n05d979d Test: read the folded file list of the commit card with textContent\n379bf7c Motor: recompila vendor/pi-engine.js (d712d74)\nd712d74 Lighter GitHub upload card; screenshots in about a minute that never hang\n20152ad Motor: recompila vendor/pi-engine.js (39a7702)\n39a7702 Tarjeta «Subir a GitHub» más clara, con changelog breve\nf73ae2c Motor: recompila vendor/pi-engine.js (bb3b703)\nbb3b703 GitHub: compilar y probar de verdad (github_run) y contribuir con fork (github_fork)\n################ chats-menu at 05d979d: Test: read the folded file list of the commit card with textContent\nPASS: 10  FAIL: 2\nFAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\nFAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"to\nbash: line 6:  2431 Killed                  python3 -m http.server 8765 --bind 127.0.0.1 > /dev/null 2>&1\n################ chats-menu at d712d74: Lighter GitHub upload card; screenshots in about a minute that never h\nPASS: 10  FAIL: 2\nFAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\nFAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"to\nbash: line 6:  2773 Killed                  python3 -m http.server 8765 --bind 127.0.0.1 > /dev/null 2>&1\n################ chats-menu at 39a7702: Tarjeta «Subir a GitHub» más clara, con changelog breve\nPASS: 10  FAIL: 2\nFAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\nFAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"to\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41323999529"
+}
