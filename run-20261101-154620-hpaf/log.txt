@@ -1,0 +1,130 @@
++ set +e
+cd core/libs/prx/libc
+grep -n -A12 "_ZNSt12future_errorD1Ev_nid_postfix(LibcException" src/exception/StandardExceptions.cpp
+grep -n -B2 -A14 "_ZNSt8_LocinfoC1EPKc_nid_postfix\|_ZNSt8_LocinfoD1Ev_nid_postfix\|_ZNSt6locale7_LocimpC1ERKS0__nid_postfix\|_ZNSt8ios_baseD2Ev_nid_postfix" src/LocaleSupport.cpp | head -150
+grep -n -B2 -A12 "_ZNSt4_PadD2Ev_nid_postfix" src/Threads.cpp
+grep -rn "_ZNSt8_LocinfoC1EPKc_nid_postfix\|_ZNSt8_LocinfoD1Ev_nid_postfix\|_ZNSt6locale7_LocimpC1ERKS0__nid_postfix\|_ZNSt8ios_baseD2Ev_nid_postfix\|_ZNSt4_PadD2Ev_nid_postfix\|_ZNSt12future_errorD1Ev\|_ZNSt14overflow_errorD1Ev\|_ZNSt15underflow_errorD1Ev\|_ZNSt8_LocinfoC2\|_ZNSt8_LocinfoD2\|ios_baseD1\|_PadD1\|_LocimpC2" --include=*.hpp --include=*.cpp ../../ | grep -v "^../../prx/libc/src" | head -30
+echo ===TESTS_USING
+grep -rln "_ZNSt8_LocinfoC1EPKc\|_ZNSt8ios_baseD2Ev\|_ZNSt4_PadD2Ev\|_ZNSt14overflow_errorD1Ev\|_ZNSt12future_errorD1Ev\|_ZNSt6locale7_LocimpC1ERKS0_" ../../tests | head
+751:void APS5_VABI _ZNSt12future_errorD1Ev_nid_postfix(LibcException::FutureErrorObject* self) {
+752-    DestroyFutureErrorString(&self->message);
+753-}
+754-
+755-}
+756-
+757-namespace LibcException {
+758-struct FilesystemErrorObject {
+759-    ExceptionObject base;
+760-    unsigned char reserved[0x20];
+761-    ErrorCode code;
+762-    GuestLocale::String path1;
+763-    GuestLocale::String path2;
+646-GuestLocale::Implementation* _ZSt21_sceLibcClassicLocale_nid_postfix = &g_classicLocale;
+647-
+648:void APS5_VABI _ZNSt8ios_baseD2Ev_nid_postfix(GuestLocale::IosBase* self) {
+649-    if (self == nullptr) throw std::invalid_argument("ios_base destructor: null object");
+650-    std::lock_guard lock(g_standardStreamMutex);
+651-    if (self->standardStream > 0) {
+652-        if (self->standardStream > StandardStreamSlots) throw std::runtime_error("ios_base destructor: unknown standard stream slot");
+653-        if (0 < --g_standardStreamOpens[self->standardStream]) return;
+654-    }
+655-    if (self->storage != nullptr || self->callbacks != nullptr) throw std::runtime_error("ios_base destructor: unsupported stream storage or callbacks");
+656-    if (self->locale != &_ZSt21_sceLibcClassicLocale_nid_postfix) throw std::runtime_error("ios_base destructor: unsupported locale ownership");
+657-    self->locale = nullptr;
+658-}
+659-
+660-GuestLocale::IosBase* APS5_VABI SetStreamWidth(GuestLocale::IosBase* stream, std::int32_t width) {
+661-    if (stream == nullptr) throw std::invalid_argument("setw: null stream");
+662-    stream->width = width;
+--
+778-}
+779-
+780:void APS5_VABI _ZNSt8_LocinfoC1EPKc_nid_postfix(GuestLocale::LocinfoStorage* self, const char* localeName) {
+781-    if (self == nullptr || localeName == nullptr || std::strcmp(localeName, "C") != 0) throw std::invalid_argument("_Locinfo: only the C locale is supported");
+782-    new (self) GuestLocale::LocinfoStorage{};
+783-}
+784-
+785:void APS5_VABI _ZNSt8_LocinfoD1Ev_nid_postfix(GuestLocale::LocinfoStorage* self) {
+786-    if (self == nullptr) throw std::invalid_argument("_Locinfo destructor: null object");
+787-}
+788-
+789-void APS5_VABI _ZNSt8__sce_v28_Locinfo13_Locinfo_ctorEPS0_PKc_nid_postfix(GuestLocale::SceV2Locinfo* self, const char* localeName) {
+790-    if (self == nullptr) throw std::invalid_argument("_Locinfo: null object");
+791-    self->name = setlocale_nid_postfix(0x3f, nullptr);
+792-    if (localeName == nullptr || (*localeName != 0 && std::strcmp(localeName, "C") != 0))
+793-        _ZNSt8__sce_v215_Xruntime_errorEPKc_nid_postfix("bad locale name");
+794-    self->classicName = self->name;
+795-}
+796-
+797-void APS5_VABI _ZNSt8__sce_v28_Locinfo13_Locinfo_dtorEPS0__nid_postfix(GuestLocale::SceV2Locinfo* self) {
+798-    if (self == nullptr) throw std::invalid_argument("_Locinfo destructor: null object");
+799-    if (self->name != nullptr) setlocale_nid_postfix(0x3f, self->name);
+--
+874-
+875-// _Locimp::_Locimp(const _Locimp&): the copy shares the source's facets; guest locales are never freed.
+876:void APS5_VABI _ZNSt6locale7_LocimpC1ERKS0__nid_postfix(GuestLocale::Implementation* self, const GuestLocale::Implementation* source) {
+877-    if (self == nullptr || source == nullptr) throw std::invalid_argument("_Locimp copy: null object");
+878-    std::lock_guard<std::mutex> lock(g_localeInitMutex);
+879-    *self = *source;
+880-    self->base.vtable = &g_copiedLocaleVtable;
+881-    self->base.references = 1;
+882-    if (source->facetCount != 0) {
+883-        self->facets = AllocateFacetVector(source->facetCount);
+884-        std::memcpy(self->facets, source->facets, source->facetCount * sizeof(GuestLocale::Facet*));
+885-    }
+886-}
+887-
+888-// _Locimp::_Addfac(facet*, size_t id): installs a facet at its id, growing the vector as needed.
+889-void APS5_VABI _ZNSt6locale7_Locimp7_AddfacEPNS_5facetEm_nid_postfix(GuestLocale::Implementation* self, GuestLocale::Facet* facet, std::size_t id) {
+890-    if (self == nullptr) throw std::invalid_argument("_Locimp::_Addfac: null object");
+495-}
+496-
+497:void APS5_VABI _ZNSt4_PadD2Ev_nid_postfix(GuestPad* pad) {
+498-    if (!pad) APS5_INVALID_ARG_EX;
+499-    RequireThrd(_Mtx_unlock_nid_postfix(&pad->mutex), "_Pad::~_Pad: _Mtx_unlock");
+500-    _Mtx_destroy_nid_postfix(&pad->mutex);
+501-    _Cnd_destroy_nid_postfix(&pad->condition);
+502-
+503-}
+504-
+505-void APS5_VABI _ZNSt4_Pad8_ReleaseEv_nid_postfix(GuestPad* pad) {
+506-    if (!pad) APS5_INVALID_ARG_EX;
+507-    RequireThrd(_Mtx_lock_nid_postfix(&pad->mutex), "_Pad::_Release: _Mtx_lock");
+508-    pad->started = true;
+509-    RequireThrd(_Cnd_signal_nid_postfix(&pad->condition), "_Pad::_Release: _Cnd_signal");
+../../prx/libc/include/Api.hpp:523:void APS5_VABI _ZNSt8ios_baseD2Ev_nid_postfix(GuestLocale::IosBase* self);
+../../prx/libc/include/Api.hpp:535:void APS5_VABI _ZNSt8_LocinfoC1EPKc_nid_postfix(GuestLocale::LocinfoStorage* self, const char* localeName);
+../../prx/libc/include/Api.hpp:536:void APS5_VABI _ZNSt8_LocinfoD1Ev_nid_postfix(GuestLocale::LocinfoStorage* self);
+../../prx/libc/include/Api.hpp:545:void APS5_VABI _ZNSt6locale7_LocimpC1ERKS0__nid_postfix(GuestLocale::Implementation* self, const GuestLocale::Implementation* source);
+../../prx/libc/include/Api.hpp:1116:void APS5_VABI _ZNSt4_PadD2Ev_nid_postfix(GuestPad* pad);
+../../prx/libc/include/Api.hpp:1373:void APS5_VABI _ZNSt12future_errorD1Ev_nid_postfix(LibcException::FutureErrorObject* self);
+../../prx/libc/include/Api.hpp:1390:void APS5_VABI _ZNSt14overflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+../../prx/libc/include/Api.hpp:1391:void APS5_VABI _ZNSt15underflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+../../tests/GuestLocale.cpp:143:    _ZNSt8_LocinfoC1EPKc_nid_postfix(storage, "C");
+../../tests/GuestLocale.cpp:146:    _ZNSt8_LocinfoD1Ev_nid_postfix(storage);
+../../tests/GuestLocale.cpp:148:    RequireException([&] { _ZNSt8_LocinfoC1EPKc_nid_postfix(storage, "unknown-locale"); });
+../../tests/GuestLocale.cpp:149:    RequireException([] { _ZNSt8_LocinfoC1EPKc_nid_postfix(nullptr, "C"); });
+../../tests/GuestLocale.cpp:201:    _ZNSt8ios_baseD2Ev_nid_postfix(&object.stream);
+../../tests/GuestLocale.cpp:206:    RequireException([&] { _ZNSt8ios_baseD2Ev_nid_postfix(&object.stream); });
+../../tests/GuestLocale.cpp:267:    _ZNSt8ios_baseD2Ev_nid_postfix(&streams[0].stream);
+../../tests/GuestLocale.cpp:270:    _ZNSt8ios_baseD2Ev_nid_postfix(&streams[0].stream);
+../../tests/GuestLocale.cpp:277:    _ZNSt8ios_baseD2Ev_nid_postfix(&streams[1].stream);
+../../tests/GuestLocale.cpp:289:    _ZNSt8ios_baseD2Ev_nid_postfix(&streams[7].stream);
+../../tests/GuestLocale.cpp:292:    _ZNSt8ios_baseD2Ev_nid_postfix(&streams[8].stream);
+../../tests/GuestLocale.cpp:296:        _ZNSt8ios_baseD2Ev_nid_postfix(&streams[index].stream);
+../../tests/GuestAmprThreads.cpp:405:    _ZNSt4_PadD2Ev_nid_postfix(&pad);
+../../tests/GuestAmprThreads.cpp:427:        _ZNSt4_PadD2Ev_nid_postfix(&pads[index]);
+../../tests/GuestAmprThreads.cpp:468:            _ZNSt4_PadD2Ev_nid_postfix(&pad);
+../../tests/GuestAmprThreads.cpp:488:    context.rejected = Throws<std::logic_error>([&] { _ZNSt4_PadD2Ev_nid_postfix(context.pad); });
+../../tests/GuestAmprThreads.cpp:535:    Require(Throws<std::invalid_argument>([] { _ZNSt4_PadD2Ev_nid_postfix(nullptr); }));
+../../tests/GuestAmprThreads.cpp:555:    _ZNSt4_PadD2Ev_nid_postfix(&pad);
+../../tests/GuestAmprThreads.cpp:558:    Require(Throws<std::invalid_argument>([&] { _ZNSt4_PadD2Ev_nid_postfix(&pad); }));
+../../tests/GuestUnderflowError.cpp:31:    _ZNSt15underflow_errorD1Ev_nid_postfix(&object);
+../../tests/GuestUnderflowError.cpp:33:    _ZNSt15underflow_errorD1Ev_nid_postfix(&object);
+../../tests/GuestLibcThreads.cpp:393:    _ZNSt4_PadD2Ev_nid_postfix(reinterpret_cast<GuestPad*>(&unregPad));
+===TESTS_USING
+../../tests/GuestLocale.cpp
+../../tests/GuestAmprThreads.cpp
+../../tests/GuestLibcThreads.cpp
+../../tests/GuestFutureCategory.cpp
+../../tests/GuestOverflowError.cpp
