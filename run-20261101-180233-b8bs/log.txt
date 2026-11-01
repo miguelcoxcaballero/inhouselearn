@@ -1,0 +1,296 @@
++ set +e
+L=core/libs/prx/libSceLibcInternal
+echo "=== debt table around 270"; sed -n 262,290p docs/dev/debt/libSceLibcInternal.md | cut -c1-600
+echo "=== table refs"; grep -rn "zpy7LnTL5p0\|m7FIvSBbMM\|2Lvc7KWtErs\|7ruwcMCJVGI\|iHILAmwYRGY\|y1dYQsc67ys" --include=*.cpp --include=*.hpp --include=*.txt --include=*.py --include=*.cmake --include=*.json . | grep -v "^./3rdparty" | grep -v "InventoryExports" | head -30
+echo "=== Inventory_263 decls"; grep -rn "libSceLibcInternalInventory_26[345]\|Unknown6_04[35]\|Unknown6_109" core | head
+echo "=== libc D0 pattern"; grep -rn "D0Ev_nid_postfix" core/libs/prx/libc --include=*.cpp | head -8
+grep -rn "APS5_VABI _ZdlPv_nid_postfix\|APS5_VABI _ZdlPvm_nid_postfix\|_ZNSt14overflow_errorD1Ev_nid_postfix\|_ZNSt15underflow_errorD1Ev_nid_postfix" core/libs/prx/libc | head
+echo "=== kernel in libc"; grep -rln "__kernel_\|k_sin\|k_cos" core/libs/prx/libc | head
+echo "=== Inventory headers"; sed -n 1,15p $L/InventoryExports.cpp; echo ---; sed -n 1,12p $L/InventoryExports6.cpp
+echo "=== CMake"; sed -n 1,45p $L/CMakeLists.txt
+echo "=== AlignedNew.cpp"; cat $L/AlignedNew.cpp
+echo "=== test aligned new head"; ls core/libs/tests | grep -i "LibcInternal"; sed -n 1,40p core/libs/tests/GuestLibcInternalAlignedNew.cpp
+echo "=== shader_scan test"; sed -n 1,60p tools/tests/test_shader_scan.py; grep -n "def test\|PAIR\|case 0x" tools/tests/test_shader_scan.py | head -40
+echo "=== token?"; [ -n "$GITHUB_TOKEN" ] && echo has GITHUB_TOKEN; [ -n "$GH_TOKEN" ] && echo has GH_TOKEN; which gh
+true
+=== debt table around 270
+| `_ZSt7_MP_MulPyyy` | `Gav1Xt1Ce+c` |
+| `_ZSt7_MP_RemPyy` | `Ozk+Z6QnlTY` |
+| `_ZSt7setbasei` | `4rrOHCHAV1w` |
+| `_ZSt9_LStrxfrmIcEmPT_S1_PKS0_S3_PKSt8_Collvec` | `V62E2Q8bJVY` |
+| `_ZSt9_LStrxfrmIwEmPT_S1_PKS0_S3_PKSt8_Collvec` | `BloPUt1HCH0` |
+| `_ZTv0_n24_NSiD1Ev` | `+Uuj++A+I14` |
+| `_ZTv0_n24_NSoD0Ev` | `QJJ-4Dgm8YQ` |
+| `_ZTv0_n24_NSoD1Ev` | `kvqg376KsJo` |
+| `_ZTv0_n24_NSt13basic_istreamIwSt11char_traitsIwEED1Ev` | `q05IXuNA2NE` |
+| `_ZTv0_n24_NSt13basic_ostreamIwSt11char_traitsIwEED0Ev` | `0j1jspKbuFk` |
+| `_ZTv0_n24_NSt13basic_ostreamIwSt11char_traitsIwEED1Ev` | `HSkPyRyFFHQ` |
+| `_ZdaPvS_` | `Suc8W0QPxjw` |
+| `_ZdlPvS_` | `1vo6qqqa9F4` |
+| `__atomic_compare_exchange_n` | `hsn2TaF3poY` |
+| `__atomic_exchange_n` | `oCH4efUlxZ0` |
+| `__atomic_store_n` | `GdwuPYbVpP4` |
+| `__fflush` | `E1iwBYkG3CM` |
+| `__kernel_cos` | `-m7FIvSBbMM` |
+| `__kernel_cosdf` | `7ruwcMCJVGI` |
+| `__kernel_sindf` | `2Lvc7KWtErs` |
+| `__longjmp` | `9mKjVppFsL0` |
+| `__vfprintf` | `yAZ5vOpmBus` |
+| `_init_tls` | `6NCOqr3cD74` |
+| `_malloc_finalize_lv2` | `RnqlvEmvkdw` |
+| `_malloc_fini` | `21KFhEQDJ3s` |
+| `_malloc_init_lv2` | `20cUk0qX9zo` |
+| `_malloc_init` | `z8GPiQwaAEY` |
+| `_malloc_postfork` | `V94pLruduLg` |
+| `_malloc_prefork` | `aLYyS4Kx6rQ` |
+=== table refs
+=== Inventory_263 decls
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:273:int APS5_VABI libSceLibcInternalInventory_263_nid_no_patch();
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:274:int APS5_VABI libSceLibcInternalInventory_264_nid_no_patch();
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp:275:int APS5_VABI libSceLibcInternalInventory_265_nid_no_patch();
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:1337:int APS5_VABI libSceLibcInternalInventory_263_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:1340:APS5_EXPORT("-m7FIvSBbMM", libSceLibcInternalInventory_263_nid_no_patch);
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:1342:int APS5_VABI libSceLibcInternalInventory_264_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:1345:APS5_EXPORT("7ruwcMCJVGI", libSceLibcInternalInventory_264_nid_no_patch);
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:1347:int APS5_VABI libSceLibcInternalInventory_265_nid_no_patch() {
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp:1350:APS5_EXPORT("2Lvc7KWtErs", libSceLibcInternalInventory_265_nid_no_patch);
+core/libs/prx/libSceLibcInternal/InventoryExports6.cpp:252:int APS5_VABI sceLibcInternalUnknown6_043_iHILAmwYRGY_nid_no_patch() {
+=== libc D0 pattern
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:342:void APS5_VABI _ZNSt9exceptionD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:360:void APS5_VABI _ZNSt8bad_castD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:373:void APS5_VABI _ZNSt10bad_typeidD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:382:void APS5_VABI _ZNSt9bad_allocD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:391:void APS5_VABI _ZNSt20bad_array_new_lengthD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:400:void APS5_VABI _ZNSt17bad_function_callD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:409:void APS5_VABI _ZNSt12bad_weak_ptrD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:419:void APS5_VABI _ZNSt19bad_optional_accessD0Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DeletePlain(self); }
+core/libs/prx/libc/include/Api.hpp:960:void APS5_VABI _ZdlPv_nid_postfix(void* pointer);
+core/libs/prx/libc/include/Api.hpp:963:void APS5_VABI _ZdlPvm_nid_postfix(void* pointer, std::size_t);
+core/libs/prx/libc/include/Api.hpp:1390:void APS5_VABI _ZNSt14overflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+core/libs/prx/libc/include/Api.hpp:1391:void APS5_VABI _ZNSt15underflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self);
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:538:void APS5_VABI _ZNSt14overflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DestroyMessage(self); }
+core/libs/prx/libc/src/exception/StandardExceptions.cpp:542:void APS5_VABI _ZNSt15underflow_errorD1Ev_nid_postfix(LibcException::ExceptionObject* self) { LibcException::DestroyMessage(self); }
+core/libs/prx/libc/src/StdioExtras.cpp:128:void APS5_VABI _ZdlPv_nid_postfix(void* pointer) {
+core/libs/prx/libc/src/StdioExtras.cpp:141:void APS5_VABI _ZdlPvm_nid_postfix(void* pointer, std::size_t) {
+=== kernel in libc
+core/libs/prx/libc/src/Math.cpp
+=== Inventory headers
+#include "prx/libc/include/general/ExportMacros.hpp"
+#include "prx/libSceLibcInternal/include/InventoryExports.hpp"
+#include "prx/libc/include/General.hpp"
+
+extern "C" {
+
+int APS5_VABI libSceLibcInternalInventory_000_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("ww3UUl317Ng", libSceLibcInternalInventory_000_nid_no_patch);
+
+int APS5_VABI libSceLibcInternalInventory_001_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+}
+APS5_EXPORT("dXy+lFOiaQA", libSceLibcInternalInventory_001_nid_no_patch);
+---
+#include "SceTypes.hpp"
+#include "prx/libc/include/General.hpp"
+
+extern "C" {
+
+int APS5_VABI sceLibcInternalUnknown6_001_DWMcG8yogkY_nid_no_patch() {
+    NotImplemented_nid_no_patch(__func__);
+    return 0;
+}
+APS5_EXPORT("DWMcG8yogkY", sceLibcInternalUnknown6_001_DWMcG8yogkY_nid_no_patch);
+
+int APS5_VABI sceLibcInternalUnknown6_002_CKlZmHmD1CE_nid_no_patch() {
+=== CMake
+add_library(libSceLibcInternal SHARED EXCLUDE_FROM_ALL Export.cpp FileTime.cpp Getopt.cpp SignalList.cpp Spawn.cpp UserContext.cpp)
+target_include_directories(libSceLibcInternal PRIVATE ${LIBS_INCLUDE_DIR})
+set_source_files_properties(UserContext.cpp PROPERTIES COMPILE_OPTIONS -fno-omit-frame-pointer)
+target_link_libraries(libSceLibcInternal PRIVATE ${CMAKE_DL_LIBS})
+target_sources(libSceLibcInternal PRIVATE Directory.cpp)
+target_sources(libSceLibcInternal PRIVATE InventoryExports.cpp)
+target_sources(libSceLibcInternal PRIVATE InitOnce.cpp)
+target_sources(libSceLibcInternal PRIVATE Mutex.cpp)
+target_sources(libSceLibcInternal PRIVATE AlignedNew.cpp)
+if(BUILD_TESTING)
+    add_test_executable(guest_libc_internal_aligned_new_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcInternalAlignedNew.cpp)
+    target_include_directories(guest_libc_internal_aligned_new_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_libc_internal_aligned_new_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_libc_internal_aligned_new_tests)
+    add_test(NAME guest_libc_internal_aligned_new COMMAND guest_libc_internal_aligned_new_tests)
+    set_tests_properties(guest_libc_internal_aligned_new PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_libc_internal_aligned_new PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+if(BUILD_TESTING)
+    add_test_executable(guest_libc_internal_mtx_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcInternalMtx.cpp)
+    target_include_directories(guest_libc_internal_mtx_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_libc_internal_mtx_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_libc_internal_mtx_tests)
+    add_test(NAME guest_libc_internal_mtx COMMAND guest_libc_internal_mtx_tests)
+    set_tests_properties(guest_libc_internal_mtx PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_libc_internal_mtx PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+if(BUILD_TESTING)
+    add_test_executable(guest_init_once_tests ${LIBS_INCLUDE_DIR}/tests/GuestInitOnce.cpp)
+    target_include_directories(guest_init_once_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_init_once_tests PRIVATE libSceLibcInternal libkernel libc)
+    configure_windows_unwind(guest_init_once_tests)
+    add_test(NAME guest_init_once COMMAND guest_init_once_tests)
+    set_tests_properties(guest_init_once PROPERTIES TIMEOUT 20)
+    if(WIN32)
+        set_tests_properties(guest_init_once PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
+    endif()
+endif()
+=== AlignedNew.cpp
+#include "prx/libSceLibcInternal/include/Api.hpp"
+#include "prx/libc/include/Api.hpp"
+#include "prx/libc/include/General.hpp"
+#include "SceTypes.hpp"
+#include <cstddef>
+
+extern "C" {
+
+void* APS5_VABI sceLibcInternalAlignedArrayNewNothrow_nid_no_patch(std::size_t size, std::size_t alignment, const void* tag) noexcept {
+    return _ZnamSt11align_val_tRKSt9nothrow_t_nid_postfix(size, alignment, tag);
+}
+APS5_EXPORT("s2eGsgUF9vk", sceLibcInternalAlignedArrayNewNothrow_nid_no_patch);
+
+void APS5_VABI sceLibcInternalAlignedArrayDelete_nid_no_patch(void* pointer, std::size_t alignment) {
+    _ZdaPvSt11align_val_t_nid_postfix(pointer, alignment);
+}
+APS5_EXPORT("v09ZcAhZzSc", sceLibcInternalAlignedArrayDelete_nid_no_patch);
+
+}
+=== test aligned new head
+GuestLibcInternalAlignedNew.cpp
+GuestLibcInternalMtx.cpp
+#include "prx/libSceLibcInternal/include/Api.hpp"
+#include "prx/libc/include/ApplicationHeap.hpp"
+#include "prx/libc/include/general/VabiMacros.hpp"
+#include <array>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+
+namespace {
+
+alignas(256) std::array<std::byte, 64> storage{};
+unsigned failuresLeft = 0;
+unsigned allocations = 0;
+unsigned releases = 0;
+std::size_t lastSize = 0;
+std::size_t lastAlignment = 0;
+void* lastReleased = nullptr;
+
+void Require(bool condition, const char* message) {
+    if (condition) return;
+    std::fprintf(stderr, "libc internal aligned new: %s\n", message);
+    std::abort();
+}
+
+void* APS5_VABI allocate(std::size_t bytes) {
+    ++allocations;
+    lastSize = bytes;
+    if (failuresLeft != 0) {
+        --failuresLeft;
+        return nullptr;
+    }
+    return storage.data();
+}
+
+void APS5_VABI release(void* pointer) {
+    ++releases;
+    lastReleased = pointer;
+}
+
+void* APS5_VABI allocateZeroed(std::size_t count, std::size_t bytes) { return allocate(count * bytes); }
+=== shader_scan test
+import importlib.util
+import json
+import re
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+TOOLS = Path(__file__).resolve().parent.parent
+
+
+def load(name, file):
+    spec = importlib.util.spec_from_file_location(name, TOOLS / file)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+shader_scan = load("anyps5_shader_scan", "shader_scan.py")
+progress = load("anyps5_progress_for_shader_scan", "progress.py")
+
+DECODER = "core/shader/recompiler/RdnaDecoder/src/"
+KEYS = {"VOP3:VOP1": "Vop3EncodedVop1", "MIMG": "Image", "VOP3P": "Vop3p"}
+ENTRIES = {"SOP1": {3: "SMovB32"}, "VOP2": {0: "VFirstF32", 3: "VAddF32", 5: "VMacF32", 0x3F: "VLastF32", 0x40: "VPastF32"}, "VOP1": {5: "VCvtF32I32"},
+           "VOP3:VOP1": {0: "VMovB32", 2: "VCvtF32I32"}, "VOPC": {0xC0: "VCmpEqF32", 0x100: "VCmpNew"}}
+
+ISA_XML = """<Spec><ISA><Instructions>
+<Instruction><InstructionName>S_MOV_B32</InstructionName><InstructionEncodings>
+  <InstructionEncoding><EncodingName>ENC_SOP1</EncodingName><Opcode Radix="10">3</Opcode></InstructionEncoding>
+</InstructionEncodings></Instruction>
+<Instruction><InstructionName>V_ADD_F32</InstructionName><InstructionEncodings>
+  <InstructionEncoding><EncodingName>ENC_VOP2</EncodingName><Opcode Radix="10">3</Opcode></InstructionEncoding>
+  <InstructionEncoding><EncodingName>ENC_VOP3</EncodingName><Opcode Radix="10">259</Opcode></InstructionEncoding>
+  <InstructionEncoding><EncodingName>VOP2_VOP_DPP16</EncodingName><Opcode Radix="10">3</Opcode></InstructionEncoding>
+  <InstructionEncoding><EncodingName>VOP2_VOP_DPP8</EncodingName><Opcode Radix="10">3</Opcode></InstructionEncoding>
+  <InstructionEncoding><EncodingName>VOP2_VOP_SDWA</EncodingName><Opcode Radix="10">3</Opcode></InstructionEncoding>
+</InstructionEncodings></Instruction>
+<Instruction><InstructionName>GLOBAL_LOAD_DWORD</InstructionName><InstructionEncodings>
+  <InstructionEncoding><EncodingName>ENC_FLAT_GLBL</EncodingName><Opcode Radix="10">20</Opcode></InstructionEncoding>
+</InstructionEncodings></Instruction>
+</Instructions></ISA></Spec>"""
+
+ISA = [
+    ("S_MOV_B32", "SOP1", "base", 3),
+    ("S_NEW", "SOP1", "base", 9),
+    ("V_ADD_F32", "VOP2", "base", 3),
+    ("V_ADD_F32", "VOP2", "vop3", 0x103),
+    ("V_MAC_F32", "VOP2", "vop3", 0x105),
+    ("V_FIRST_F32", "VOP2", "vop3", 0x100),
+    ("V_LAST_F32", "VOP2", "vop3", 0x13F),
+    ("V_PAST_F32", "VOP2", "vop3", 0x140),
+    ("V_ADD_F32", "VOP2", "dpp16", 3),
+    ("V_ADD_F32", "VOP2", "dpp8", 3),
+    ("V_CVT_F32_I32", "VOP1", "base", 5),
+    ("V_CVT_F32_I32", "VOP1", "vop3", 0x182),
+    ("V_CVT_F32_I32", "VOP1", "dpp16", 5),
+    ("V_MOV_B32", "VOP1", "vop3", 0x180),
+    ("V_CMP_EQ_F32", "VOPC", "vop3", 0xC0),
+68:    cases = "".join(f"        case 0x{number:02x}: return RdnaOpcode::{name};\n"
+120:    def test_xml_forms_are_classified_and_sdwa_is_left_out(self):
+130:    def test_xml_without_instructions_is_an_error(self):
+134:    def test_checked_in_table_has_every_form_once(self):
+140:    def test_regenerating_the_table_from_xml_round_trips(self):
+157:    def test_known_answers_on_a_small_tree(self):
+177:    def test_unsupported_throws_skip_comments_rethrows_other_messages_and_tests(self):
+184:    def test_a_missing_opcode_table_stops_the_scan_naming_it(self):
+190:    def test_a_missing_translator_stops_the_scan(self):
+197:    def test_comments_keep_offsets_and_literals(self):
+216:    def test_badge_shows_decoded_over_total_and_says_what_it_measures(self):
+222:    def test_site_files_carry_the_source_numbers_and_the_wording(self):
+239:    def test_progress_map_panel_shows_the_forms_not_the_old_instruction_names(self):
+248:    def test_still_needed_groups_names_by_form_kind(self):
+263:    def test_still_needed_panel_lists_names_and_draws_the_bars(self):
+289:    def test_still_needed_panel_ignores_the_shared_palette(self):
+309:    def test_still_needed_html_scales_to_the_totals_and_keeps_labels_beside_the_bars(self):
+321:    def test_without_source_numbers_the_old_files_are_written(self):
+347:    def test_unreadable_recompiler_leaves_the_numbers_out_unless_required(self):
+=== token?
+/usr/bin/gh
