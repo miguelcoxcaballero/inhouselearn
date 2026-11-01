@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-165908-938q",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v3",
+ "os": "ubuntu-24.04",
+ "sha": "8c4a77929028e80288a21d7a5a4dd3e2f072f8bf",
+ "runner": "Linux X64",
+ "command": "git fetch --quiet origin main --unshallow 2>/dev/null || git fetch --quiet origin main\nfor f in $(git diff --name-only origin/main HEAD); do printf \"%8s %6s  %s\\n\" \"$(wc -c < $f)\" \"$(git diff --numstat origin/main HEAD -- $f | awk '{print $1\"+/\"$2\"-\"}')\" \"$f\"; done",
+ "exit_code": 0,
+ "seconds": 1,
+ "lines": 33,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ git fetch --quiet origin main --unshallow 2>/dev/null || git fetch --quiet origin main\nfor f in $(git diff --name-only origin/main HEAD); do printf \"%8s %6s  %s\\n\" \"$(wc -c < $f)\" \"$(git diff --numstat origin/main HEAD -- $f | awk '{print $1\"+/\"$2\"-\"}')\" \"$f\"; done\n   52210 43+/2-  AGENTS.md\n   21742 12+/2-  composer-dock.css\n   53276 22+/5-  composer-dock.js\n   11857 85+/692-  engine/src/agents.js\n    2233 52+/0-  engine/src/agents/common.js\n    1826 37+/0-  engine/src/agents/effort.js\n    7102 124+/0-  engine/src/agents/plan.js\n    2727 51+/0-  engine/src/agents/policy.js\n    5437 97+/0-  engine/src/agents/report.js\n   32362 561+/0-  engine/src/agents/run.js\n   37283  2+/2-  engine/src/index.js\n    5085  1+/1-  engine/src/interact.js\n  677301 152+/67-  index.html\n    5804 124+/0-  model-scores.js\n   21208  2+/2-  stream.js\n    7849 94+/0-  tests/web/activity-state.cjs\n   30044 237+/7-  tests/web/agents-plan.mjs\n   18041  1+/1-  tests/web/github.cjs\n   13564  2+/1-  tests/web/harness.cjs\n    6576 66+/0-  tests/web/model-list.cjs\n    4388 63+/0-  tests/web/model-scores.mjs\n    7929 22+/1-  tests/web/queue.cjs\n    1917  2+/2-  tests/web/run-ci.sh\n   26626 15+/4-  tests/web/ultra-board.cjs\n   13821 37+/4-  tests/web/ultra.cjs\n    3665  9+/1-  tests/web/wiring.mjs\n   26684  2+/0-  theme.css\n   24330 77+/12-  ultra.css\n   40992 106+/37-  ultra.js\n 1059263 250+/240-  vendor/pi-engine.js\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41329095277"
+}
