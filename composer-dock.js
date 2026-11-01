@@ -339,9 +339,10 @@ function dockChangelog(info) {
     items = bullets.length ? bullets : body.split(/\n\s*\n/).map((part) => part.replace(/\s+/g, ' ').trim()).filter(Boolean);
   }
   const LIMIT = 6;
-  const shown = items.slice(0, LIMIT).map((line) => dockShortLine(line, given.length ? 160 : 96));
-  const shortened = shown.some((line, index) => line !== items[index].replace(/\s+/g, ' ').trim());
-  return { title, items: shown, more: Math.max(0, items.length - LIMIT), full: message, foldFull: !!body && (shortened || items.length > LIMIT || given.length > 0) };
+  const shown = items.slice(0, LIMIT).map((line) => dockShortLine(line, given.length ? 140 : 96));
+  // With the model's own sentences the commit title (often technical) stays
+  // in the folded details; without them it is the card's first line.
+  return { title: given.length ? '' : title, items: shown, more: Math.max(0, items.length - LIMIT), full: message };
 }
 
 function dockFileStatus(status) {
@@ -377,8 +378,10 @@ function dockApprovalActionsHtml(request) {
     '<button type="button" class="dock-btn primary" data-dock="approve">' + escapeHtml(request.confirmText || 'Aprobar') + '</button></div>';
 }
 
-// A commit: where it goes (repo, branch, main branch flag), a few clear
-// sentences of what changes, the files with +/−; the raw message folded.
+// A commit, kept light: a header that says where it goes (repo · branch, and
+// a calm amber «Rama principal» when it is main), the changelog as a few
+// plain sentences, and ONE fold with the files (+/−) and the raw commit
+// message. Nothing technical is on screen until the user opens the fold.
 function dockCommitCardHtml(request, info) {
   const items = Array.isArray(request.items) ? request.items : [];
   const queueText = dockApprovalQueueText();
@@ -390,14 +393,26 @@ function dockCommitCardHtml(request, info) {
   const note = pr ? '' : extra;
   const flag = info.mainBranch ? '<span class="dock-flag main">Rama principal</span>'
     : info.creating ? '<span class="dock-flag">nueva' + (info.base ? ' desde ' + escapeHtml(info.base) : '') + '</span>' : '';
+  const added = items.reduce((sum, item) => sum + (Number(item.added) || 0), 0);
+  const removed = items.reduce((sum, item) => sum + (Number(item.removed) || 0), 0);
+  const fold = items.length || log.full
+    ? '<details class="dock-commit-full"><summary>' +
+        '<span class="dock-fold-label">' + (items.length ? items.length + (items.length === 1 ? ' archivo' : ' archivos') : 'Detalles') + '</span>' +
+        (added ? '<span class="add">+' + added + '</span>' : '') + (removed ? '<span class="del">−' + removed + '</span>' : '') +
+        '<span class="dock-fold-chev" aria-hidden="true"></span></summary>' +
+        dockFilesHtml(items) +
+        (log.full ? '<p class="dock-commit-msg-label">Mensaje del commit</p><pre>' + escapeHtml(log.full) + '</pre>' : '') +
+      '</details>'
+    : '';
   return '<div class="dock-card dock-approve dock-commit' + (info.mainBranch ? ' main' : '') + '" role="alertdialog" aria-live="assertive" aria-label="' + escapeHtml(request.title || 'Subir a GitHub') + '">' +
-    '<div class="dock-approve-head">' + dockAgentChip(request) + '<span class="dock-commit-icon" aria-hidden="true">' + dockIcon('upload') + '</span><b>' + escapeHtml(request.title || 'Subir a GitHub') + '</b>' +
-    '<span class="dock-approve-queue"' + (queueText ? '' : ' hidden') + '>' + queueText + '</span></div>' +
-    '<div class="dock-commit-meta">' +
-      (repo ? '<span class="dock-commit-repo">' + dockIcon('repo') + (slash > 0 ? '<span class="owner">' + escapeHtml(repo.slice(0, slash + 1)) + '</span>' : '') + '<span>' + escapeHtml(repo.slice(slash + 1)) + '</span></span>' : '') +
-      (info.branch ? '<span class="dock-commit-branch">' + dockIcon('branch') + '<span>' + escapeHtml(info.branch) + '</span></span>' : '') + flag +
-      dockStatsHtml(items) +
-    '</div>' +
+    '<div class="dock-approve-head">' + dockAgentChip(request) +
+      '<span class="dock-commit-icon" aria-hidden="true">' + dockIcon('upload') + '</span>' +
+      '<span class="dock-commit-titles"><b>' + escapeHtml(request.title || 'Subir a GitHub') + '</b>' +
+        '<span class="dock-commit-meta">' +
+          (repo ? '<span class="dock-commit-repo">' + (slash > 0 ? '<span class="owner">' + escapeHtml(repo.slice(0, slash + 1)) + '</span>' : '') + '<span>' + escapeHtml(repo.slice(slash + 1)) + '</span></span>' : '') +
+          (info.branch ? '<span class="dock-commit-branch">' + dockIcon('branch') + '<span>' + escapeHtml(info.branch) + '</span></span>' : '') +
+        '</span></span>' + flag +
+      '<span class="dock-approve-queue"' + (queueText ? '' : ' hidden') + '>' + queueText + '</span></div>' +
     (pr ? '<div class="dock-commit-pr">' + dockIcon('pr') + '<span>' + dockInline(pr) + '</span></div>' : '') +
     '<div class="dock-approve-msg dock-changelog">' +
       (log.title ? '<p class="dock-changelog-title">' + dockInline(log.title) + '</p>' : '') +
@@ -405,8 +420,7 @@ function dockCommitCardHtml(request, info) {
       (log.more ? '<p class="dock-changelog-more">y ' + log.more + ' cambio' + (log.more === 1 ? '' : 's') + ' más</p>' : '') +
       (note ? '<p class="dock-changelog-note">' + dockInline(note) + '</p>' : '') +
     '</div>' +
-    (log.foldFull ? '<details class="dock-commit-full"><summary>Mensaje completo del commit</summary><pre>' + escapeHtml(log.full) + '</pre></details>' : '') +
-    dockFilesHtml(items) +
+    fold +
     dockApprovalActionsHtml(request) + '</div>';
 }
 

@@ -2,7 +2,8 @@ name: App screenshots
 # Real screenshots for the chat, of any web project: the model calls
 # github_screenshot (engine/src/github.js) and this workflow opens the page in
 # Chromium, runs the steps it was given and takes each picture
-# (.github/scripts/screenshots.cjs, always taken from inhouselearn's main).
+# (.github/scripts/shoot.sh + screenshots.cjs, always taken from
+# inhouselearn's main).
 #
 # What it photographs: a public URL (`url`), or a branch or commit of a
 # repository (`repo`, empty = the repository running this workflow), served
@@ -10,6 +11,11 @@ name: App screenshots
 # (e.g. "npm ci && npm run build") or with its own server (`start`, which must
 # listen on port 8765). Inhouse Learn itself is opened with OpenRouter mocked
 # like tests/web, so a conversation can be replayed through the real renderer.
+#
+# Fast path (`quick`, no setup/start: nothing of the project's code runs
+# outside the browser): ONE job takes the pictures and publishes them, with
+# the runner's own Chrome, about 30-60 s. With setup/start the project's code
+# runs in a read-only job (`shoot`) and only `publish` can write, as before.
 #
 # Public repositories and URLs run here, in inhouselearn. A private repository
 # runs this same file, copied into it as .github/workflows/inhouse-screenshots.yml
@@ -56,13 +62,71 @@ permissions:
   contents: read
 
 # No concurrency group: GitHub would cancel a waiting run when a third one
-# arrives. Runs go in parallel and the publish step retries its push.
+# arrives. Runs go in parallel and publishing retries its push.
 
 jobs:
-  # Runs the project's code (setup/start) with a read-only token that is not
-  # kept on disk; only the pictures leave this job, as an artifact.
-  shoot:
+  quick:
+    if: inputs.setup == '' && inputs.start == ''
     # Playwright 1.56 supports Ubuntu 24.04, not ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check the inputs
+        env:
+          ID: ${{ inputs.id }}
+          REPO: ${{ inputs.repo }}
+          REF: ${{ inputs.ref }}
+          URL: ${{ inputs.url }}
+          SERVE: ${{ inputs.serve }}
+        run: |
+          [[ "$ID" =~ ^[A-Za-z0-9._-]{1,60}$ ]] || { echo "::error::id must be 1-60 letters, digits, . _ -"; exit 1; }
+          [[ -z "$REPO" || "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || { echo "::error::repo must be owner/name"; exit 1; }
+          [[ -z "$REF" || "$REF" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] || { echo "::error::ref must be a branch or a commit"; exit 1; }
+          [[ -z "$URL" || "$URL" =~ ^https?://[^[:space:]]+$ ]] || { echo "::error::url must be an http(s) address"; exit 1; }
+          [[ -z "$SERVE" || ( "$SERVE" =~ ^[A-Za-z0-9._/-]{1,120}$ && "$SERVE" != *..* ) ]] || { echo "::error::serve must be a folder of the checkout"; exit 1; }
+      - name: Get the screenshot tool
+        uses: actions/checkout@v5
+        with:
+          repository: miguelcoxcaballero/inhouselearn
+          ref: main
+          path: tool
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+            tests/web/mock.cjs
+          sparse-checkout-cone-mode: false
+      - name: Get the project
+        if: inputs.url == ''
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.repo != '' && inputs.repo || github.repository }}
+          ref: ${{ inputs.ref }}
+          path: app
+          persist-credentials: false
+      - name: Take the pictures
+        timeout-minutes: 7
+        env:
+          ID: ${{ inputs.id }}
+          TARGET: ${{ inputs.url == '' && (inputs.repo != '' && inputs.repo || github.repository) || '' }}
+          REF: ${{ inputs.ref }}
+          URL: ${{ inputs.url }}
+          SERVE: ${{ inputs.serve }}
+          SHOTS: ${{ inputs.shots }}
+          OUT: ${{ github.workspace }}/out
+        run: bash tool/.github/scripts/shoot.sh
+      - name: Publish on the screenshots branch
+        env:
+          ID: ${{ inputs.id }}
+          OUT: ${{ github.workspace }}/out
+          GH_TOKEN: ${{ github.token }}
+        run: bash tool/.github/scripts/publish-shots.sh
+
+  # The project's code (setup/start) runs here with a read-only token that is
+  # not kept on disk; only the pictures leave this job, as an artifact.
+  shoot:
+    if: inputs.setup != '' || inputs.start != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -88,6 +152,10 @@ jobs:
           ref: main
           path: tool
           persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+            tests/web/mock.cjs
+          sparse-checkout-cone-mode: false
       - name: Get the project
         if: inputs.url == ''
         uses: actions/checkout@v5
@@ -99,11 +167,6 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Install Playwright and Chromium
-        working-directory: tool
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
       - name: Prepare the project
         if: inputs.url == '' && inputs.setup != ''
         working-directory: app
@@ -111,7 +174,7 @@ jobs:
           SETUP: ${{ inputs.setup }}
         run: bash -c "$SETUP"
       - name: Take the pictures
-        working-directory: tool
+        timeout-minutes: 9
         env:
           ID: ${{ inputs.id }}
           TARGET: ${{ inputs.url == '' && (inputs.repo != '' && inputs.repo || github.repository) || '' }}
@@ -120,19 +183,8 @@ jobs:
           SERVE: ${{ inputs.serve }}
           START: ${{ inputs.start }}
           SHOTS: ${{ inputs.shots }}
-        run: |
-          if [ -z "$URL" ]; then
-            if [ -n "$START" ]; then
-              (cd ../app && nohup bash -c "$START" > ../server.log 2>&1 &)
-              for _ in $(seq 1 120); do curl -s -o /dev/null http://127.0.0.1:8765/ && break; sleep 1; done
-              curl -s -o /dev/null http://127.0.0.1:8765/ || { echo "::error::Nothing answers on port 8765 after 2 minutes"; tail -n 40 ../server.log; exit 1; }
-            else
-              [ -d "../app/$SERVE" ] || { echo "::error::The folder '$SERVE' does not exist (did setup build it?)"; exit 1; }
-              (cd "../app/$SERVE" && python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &)
-              for _ in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8765/ && break; sleep 0.2; done
-            fi
-          fi
-          OUT="$GITHUB_WORKSPACE/out" node .github/scripts/screenshots.cjs
+          OUT: ${{ github.workspace }}/out
+        run: bash tool/.github/scripts/shoot.sh
       - name: Keep them in the run
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,6 +201,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Get the publishing script
+        uses: actions/checkout@v5
+        with:
+          repository: miguelcoxcaballero/inhouselearn
+          ref: main
+          path: tool
+          persist-credentials: false
+          sparse-checkout: .github/scripts
       - uses: actions/download-artifact@v4
         with:
           name: screenshots
@@ -156,27 +216,6 @@ jobs:
       - name: Publish on the screenshots branch
         env:
           ID: ${{ inputs.id }}
+          OUT: ${{ github.workspace }}/out
           GH_TOKEN: ${{ github.token }}
-        run: |
-          [ -f "out/$ID/manifest.json" ] || { echo "::error::No manifest for $ID"; exit 1; }
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Another run may publish at the same time: start again from the new head.
-          for attempt in 1 2 3 4 5 6; do
-            rm -rf pub && mkdir pub && cd pub
-            git init -q
-            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            if git fetch -q --depth 1 origin screenshots; then git checkout -q -B screenshots FETCH_HEAD; else git checkout -q --orphan screenshots; fi
-            # Keep the newest folders only (ids start with a timestamp, so they sort by date).
-            ls -1d */ 2>/dev/null | sed 's#/$##' | sort | head -n -29 | while read -r old; do git rm -rq "$old"; done
-            rm -rf "$ID" && cp -r "../out/$ID" .
-            git add -A
-            git commit -qm "Screenshots $ID"
-            if git push -q origin screenshots; then
-              echo "Published: https://github.com/${GITHUB_REPOSITORY}/tree/screenshots/$ID"
-              exit 0
-            fi
-            cd .. && sleep $((attempt * 3))
-          done
-          echo "::error::Could not publish on the screenshots branch"
-          exit 1
+        run: bash tool/.github/scripts/publish-shots.sh

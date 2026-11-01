@@ -487,12 +487,24 @@ export function createGithubTools(ctx) {
     return (data.workflow_runs || [])[0] || null;
   }
 
-  // Starts a workflow_dispatch run and finds it (GitHub does not return its id).
+  // Starts a workflow_dispatch run. GitHub returns its id with
+  // return_run_details (since 2026-02); without it, the run is searched for.
   async function dispatch(repo, workflow, ref, inputs, headSha) {
     const since = Date.now() - 5000;
-    await gh('POST', '/repos/' + repo + '/actions/workflows/' + workflow + '/dispatches', { ref, inputs });
-    for (let i = 0; i < 30; i++) {
-      await sleep(3000);
+    const path = '/repos/' + repo + '/actions/workflows/' + workflow + '/dispatches';
+    let started = null;
+    try { started = await gh('POST', path, { ref, inputs, return_run_details: true }); } catch (error) {
+      if (error.status !== 422 || !/return_run_details/i.test(String(error.githubMessage || ''))) throw error;
+      await gh('POST', path, { ref, inputs });
+    }
+    const runId = started && (started.workflow_run_id || started.id);
+    if (runId) {
+      const run = await gh('GET', '/repos/' + repo + '/actions/runs/' + runId).catch(() => null);
+      if (run && (!headSha || run.head_sha === headSha)) return run;
+      if (run && headSha) throw new Error('El workflow ' + workflow + ' arrancó en otro commit (' + String(run.head_sha).slice(0, 7) + ', no ' + String(headSha).slice(0, 7) + '): ' + run.html_url);
+    }
+    for (let i = 0; i < 45; i++) {
+      await sleep(i < 10 ? 1500 : 3000);
       const data = await gh('GET', '/repos/' + repo + '/actions/workflows/' + workflow + '/runs?per_page=5&event=workflow_dispatch');
       const run = (data.workflow_runs || []).find((item) => Date.parse(item.created_at) >= since && (!headSha || item.head_sha === headSha));
       if (run) return run;
@@ -502,13 +514,23 @@ export function createGithubTools(ctx) {
 
   // Waits for a run to end, telling what it is doing; a failure stops
   // everything with the failing steps and their error annotations.
-  async function waitRun(repo, run, what, step) {
+  // options: { every (ms between looks, default 10 s), limit (ms, default 40 min),
+  // cancel (cancel the run when the limit is reached) }.
+  async function waitRun(repo, run, what, step, options) {
+    const opts = options || {};
+    const every = opts.every || 10000;
+    const limit = opts.limit || 40 * 60 * 1000;
     const started = Date.now();
     let current = run;
     let shown = '';
     while (current.status !== 'completed') {
-      if (Date.now() - started > 40 * 60 * 1000) throw new Error('Lleva más de 40 minutos ' + what + ': ' + current.html_url);
-      await sleep(10000);
+      if (Date.now() - started > limit) {
+        if (opts.cancel) await gh('POST', '/repos/' + repo + '/actions/runs/' + current.id + '/cancel').catch(() => null);
+        const error = new Error('Lleva más de ' + Math.round(limit / 60000) + ' minutos ' + what + (opts.cancel ? ' y lo he cancelado' : '') + (current.status === 'queued' ? ' (GitHub no le ha dado todavía un runner)' : '') + ': ' + current.html_url);
+        error.timedOut = true;
+        throw error;
+      }
+      await sleep(every);
       current = await gh('GET', '/repos/' + repo + '/actions/runs/' + current.id);
       const jobs = await gh('GET', '/repos/' + repo + '/actions/runs/' + current.id + '/jobs').catch(() => ({ jobs: [] }));
       const active = (jobs.jobs || []).find((job) => job.status === 'in_progress');
@@ -966,7 +988,7 @@ export function createGithubTools(ctx) {
     {
       name: 'github_screenshot',
       label: 'GitHub: capturas reales',
-      description: 'Take REAL screenshots of any web project: a branch or commit of any GitHub repository the token can read (public or private), or any public URL. GitHub Actions opens the page in Chromium (phone, tablet or desktop; light or dark colour scheme), runs optional steps (click, fill, press, wait, scroll, eval) and photographs the screen or one element. A static site is served from the repository root (or `serve`); a project that needs building takes `setup` (e.g. "npm ci && npm run build") and `serve` (e.g. "dist"), or `start` for its own server on port 8765. For this app (' + LEARN_REPO + ', the default) it can also replay a conversation through the real renderer. Use it after you change a project (push first, then photograph that branch) or whenever the user wants to see how something looks; then show every picture in the chat with an image block (or one gallery block). Takes about 1-3 minutes. A private repository gets a small workflow file installed once (the user approves it) so its code and pictures stay private.',
+      description: 'Take REAL screenshots of any web project: a branch or commit of any GitHub repository the token can read (public or private), or any public URL. GitHub Actions opens the page in Chromium (phone, tablet or desktop; light or dark colour scheme), runs optional steps (click, fill, press, wait, scroll, eval) and photographs the screen or one element. A static site is served from the repository root (or `serve`); a project that needs building takes `setup` (e.g. "npm ci && npm run build") and `serve` (e.g. "dist"), or `start` for its own server on port 8765. For this app (' + LEARN_REPO + ', the default) it can also replay a conversation through the real renderer. Use it after you change a project (push first, then photograph that branch) or whenever the user wants to see how something looks; then show every picture in the chat with an image block (or one gallery block). Takes about 1 minute (several minutes with setup/start). Put all the pictures you need in ONE call (up to 6, they are taken in parallel); a step that fails still returns the picture of the screen as it was, with the error. A private repository gets a small workflow file installed once (the user approves it) so its code and pictures stay private.',
       parameters: Type.Object({
         repo: Type.Optional(Type.String({ description: 'Repository "owner/name" to photograph (default ' + LEARN_REPO + ', this app).' })),
         ref: Type.Optional(Type.String({ description: 'Branch or commit (default the repository\'s default branch). Push your changes there first.' })),
@@ -1069,18 +1091,29 @@ export function createGithubTools(ctx) {
           }
         }
         step('Haciendo las capturas: ' + run.html_url);
-        run = await waitRun(runner, run, 'el trabajo de capturas', step);
-        const manifestFile = await readRemote(runner, folder + '/manifest.json', 'screenshots');
+        // Without setup/start it is one quick job (~30-60 s): looks every 3 s,
+        // and a run stuck for 6 minutes is cancelled instead of waited on.
+        const heavy = !!(setup || start);
+        let failure = null;
+        try {
+          run = await waitRun(runner, run, 'el trabajo de capturas', step, { every: heavy ? 6000 : 3000, limit: (heavy ? 22 : 6) * 60 * 1000, cancel: true });
+        } catch (error) {
+          if (error && error.name === 'AbortError') throw error;
+          failure = error;
+        }
+        const manifestFile = await readRemote(runner, folder + '/manifest.json', 'screenshots').catch(() => null);
         let manifest = null;
         try { manifest = JSON.parse(manifestFile.text); } catch (_) {}
-        if (!manifest || !Array.isArray(manifest.shots)) throw new Error('Las capturas terminaron pero no aparece ' + folder + '/manifest.json en la rama screenshots de ' + runner + ': ' + run.html_url);
+        if (!manifest || !Array.isArray(manifest.shots)) throw failure || new Error('Las capturas terminaron pero no aparece ' + folder + '/manifest.json en la rama screenshots de ' + runner + ': ' + run.html_url);
         const base = 'https://raw.githubusercontent.com/' + runner + '/screenshots/' + folder + '/';
         const done = manifest.shots.filter((shot) => shot.file);
         const lines = manifest.shots.map((shot) => shot.file
-          ? '· ' + shot.name + ' (' + shot.device + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + '): ' + base + encodeURIComponent(shot.file) + (shot.pageErrors ? ' — errores en la página: ' + shot.pageErrors.join(' | ') : '')
+          ? '· ' + shot.name + ' (' + shot.device + ', ' + (shot.theme === 'dark' ? 'oscuro' : 'claro') + '): ' + base + encodeURIComponent(shot.file) +
+            (shot.error ? ' — foto de cómo quedó la pantalla, pero hubo un problema: ' + shot.error : '') +
+            (shot.pageErrors ? ' — errores en la página: ' + shot.pageErrors.join(' | ') : '')
           : '· ' + shot.name + ': no se pudo hacer (' + shot.error + ')');
         return textResult([
-          done.length + ' de ' + manifest.shots.length + ' capturas reales de ' + where + ':',
+          done.length + ' de ' + manifest.shots.length + ' capturas reales de ' + where + (manifest.seconds ? ' (' + manifest.seconds + ' s en el navegador)' : '') + ':',
           ...lines,
           '',
           'Enséñalas en el chat ahora: un bloque visual image por captura ({"type":"image","src":"<url>","alt":"…","caption":"…"}) o un solo gallery. Son fotos de verdad de esa versión; di qué se ve y qué ha cambiado.' + (own ? '' : ' (El repositorio es privado: la app las abre con el token del usuario.)')

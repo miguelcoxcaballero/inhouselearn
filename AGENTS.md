@@ -77,10 +77,12 @@ Mandatory guidance for every AI and developer working in this repository.
   workspace tools and the GitHub `confirm` hook; every write still goes through it.
   `composer-dock.js` + `composer-dock.css` own what sits right above the composer: the approval
   card (`dockApprove`, never a fullscreen dialog for tool approvals; a commit — `kind: 'commit'` — gets its own
-  layout from `dockCommitCardHtml`: repo and branch pills, a «Rama principal» flag, the model's `changelog` of
-  2–6 short sentences with **bold** (github_push / github_create_pull_request), files with N/M/B badges, and the
-  raw commit message folded; an older engine's summary text is parsed into the same card; a delicate change
-  is marked by the border, never by red text; test `tests/web/approval-card.cjs`), the GitHub changes prepared
+  light layout from `dockCommitCardHtml`: a header with the upload icon, the title and «owner/repo · branch» in one
+  muted line, a calm **amber** «Rama principal» flag (main is not an error: no red there), the model's `changelog` of
+  2–6 short sentences with **bold** (github_push / github_create_pull_request) as the body — the technical commit
+  title only shows when there is no changelog —, and ONE fold «N archivos +A −R» with the files (N/M/B badges) and
+  the raw commit message; an older engine's summary text is parsed into the same card; a delete is marked by a red
+  border, never by red text; test `tests/web/approval-card.cjs`), the GitHub changes prepared
   but not uploaded (`githubStageStore`: IndexedDB with a memory copy, never localStorage, which
   big files filled; test `tests/web/github-stage.cjs`), the message queue (Enter while the model works queues;
   each queued message goes out when the previous turn has fully ended) and steering («Ahora» or
@@ -159,9 +161,17 @@ Mandatory guidance for every AI and developer working in this repository.
   **Real screenshots (any project):** `github_screenshot` photographs a branch or commit of any
   repository the token reads, or any public URL: `.github/workflows/screenshots.yml` checks out the
   project (optional `setup`, `serve` folder or its own `start` server on :8765), Chromium opens it
-  (`.github/scripts/screenshots.cjs`, always from this repo's `main`; Inhouse Learn itself with
+  (`.github/scripts/shoot.sh` + `screenshots.cjs`, always from this repo's `main`; Inhouse Learn itself with
   OpenRouter mocked like `tests/web`, so a conversation can be replayed), runs the steps, and the PNGs
-  land on the `screenshots` branch (`<id>/`, newest 30 kept); the model shows them with `image` blocks.
+  land on the `screenshots` branch (`<id>/`, newest 30 kept, `publish-shots.sh`); the model shows them with `image` blocks.
+  **Speed and robustness (2026-11-01; before, a run took ~12 min — the separate publish job waited ~10 min for a
+  runner — and one hung for over an hour):** without `setup`/`start` ONE job (`quick`) shoots and publishes; only
+  with them the read-only `shoot` + writing `publish` split stays. It uses the runner's own Chrome with
+  `playwright-core` (Playwright's Chromium is downloaded only if that Chrome does not start: exit 3), takes up to 3
+  shots in parallel, each with a hard limit (75 s) and the script with one more (240 s); a failing step still
+  photographs the screen as it is (manifest `error` next to `file`), and the manifest is always written and
+  published. The engine gets the run id from the dispatch (`return_run_details`, fallback: searching), looks every 3 s
+  and cancels a run stuck for 6 min (22 with setup/start), still reading whatever manifest exists.
   Public projects and URLs run here. A **private** repository runs the same file copied into it as
   `.github/workflows/inhouse-screenshots.yml` (installed once through the approval gate), so its code
   and pictures stay private; the chat loads those images with the user's token

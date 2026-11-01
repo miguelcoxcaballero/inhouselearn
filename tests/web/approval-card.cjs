@@ -45,8 +45,13 @@ const ITEMS = [
       rawVisible: /long technical detail/.test(msg.textContent),
       folded: !!card.querySelector('details.dock-commit-full:not([open])') && /long technical detail/.test(card.querySelector('.dock-commit-full pre').textContent),
       badges: Array.from(card.querySelectorAll('.dock-approve-files .st')).map((el) => el.textContent).join(''),
-      files: card.querySelector('.dock-approve-files').innerText,
+      files: card.querySelector('.dock-approve-files').textContent,
+      filesFolded: !!card.querySelector('details.dock-commit-full:not([open]) .dock-approve-files'),
+      foldSummary: card.querySelector('.dock-commit-full summary').textContent,
+      commitTitleShown: !!card.querySelector('.dock-changelog-title'),
       msgColor: getComputedStyle(card.querySelector('.dock-changelog li')).color,
+      flagColor: getComputedStyle(card.querySelector('.dock-flag.main')).color,
+      borderColor: getComputedStyle(card).borderTopColor,
       overflow: document.documentElement.scrollWidth > window.innerWidth + 1 || card.scrollWidth > card.clientWidth + 1
     };
     window.__pending = pending;
@@ -55,9 +60,10 @@ const ITEMS = [
   await page.screenshot({ path: SCRATCH + '/approval-card-light.png' });
   check('commit card: title, repo, branch and the «Rama principal» flag', modern.title === 'Subir a GitHub' && modern.commit && modern.main && modern.repo === 'me/app' && modern.branch === 'main' && modern.flag === 'Rama principal', modern);
   check('the changelog is the model\'s short sentences, **bold** rendered; the raw message is folded', modern.bullets.length === 2 && modern.strong === 'compilar y ejecutar tests' && !/\*\*/.test(modern.bullets.join('')) && !modern.rawVisible && modern.folded, modern);
-  check('files with N/M/B badges and +/−', modern.badges === 'MNB' && /engine\/src\/github\.js\s*\+230\s*−6/.test(modern.files) && /run\.yml\s*\+276/.test(modern.files), modern.files);
+  check('files with N/M/B badges and +/−, folded under one «3 archivos +506 −18» line', modern.badges === 'MNB' && /engine\/src\/github\.js\s*\+230\s*−6/.test(modern.files) && /run\.yml\s*\+276/.test(modern.files) && modern.filesFolded && /3 archivos\s*\+506\s*−18/.test(modern.foldSummary), modern);
+  check('with the model\'s changelog the technical commit title is not on the card', !modern.commitTitleShown, modern);
   const red = (color) => { const m = String(color).match(/\d+/g) || []; return Number(m[0]) > 120 && Number(m[1]) < 60 && Number(m[2]) < 60; };
-  check('main branch: the text is not red, nothing scrolls sideways at 390 px', !red(modern.msgColor) && !modern.overflow, modern);
+  check('main branch: nothing red (text, flag, border), nothing scrolls sideways at 390 px', !red(modern.msgColor) && !red(modern.flagColor) && !red(modern.borderColor) && !modern.overflow, modern);
 
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
   await page.waitForTimeout(150);
