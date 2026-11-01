@@ -1500,6 +1500,9 @@
     .model-gauge { flex: 0 0 auto; width: 34px; color: #1a1a1a; display: flex; flex-direction: column; align-items: center; }
     .model-gauge svg { width: 34px; height: 20px; display: block; overflow: visible; }
     .model-gauge-num { font-size: 0.56rem; font-weight: 700; line-height: 1; margin-top: 1px; color: #44403c; font-variant-numeric: tabular-nums; }
+    /* An estimate (OpenRouter gives no intelligence number for the model): a little fainter, with «~». */
+    .model-gauge.est { opacity: 0.7; }
+    .model-gauge.est .model-gauge-num { font-style: italic; }
     .model-price {
       flex: 0 0 auto; min-width: 34px; display: flex; flex-direction: column; align-items: center;
       font-size: 0.62rem; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums;
@@ -2160,6 +2163,7 @@
   <script src="explain.js?v=20261024-controls1"></script>
   <script src="practice.js?v=20261021-text-motion"></script>
   <script src="learning.js?v=20261024-wait1"></script>
+  <script src="model-scores.js?v=20261101-ultra3"></script>
   <script src="guided.js?v=20261024-wait1"></script>
   <script src="guided-stage.js?v=20261024-wait1"></script>
   <script src="guided-wait.js?v=20261024-wait1"></script>
@@ -2778,9 +2782,14 @@
       return '<svg viewBox="0 0 40 22" aria-hidden="true">' + g + '</svg>';
     }
 
-    function gaugeMarkup(score) {
-      return '<span class="model-gauge" title="Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)">' + gaugeSvg(score) +
-        '<span class="model-gauge-num">' + Math.round(score) + '</span></span>';
+    // estimated: OpenRouter gives no intelligence number for this model; it is worked out
+    // from its coding and agentic indices (model-scores.js) and drawn with «~».
+    function gaugeMarkup(score, estimated) {
+      const title = estimated
+        ? 'Índice de inteligencia estimado (≈ ' + score + '): OpenRouter no publica el de este modelo; sale de sus índices de código y de agentes (Artificial Analysis)'
+        : 'Índice de inteligencia ' + score + ' (Artificial Analysis, vía OpenRouter)';
+      return '<span class="model-gauge' + (estimated ? ' est' : '') + '" title="' + title + '">' + gaugeSvg(score) +
+        '<span class="model-gauge-num">' + (estimated ? '~' : '') + Math.round(score) + '</span></span>';
     }
 
     // Price as a fraction: output (dearer) in red over input (cheaper) in green, per million tokens.
@@ -2823,8 +2832,15 @@
 
     function setModelCatalog(openRouterEntries, fetchedAt) {
       modelCatalog.openRouter = openRouterEntries;
-      const claude = claudeCatalogEntries();
-      const entries = claude.concat(claude.length ? openRouterEntries.filter((entry) => !directClaudeId(entry.id)) : openRouterEntries);
+      // OpenRouter gives the intelligence number of only some models, and a Claude model of
+      // the user's own key is built here with none: the Claude copy takes its OpenRouter
+      // twin's scores, and a model with only coding/agentic scores gets a marked estimate
+      // (model-scores.js), so the rows keep their speedometer and number.
+      const twins = new Map();
+      openRouterEntries.forEach((entry) => { const direct = directClaudeId(entry.id); if (direct) twins.set(direct, entry); });
+      const claude = claudeCatalogEntries().map((entry) => (window.ModelScores ? ModelScores.withTwinScores(entry, twins.get(entry.id)) : entry));
+      const listed = claude.concat(claude.length ? openRouterEntries.filter((entry) => !directClaudeId(entry.id)) : openRouterEntries);
+      const entries = window.ModelScores ? ModelScores.estimate(listed) : listed;
       modelCatalog.entries = entries;
       modelCatalog.byId = new Map(entries.map((entry) => [entry.id, entry]));
       modelCatalog.search = new Map(entries.map((entry) => [entry.id, searchKey(entry.name + ' ' + entry.company + ' ' + entry.id)]));
@@ -5898,9 +5914,10 @@
       if (entry && entry.video) subParts.push('vídeo');
       const price = modelPriceLabel(entry);
       const score = entry && typeof entry.intelligence === 'number' ? entry.intelligence : null;
+      const estimated = !!(entry && entry.iqEstimated);
       const isActive = modelId === activeId;
       const title = entry
-        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '') + (score !== null ? ' · inteligencia ' + score : '')
+        ? modelId + (entry.context ? ' · ' + formatCompactNumber(entry.context) + ' tokens de contexto' : '') + (price ? ' · ' + price + ' por millón de tokens (entrada / salida)' : '') + (score !== null ? ' · inteligencia ' + (estimated ? '≈ ' : '') + score : '')
         : modelId;
       return '<button type="button" class="model-card' + (isActive ? ' active' : '') + '" data-model-id="' + escapeHtml(modelId) + '" style="' + brandStyle(modelId) + '" title="' + escapeHtml(title) + '" role="option" aria-selected="' + (isActive ? 'true' : 'false') + '">' +
         '<span class="model-card-icon">' + brandIconSvg(modelId) + '</span>' +
@@ -5908,7 +5925,7 @@
           '<span class="model-card-name">' + escapeHtml(entry ? entry.name : modelId) + '</span>' +
           '<span class="model-card-sub">' + escapeHtml(subParts.join(' · ')) + '</span>' +
         '</span>' +
-        (score !== null ? gaugeMarkup(score) : '') +
+        (score !== null ? gaugeMarkup(score, estimated) : '') +
         priceMarkup(entry) +
         '<svg class="model-card-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"/></svg>' +
         '</button>';

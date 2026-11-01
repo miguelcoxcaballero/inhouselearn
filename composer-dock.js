@@ -60,6 +60,19 @@ function renderComposerDock() {
   renderStageSlot();
 }
 
+// A slot's markup is set only when it changed. updateSendUi() draws the dock on
+// every key typed in the composer: redrawing the same queue each time replayed the
+// card's entrance (and dropped hover, focus and a half-made click). And a card only
+// «comes in» when it enters an empty slot; one redrawn with new content (a second
+// message queued, «Entrando…») stays where it is (dock-still: no entrance again).
+function dockSetSlot(slot, html) {
+  if (!slot || slot.__dockHtml === html) return;
+  const wasEmpty = !slot.firstElementChild;
+  slot.__dockHtml = html;
+  slot.innerHTML = html;
+  if (!wasEmpty) slot.querySelectorAll('.dock-card').forEach((card) => card.classList.add('dock-still'));
+}
+
 function onDockClick(event) {
   const button = event.target.closest('[data-dock]');
   if (!button) return;
@@ -240,14 +253,14 @@ function renderQueueSlot() {
   const slot = document.getElementById('dock-queue');
   if (!slot) return;
   const items = messageQueue.items;
-  if (!items.length) { slot.innerHTML = ''; return; }
+  if (!items.length) { dockSetSlot(slot, ''); return; }
   const head = messageQueue.paused
     ? '<div class="dock-queue-head paused">' + dockIcon('pause') + '<span>En pausa · ' + items.length + (items.length === 1 ? ' mensaje' : ' mensajes') + ' en la cola</span>' +
       '<button type="button" class="dock-link" data-dock="resume">' + dockIcon('play') + 'Seguir</button></div>'
     : items.every((item) => item.steering)
       ? '<div class="dock-queue-head">' + dockIcon('bolt') + '<span>Entra en cuanto acabe el paso en curso</span></div>'
       : '<div class="dock-queue-head">' + dockIcon('queue') + '<span>' + (items.length === 1 ? 'En la cola' : items.length + ' en la cola') + ' · salen cuando termine la respuesta</span></div>';
-  slot.innerHTML = '<div class="dock-card dock-queue">' + head + '<ol class="dock-queue-list">' + items.map((item) => {
+  dockSetSlot(slot, '<div class="dock-card dock-queue">' + head + '<ol class="dock-queue-list">' + items.map((item) => {
     const files = item.attachments.length ? '<span class="dock-queue-files">' + item.attachments.length + (item.attachments.length === 1 ? ' archivo' : ' archivos') + '</span>' : '';
     const chatNote = item.chatId !== appState.activeChatId ? '<span class="dock-queue-files">otro chat</span>' : '';
     return '<li class="dock-queue-item' + (item.steering ? ' steering' : '') + '">' +
@@ -258,7 +271,7 @@ function renderQueueSlot() {
           '<button type="button" class="dock-icon-btn" data-dock="edit" data-id="' + item.id + '" aria-label="Editar">' + dockIcon('edit') + '</button>' +
           '<button type="button" class="dock-icon-btn" data-dock="remove" data-id="' + item.id + '" aria-label="Quitar de la cola">' + dockIcon('close') + '</button>') +
       '</li>';
-  }).join('') + '</ol></div>';
+  }).join('') + '</ol></div>');
 }
 
 /* ─── Aprobación encima del cuadro ──────────────────────────────────── */
@@ -708,7 +721,7 @@ function renderStageSlot() {
       '<div class="dock-stage-head">' + dockIcon('check') + '<span><b>Subido</b> · ' + escapeHtml(item.repo) + ' · rama ' + escapeHtml(item.branch) +
       ' · ' + item.count + (item.count === 1 ? ' archivo' : ' archivos') + '</span></div></div>');
   });
-  slot.innerHTML = cards.join('');
+  dockSetSlot(slot, cards.join(''));
 }
 
 async function stagePush(repo, branch) {

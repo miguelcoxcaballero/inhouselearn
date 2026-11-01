@@ -17,7 +17,7 @@ async function type(page, text, mod) {
   const slow = (text) => ({ text, chunk: 3, delay: 70 });
 
   // 1. Queue: two messages written during the first answer go out after it, in order.
-  await page.evaluate((r) => window.__replies.push(r[0], r[1], r[2]), [slow('Primera respuesta, que tarda un poco en escribirse entera.'), { text: 'Segunda respuesta.' }, { text: 'Tercera respuesta.' }]);
+  await page.evaluate((r) => window.__replies.push(r[0], r[1], r[2]), [Object.assign(slow('Primera respuesta, que tarda un poco en escribirse entera.'), { delay: 140 }), { text: 'Segunda respuesta.' }, { text: 'Tercera respuesta.' }]);
   await type(page, 'Primero');
   await page.waitForFunction(() => appState.busy);
   await page.fill('#composer', 'Segundo');
@@ -27,6 +27,27 @@ async function type(page, text, mod) {
   const queued = await page.evaluate(() => ({ items: document.querySelectorAll('.dock-queue-item').length, busy: appState.busy, composer: document.getElementById('composer').value }));
   await page.screenshot({ path: SCRATCH + '/queue-dock.png' });
   check('while busy, Enter queues (button says «A la cola», composer clears)', label === 'A la cola' && queued.items === 2 && queued.busy && queued.composer === '', { label, queued });
+  // Typing in the composer must not redraw the queue: its card came in once (when the first
+  // message was queued); a second one redrew it without an entrance, and every key typed
+  // leaves the very same card alone (it used to replay its entrance on each character).
+  await page.waitForTimeout(450);
+  const typing = await page.evaluate(async () => {
+    const card = document.querySelector('.dock-queue');
+    const settled = card.getAnimations().length;
+    const still = card.classList.contains('dock-still');
+    const composer = document.getElementById('composer');
+    let replays = 0;
+    for (const ch of 'hola') {
+      composer.value += ch;
+      composer.dispatchEvent(new Event('input', { bubbles: true }));
+      if (card !== document.querySelector('.dock-queue') || card.getAnimations().length) replays++;
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+    composer.value = '';
+    composer.dispatchEvent(new Event('input', { bubbles: true }));
+    return { settled, still, replays, same: card.isConnected && card === document.querySelector('.dock-queue') };
+  });
+  check('typing never redraws the queue: the same card, no entrance again (and a second queued message did not replay it either)', typing.settled === 0 && typing.still && typing.replays === 0 && typing.same, typing);
   await page.waitForFunction(() => !appState.busy && !document.querySelector('.dock-queue-item') && getActiveChat().messages.length === 6, null, { timeout: 30000 });
   const order = await page.evaluate(() => getActiveChat().messages.map((m) => m.role[0] + ':' + m.content.slice(0, 9)));
   check('queued messages go out one per finished turn, in order', JSON.stringify(order) === JSON.stringify(['u:Primero', 'a:Primera r', 'u:Segundo', 'a:Segunda r', 'u:Tercero', 'a:Tercera r']), order);

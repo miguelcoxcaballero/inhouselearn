@@ -34,6 +34,8 @@ const NEEDED = {
   'agentThinkingLevel(': 'each parallel agent thinks as deep as its role needs',
   'UltraAgents.setMode(': 'the composer carries the Ultra code mode',
   'UltraAgents.ignite(': 'the moment Ultra code is turned on',
+  'ModelScores.estimate(': 'the intelligence number of every model in the picker',
+  'src="model-scores.js': 'model-scores.js',
   'src="ultra.js': 'the Ultra code board',
   'createSubAgentReportTool': 'submit_result for the parallel agents',
   'githubTurnText(': 'GitHub state in the per-turn block (not the cached prompt)',

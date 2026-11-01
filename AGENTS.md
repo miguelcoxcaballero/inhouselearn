@@ -89,6 +89,10 @@ Mandatory guidance for every AI and developer working in this repository.
   Ctrl/Cmd+Enter: pi's `agent.steer`, the message enters the running turn after the current
   tool, and the answer is split there into two messages). It also draws the live tool activity
   in the thread (`renderLiveSteps`).
+  `dockSetSlot` sets the queue's and the staged changes' markup only when it changed, and a card plays its
+  entrance only when it enters an empty slot (a redraw with new content gets `.dock-still`):
+  `updateSendUi()` draws the dock on every key typed in the composer, so before this the queue's card (and an
+  upload's progress bar) replayed its animation on each character. Test: `queue.cjs`.
   **Activity as a timeline:** reasoning, plan and steps sit in one `.activity` wrapper
   (`.slot-reasoning` + `.slot-steps`, still patched by stream.js). `activity.css` (after theme.css,
   tokens only) draws them as a rail with dots: plan, last steps done, «now» (a pinging orange dot,
@@ -262,6 +266,16 @@ Mandatory guidance for every AI and developer working in this repository.
   elsewhere (`claudeOffset`: deleted chats via `keepClaudeSpendOf`, «Saldo real ahora» via `setClaudeRealBalance`).
   Shown in the model popup's «Cuentas» tab (below) with a bar and «Ajustar» (credit, next renewal, real balance) and
   on that tab's badge; synced with the other settings. Test: `tests/web/claude-api.cjs`.
+- **The intelligence number of each model row** (`model-scores.js` = `ModelScores`, no DOM; tests
+  `model-scores.mjs`, `model-list.cjs`): OpenRouter now publishes Artificial Analysis' intelligence index for
+  only some models (many come with coding and agentic indices and a null intelligence, some with nothing), and a
+  Claude model of the user's own key is built by the app with no scores, so rows lost their speedometer and
+  number. `setModelCatalog` gives a Claude copy its OpenRouter twin's scores (`withTwinScores`, exact) and a model
+  with only coding/agentic an estimate (`estimate`: least squares on the models that have them, needs ≥ 10 of
+  them and R² ≥ 0.5, prefers the agentic fit unless both indices clearly help; the entry gets `iqEstimated`, is
+  drawn fainter with «~», and counts for the «Más inteligentes» order and the minimum-intelligence filter). The
+  cached OpenRouter list is never changed by it. A model with none of the three shows no speedometer: nothing is
+  invented.
 - **Model popup «Modelo · Cuentas»** (`#model-menu-popup`, styles at the end of `model-picker.css`, dark in `theme.css`):
   two tabs (`setModelPopoverTab`). **Modelo**: a notice only when a key is missing or the list failed
   (`#model-menu-status`, «Ir a Cuentas»), search + «Filtros» (with its count) folding capabilities, minimum
