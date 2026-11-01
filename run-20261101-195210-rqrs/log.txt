@@ -1,0 +1,12 @@
++ set +e
+git log --oneline -2
+echo '=== unit (engine sources, no browser)'
+node --test tests/web/agents-plan.mjs tests/web/coach.mjs tests/web/model-scores.mjs tests/web/wiring.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'
+node -e "require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js','utf8')); console.log('bundle loads; createAgentTools:', typeof InhousePi.createAgentTools, '| arenaMean in bundle:', require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('design_arena'), '| partial text in bundle:', require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('Se par\\u00f3 antes de entregar') || require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('antes de entregar su informe'))"
+exit 0
+218d29e Motor: recompila vendor/pi-engine.js (4161f7f)
+=== unit (engine sources, no browser)
+# tests 46
+# pass 46
+# fail 0
+bundle loads; createAgentTools: function | arenaMean in bundle: true | partial text in bundle: true

@@ -1,0 +1,17 @@
+{
+ "id": "run-20261101-195210-rqrs",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "",
+ "os": "ubuntu-24.04",
+ "sha": "218d29edab1900a0823e09aa80b2a02db181a2f8",
+ "runner": "Linux X64",
+ "command": "set +e\ngit log --oneline -2\necho '=== unit (engine sources, no browser)'\nnode --test tests/web/agents-plan.mjs tests/web/coach.mjs tests/web/model-scores.mjs tests/web/wiring.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nnode -e \"require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js','utf8')); console.log('bundle loads; createAgentTools:', typeof InhousePi.createAgentTools, '| arenaMean in bundle:', require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('design_arena'), '| partial text in bundle:', require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('Se par\\\\u00f3 antes de entregar') || require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('antes de entregar su informe'))\"\nexit 0",
+ "exit_code": 0,
+ "seconds": 1,
+ "lines": 13,
+ "truncated": false,
+ "errors": [],
+ "errors_total": 0,
+ "tail": "+ set +e\ngit log --oneline -2\necho '=== unit (engine sources, no browser)'\nnode --test tests/web/agents-plan.mjs tests/web/coach.mjs tests/web/model-scores.mjs tests/web/wiring.mjs 2>&1 | grep -E '^(# (tests|pass|fail)|not ok)'\nnode -e \"require('vm').runInThisContext(require('fs').readFileSync('vendor/pi-engine.js','utf8')); console.log('bundle loads; createAgentTools:', typeof InhousePi.createAgentTools, '| arenaMean in bundle:', require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('design_arena'), '| partial text in bundle:', require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('Se par\\\\u00f3 antes de entregar') || require('fs').readFileSync('vendor/pi-engine.js','utf8').includes('antes de entregar su informe'))\"\nexit 0\n218d29e Motor: recompila vendor/pi-engine.js (4161f7f)\n=== unit (engine sources, no browser)\n# tests 46\n# pass 46\n# fail 0\nbundle loads; createAgentTools: function | arenaMean in bundle: true | partial text in bundle: true\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41343912508"
+}
