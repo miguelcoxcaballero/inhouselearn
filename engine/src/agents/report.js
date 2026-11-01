@@ -1,18 +1,19 @@
-// Los informes de los agentes de Ultra code: la herramienta con la que cada uno
-// entrega el suyo (submit_result), cómo se normalizan, cómo se resumen para el
-// modelo principal (digest acotado, que no le llene la ventana de contexto) y la
-// herramienta con la que él pide el texto completo de uno (agent_report).
-import { Type } from '@earendil-works/pi-ai';
-import { clip, textResult } from './common.js';
+// Los informes de los agentes de Ultra code: cómo se normalizan, cómo se resumen
+// para el modelo principal (digest acotado, que no le llene la ventana de contexto)
+// y cómo se lee uno entero. Puro: sin red, sin DOM y sin pi-ai (las herramientas
+// que los entregan y los leen, submit_result y agent_report, se definen en
+// agents.js, el único módulo que necesita el esquema de pi).
+import { clip } from './common.js';
 
-const REPORT_STATUS = ['done', 'partial', 'blocked'];
-const ARTIFACT_KINDS = ['file', 'commit', 'pr', 'document', 'url'];
+export const REPORT_STATUS = ['done', 'partial', 'blocked'];
+export const ARTIFACT_KINDS = ['file', 'commit', 'pr', 'document', 'url'];
 // Lo que cabe entre TODOS los informes que vuelven al modelo principal (en
 // caracteres, unos 6 000 tokens). Pocos agentes: informes enteros; muchos: cada
 // uno se recorta y el modelo pide el texto completo del que le importe.
 export const RESULT_BUDGET = 24000;
 const MIN_SECTION = 1200;
-const FULL_REPORT = 14000;
+// Lo máximo que devuelve agent_report de un agente.
+export const FULL_REPORT = 14000;
 
 export function normalizeReport(raw, keepData) {
   if (!raw || typeof raw !== 'object') return null;
@@ -31,32 +32,6 @@ export function normalizeReport(raw, keepData) {
   if (keepData && raw.data !== undefined) report.data = raw.data;
   if (raw.synthesized) report.synthesized = true;
   return report;
-}
-
-// Tool the app gives each sub-agent so it ends with a structured report.
-export function createSubAgentReportTool(onSubmit) {
-  return {
-    name: 'submit_result',
-    label: 'Entregar informe',
-    description: 'Hand your result to the main assistant when your task is finished (or you cannot go on). Call it once, at the end: summary of what you did and found, status (done, partial or blocked), the artifacts you produced (files, commits, PRs, documents, URLs), what is still open, your confidence (0-1) and, only if your task asks for it, structured data. Then end with one sentence.',
-    parameters: Type.Object({
-      summary: Type.String({ description: 'What you did and found, concise and complete (the main assistant integrates it).' }),
-      status: Type.Union([Type.Literal('done'), Type.Literal('partial'), Type.Literal('blocked')]),
-      artifacts: Type.Optional(Type.Array(Type.Object({
-        kind: Type.Union(ARTIFACT_KINDS.map((kind) => Type.Literal(kind))),
-        ref: Type.String({ description: 'Path, commit sha, PR URL, document name or URL.' }),
-        note: Type.Optional(Type.String())
-      }))),
-      open_issues: Type.Optional(Type.Array(Type.String())),
-      confidence: Type.Optional(Type.Number({ description: '0 to 1.' })),
-      data: Type.Optional(Type.Any({ description: 'Structured data, only when the task asks for it.' }))
-    }),
-    execute: async (id, params) => {
-      const report = normalizeReport(params, true);
-      if (typeof onSubmit === 'function') onSubmit(report);
-      return textResult('Recibido. Termina con una frase.', { report: Object.assign({}, report, { data: undefined }) });
-    }
-  };
 }
 
 // No submit_result: the text itself becomes the report (links as artifacts).
@@ -109,32 +84,14 @@ export function trimSection(body, limit, id) {
   return { text: clip(text, limit, '… (recortado; agent_report con «' + id + '» da el texto completo)'), cut: true };
 }
 
-// agent_report: what the main model uses to read one agent's whole work when the
-// digest it got was trimmed. lookup(query) → { id, name, role, status, task, text, report } | null;
-// names() → the agents it can ask for.
-export function createAgentReportTool(lookup, names) {
-  return {
-    name: 'agent_report',
-    label: 'Informe de un agente',
-    description: 'Read the full report and final text of one agent from a spawn_agents run of this answer (give its id or its name, as in the results). The results you got back are trimmed to keep your context short: use this only for the agents whose details you really need. part: full (default), report (only its structured report) or task (what it was asked).',
-    parameters: Type.Object({
-      agent: Type.String({ description: 'The agent id or name.' }),
-      part: Type.Optional(Type.Union([Type.Literal('full'), Type.Literal('report'), Type.Literal('task')]))
-    }),
-    execute: async (id, params) => {
-      const query = String((params && params.agent) || '').trim();
-      const found = typeof lookup === 'function' ? lookup(query) : null;
-      if (!found) {
-        const known = typeof names === 'function' ? names() : [];
-        return Object.assign(textResult(known.length ? 'No hay ningún agente «' + query + '» en esta respuesta. Agentes: ' + known.map((item) => item.id + ' (' + item.name + ')').join(', ') + '.' : 'Todavía no se ha lanzado ningún agente en esta respuesta.', {}), { isError: true });
-      }
-      const part = params && ['full', 'report', 'task'].includes(params.part) ? params.part : 'full';
-      const head = '## ' + found.name + ' (' + found.id + ', ' + found.role + ', ' + found.status + ')';
-      if (part === 'task') return textResult(head + '\nTarea:\n' + found.task, { agent: found.id });
-      const report = found.report ? reportBody(found.report, '') : '(sin informe)';
-      if (part === 'report') return textResult(head + '\n' + report, { agent: found.id });
-      const body = String(found.text || '').trim();
-      return textResult(clip(head + '\n' + report + (body && !(found.report && !found.report.synthesized && body === found.report.summary) ? '\n\nTexto final:\n' + body : ''), FULL_REPORT, '… (recortado)'), { agent: found.id });
-    }
-  };
+// What agent_report returns for one agent: its report and its final text (or only
+// one of them), cut at FULL_REPORT. entry: { id, name, role, status, task, text, report }.
+export function fullReportText(entry, part) {
+  const head = '## ' + entry.name + ' (' + entry.id + ', ' + entry.role + ', ' + entry.status + ')';
+  if (part === 'task') return head + '\nTarea:\n' + entry.task;
+  const report = entry.report ? reportBody(entry.report, '') : '(sin informe)';
+  if (part === 'report') return head + '\n' + report;
+  const body = String(entry.text || '').trim();
+  const sameAsSummary = !!(entry.report && !entry.report.synthesized && body === entry.report.summary);
+  return clip(head + '\n' + report + (body && !sameAsSummary ? '\n\nTexto final:\n' + body : ''), FULL_REPORT, '… (recortado)');
 }

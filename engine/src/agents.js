@@ -13,8 +13,9 @@
 //
 // El código está repartido: agents/plan.js (el plan), agents/policy.js (las reglas
 // de decisión), agents/effort.js, agents/report.js (informes y digest) y
-// agents/run.js (la ejecución, lo único con estado). Este archivo las junta y
-// conserva la API que usan index.js, la app y los tests.
+// agents/run.js (la ejecución, lo único con estado). Todos son puros y no dependen de
+// pi: este archivo es el único que importa su esquema (Type), define las herramientas
+// y conserva la API que usan index.js, la app y los tests.
 //
 // La app crea cada agente (ctx.runSubAgent: mismo modelo, mismas herramientas
 // salvo spawn_agents, la misma puerta de aprobación) y dibuja en el chat lo que
@@ -30,13 +31,13 @@
 //        onUpdate(update), onWrite(path, kind) → string|undefined, onReport(report) }
 // update: { doing?, cost?, steps?, trail?, kind?, waiting?, wrote? }
 import { Type } from '@earendil-works/pi-ai';
-import { MAX_AGENTS, MAX_PARALLEL, DEFAULT_BUDGET, DEFAULT_MINUTES, DEFAULT_TURN_BUDGET, MIN_BUDGET, ownsPath } from './agents/common.js';
+import { MAX_AGENTS, MAX_PARALLEL, DEFAULT_BUDGET, DEFAULT_MINUTES, DEFAULT_TURN_BUDGET, MIN_BUDGET, textResult, ownsPath } from './agents/common.js';
 import { planAgents } from './agents/plan.js';
-import { createSubAgentReportTool, createAgentReportTool } from './agents/report.js';
+import { ARTIFACT_KINDS, normalizeReport, fullReportText } from './agents/report.js';
 import { runSpawn, STAGGER_MS } from './agents/run.js';
 import { pickLevel, normalizeEffort, STEP_CAPS, EFFORTS } from './agents/effort.js';
 
-export { planAgents, ownsPath, createSubAgentReportTool, pickLevel, normalizeEffort, MAX_PARALLEL };
+export { planAgents, ownsPath, pickLevel, normalizeEffort, MAX_PARALLEL };
 export const MAX_AGENT_STEPS = STEP_CAPS.build;
 
 const SPAWN_DESCRIPTION = 'Ultra code: split a big job into parts and run them as separate agents (up to ' + MAX_AGENTS + ', ' + MAX_PARALLEL + ' at a time), then integrate what they return. Agents start from zero and never see this conversation: put what all need (user goal, decisions, repository, branch, conventions) in context once, and give each a self-contained task (what, where, what to return in returns); a task of a few words with no context is refused once, before anything is spent. ' +
@@ -46,6 +47,57 @@ const SPAWN_DESCRIPTION = 'Ultra code: split a big job into parts and run them a
   'acceptance: checkable criteria; a read-only verifier (by default when something is written, when there are criteria or with 3+ agents; verify:false skips it) tries to refute the work against the real files/commits/sources, and the owners fix what fails: fix_rounds times (default 1, up to 3; it stops when nothing improves). ' +
   'budget_usd (default ' + DEFAULT_BUDGET + '): cap for this call, and the answer as a whole has a cap too; the most expensive agent is stopped when it runs out and none is started that what is left could not finish. When many agents ran their results come back trimmed: agent_report(agent) gives one agent\'s full text. ' +
   'max_minutes per agent (default ' + DEFAULT_MINUTES + '). on_failure "stop" skips everything not started once one fails. Do not use it for a single small task.';
+
+// ─── submit_result: how each agent hands in its report ─────────────────────────────────
+// Tool the app gives each sub-agent so it ends with a structured report.
+export function createSubAgentReportTool(onSubmit) {
+  return {
+    name: 'submit_result',
+    label: 'Entregar informe',
+    description: 'Hand your result to the main assistant when your task is finished (or you cannot go on). Call it once, at the end: summary of what you did and found, status (done, partial or blocked), the artifacts you produced (files, commits, PRs, documents, URLs), what is still open, your confidence (0-1) and, only if your task asks for it, structured data. Then end with one sentence.',
+    parameters: Type.Object({
+      summary: Type.String({ description: 'What you did and found, concise and complete (the main assistant integrates it).' }),
+      status: Type.Union([Type.Literal('done'), Type.Literal('partial'), Type.Literal('blocked')]),
+      artifacts: Type.Optional(Type.Array(Type.Object({
+        kind: Type.Union(ARTIFACT_KINDS.map((kind) => Type.Literal(kind))),
+        ref: Type.String({ description: 'Path, commit sha, PR URL, document name or URL.' }),
+        note: Type.Optional(Type.String())
+      }))),
+      open_issues: Type.Optional(Type.Array(Type.String())),
+      confidence: Type.Optional(Type.Number({ description: '0 to 1.' })),
+      data: Type.Optional(Type.Any({ description: 'Structured data, only when the task asks for it.' }))
+    }),
+    execute: async (id, params) => {
+      const report = normalizeReport(params, true);
+      if (typeof onSubmit === 'function') onSubmit(report);
+      return textResult('Recibido. Termina con una frase.', { report: Object.assign({}, report, { data: undefined }) });
+    }
+  };
+}
+
+// ─── agent_report: how the main model reads one agent in full ────────────────────────
+// lookup(query) → the stored entry of an agent | null; names() → [{ id, name }] it can ask for.
+function createAgentReportTool(lookup, names) {
+  return {
+    name: 'agent_report',
+    label: 'Informe de un agente',
+    description: 'Read the full report and final text of one agent from a spawn_agents run of this answer (give its id or its name, as in the results). The results you got back are trimmed to keep your context short: use this only for the agents whose details you really need. part: full (default), report (only its structured report) or task (what it was asked).',
+    parameters: Type.Object({
+      agent: Type.String({ description: 'The agent id or name.' }),
+      part: Type.Optional(Type.Union([Type.Literal('full'), Type.Literal('report'), Type.Literal('task')]))
+    }),
+    execute: async (id, params) => {
+      const query = String((params && params.agent) || '').trim();
+      const found = lookup(query);
+      if (!found) {
+        const known = names();
+        return Object.assign(textResult(known.length ? 'No hay ningún agente «' + query + '» en esta respuesta. Agentes: ' + known.map((item) => item.id + ' (' + item.name + ')').join(', ') + '.' : 'Todavía no se ha lanzado ningún agente en esta respuesta.', {}), { isError: true });
+      }
+      const part = params && ['full', 'report', 'task'].includes(params.part) ? params.part : 'full';
+      return textResult(fullReportText(found, part), { agent: found.id });
+    }
+  };
+}
 
 // ─── spawn_agents y agent_report ────────────────────────────────────────
 // The app builds these tools again for each answer, so what they remember (what
