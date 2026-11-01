@@ -1,0 +1,22 @@
+{
+ "id": "run-20261101-165818-rgnv",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v3",
+ "os": "ubuntu-24.04",
+ "sha": "8c4a77929028e80288a21d7a5a4dd3e2f072f8bf",
+ "runner": "Linux X64",
+ "command": "git fetch --quiet origin main feat/ultra-v3 --unshallow 2>/dev/null || git fetch --quiet origin main feat/ultra-v3\ntest \"$(git rev-parse origin/main)\" = \"3311d424086f896e5338f9691e29d855120e243d\"\ngit merge-base --is-ancestor origin/main origin/feat/ultra-v3\ngrep -n \"versionName\\|2026.11.01\" index.html | head -3 || true\ngit push origin origin/feat/ultra-v3:refs/heads/main\ngit fetch --quiet origin main\necho \"MAIN NOW: $(git rev-parse origin/main)\"\necho \"BRANCH:   $(git rev-parse origin/feat/ultra-v3)\"",
+ "exit_code": 128,
+ "seconds": 2,
+ "lines": 12,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 11,
+   "text": "fatal: could not read Username for 'https://github.com': No such device or address"
+  }
+ ],
+ "errors_total": 1,
+ "tail": "+ git fetch --quiet origin main feat/ultra-v3 --unshallow 2>/dev/null || git fetch --quiet origin main feat/ultra-v3\ntest \"$(git rev-parse origin/main)\" = \"3311d424086f896e5338f9691e29d855120e243d\"\ngit merge-base --is-ancestor origin/main origin/feat/ultra-v3\ngrep -n \"versionName\\|2026.11.01\" index.html | head -3 || true\ngit push origin origin/feat/ultra-v3:refs/heads/main\ngit fetch --quiet origin main\necho \"MAIN NOW: $(git rev-parse origin/main)\"\necho \"BRANCH:   $(git rev-parse origin/feat/ultra-v3)\"\n5851:        '  - Esta misma app es el repositorio miguelcoxcaballero/inhouselearn: si el usuario te pide cambiar la app, trabaja ahí (lee primero su AGENTS.md). Lo de la web (index.html, *.js, *.css) llega a todos sus dispositivos en cuanto está en main. Si cambia la app de Android (android/), sube también versionCode y versionName en android/app/build.gradle.kts, súbelo a main, mira github_ci_status y, cuando el build esté en verde y el usuario quiera la APK, usa github_release_android con un changelog en inglés de 2–10 palabras: firma, publica en el canal A y lo comprueba (el usuario lo confirma siempre). Nunca el canal B.',\n12768:    const APP_VERSION = '2026.11.01.6';\nfatal: could not read Username for 'https://github.com': No such device or address\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41329026514"
+}

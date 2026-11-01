@@ -1,0 +1,11 @@
++ git fetch --quiet origin main feat/ultra-v3 --unshallow 2>/dev/null || git fetch --quiet origin main feat/ultra-v3
+test "$(git rev-parse origin/main)" = "3311d424086f896e5338f9691e29d855120e243d"
+git merge-base --is-ancestor origin/main origin/feat/ultra-v3
+grep -n "versionName\|2026.11.01" index.html | head -3 || true
+git push origin origin/feat/ultra-v3:refs/heads/main
+git fetch --quiet origin main
+echo "MAIN NOW: $(git rev-parse origin/main)"
+echo "BRANCH:   $(git rev-parse origin/feat/ultra-v3)"
+5851:        '  - Esta misma app es el repositorio miguelcoxcaballero/inhouselearn: si el usuario te pide cambiar la app, trabaja ahí (lee primero su AGENTS.md). Lo de la web (index.html, *.js, *.css) llega a todos sus dispositivos en cuanto está en main. Si cambia la app de Android (android/), sube también versionCode y versionName en android/app/build.gradle.kts, súbelo a main, mira github_ci_status y, cuando el build esté en verde y el usuario quiera la APK, usa github_release_android con un changelog en inglés de 2–10 palabras: firma, publica en el canal A y lo comprueba (el usuario lo confirma siempre). Nunca el canal B.',
+12768:    const APP_VERSION = '2026.11.01.6';
+fatal: could not read Username for 'https://github.com': No such device or address
