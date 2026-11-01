@@ -1,0 +1,104 @@
++ set +e
+grep -rhn "APS5_EXPORT" core/libs/prx/libSceLibcInternal core/libs/prx/libc | grep -v "Pending\|Unknown" | head -20
+echo ---
+python3 - <<'EOF'
+import sys; sys.path.insert(0,'tools')
+import nid_names
+for n in ["_ZnamSt11align_val_tRKSt9nothrow_t","_ZdaPvSt11align_val_t","_ZdaPvmRKSt9nothrow_t","_ZdlPvmRKSt9nothrow_t"]:
+    print(n, nid_names.compute_nid(n))
+EOF
+echo ---
+grep -n "libc\b\|link_libraries\|prx_library\|function(add_prx" core/libs/CMakeLists.txt | head -20
+grep -rn "ApplicationHeapRegister_nid_no_patch" core/libs/prx/libc/include/*.hpp | head -3
+sed -n 1,40p core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+grep -n "InventoryExports6\|Unknown6" tools/*.py | head
+10:APS5_EXPORT("ww3UUl317Ng", libSceLibcInternalInventory_000_nid_no_patch);
+15:APS5_EXPORT("dXy+lFOiaQA", libSceLibcInternalInventory_001_nid_no_patch);
+20:APS5_EXPORT("HpAlvhNKb2Y", libSceLibcInternalInventory_002_nid_no_patch);
+25:APS5_EXPORT("5bQqdR3hTZw", libSceLibcInternalInventory_003_nid_no_patch);
+30:APS5_EXPORT("1kvQkOSaaVo", libSceLibcInternalInventory_004_nid_no_patch);
+35:APS5_EXPORT("bBGvmspg3Xs", libSceLibcInternalInventory_005_nid_no_patch);
+40:APS5_EXPORT("95MaQlRbfC8", libSceLibcInternalInventory_006_nid_no_patch);
+45:APS5_EXPORT("ki5SQPsB4m4", libSceLibcInternalInventory_007_nid_no_patch);
+50:APS5_EXPORT("6F1JfiING18", libSceLibcInternalInventory_008_nid_no_patch);
+55:APS5_EXPORT("HmcMLz3cPkM", libSceLibcInternalInventory_009_nid_no_patch);
+60:APS5_EXPORT("pyBabUesXN4", libSceLibcInternalInventory_010_nid_no_patch);
+65:APS5_EXPORT("uROsAczW6OU", libSceLibcInternalInventory_011_nid_no_patch);
+70:APS5_EXPORT("X69UlAXF-Oc", libSceLibcInternalInventory_012_nid_no_patch);
+75:APS5_EXPORT("GS1AvxBwVgY", libSceLibcInternalInventory_013_nid_no_patch);
+80:APS5_EXPORT("sTaUDDnGOpE", libSceLibcInternalInventory_014_nid_no_patch);
+85:APS5_EXPORT("OM0FnA7Tldk", libSceLibcInternalInventory_015_nid_no_patch);
+90:APS5_EXPORT("uVOxy7dQTFc", libSceLibcInternalInventory_016_nid_no_patch);
+95:APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+100:APS5_EXPORT("XFh0C66aEms", libSceLibcInternalInventory_018_nid_no_patch);
+105:APS5_EXPORT("oly3wSwEJ2A", libSceLibcInternalInventory_019_nid_no_patch);
+grep: write error: Broken pipe
+grep: write error: Broken pipe
+---
+_ZnamSt11align_val_tRKSt9nothrow_t s2eGsgUF9vk
+_ZdaPvSt11align_val_t v09ZcAhZzSc
+_ZdaPvmRKSt9nothrow_t 7lCihI18N9I
+_ZdlPvmRKSt9nothrow_t 7VPIYFpwU2A
+---
+46:        add_library(windows_seh_personalities OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/prx/libc/src/specifics/windows/SehPersonalities.cpp)
+48:        link_libraries(windows_seh_personalities)
+106:set(LIBC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/prx/libc)
+107:add_library(libc SHARED EXCLUDE_FROM_ALL)
+109:add_subdirectory(${LIBC_DIR} ${CMAKE_CURRENT_BINARY_DIR}/prx/libc)
+110:target_include_directories(libc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+112:    target_compile_options(libc PRIVATE "SHELL:-include \"${CMAKE_CURRENT_SOURCE_DIR}/prx/libc/include/HostStandardStreams.hpp\"")
+114:configure_windows_unwind(libc)
+115:configure_macos_unwind(libc)
+117:    target_link_options(libc PRIVATE LINKER:-z,now)
+118:    target_link_options(libc INTERFACE LINKER:--no-as-needed)
+124:set(RELEASE_IMPLIBS "libc=$<TARGET_LINKER_FILE:libc>\n")
+126:set_target_properties(libc PROPERTIES
+136:set(LIBC_UNPATCHED ${UNPATCHED_DIR}/libc.prx)
+137:set(LIBC_PATCHED ${PATCHED_DIR}/libc.prx)
+138:set(LIBC_EXPORT_LIST ${CMAKE_CURRENT_BINARY_DIR}/libc.exports)
+143:        DEPENDS nid_patcher libc ${LIBC_UNPATCHED}
+144:        COMMENT "Listing libc exports"
+150:        COMMAND $<TARGET_FILE:nid_patcher> libc ${LIBC_PATCHED}
+151:        DEPENDS nid_patcher libc ${LIBC_UNPATCHED}
+grep: write error: Broken pipe
+core/libs/prx/libc/include/ApplicationHeap.hpp:12:void ApplicationHeapRegister_nid_no_patch(void* const* api);
+#pragma once
+
+#include "SceTypes.hpp"
+
+extern "C" {
+
+int APS5_VABI libSceLibcInternalInventory_000_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_001_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_002_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_003_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_004_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_005_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_006_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_007_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_008_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_009_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_010_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_011_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_012_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_013_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_014_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_015_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_016_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_020_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_021_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_022_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_023_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_024_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_025_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_026_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_027_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_028_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_029_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_030_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_031_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_032_nid_no_patch();
+int APS5_VABI libSceLibcInternalInventory_033_nid_no_patch();
