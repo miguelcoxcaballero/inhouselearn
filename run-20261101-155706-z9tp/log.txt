@@ -1,0 +1,25 @@
++ set +e +o pipefail
+npm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1
+python3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &
+sleep 1
+export CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT
+for t in chat-title chats-menu; do
+  echo "################ $t (branch)"
+  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1
+  echo "PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)"
+  grep -E '^FAIL' /tmp/$t.log | cut -c1-900
+done
+echo; echo "--- the failing test sources"
+grep -n "tapping the open chat's name" tests/web/chat-title.cjs | head -3
+grep -n "double click renames" tests/web/chats-menu.cjs | head -3
+exit 0
+################ chat-title (branch)
+PASS: 17  FAIL: 0
+################ chats-menu (branch)
+PASS: 9  FAIL: 3
+FAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {"renamed":{"title":"Historia moderna","custom":"Historia moderna"},"editor":{"value":"Revolución francesa causas","focused":true,"editable":"plaintext-only","field":true,"collapsed":true,"caret":1,"mark":true},"partial":[]}
+FAIL Escape discards the edit and keeps the name — {"title":"Historia moderna","custom":"Historia moderna","list":"Revolución francesa causas"}
+FAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {"topEditor":null,"topRenamed":{"title":"Historia contemporánea","custom":"Historia contemporánea","top":"Historia contemporánea","list":"Historia contemporánea"}}
+
+--- the failing test sources
+122:  check('double click renames the chat with no box at all, and the name is typed out like the automatic ones',

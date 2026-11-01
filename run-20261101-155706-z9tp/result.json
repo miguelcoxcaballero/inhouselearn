@@ -1,0 +1,46 @@
+{
+ "id": "run-20261101-155706-z9tp",
+ "repo": "miguelcoxcaballero/inhouselearn",
+ "ref": "feat/ultra-v3",
+ "os": "ubuntu-24.04",
+ "sha": "8c4a77929028e80288a21d7a5a4dd3e2f072f8bf",
+ "runner": "Linux X64",
+ "command": "set +e +o pipefail\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\nfor t in chat-title chats-menu; do\n  echo \"################ $t (branch)\"\n  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)\"\n  grep -E '^FAIL' /tmp/$t.log | cut -c1-900\ndone\necho; echo \"--- the failing test sources\"\ngrep -n \"tapping the open chat's name\" tests/web/chat-title.cjs | head -3\ngrep -n \"double click renames\" tests/web/chats-menu.cjs | head -3\nexit 0",
+ "exit_code": 0,
+ "seconds": 59,
+ "lines": 26,
+ "truncated": false,
+ "errors": [
+  {
+   "line": 9,
+   "text": "echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)\""
+  },
+  {
+   "line": 10,
+   "text": "grep -E '^FAIL' /tmp/$t.log | cut -c1-900"
+  },
+  {
+   "line": 17,
+   "text": "PASS: 17  FAIL: 0"
+  },
+  {
+   "line": 19,
+   "text": "PASS: 9  FAIL: 3"
+  },
+  {
+   "line": 20,
+   "text": "FAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\"renamed\":{\"title\":\"Historia moderna\",\"custom\":\"Historia moderna\"},\"editor\":{\"value\":\"Revolución francesa causas\",\"focused\":true,\"editable\":\"plaintext-only\",\"field\":true,\"collapsed\":true,\"caret\":1,\"mark\":true},\"partial\":[]}"
+  },
+  {
+   "line": 21,
+   "text": "FAIL Escape discards the edit and keeps the name — {\"title\":\"Historia moderna\",\"custom\":\"Historia moderna\",\"list\":\"Revolución francesa causas\"}"
+  },
+  {
+   "line": 22,
+   "text": "FAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"topEditor\":null,\"topRenamed\":{\"title\":\"Historia contemporánea\",\"custom\":\"Historia contemporánea\",\"top\":\"Historia contemporánea\",\"list\":\"Historia contemporánea\"}}"
+  }
+ ],
+ "errors_total": 7,
+ "tail": "+ set +e +o pipefail\nnpm install --no-save --no-package-lock playwright@1.56.1 >/dev/null 2>&1\npython3 -m http.server 8765 --bind 127.0.0.1 >/dev/null 2>&1 &\nsleep 1\nexport CHROMIUM=$(which google-chrome) OUT=/tmp/out; mkdir -p $OUT\nfor t in chat-title chats-menu; do\n  echo \"################ $t (branch)\"\n  timeout 280 node tests/web/$t.cjs > /tmp/$t.log 2>&1\n  echo \"PASS: $(grep -c '^PASS' /tmp/$t.log)  FAIL: $(grep -c '^FAIL' /tmp/$t.log)\"\n  grep -E '^FAIL' /tmp/$t.log | cut -c1-900\ndone\necho; echo \"--- the failing test sources\"\ngrep -n \"tapping the open chat's name\" tests/web/chat-title.cjs | head -3\ngrep -n \"double click renames\" tests/web/chats-menu.cjs | head -3\nexit 0\n################ chat-title (branch)\nPASS: 17  FAIL: 0\n################ chats-menu (branch)\nPASS: 9  FAIL: 3\nFAIL double click renames the chat with no box at all, and the name is typed out like the automatic ones — {\"renamed\":{\"title\":\"Historia moderna\",\"custom\":\"Historia moderna\"},\"editor\":{\"value\":\"Revolución francesa causas\",\"focused\":true,\"editable\":\"plaintext-only\",\"field\":true,\"collapsed\":true,\"caret\":1,\"mark\":true},\"partial\":[]}\nFAIL Escape discards the edit and keeps the name — {\"title\":\"Historia moderna\",\"custom\":\"Historia moderna\",\"list\":\"Revolución francesa causas\"}\nFAIL tapping the open chat's name in the top bar renames it (and the new name is typed out there too) — {\"topEditor\":null,\"topRenamed\":{\"title\":\"Historia contemporánea\",\"custom\":\"Historia contemporánea\",\"top\":\"Historia contemporánea\",\"list\":\"Historia contemporánea\"}}\n\n--- the failing test sources\n122:  check('double click renames the chat with no box at all, and the name is typed out like the automatic ones',\n",
+ "run": "https://github.com/miguelcoxcaballero/inhouselearn/actions/runs/41323786694"
+}
