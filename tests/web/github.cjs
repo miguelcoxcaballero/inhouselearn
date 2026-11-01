@@ -195,7 +195,11 @@ const toolOutputs = (page, n) => page.evaluate((k) => window.__requests.slice(-1
 
   // Prompt: tools and workflow.
   const prompt = await page.evaluate(() => { const r = window.__requests[0]; return { sys: (r.messages.find((m) => m.role === 'system') || {}).content || '', tools: (r.tools || []).map((t) => t.function.name).filter((n) => /^github_/.test(n)) }; });
-  check('model gets the GitHub tools and the prepare → push workflow', prompt.tools.length === 15 && prompt.tools.includes('github_release_android') && prompt.tools.includes('github_screenshot') && /Prepara TODOS los cambios/.test(prompt.sys) && /github_grep/.test(prompt.sys) && /AGENTS\.md/.test(prompt.sys), prompt.tools);
+  // 17 with github_fork and github_run. The commit that adds tools to engine/src runs
+  // these tests against the previous bundle (the Engine workflow rebuilds it right
+  // after, and its bot commit starts no workflow), so 15 still passes there.
+  const hasForkRun = prompt.tools.includes('github_fork') && prompt.tools.includes('github_run');
+  check('model gets the GitHub tools and the prepare → push workflow', prompt.tools.length === (hasForkRun ? 17 : 15) && /github_run/.test(prompt.sys) && /github_fork/.test(prompt.sys) && prompt.tools.includes('github_release_android') && prompt.tools.includes('github_screenshot') && /Prepara TODOS los cambios/.test(prompt.sys) && /github_grep/.test(prompt.sys) && /AGENTS\.md/.test(prompt.sys), prompt.tools);
 
   // A chat without the switch gets no GitHub tools.
   await page.click('#hamburger-btn'); await page.click('#new-chat-btn');

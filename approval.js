@@ -66,7 +66,9 @@ const APPROVAL_GITHUB_LABELS = {
   github_ci_status: 'GitHub: estado de la CI',
   github_create_pull_request: 'GitHub: abrir PR',
   github_list_issues: 'GitHub: issues y PRs',
-  github_comment: 'GitHub: comentar'
+  github_comment: 'GitHub: comentar',
+  github_fork: 'GitHub: hacer fork',
+  github_run: 'GitHub: compilar y probar'
 };
 
 function approvalIconSvg(id) {
@@ -164,9 +166,10 @@ async function approveChange(chat, request) {
   // Some actions (publishing an APK) reach other people's phones and cannot be
   // undone: they ask even in «Acceso total».
   if (mode === 'full' && !options.always) return true;
-  // Screenshots change no code (they only add pictures to the screenshots
-  // branch): in «Auto» they go ahead like the chat's own files.
-  if (mode === 'auto' && options.kind === 'screenshot') return true;
+  // Screenshots and remote builds/tests change no code (they only add pictures
+  // to the screenshots branch or a log to the runs branch): in «Auto» they go
+  // ahead like the chat's own files. A fork (a new repository) still asks.
+  if (mode === 'auto' && (options.kind === 'screenshot' || options.kind === 'run')) return true;
   // Above the composer, not over the whole screen: the user can keep writing.
   // A parallel agent (Ultra code) says who asks: its name and colour on the card.
   const card = {

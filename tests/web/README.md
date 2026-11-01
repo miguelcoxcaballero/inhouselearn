@@ -70,6 +70,7 @@ login, and that sync preserves a running agent's chat object.
 `reasoning.cjs` checks that reasoning written inside an answer (`<think>`, or a lone `</think>`)
 goes to the thinking section, that a model repeating itself is cut (and the queue goes on), that
 «Muéstramelo en visual» is gone from normal chats and that confirmations show no dark notice.
+`fork-run.cjs` covers `github_fork` (asks, creates, reuses and syncs), `github_run` (refuses unpushed changes, runs in «Auto» through run.yml, reports exit code, errors and the log path) and a pull request from a fork (owner:branch, filled-in link when the token may not open it).
 `release.cjs` also covers `github_screenshot` (no card in «Auto», a card in «Preguntar», real URLs, another public repository with setup/serve, and a private one: workflow installed there once, pictures kept there and loaded with the token).
 
 `queue.cjs` checks the message queue (Enter while busy, one per finished turn, Stop pauses)

@@ -1,0 +1,275 @@
+name: Remote run
+# Builds and tests for the chat: the model calls github_run (engine/src/github.js)
+# and this workflow checks out a branch or commit of a repository, runs the
+# command it was given (bash -e, from the repository root) on a GitHub-hosted
+# runner and publishes the exit code, the time, the error lines and the log on
+# the `runs` branch of the repository running it (<id>/result.json and
+# <id>/log.txt, newest 30 kept), where the connector reads them.
+#
+# Public repositories run here, in inhouselearn. A private repository runs this
+# same file, copied into it as .github/workflows/inhouse-run.yml (the app
+# installs it, with the user's approval), so its code and its logs never leave
+# it. The project's code runs in a job with a read-only token that is not kept
+# on disk; only the publish job writes, and it runs nothing from the project.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repository to run, owner/name (empty = this one)
+        type: string
+        default: ''
+      ref:
+        description: Branch or commit (empty = default branch)
+        type: string
+        default: ''
+      command:
+        description: Shell commands, run with bash -e from the repository root
+        type: string
+        required: true
+      os:
+        description: Runner (ubuntu-24.04, ubuntu-22.04, ubuntu-24.04-arm, macos-15, macos-14, windows-2025, windows-2022)
+        type: string
+        default: ubuntu-24.04
+      submodules:
+        description: false, true or recursive
+        type: string
+        default: 'false'
+      packages:
+        description: System packages installed first (apt on Linux, brew on macOS, choco on Windows)
+        type: string
+        default: ''
+      minutes:
+        description: Time limit for the command, 1-150
+        type: string
+        default: '30'
+      id:
+        description: Folder for the result on the runs branch (letters, digits, . _ -)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+# No concurrency group: GitHub would cancel a waiting run when a third one
+# arrives. Runs go in parallel and the publish step retries its push.
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Check the inputs
+        env:
+          ID: ${{ inputs.id }}
+          REPO: ${{ inputs.repo }}
+          REF: ${{ inputs.ref }}
+          OS: ${{ inputs.os }}
+          SUBMODULES: ${{ inputs.submodules }}
+          PACKAGES: ${{ inputs.packages }}
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          [[ "$ID" =~ ^[A-Za-z0-9._-]{1,60}$ ]] || { echo "::error::id must be 1-60 letters, digits, . _ -"; exit 1; }
+          [[ -z "$REPO" || "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || { echo "::error::repo must be owner/name"; exit 1; }
+          [[ -z "$REF" || "$REF" =~ ^[A-Za-z0-9._/-]{1,120}$ ]] || { echo "::error::ref must be a branch or a commit"; exit 1; }
+          case "$OS" in ubuntu-24.04|ubuntu-22.04|ubuntu-24.04-arm|macos-15|macos-14|windows-2025|windows-2022) ;; *) echo "::error::os not allowed: $OS"; exit 1 ;; esac
+          case "$SUBMODULES" in false|true|recursive) ;; *) echo "::error::submodules must be false, true or recursive"; exit 1 ;; esac
+          [[ -z "$PACKAGES" || "$PACKAGES" =~ ^[A-Za-z0-9.+:=_@/\ -]{1,600}$ ]] || { echo "::error::packages must be package names separated by spaces"; exit 1; }
+          [[ "$MINUTES" =~ ^[0-9]{1,3}$ ]] && (( MINUTES >= 1 && MINUTES <= 150 )) || { echo "::error::minutes must be 1-150"; exit 1; }
+
+  run:
+    needs: check
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 175
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      ID: ${{ inputs.id }}
+    steps:
+      - name: Get the project
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.repo != '' && inputs.repo || github.repository }}
+          ref: ${{ inputs.ref }}
+          path: app
+          submodules: ${{ inputs.submodules }}
+          persist-credentials: false
+      - name: Restore the compiler cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.ccache
+          key: run-${{ inputs.os }}-${{ inputs.repo != '' && inputs.repo || github.repository }}-${{ github.run_id }}
+          restore-keys: run-${{ inputs.os }}-${{ inputs.repo != '' && inputs.repo || github.repository }}-
+      - name: Run the command
+        working-directory: app
+        timeout-minutes: ${{ fromJSON(inputs.minutes) }}
+        env:
+          COMMAND: ${{ inputs.command }}
+          PACKAGES: ${{ inputs.packages }}
+        run: |
+          OUT="$GITHUB_WORKSPACE/out/$ID"
+          mkdir -p "$OUT"
+          date +%s > "$OUT/start"
+          git rev-parse HEAD > "$OUT/sha" 2>/dev/null || true
+          echo "$RUNNER_OS $RUNNER_ARCH" > "$OUT/runner"
+          export CCACHE_DIR="$HOME/.ccache"
+          export CCACHE_MAXSIZE=2G
+          set +e
+          (
+            if [ -n "$PACKAGES" ]; then
+              echo "+ install: $PACKAGES"
+              case "$RUNNER_OS" in
+                Linux) sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $PACKAGES ;;
+                macOS) brew install $PACKAGES ;;
+                Windows) choco install -y --no-progress $PACKAGES ;;
+              esac || { echo "Package installation failed"; exit 97; }
+            fi
+            echo "+ $COMMAND"
+            bash -e -o pipefail -c "$COMMAND"
+          ) 2>&1 | tee "$OUT/log.txt"
+          CODE=${PIPESTATUS[0]}
+          echo "$CODE" > "$OUT/exit_code"
+          echo $(( $(date +%s) - $(cat "$OUT/start") )) > "$OUT/seconds"
+          exit 0
+      - name: Note a timeout or a failed setup
+        if: always()
+        run: |
+          OUT="$GITHUB_WORKSPACE/out/$ID"
+          mkdir -p "$OUT"
+          if [ ! -f "$OUT/exit_code" ]; then
+            if [ -f "$OUT/start" ]; then
+              echo timeout > "$OUT/exit_code"
+              echo $(( $(date +%s) - $(cat "$OUT/start") )) > "$OUT/seconds"
+            else
+              echo setup > "$OUT/exit_code"
+            fi
+          fi
+      - name: Save the compiler cache
+        if: always() && steps.cache.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.ccache
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - name: Keep the result in the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run
+          path: out/
+          if-no-files-found: ignore
+
+  publish:
+    needs: [check, run]
+    if: always() && needs.check.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      ID: ${{ inputs.id }}
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: run
+          path: out
+      - name: Summarise
+        env:
+          REPO: ${{ inputs.repo != '' && inputs.repo || github.repository }}
+          REF: ${{ inputs.ref }}
+          OS: ${{ inputs.os }}
+          COMMAND: ${{ inputs.command }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          folder = os.path.join('out', os.environ['ID'])
+          os.makedirs(folder, exist_ok=True)
+          def read(name, default=''):
+              try:
+                  with open(os.path.join(folder, name), encoding='utf-8', errors='replace') as handle:
+                      return handle.read().strip()
+              except OSError:
+                  return default
+          code = read('exit_code', 'setup')
+          raw = ''
+          path = os.path.join(folder, 'log.txt')
+          if os.path.exists(path):
+              with open(path, 'rb') as handle:
+                  raw = handle.read().decode('utf-8', 'replace')
+          raw = re.sub(r'\x1b\[[0-9;?]*[A-Za-z]', '', raw).replace('\r\n', '\n')
+          raw = '\n'.join(line.split('\r')[-1] for line in raw.split('\n'))
+          truncated = False
+          if len(raw) > 8000000:
+              raw = raw[:1000000] + '\n... [middle of the log cut: too long] ...\n' + raw[-6000000:]
+              truncated = True
+          with open(path, 'w', encoding='utf-8') as handle:
+              handle.write(raw)
+          lines = raw.split('\n')
+          loose = re.compile(r'\berror\b|\bfatal\b|undefined reference|segmentation fault|no such file or directory|cannot find|command not found', re.I)
+          strict = re.compile(r'FAILED|\bFAIL\b|Traceback \(most recent|AssertionError|panicked at|ninja: build stopped|\*\*\*Failed|Error \d+')
+          quiet = re.compile(r'\b0 (errors?|error\(s\)|failed)\b|-Werror|error-limit|errors? = 0', re.I)
+          errors, seen, total = [], set(), 0
+          for number, line in enumerate(lines, 1):
+              text = line.strip()
+              if not text or quiet.search(text) or not (loose.search(text) or strict.search(text)):
+                  continue
+              total += 1
+              if text in seen or len(errors) >= 80:
+                  continue
+              seen.add(text)
+              errors.append({'line': number, 'text': text[:400]})
+          tail = '\n'.join(lines[-150:])[-15000:]
+          def number(value):
+              try:
+                  return int(value)
+              except ValueError:
+                  return None
+          result = {
+              'id': os.environ['ID'], 'repo': os.environ['REPO'], 'ref': os.environ['REF'], 'os': os.environ['OS'],
+              'sha': read('sha'), 'runner': read('runner'), 'command': os.environ['COMMAND'],
+              'exit_code': number(code) if number(code) is not None else code, 'seconds': number(read('seconds', 'x')),
+              'lines': len(lines) if raw else 0, 'truncated': truncated, 'errors': errors, 'errors_total': total,
+              'tail': tail, 'run': os.environ['RUN_URL']
+          }
+          with open(os.path.join(folder, 'result.json'), 'w', encoding='utf-8') as handle:
+              json.dump(result, handle, ensure_ascii=False, indent=1)
+          for name in ('start', 'sha', 'runner', 'seconds'):
+              try:
+                  os.remove(os.path.join(folder, name))
+              except OSError:
+                  pass
+          print('exit code:', code, '| lines:', len(lines), '| error lines:', total)
+          PY
+      - name: Publish on the runs branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Another run may publish at the same time: start again from the new head.
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf pub && mkdir pub && cd pub
+            git init -q
+            git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            if git fetch -q --depth 1 origin runs; then git checkout -q -B runs FETCH_HEAD; else git checkout -q --orphan runs; fi
+            # Keep the newest folders only (ids start with a timestamp, so they sort by date).
+            ls -1d */ 2>/dev/null | sed 's#/$##' | sort | head -n -29 | while read -r old; do git rm -rq "$old"; done
+            rm -rf "$ID" && cp -r "../out/$ID" .
+            git add -A
+            git commit -qm "Run $ID"
+            if git push -q origin runs; then
+              echo "Published: https://github.com/${GITHUB_REPOSITORY}/tree/runs/$ID"
+              break
+            fi
+            cd .. && sleep $((attempt * 3))
+            [ "$attempt" = 6 ] && { echo "::error::Could not publish on the runs branch"; exit 1; }
+          done
+      - name: Fail the run if the command failed
+        run: |
+          CODE=$(cat "out/$ID/exit_code" 2>/dev/null || echo setup)
+          [ "$CODE" = 0 ] || { echo "::error::The command ended with: $CODE"; exit 1; }

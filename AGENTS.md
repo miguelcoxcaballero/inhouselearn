@@ -164,6 +164,23 @@ Mandatory guidance for every AI and developer working in this repository.
   (`window.inhousePrivateImage`). The project's code runs in a read-only job; only the publish job
   writes. In «Auto» the screenshot itself does not ask. A `preview` is a mockup, never presented as a
   screenshot.
+  **Real builds and tests (any project):** `github_run` runs the model's shell commands (`bash -e`, repository
+  root) on a GitHub-hosted runner (`RUN_OS`: Ubuntu 24.04 by default, 22.04, ARM, macOS, Windows) against a
+  pushed branch or commit of any repository the token reads: `.github/workflows/run.yml` (a `check` job
+  validates the inputs; `run` checks out the project with optional submodules, installs `packages` with
+  apt/brew/choco, keeps a ccache in `~/.ccache` per repository and system, captures exit code and log with a
+  per-step time limit of 1–150 min; `publish` summarises with Python and writes `<id>/result.json` +
+  `<id>/log.txt` to the `runs` branch, newest 30 kept, then turns the run red if the command failed). The tool
+  reads result.json even when the run is red and returns the exit code (`timeout`, `setup` and 97 = packages
+  are special), the error lines, the tail and the path of the whole log for `github_read_file`. It refuses a
+  branch with prepared but unpushed changes. Private repositories get `inhouse-run.yml` installed once
+  (`ensurePrivateWorkflow`, approval gate) like the screenshots. In «Auto» it does not ask (it changes no code).
+  **Contributing to others' projects:** `github_fork` creates the user's fork (`default_branch_only`, asks even
+  in «Auto»: a new repository) and waits for it, or reuses an existing one and syncs it (`merge-upstream`).
+  `github_create_pull_request` takes `head_repo` (the fork): prepared changes are pushed there, the PR goes to
+  `repo` with `owner:branch` and `maintainer_can_modify`; a fine-grained token cannot write to repositories of
+  another account, so a 403/404 returns a compare link with title and body filled in for the user to tap.
+  Test: `tests/web/fork-run.cjs` (prints SKIP while `vendor/pi-engine.js` predates the tools).
 - **The user's Google Drive:** + menu → Google Drive (per browser, `localStorage` `::userDrive`;
   on per chat, `chat.userDrive`). Connecting asks Google only for `drive.readonly` (added to
   `googleOauthScopes()`, checked with tokeninfo; if Google does not grant it nothing is connected).

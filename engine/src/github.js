@@ -24,6 +24,17 @@ const LEARN_REPO = 'miguelcoxcaballero/inhouselearn';
 const SIGN_REPO = 'miguelcoxcaballero/youtube-calma';
 // The screenshots workflow as installed in a private repository (same file).
 const PRIVATE_SHOT_WORKFLOW = 'inhouse-screenshots.yml';
+// Remote builds and tests (github_run): run.yml here, or this copy inside a
+// private repository so its code and its logs never leave it.
+const RUN_WORKFLOW = 'run.yml';
+const PRIVATE_RUN_WORKFLOW = 'inhouse-run.yml';
+const RUN_OS = ['ubuntu-24.04', 'ubuntu-22.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-14', 'windows-2025', 'windows-2022'];
+const RUN_TAIL_CHARS = 14000;
+
+function duration(seconds) {
+  const s = Math.max(0, Math.round(Number(seconds) || 0));
+  return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + (s % 60) + ' s';
+}
 
 function textResult(text, details) {
   return { content: [{ type: 'text', text }], details: details || {} };
@@ -506,6 +517,43 @@ export function createGithubTools(ctx) {
     return current;
   }
 
+  // A private repository runs this app's workflow inside itself: the same file,
+  // committed once to its default branch through the approval gate.
+  async function ensurePrivateWorkflow(repo, info, source, target, step, title, extra) {
+    const main = info.default_branch;
+    const wanted = await readRemote(LEARN_REPO, '.github/workflows/' + source, 'main');
+    if (!wanted) throw new Error('No encuentro el workflow ' + source + ' en ' + LEARN_REPO + '.');
+    const current = await readRemote(repo, '.github/workflows/' + target, main);
+    if (current && current.text === wanted.text) return false;
+    step('Instalando el workflow ' + target + ' en ' + repo + '…');
+    try {
+      await commitFiles({
+        repo, branch: main,
+        message: (current ? 'Update' : 'Add') + ' the Inhouse ' + title + ' workflow\n\nRuns for the Inhouse Learn chat inside this private repository, so its code and results stay here.',
+        files: [{ path: '.github/workflows/' + target, content: wanted.text }],
+        title: (current ? 'Actualizar ' : 'Instalar ') + title + ' en ' + repo,
+        extra
+      });
+    } catch (error) {
+      if (error.status === 403 || error.status === 404) throw new Error('No he podido instalar el workflow en ' + repo + ' (' + error.message + '). El token necesita en ese repositorio Contents y Workflows de lectura y escritura, y Actions de lectura y escritura.');
+      throw error;
+    }
+    await sleep(4000);
+    return true;
+  }
+
+  // The user's fork of repo, if they have one under that name.
+  async function existingFork(upstream, owner, name) {
+    const found = await gh('GET', '/repos/' + owner + '/' + name).catch((error) => { if (error.status === 404) return null; throw error; });
+    if (!found) return null;
+    const parent = found.parent && found.parent.full_name ? found.parent.full_name.toLowerCase() : '';
+    const source = found.source && found.source.full_name ? found.source.full_name.toLowerCase() : '';
+    if (found.fork && (parent === upstream.toLowerCase() || source === upstream.toLowerCase())) return found;
+    const error = new Error(owner + '/' + name + ' ya existe y no es un fork de ' + upstream + '. Llama a github_fork con otro name.');
+    error.taken = true;
+    throw error;
+  }
+
   return [
     {
       name: 'github_list_repos',
@@ -735,10 +783,11 @@ export function createGithubTools(ctx) {
     {
       name: 'github_create_pull_request',
       label: 'GitHub: abrir PR',
-      description: 'Open a pull request from a branch. If that branch has prepared changes they are uploaded first in one commit, and the user approves both together.',
+      description: 'Open a pull request from a branch. If that branch has prepared changes they are uploaded first in one commit, and the user approves both together. From a fork to the original project: repo = the original, head_repo = the fork (see github_fork); if GitHub does not let the token open it there, you get a link that opens it with the title and description filled in.',
       parameters: Type.Object({
-        repo: repoParam,
+        repo: Type.String({ description: 'Repository that receives the pull request, "owner/name".' }),
         head: Type.String({ description: 'Branch with the changes.' }),
+        head_repo: Type.Optional(Type.String({ description: 'Fork that holds that branch, "owner/name", for a pull request from a fork to repo.' })),
         base: Type.Optional(Type.String({ description: 'Target branch (default branch if omitted).' })),
         title: Type.String(),
         body: Type.Optional(Type.String({ description: 'Description in Markdown.' })),
@@ -748,13 +797,19 @@ export function createGithubTools(ctx) {
       executionMode: 'sequential',
       execute: async (id, params) => {
         const repo = used(repoOf(params.repo));
+        const headRepo = params.head_repo ? used(repoOf(params.head_repo)) : repo;
+        const cross = headRepo.toLowerCase() !== repo.toLowerCase();
+        const branch = cross ? String(params.head || '').trim().replace(/^[^:]+:/, '') : String(params.head || '').trim();
+        const [headOwner, headName] = headRepo.split('/');
+        const headRef = cross ? headOwner + ':' + branch : branch;
         const base = params.base || await defaultBranch(repo);
-        const prLine = params.head + ' → ' + base + ' · «' + params.title + '»' + (params.draft ? ' (borrador)' : '');
+        const prLine = (cross ? headRepo + ' ' : '') + branch + ' → ' + (cross ? repo + ' ' : '') + base + ' · «' + params.title + '»' + (params.draft ? ' (borrador)' : '');
         let pushed = null;
-        if (stageCount(stage.get(repo, params.head))) {
-          pushed = await pushStaged(repo, params.head, params.commit_message || params.title, { title: 'Subir y abrir pull request', extra: 'Pull request: ' + prLine });
+        if (stageCount(stage.get(headRepo, branch))) {
+          pushed = await pushStaged(headRepo, branch, params.commit_message || params.title, { title: 'Subir y abrir pull request', extra: 'Pull request: ' + prLine });
         } else {
-          const compare = await gh('GET', '/repos/' + repo + '/compare/' + encodeURIComponent(base) + '...' + encodeURIComponent(params.head));
+          const compare = await gh('GET', '/repos/' + repo + '/compare/' + encodeURIComponent(base) + '...' + (cross ? encodeURIComponent(headOwner) + ':' : '') + encodeURIComponent(branch))
+            .catch((error) => { if (cross) return { files: [] }; throw error; });
           await ask({
             title: 'Abrir pull request',
             summary: repo + ' · ' + prLine,
@@ -762,7 +817,21 @@ export function createGithubTools(ctx) {
             kind: 'pr'
           });
         }
-        const pr = await gh('POST', '/repos/' + repo + '/pulls', { title: params.title, head: params.head, base, body: params.body || '', draft: !!params.draft });
+        const request = { title: params.title, head: headRef, base, body: params.body || '', draft: !!params.draft };
+        if (cross) request.maintainer_can_modify = true;
+        let pr;
+        try {
+          pr = await gh('POST', '/repos/' + repo + '/pulls', request);
+        } catch (error) {
+          // A fine-grained token only writes to the account it was made for: the
+          // branch is already in the fork, so the user opens the PR with one tap.
+          if (!cross || ![403, 404].includes(error.status)) throw error;
+          const repoName = repo.split('/')[1];
+          const refPart = (value) => encodeURIComponent(value).replace(/%2F/gi, '/');
+          const headSpec = encodeURIComponent(headOwner) + ':' + (headName.toLowerCase() === repoName.toLowerCase() ? '' : encodeURIComponent(headName) + ':') + refPart(branch);
+          const link = 'https://github.com/' + repo + '/compare/' + refPart(base) + '...' + headSpec + '?expand=1&title=' + encodeURIComponent(params.title) + (params.body ? '&body=' + encodeURIComponent(String(params.body).slice(0, 6000)) : '');
+          return textResult((pushed ? pushed.text + '\n' : '') + 'GitHub no deja que este token abra el PR en ' + repo + ' (' + error.message + '). Los tokens fine-grained solo escriben en los repositorios de su propia cuenta; la rama ya está en ' + headRepo + '. Dale al usuario este enlace: abre el PR con el título y la descripción ya puestos y solo tiene que pulsar «Create pull request»:\n' + link, { repo, headRepo, branch, link });
+        }
         return textResult((pushed ? pushed.text + '\n' : '') + 'PR #' + pr.number + ' abierta: ' + pr.html_url, { repo, number: pr.number });
       }
     },
@@ -1000,6 +1069,161 @@ export function createGithubTools(ctx) {
           '',
           'Enséñalas en el chat ahora: un bloque visual image por captura ({"type":"image","src":"<url>","alt":"…","caption":"…"}) o un solo gallery. Son fotos de verdad de esa versión; di qué se ve y qué ha cambiado.' + (own ? '' : ' (El repositorio es privado: la app las abre con el token del usuario.)')
         ].join('\n'), { repo, url, ref, folder, run: run.html_url, images: done.map((shot) => base + encodeURIComponent(shot.file)) });
+      }
+    },
+    {
+      name: 'github_fork',
+      label: 'GitHub: hacer fork',
+      description: 'Fork a repository into the user\'s account (or reuse the fork they already have, brought up to date with the original) to contribute to a project the token cannot write to. Then prepare and push the changes on a new branch of the FORK (github_write_files / github_edit_file / github_push with repo = the fork), build and test them with github_run, and open the pull request against the original with github_create_pull_request (repo = original, head_repo = fork). The user approves creating a fork.',
+      parameters: Type.Object({
+        repo: Type.String({ description: 'Original repository "owner/name".' }),
+        name: Type.Optional(Type.String({ description: 'Name for the fork (default the same name).' })),
+        sync: Type.Optional(Type.Boolean({ description: 'Bring an existing fork\'s default branch up to date with the original (default true).' }))
+      }),
+      executionMode: 'sequential',
+      execute: async (id, params, signal, onUpdate) => {
+        const log = [];
+        const step = (text) => {
+          log.push(text);
+          if (typeof onUpdate === 'function') onUpdate(textResult(log.join('\n'), { phase: text }));
+        };
+        const upstream = repoOf(params.repo);
+        const info = await gh('GET', '/repos/' + upstream);
+        const me = (await gh('GET', '/user')).login;
+        if (upstream.split('/')[0].toLowerCase() === String(me).toLowerCase()) throw new Error(upstream + ' ya es de tu cuenta: no hace falta fork, trabaja en una rama de ese repositorio.');
+        const name = String(params.name || info.name || upstream.split('/')[1]).trim();
+        if (!/^[\w.-]{1,100}$/.test(name)) throw new Error('name no válido: "' + params.name + '".');
+        let fork = await existingFork(upstream, me, name);
+        const tips = '\nSiguiente: prepara los cambios en una rama nueva de ' + '%FORK%' + ' (repo = el fork; nunca su rama principal), súbelos con github_push, compílalos y pruébalos con github_run y abre el PR con github_create_pull_request (repo = ' + upstream + ', head_repo = %FORK%, base = ' + info.default_branch + ').';
+        if (fork) {
+          used(fork.full_name);
+          let synced = '';
+          if (params.sync !== false) {
+            try {
+              const merge = await gh('POST', '/repos/' + fork.full_name + '/merge-upstream', { branch: fork.default_branch });
+              synced = ' Rama ' + fork.default_branch + ' al día con ' + upstream + (merge && merge.merge_type && merge.merge_type !== 'none' ? ' (' + merge.merge_type + ')' : ' (ya lo estaba)') + '.';
+            } catch (error) {
+              synced = ' No se pudo poner al día ' + fork.default_branch + ' con ' + upstream + ': ' + error.message + (error.status === 409 ? ' (el fork tiene commits propios en esa rama que chocan; trabaja en ramas nuevas creadas desde la del original).' : '');
+            }
+          }
+          return textResult('Ya tienes el fork ' + fork.full_name + ' (de ' + upstream + ', rama principal ' + fork.default_branch + ').' + synced + tips.replace(/%FORK%/g, fork.full_name), { repo: upstream, fork: fork.full_name, created: false });
+        }
+        await ask({
+          title: 'Hacer fork',
+          summary: upstream + ' → ' + me + '/' + name + '\nCrea en tu cuenta una copia ' + (info.private ? 'privada' : 'pública') + ' de ' + upstream + ' (solo su rama ' + info.default_branch + '). Ahí se suben los cambios y desde ahí se abre el pull request al original.',
+          items: [],
+          kind: 'fork',
+          confirmText: 'Hacer fork'
+        });
+        let created;
+        try {
+          created = await gh('POST', '/repos/' + upstream + '/forks', Object.assign({ default_branch_only: true }, name !== info.name ? { name } : {}));
+        } catch (error) {
+          if (error.status === 403 || error.status === 404) throw new Error('GitHub no deja que este token haga el fork (' + error.message + '). Para forks hace falta un token con acceso a «All repositories» (un fork es un repositorio nuevo, y un token limitado a unos repositorios no lo vería) y permisos Administration, Contents, Workflows y Pull requests de lectura y escritura. O que el usuario pulse «Fork» en https://github.com/' + upstream + ' y vuelvas a llamar a github_fork.');
+          throw error;
+        }
+        const full = created.full_name;
+        step('Creando ' + full + '…');
+        for (let i = 0; i < 40; i++) {
+          if (await branchSha(full, created.default_branch || info.default_branch).catch(() => '')) break;
+          if (i === 39) throw new Error('GitHub aceptó el fork pero ' + full + ' todavía no tiene su rama ' + (created.default_branch || info.default_branch) + ' tras 2 minutos. Vuelve a llamar a github_fork dentro de un rato.');
+          await sleep(3000);
+        }
+        used(full);
+        repoInfo.delete(full);
+        return textResult('Fork creado: ' + full + ' (de ' + upstream + ', rama principal ' + (created.default_branch || info.default_branch) + '): https://github.com/' + full + tips.replace(/%FORK%/g, full), { repo: upstream, fork: full, created: true });
+      }
+    },
+    {
+      name: 'github_run',
+      label: 'GitHub: compilar y probar',
+      description: 'Build and test code for real: runs shell commands on a GitHub Actions runner (Linux by default; macOS or Windows too) on a branch or commit of any repository the token can read (a fork included) and returns the exit code, the time, the error lines and the end of the log; the whole log stays readable with github_read_file. Use it to compile (cmake, make, cargo, gradle, npm…) and run tests before saying a change works, above all in projects whose own CI you cannot start. Push the changes first: prepared but unpushed changes are not seen. The command runs with bash -e from the repository root. `packages` installs system packages first (apt on Linux, brew on macOS, choco on Windows). A compiler cache persists between runs of the same repository and system in $CCACHE_DIR: add "ccache" to packages and pass -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache to CMake. Takes from about a minute up to the limit you set. A private repository gets a small workflow file installed once (the user approves it) so its code and logs stay private.',
+      parameters: Type.Object({
+        repo: repoParam,
+        ref: Type.Optional(Type.String({ description: 'Branch or commit (default the repository\'s default branch). Push your changes there first.' })),
+        command: Type.String({ description: 'Shell commands (bash -e), e.g. "cmake -S . -B build -G Ninja -DBUILD_TESTING=ON && cmake --build build -j4 && ctest --test-dir build --output-on-failure".' }),
+        packages: Type.Optional(Type.String({ description: 'System packages to install first, separated by spaces, e.g. "ninja-build ccache libsdl2-dev".' })),
+        submodules: Type.Optional(Type.String({ description: '"false" (default), "true" or "recursive".' })),
+        os: Type.Optional(Type.String({ description: 'Runner: ' + RUN_OS.map((item) => '"' + item + '"').join(', ') + ' (default ubuntu-24.04).' })),
+        minutes: Type.Optional(Type.Number({ description: 'Time limit for the command, 1-150 minutes (default 30).' }))
+      }),
+      executionMode: 'sequential',
+      execute: async (id, params, signal, onUpdate) => {
+        const log = [];
+        const step = (text) => {
+          log.push(text);
+          if (typeof onUpdate === 'function') onUpdate(textResult(log.join('\n'), { phase: text }));
+        };
+        const repo = used(repoOf(params.repo));
+        const command = String(params.command || '').trim();
+        if (!command) throw new Error('Falta command: los comandos que hay que ejecutar.');
+        if (command.length > 6000) throw new Error('command es demasiado largo (máximo 6000 caracteres): pon los pasos en un script del repositorio y ejecútalo.');
+        const ref = String(params.ref || '').trim();
+        if (ref && !/^[A-Za-z0-9._/-]{1,120}$/.test(ref)) throw new Error('ref debe ser una rama o un commit.');
+        const os = String(params.os || 'ubuntu-24.04').trim().toLowerCase();
+        if (!RUN_OS.includes(os)) throw new Error('os debe ser uno de: ' + RUN_OS.join(', ') + '.');
+        const submodules = params.submodules === true ? 'recursive' : String(params.submodules == null || params.submodules === false ? 'false' : params.submodules).trim().toLowerCase();
+        if (!['false', 'true', 'recursive'].includes(submodules)) throw new Error('submodules debe ser "false", "true" o "recursive".');
+        const packages = String(params.packages || '').trim().replace(/\s+/g, ' ');
+        if (packages && !/^[A-Za-z0-9.+:=_@/ -]{1,600}$/.test(packages)) throw new Error('packages: solo nombres de paquetes separados por espacios.');
+        const minutes = Math.round(Number(params.minutes == null ? 30 : params.minutes));
+        if (!(minutes >= 1 && minutes <= 150)) throw new Error('minutes debe estar entre 1 y 150.');
+        const info = await gh('GET', '/repos/' + repo);
+        const branch = ref || info.default_branch;
+        const pending = stage.get(repo, branch);
+        if (stageCount(pending)) throw new Error('Hay ' + stageCount(pending) + ' cambio(s) preparado(s) sin subir en ' + repo + '@' + branch + ', y github_run usa lo que está en GitHub. Súbelos antes con github_push y vuelve a llamar a github_run.');
+        const own = !info.private || repo.toLowerCase() === LEARN_REPO;
+        const runner = own ? LEARN_REPO : repo;
+        const workflow = own ? RUN_WORKFLOW : PRIVATE_RUN_WORKFLOW;
+        const where = repo + '@' + branch;
+        const what = where + ' · ' + os + (packages ? '\nPaquetes: ' + packages : '') + (submodules !== 'false' ? '\nSubmódulos: ' + submodules : '') + '\nLímite: ' + minutes + ' min\n$ ' + command.slice(0, 800) + (command.length > 800 ? '…' : '');
+        if (!own) await ensurePrivateWorkflow(repo, info, RUN_WORKFLOW, PRIVATE_RUN_WORKFLOW, step, 'las ejecuciones', repo + ' es privado: para que su código y sus registros no salgan de él, se ejecuta dentro (un workflow, una vez). Los resultados se guardan en su rama runs.\n' + what);
+        await ask({
+          title: 'Compilar y probar en GitHub Actions',
+          summary: what + '\nSe ejecuta en un runner de GitHub (no cambia el código) y el registro se guarda en la rama runs de ' + runner + '.',
+          items: [],
+          kind: 'run',
+          confirmText: 'Ejecutar'
+        });
+        const folder = 'run-' + new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15) + '-' + Math.random().toString(36).slice(2, 6);
+        const inputs = { ref, command, os, submodules, packages, minutes: String(minutes), id: folder };
+        if (own && repo.toLowerCase() !== LEARN_REPO) inputs.repo = repo;
+        let run = null;
+        for (let attempt = 0; !run; attempt++) {
+          try { run = await dispatch(runner, workflow, own ? 'main' : info.default_branch, inputs, null); } catch (error) {
+            if (own || attempt >= 5 || (error.status !== 404 && error.status !== 422)) throw error;
+            await sleep(5000);
+          }
+        }
+        step('Ejecutando en ' + os + ': ' + run.html_url);
+        let failure = null;
+        try { run = await waitRun(runner, run, 'la ejecución', step); } catch (error) {
+          if (error && error.name === 'AbortError') throw error;
+          failure = error;
+        }
+        const file = await readRemote(runner, folder + '/result.json', 'runs').catch(() => null);
+        let result = null;
+        try { result = JSON.parse(file.text); } catch (_) {}
+        if (!result) throw failure || new Error('La ejecución terminó pero no aparece ' + folder + '/result.json en la rama runs de ' + runner + ': ' + run.html_url);
+        const code = String(result.exit_code);
+        const ok = code === '0';
+        const head = ok ? 'BIEN: terminó con código 0'
+          : code === 'timeout' ? 'CORTADO: llegó al límite de ' + minutes + ' minutos sin terminar'
+            : code === 'setup' ? 'NO SE EJECUTÓ: falló antes del comando (checkout, submódulos o runner)'
+              : code === '97' ? 'FALLÓ la instalación de paquetes (código 97)'
+                : 'FALLÓ con código ' + code;
+        const errors = (result.errors || []).slice(0, 60).map((item) => '  ' + item.line + ': ' + String(item.text).slice(0, 300));
+        const logPath = folder + '/log.txt';
+        return textResult([
+          head + (result.seconds != null ? ' en ' + duration(result.seconds) : '') + ' · ' + where + (result.sha ? ' (' + String(result.sha).slice(0, 7) + ')' : '') + ' · ' + os + (result.runner ? ' (' + result.runner + ')' : ''),
+          '$ ' + command.slice(0, 400) + (command.length > 400 ? '…' : ''),
+          errors.length ? 'Líneas con errores (' + (result.errors || []).length + (result.errors_total > (result.errors || []).length ? ' de ' + result.errors_total : '') + '):\n' + errors.join('\n') : (ok ? '' : 'No se han detectado líneas de error típicas: mira el final del registro.'),
+          'Final del registro:',
+          clip(String(result.tail || '').slice(-RUN_TAIL_CHARS), RUN_TAIL_CHARS + 200),
+          'Registro completo (' + (result.lines || 0) + ' líneas' + (result.truncated ? ', recortado por el medio' : '') + '): github_read_file repo=' + runner + ' ref=runs path=' + logPath + ' (por rangos con from_line/to_line).',
+          'Run: ' + run.html_url,
+          ok ? 'Di qué se ha comprobado de verdad (qué compiló y qué tests pasaron).' : 'Corrige la causa, súbelo y vuelve a ejecutarlo hasta que pase; no digas que funciona sin un run en verde.'
+        ].filter(Boolean).join('\n'), { repo, ref: branch, os, ok, exitCode: code, run: run.html_url, log: { repo: runner, ref: 'runs', path: logPath } });
       }
     },
     {

@@ -626,6 +626,8 @@ const STEP_TEXT = {
   github_comment: ['Comentando en', 'Comentado en'],
   github_release_android: ['Publicando la APK', 'APK publicada'],
   github_screenshot: ['Haciendo capturas reales', 'Capturas hechas'],
+  github_fork: ['Haciendo fork de', 'Fork de'],
+  github_run: ['Compilando y probando', 'Compilado y probado'],
   run_js: ['Ejecutando código', 'Código ejecutado'],
   write_file: ['Guardando', 'Guardado'],
   read_file: ['Leyendo', 'Leído'],
@@ -711,8 +713,12 @@ function describeToolStep(step) {
       break;
     case 'github_screenshot':
     case 'github_release_android':
+    case 'github_run':
       // What the release is doing right now (build, signature, publication…).
       target = running && step.progress ? String(step.progress).replace(/: https?:\/\/\S+$/, '').slice(0, 80) : '';
+      break;
+    case 'github_fork':
+      target = repoShort;
       break;
     case 'web_search':
       target = args.query ? '«' + String(args.query).slice(0, 70) + '»' : '';
@@ -735,7 +741,7 @@ function describeToolStep(step) {
     default:
       break;
   }
-  if (repoShort && !['github_list_files', 'github_ci_status', 'github_list_issues', 'github_comment', 'github_discard'].includes(step.name)) where.push(repoShort);
+  if (repoShort && !['github_list_files', 'github_ci_status', 'github_list_issues', 'github_comment', 'github_discard', 'github_fork'].includes(step.name)) where.push(repoShort);
   const title = [verb, target].filter(Boolean).join(' ') + (where.length ? ' · ' + where.join(' · ') : '');
   return { title, verb, target, where: where.join(' · ') };
 }
