@@ -127,7 +127,8 @@ const check = (label, ok, extra) => console.log((ok ? 'PASS ' : 'FAIL ') + label
 
   // 4. Under «reduce motion» turning it on shows the steady state and plays nothing.
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.click('#model-menu-btn');
+  // (choosing «Normal» leaves the popup open: only open it if it is closed.)
+  await page.evaluate(() => { if (document.getElementById('model-menu-popup').classList.contains('hidden')) document.getElementById('model-menu-btn').click(); });
   await page.waitForSelector('[data-thinking-level="ultra"]');
   await page.click('[data-thinking-level="ultra"]');
   const calm = await page.evaluate(() => { const shell = document.querySelector('.composer-shell'); return { mode: shell.dataset.ultra, tag: !!shell.querySelector('.ultra-tag'), sweep: document.querySelectorAll('.ultra-sweep').length, igniting: shell.classList.contains('ultra-igniting'), moving: getComputedStyle(shell.querySelector('.ultra-tag-text')).animationName }; });
