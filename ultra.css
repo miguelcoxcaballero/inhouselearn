@@ -130,6 +130,11 @@
   color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border);
 }
 .ua-lane[data-role="verify"] .ua-role, .ua-lane[data-role="review"] .ua-role { color: var(--ua-accent); border-color: var(--ua-accent-soft); background: var(--ua-accent-soft); }
+/* How hard the agent thinks, next to its role: «Explora · medio». */
+.ua-role small { font-size: inherit; font-weight: 600; opacity: 0.7; }
+.ua-role small::before { content: ' · '; }
+.ua-note { margin: 7px 2px 0; padding: 5px 9px; border-radius: 9px; background: color-mix(in srgb, var(--ua-wait) 12%, transparent); color: var(--ua-wait); font-size: 0.72rem; font-weight: 600; }
+.ua-note[hidden] { display: none; }
 .ua-time { flex: none; margin-left: auto; color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
 .ua-cost { flex: none; }
 .ua-chev { flex: none; width: 14px; height: 14px; color: var(--muted); transition: transform 0.2s var(--ease, ease); }
@@ -241,18 +246,74 @@
 .ua-file.conflict code { color: var(--ua-err); }
 .ua-file b { color: var(--ua-err); font-size: 0.72rem; }
 
-/* Al encender Ultra code: un anillo que se expande y unas chispas (ultra.js · burst) */
-.ua-burst-ring {
-  position: fixed; z-index: 1000; pointer-events: none; border-radius: 50%;
-  width: var(--ua-burst-size, 80px); height: var(--ua-burst-size, 80px);
-  margin: calc(var(--ua-burst-size, 80px) / -2) 0 0 calc(var(--ua-burst-size, 80px) / -2);
-  background: conic-gradient(#a78bfa, #f472b6, #38bdf8, #c4b5fd, #f9a8d4, #7dd3fc, #a78bfa);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
-  animation: ua-burst-ring 0.8s cubic-bezier(.2, .8, .2, 1) forwards;
+/* ─── Ultra code en el compositor (ultra.js · setMode / ignite) ───────────────
+   El compositor lleva siempre el modo: el borde con un tinte violeta y una
+   etiqueta «Ultra code» sobre su borde superior (como la que Claude Code pone en
+   su caja de texto). Al encenderlo hay UN momento tranquilo: una franja de luz
+   recorre el borde una vez, la etiqueta se asienta y las palabras se encienden de
+   izquierda a derecha; después queda el tinte y un brillo lento. Sin chispas.
+   Con «reducir movimiento» solo se ve el estado, sin animación. */
+:root {
+  --ua-base: #7c3aed;
+  --ua-glow: rgba(124, 58, 237, 0.3);
+  --ua-prism: linear-gradient(100deg, var(--ua-base) 0%, var(--ua-base) 36%, #ff5f6d 42%, #ffb347 46%, #facc15 50%, #4ade80 54%, #38bdf8 58%, #a78bfa 62%, var(--ua-base) 68%, var(--ua-base) 100%);
 }
-@keyframes ua-burst-ring { 0% { transform: scale(0.3) rotate(0deg); opacity: 1; } 100% { transform: scale(1.7) rotate(90deg); opacity: 0; } }
-.ua-spark { box-shadow: 0 0 8px 1px currentColor; }
+@property --ua-reveal { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
+
+/* La palabra «Ultra code» (el botón del modelo, el desplegable y la etiqueta): violeta
+   con un destello de arcoíris que la cruza de vez en cuando. */
+.ultra-text {
+  display: inline-block; font-weight: 700; color: transparent !important; -webkit-text-fill-color: transparent;
+  background: var(--ua-prism) 100% 0 / 320% 100%; -webkit-background-clip: text; background-clip: text;
+  animation: ultra-glint 7s linear infinite;
+}
+@keyframes ultra-glint { 0%, 30% { background-position: 100% 0; } 72%, 100% { background-position: 0 0; } }
+@keyframes ultra-flash { from { background-position: 100% 0; } to { background-position: 0 0; } }
+/* Al encenderlo, las palabras se encienden de izquierda a derecha y el arcoíris las cruza entero. */
+.ultra-lit.ultra-text, .ultra-lit .ultra-text {
+  -webkit-mask-image: linear-gradient(90deg, #000 var(--ua-reveal), rgba(0, 0, 0, 0.16) calc(var(--ua-reveal) + 22%));
+  mask-image: linear-gradient(90deg, #000 var(--ua-reveal), rgba(0, 0, 0, 0.16) calc(var(--ua-reveal) + 22%));
+  animation: ultra-reveal 1.1s cubic-bezier(.3, .1, .2, 1) both, ultra-flash 1.25s cubic-bezier(.4, 0, .2, 1) both, ultra-glint 7s linear 1.4s infinite;
+}
+@keyframes ultra-reveal { from { --ua-reveal: -22%; } to { --ua-reveal: 110%; } }
+.thinking-pill.ultra-pill.ultra-lit { animation: ultra-pop 0.6s cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes ultra-pop { 0% { transform: scale(0.94); } 55% { transform: scale(1.06); } 100% { transform: scale(1); } }
+
+/* El estado fijo: el borde del compositor con tinte violeta. */
+:root .composer-shell[data-ultra="on"] { border-color: color-mix(in srgb, var(--ua-base) 40%, var(--border-strong)); }
+:root .composer-shell[data-ultra="on"]:focus-within {
+  border-color: color-mix(in srgb, var(--ua-base) 62%, var(--border-strong));
+  box-shadow: 0 0 0 4px var(--ua-accent-soft), 0 10px 30px rgba(28, 25, 20, 0.07);
+}
+/* La etiqueta sobre su borde superior. */
+.ultra-tag {
+  position: absolute; top: -9px; left: 20px; z-index: 3; pointer-events: none;
+  display: inline-flex; align-items: center; height: 17px; padding: 0 8px; border-radius: 999px;
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--ua-base) 42%, var(--border-strong));
+  font-size: 0.63rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1;
+  transition: opacity 0.25s var(--ease, ease), transform 0.25s var(--ease, ease);
+}
+.ultra-tag.leaving { opacity: 0; transform: translateY(3px); }
+.ultra-tag.ultra-lit { animation: ultra-tag-in 0.55s cubic-bezier(.2, .8, .2, 1) 0.15s both; }
+@keyframes ultra-tag-in { from { opacity: 0; transform: translateY(6px) scale(0.94); } }
+/* La franja de luz que recorre el borde una vez (un anillo de 1,5 px y su resplandor). */
+.ultra-sweep { position: absolute; inset: -1px; z-index: 2; pointer-events: none; border-radius: inherit; }
+.ultra-sweep::before, .ultra-sweep::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; opacity: 0;
+  background: conic-gradient(from var(--ua-a), rgba(124, 58, 237, 0) 0deg, rgba(124, 58, 237, 0) 232deg, rgba(139, 92, 246, 0.55) 282deg, #c084fc 316deg, #f472b6 337deg, #38bdf8 354deg, rgba(56, 189, 248, 0) 360deg);
+  animation: ultra-sweep 1.5s cubic-bezier(.45, .05, .25, 1) both;
+}
+.ultra-sweep::before {
+  padding: 1.5px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+}
+.ultra-sweep::after { filter: blur(11px); animation-name: ultra-sweep-glow; }
+@keyframes ultra-sweep { 0% { --ua-a: -30deg; opacity: 0; } 10%, 82% { opacity: 1; } 100% { --ua-a: 390deg; opacity: 0; } }
+@keyframes ultra-sweep-glow { 0% { --ua-a: -30deg; opacity: 0; } 10%, 82% { opacity: 0.55; } 100% { --ua-a: 390deg; opacity: 0; } }
+/* Un resplandor suave en todo el compositor mientras la franja pasa. */
+.composer-shell.ultra-igniting { animation: ultra-bloom 1.7s ease-out 1; }
+@keyframes ultra-bloom { 32% { box-shadow: 0 0 0 5px var(--ua-accent-soft), 0 12px 46px var(--ua-glow), 0 1px 2px rgba(28, 25, 20, 0.05); } }
 
 @media (max-width: 420px) {
   .ua-card { padding: 10px 9px 9px; }
@@ -263,7 +324,11 @@
 @media (max-width: 360px) { .ua-role { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .ua-card, .ua-card::before, .ua-card *, .ua-burst-ring, .ua-spark { animation: none !important; transition: none !important; }
+  .ua-card, .ua-card::before, .ua-card * { animation: none !important; transition: none !important; }
+  /* The composer keeps its violet border and its tag; nothing moves. */
+  .ultra-sweep { display: none; }
+  .ultra-text, .ultra-lit, .ultra-lit.ultra-text, .ultra-lit .ultra-text, .ultra-tag, .composer-shell.ultra-igniting { animation: none !important; transition: none !important; }
+  .ultra-lit.ultra-text, .ultra-lit .ultra-text { -webkit-mask-image: none; mask-image: none; }
 }
 
 /* Finished lanes read as a preview of their result; headings of a result stay small. */

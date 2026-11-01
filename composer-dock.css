@@ -18,6 +18,8 @@
   animation: dock-in 0.18s var(--ease);
 }
 @keyframes dock-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* A card that is redrawn with new content (not one that appears) never comes in again. */
+.dock-card.dock-still { animation: none; }
 
 .dock-btn {
   display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
@@ -189,9 +191,17 @@
 .plan-list li.done .plan-mark { position: relative; background: #15803d; border-color: #15803d; }
 .plan-list li.done .plan-mark::after { content: ''; position: absolute; left: 3.6px; top: 1.2px; width: 3.2px; height: 6.4px; border: solid #fff; border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
 .plan-list li.in_progress .plan-text { font-weight: 600; }
-.plan-list li.in_progress .plan-mark { border-color: var(--orange); border-top-color: transparent; animation: plan-spin 0.9s linear infinite; }
+.plan-list li.in_progress .plan-mark { border-color: var(--orange); border-top-color: transparent; }
+/* Only an answer still being written spins (the card says so in data-state): a plan
+   that ended, was stopped or came back after a reload never keeps turning. */
+.plan-card[data-state="live"] .plan-list li.in_progress .plan-mark { animation: plan-spin 0.9s linear infinite; }
 @keyframes plan-spin { to { transform: translateY(2px) rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .plan-list li.in_progress .plan-mark { animation: none; border-top-color: var(--orange); } }
+/* A step left unfinished by a stop or an error: a still ring with a dash, in a muted orange. */
+.plan-list li.halted { color: var(--muted); }
+.plan-list li.halted .plan-mark { position: relative; border-color: var(--orange); opacity: 0.6; }
+.plan-list li.halted .plan-mark::after { content: ''; position: absolute; left: 25%; right: 25%; top: 50%; height: 1.5px; margin-top: -0.75px; border-radius: 1px; background: var(--orange); }
+.plan-card[data-state="halted"] .plan-count { color: var(--orange); }
+@media (prefers-reduced-motion: reduce) { .plan-card[data-state="live"] .plan-list li.in_progress .plan-mark { animation: none; border-top-color: var(--orange); } }
 
 /* Cambios preparados */
 .dock-stage-head { display: flex; align-items: flex-start; gap: 8px; color: var(--text-secondary); line-height: 1.4; }

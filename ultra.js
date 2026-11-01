@@ -29,7 +29,7 @@
     done: 'Hecho', error: 'Con error', stopped: 'Detenido', skipped: 'Omitido'
   };
   const LIVE = /^(queued|running|waiting)$/;
-  const SPARK_PALETTE = ['#a78bfa', '#f472b6', '#38bdf8', '#c4b5fd', '#f9a8d4', '#7dd3fc'];
+  const EFFORT_LABEL = { low: 'bajo', medium: 'medio', high: 'alto', max: 'máx' };
   // Cards whose completion moment already played (once per step id).
   const celebrated = new Set();
   // Steps this page saw running: if a full redraw shows them finished before
@@ -91,7 +91,9 @@
       waves: num(pick('waves')),
       budget: num(pick('budget')),
       verify: verify && typeof verify === 'object' ? verify : null,
-      files: Array.isArray(files) ? files.slice(0, 40) : []
+      files: Array.isArray(files) ? files.slice(0, 40) : [],
+      rounds: num(pick('rounds')),
+      notice: String(pick('notice') || '')
     };
   }
 
@@ -145,6 +147,7 @@
     const waves = Math.max(details.waves, layout.waveIds.length, 1);
     if (stepRunning(step)) {
       let text = 'Trabajando · ' + finished + ' de ' + total;
+      if (details.rounds) text += ' · ronda de arreglos ' + details.rounds;
       if (waves > 1) {
         const live = layout.groups.findIndex((group) => group.entries.some((entry) => LIVE.test(entry.agent.status)));
         const current = live >= 0 ? live + 1 : waves;
@@ -155,6 +158,7 @@
     const { start, end } = bounds(step);
     let text = total + (total === 1 ? ' agente' : ' agentes');
     if (waves > 1) text += ' · ' + waves + ' oleadas';
+    if (details.rounds) text += ' · ' + details.rounds + (details.rounds === 1 ? ' ronda de arreglos' : ' rondas de arreglos');
     if (start && end > start) text += ' · ' + fmtDuration(end - start);
     if (details.verify && details.verify.passed) text += ' · verificado ✓';
     return text;
@@ -236,7 +240,7 @@
       '<button type="button" class="ua-lane-head" aria-expanded="false" aria-controls="' + body + '">' +
       ORB +
       '<span class="ua-name" title="' + esc(agent.name || 'Agente') + '">' + esc(agent.name || 'Agente') + '</span>' +
-      '<span class="ua-role">' + esc(ROLE_LABEL[agent.role] || ROLE_LABEL.build) + '</span>' +
+      '<span class="ua-role">' + esc(ROLE_LABEL[agent.role] || ROLE_LABEL.build) + (EFFORT_LABEL[agent.effort] ? '<small>' + esc(EFFORT_LABEL[agent.effort]) + '</small>' : '') + '</span>' +
       '<span class="ua-status-text ua-sr">' + esc(STATUS_LABEL[agent.status] || '') + '</span>' +
       '<span class="ua-time"' + (time.since ? ' data-live-since="' + time.since + '"' : '') + '>' + esc(time.text) + '</span>' +
       '<span class="ua-cost">' + costMarkup(message.id + ':agent:' + step.id + ':' + entry.index, num(agent.cost)) + '</span>' +
@@ -326,6 +330,7 @@
       '<span class="ua-clock"' + (running && start ? ' data-live-since="' + start + '"' : '') + '>' + (running && start ? esc(fmtDuration(Date.now() - start)) : '') + '</span>' +
       '<span class="ua-total">' + costMarkup(message.id + ':agents:' + step.id, total) + '</span>' +
       '</header>' +
+      '<div class="ua-note" role="status"' + (details.notice ? '' : ' hidden') + '>' + esc(details.notice) + '</div>' +
       '<div class="ua-budget"' + (details.budget > 0 ? '' : ' hidden') + (ratio > 0.8 ? ' data-warn="1"' : '') + (details.budget > 0 && ratio < 0.25 ? ' data-low="1"' : '') + '>' + (details.budget > 0 ? budgetMarkup(total, details.budget) : '') + '</div>' +
       '<div class="ua-segs" aria-hidden="true">' + segsMarkup(layout) + '</div>' +
       constellationMarkup(step, layout) +
@@ -443,6 +448,11 @@
       setText(clock, '');
     }
     setCost(card.querySelector('.ua-total'), total);
+    const note = card.querySelector('.ua-note');
+    if (note) {
+      setText(note, details.notice);
+      setAttr(note, 'hidden', details.notice ? null : '');
+    }
     const budget = card.querySelector('.ua-budget');
     if (budget) {
       setAttr(budget, 'hidden', details.budget > 0 ? null : '');
@@ -678,43 +688,102 @@
     });
   }
 
-  /* ─── Turning Ultra code on: a ring and a few sparks ───────────────── */
+  /* ─── Turning Ultra code on ─────────────────────────────────────────────
+     The composer is what always carries the mode: its border takes a violet
+     tint and a small «Ultra code» tag sits on its top edge (like the tag Claude
+     Code puts on its input box). Turning the mode on plays ONE calm moment: a
+     band of light runs once around the border, the tag settles on the edge and
+     the labels come on letter by letter; then the tint stays and the tag keeps a
+     slow glint. No sparks. All the drawing is CSS (ultra.css); this only adds and
+     removes classes and the two small elements, and does nothing under reduced
+     motion except show the steady state. */
 
-  function burst(anchorEl) {
-    if (!anchorEl || reducedMotion()) return;
-    const box = anchorEl.getBoundingClientRect();
-    const cx = box.left + box.width / 2;
-    const cy = box.top + box.height / 2;
-    const ring = document.createElement('span');
-    ring.className = 'ua-burst-ring';
-    ring.style.left = cx + 'px';
-    ring.style.top = cy + 'px';
-    ring.style.setProperty('--ua-burst-size', Math.max(44, Math.min(110, box.width * 0.8)) + 'px');
-    document.body.appendChild(ring);
-    window.setTimeout(() => ring.remove(), 900);
-    for (let i = 0; i < 14; i++) {
-      const spark = document.createElement('span');
-      spark.className = 'ultra-spark ua-spark';
-      const angle = (Math.PI * 2 * i) / 14 + (Math.random() - 0.5) * 0.35;
-      // Wide pills throw their sparks wider than tall.
-      const distance = 34 + Math.random() * 34;
-      const size = (6 + Math.random() * 4).toFixed(1) + 'px';
-      const colour = SPARK_PALETTE[i % SPARK_PALETTE.length];
-      spark.style.left = cx + 'px';
-      spark.style.top = cy + 'px';
-      spark.style.width = size;
-      spark.style.height = size;
-      spark.style.setProperty('--dx', (Math.cos(angle) * distance * 1.5).toFixed(1) + 'px');
-      spark.style.setProperty('--dy', (Math.sin(angle) * distance * 0.8).toFixed(1) + 'px');
-      spark.style.background = colour;
-      // The glow (box-shadow: currentColor) takes the spark's own colour.
-      spark.style.color = colour;
-      document.body.appendChild(spark);
-      window.setTimeout(() => spark.remove(), 900);
-    }
+  const IGNITE_MS = 2100;
+  let igniteTimer = 0;
+
+  function composerShell() {
+    return document.querySelector('.composer-shell');
   }
 
-  window.UltraAgents = { markupAll, patch, bind, burst };
+  // The tag on the composer's top edge (decorative: the model button says it too).
+  function ensureTag(shell) {
+    let tag = shell.querySelector(':scope > .ultra-tag');
+    if (!tag) {
+      tag = document.createElement('span');
+      tag.className = 'ultra-tag';
+      tag.setAttribute('aria-hidden', 'true');
+      tag.innerHTML = '<span class="ultra-tag-text ultra-text">Ultra code</span>';
+      shell.appendChild(tag);
+    }
+    tag.classList.remove('leaving');
+    return tag;
+  }
+
+  // The steady state, set on every render of the model controls: on or off.
+  // Returns true when it changed.
+  function setMode(on) {
+    const shell = composerShell();
+    if (!shell) return false;
+    const was = shell.dataset.ultra === 'on';
+    if (on) {
+      shell.dataset.ultra = 'on';
+      ensureTag(shell);
+    } else {
+      delete shell.dataset.ultra;
+      const tag = shell.querySelector(':scope > .ultra-tag');
+      if (tag && !tag.classList.contains('leaving')) {
+        if (reducedMotion()) tag.remove();
+        else {
+          tag.classList.add('leaving');
+          window.setTimeout(() => { if (tag.classList.contains('leaving')) tag.remove(); }, 280);
+        }
+      }
+    }
+    return was !== !!on;
+  }
+
+  // options: { pill (the «Ultra» button of the popup), labels ([elements that read «Ultra code»]),
+  //            before (called when the composer is about to light up: the app closes the model
+  //            popup, which covers it, all of it on a phone), delay (ms the button pops alone first) }
+  function ignite(options) {
+    const opts = options || {};
+    const shell = composerShell();
+    setMode(true);
+    const before = () => { if (typeof opts.before === 'function') opts.before(); };
+    if (!shell || reducedMotion()) { before(); return; }
+    window.clearTimeout(igniteTimer);
+    // The button of the popup pops at once…
+    if (opts.pill) {
+      opts.pill.classList.remove('ultra-lit');
+      void opts.pill.offsetWidth;
+      opts.pill.classList.add('ultra-lit');
+    }
+    // …and then the composer, uncovered, lights up.
+    const light = () => {
+      before();
+      shell.querySelectorAll(':scope > .ultra-sweep').forEach((el) => el.remove());
+      const sweep = document.createElement('span');
+      sweep.className = 'ultra-sweep';
+      sweep.setAttribute('aria-hidden', 'true');
+      shell.appendChild(sweep);
+      const lit = [shell, shell.querySelector(':scope > .ultra-tag'), opts.pill].concat(opts.labels || []).filter(Boolean);
+      shell.classList.remove('ultra-igniting');
+      lit.forEach((el) => el.classList.remove('ultra-lit'));
+      void shell.offsetWidth;
+      shell.classList.add('ultra-igniting');
+      lit.forEach((el) => el.classList.add('ultra-lit'));
+      igniteTimer = window.setTimeout(() => {
+        sweep.remove();
+        shell.classList.remove('ultra-igniting');
+        lit.forEach((el) => el.classList.remove('ultra-lit'));
+      }, IGNITE_MS);
+    };
+    const delay = Number(opts.delay) || 0;
+    if (delay > 0) igniteTimer = window.setTimeout(light, delay);
+    else light();
+  }
+
+  window.UltraAgents = { markupAll, patch, bind, ignite, setMode };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => bind(null));
   else bind(null);
 })();
