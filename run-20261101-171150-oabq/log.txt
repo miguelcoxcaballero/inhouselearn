@@ -1,0 +1,333 @@
++ bash analysis/run.sh 2>&1
+== upstream main: f2d874c1fd
+== shader scan
+BEFORE {'total': 1460, 'decoded': 1456, 'translated': 1455} {'total': 202, 'decoded': 199} missing: {'SOPP base': ['S_CBRANCH_CDBGSYS', 'S_CBRANCH_CDBGUSER', 'S_CBRANCH_CDBGSYS_OR_USER', 'S_ENDPGM_SAVED'], 'VOP1 dpp8': ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32']} untranslated: {'MIMG base': ['IMAGE_GATHER8H_PCK']}
+old PAIR found: True old loop found: True
+AFTER {'total': 1460, 'decoded': 1460, 'translated': 1459} {'total': 202, 'decoded': 199} missing: {'VOP1 dpp8': ['V_MOVRELS_B32', 'V_MOVRELSD_B32', 'V_MOVRELSD_2_B32']} untranslated: {'MIMG base': ['IMAGE_GATHER8H_PCK']}
+existing tests with fix: 0 ..................
+----------------------------------------------------------------------
+Ran 18 tests in 0.065s
+
+OK
+
+diff --git a/tools/shader_scan.py b/tools/shader_scan.py
+index a675d5d8c9..7a4725d029 100644
+--- a/tools/shader_scan.py
++++ b/tools/shader_scan.py
+@@ -152,7 +152,7 @@ TABLE_KEYS = ("vop3encodedvop1", "vop3p", "vop3", "vopc", "vop2", "vop1", "vintr
+               "smem", "mubuf", "mtbuf", "flat", "ds", "image")
+ TABLE_ENCODING = {"vop3encodedvop1": "VOP3:VOP1", "image": "MIMG"}
+ BLOCK = re.compile(r"^(?![\s}#])(?:[\w:<>&*,]+[ \t]+)*?(\w+)\s*(?:\[\]\s*=|\()", re.M)
+-PAIR = re.compile(r"(?:\{\s*|case\s+)0x([0-9a-fA-F]+)u?\s*(?:,|:\s*return)\s*RdnaOpcode::(\w+)")
++PAIR = re.compile(r"(?:\{\s*0x([0-9a-fA-F]+)u?\s*,|((?:case\s+0x[0-9a-fA-F]+u?\s*:\s*)+)return)\s*RdnaOpcode::(\w+)")
+ REQUIRED_TABLES = ("SOP1", "SOP2", "SOPC", "SOPK", "SOPP", "VOP1", "VOP2", "VOPC", "VOP3", "VOP3:VOP1", "VOP3P",
+                    "SMEM", "MUBUF", "MTBUF", "FLAT", "DS", "MIMG")
+ 
+@@ -181,7 +181,8 @@ def scan_decoder(files):
+             if table:
+                 entries = d.tables.setdefault(TABLE_ENCODING.get(table, table.upper()), {})
+                 for m in PAIR.finditer(block):
+-                    entries[int(m.group(1), 16)] = m.group(2)
++                    for number in [m.group(1)] if m.group(1) else re.findall(r"0x([0-9a-fA-F]+)", m.group(2)):
++                        entries[int(number, 16)] = m.group(3)
+             else:
+                 numbers = [int(m.group(1), 16) for m in re.finditer(r"\b0x([0-9a-fA-F]+)u?\b", block)]
+                 for opcode in re.findall(r"RdnaOpcode::(\w+)", block):
+
+== twins
+nid check: XyJPhPqpzMw expected XyJPhPqpzMw
+libSceLibcInternal stubs: 656
+libc mangled defs: 262 implemented: 261
+CANDIDATES 0
+== overlap
+api error HTTP Error 403: rate limit exceeded
+open PRs: 0
+11613 err HTTP Error 403: rate limit exceeded
+OVERLAP HITS: {}
+== template diff
+ core/libs/prx/libSceLibcInternal/CMakeLists.txt    | 13 +++
+ .../libSceLibcInternal/ExceptionDestructors.cpp    | 23 ++++++
+ .../prx/libSceLibcInternal/InventoryExports.cpp    | 15 ----
+ core/libs/prx/libSceLibcInternal/include/Api.hpp   |  3 +
+ .../include/InventoryExports.hpp                   |  3 -
+ .../GuestLibcInternalExceptionDestructors.cpp      | 94 ++++++++++++++++++++++
+ docs/dev/debt/libSceLibcInternal.md                |  4 +-
+ 7 files changed, 134 insertions(+), 21 deletions(-)
+diff --git a/core/libs/prx/libSceLibcInternal/CMakeLists.txt b/core/libs/prx/libSceLibcInternal/CMakeLists.txt
+index 2655d73c0b..cfa03e600c 100644
+--- a/core/libs/prx/libSceLibcInternal/CMakeLists.txt
++++ b/core/libs/prx/libSceLibcInternal/CMakeLists.txt
+@@ -44,6 +44,19 @@ if(BUILD_TESTING)
+     endif()
+ endif()
+ target_sources(libSceLibcInternal PRIVATE Err.cpp)
++target_sources(libSceLibcInternal PRIVATE ExceptionDestructors.cpp)
++if(BUILD_TESTING)
++    add_test_executable(guest_libc_internal_exception_destructors_tests ${LIBS_INCLUDE_DIR}/tests/GuestLibcInternalExceptionDestructors.cpp)
++    target_include_directories(guest_libc_internal_exception_destructors_tests PRIVATE ${LIBS_INCLUDE_DIR})
++    target_link_libraries(guest_libc_internal_exception_destructors_tests PRIVATE libSceLibcInternal libkernel libc)
++    configure_windows_unwind(guest_libc_internal_exception_destructors_tests)
++    add_test(NAME guest_libc_internal_exception_destructors COMMAND guest_libc_internal_exception_destructors_tests)
++    set_tests_properties(guest_libc_internal_exception_destructors PROPERTIES TIMEOUT 20)
++    if(WIN32)
++        set_tests_properties(guest_libc_internal_exception_destructors PROPERTIES ENVIRONMENT_MODIFICATION
++            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceLibcInternal>")
++    endif()
++endif()
+ configure_windows_unwind(libSceLibcInternal)
+ target_sources(libSceLibcInternal PRIVATE FilesystemStatistics.cpp PathStatistics.cpp)
+ target_sources(libSceLibcInternal PRIVATE Inet.cpp)
+diff --git a/core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp b/core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp
+new file mode 100644
+index 0000000000..9419eec401
+--- /dev/null
++++ b/core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp
+@@ -0,0 +1,23 @@
++#include "prx/libSceLibcInternal/include/Api.hpp"
++#include "prx/libc/include/Api.hpp"
++#include "prx/libc/include/General.hpp"
++#include "SceTypes.hpp"
++
++extern "C" {
++
++void APS5_VABI sceLibcInternalFutureErrorBaseDestructor_nid_no_patch(void* self) {
++    _ZNSt12future_errorD1Ev_nid_postfix(static_cast<LibcException::FutureErrorObject*>(self));
++}
++APS5_EXPORT("XFh0C66aEms", sceLibcInternalFutureErrorBaseDestructor_nid_no_patch);
++
++void APS5_VABI sceLibcInternalOverflowErrorBaseDestructor_nid_no_patch(void* self) {
++    _ZNSt14overflow_errorD1Ev_nid_postfix(static_cast<LibcException::ExceptionObject*>(self));
++}
++APS5_EXPORT("OypvNf3Uq3c", sceLibcInternalOverflowErrorBaseDestructor_nid_no_patch);
++
++void APS5_VABI sceLibcInternalUnderflowErrorBaseDestructor_nid_no_patch(void* self) {
++    _ZNSt15underflow_errorD1Ev_nid_postfix(static_cast<LibcException::ExceptionObject*>(self));
++}
++APS5_EXPORT("xiqd+QkuYXc", sceLibcInternalUnderflowErrorBaseDestructor_nid_no_patch);
++
++}
+diff --git a/core/libs/prx/libSceLibcInternal/InventoryExports.cpp b/core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+index 056e657d70..b3232790c9 100644
+--- a/core/libs/prx/libSceLibcInternal/InventoryExports.cpp
++++ b/core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+@@ -94,11 +94,6 @@ int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch() {
+ }
+ APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+ 
+-int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch() {
+-    NotImplemented_nid_no_patch(__func__);
+-}
+-APS5_EXPORT("XFh0C66aEms", libSceLibcInternalInventory_018_nid_no_patch);
+-
+ int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch() {
+     NotImplemented_nid_no_patch(__func__);
+ }
+@@ -224,11 +219,6 @@ int APS5_VABI libSceLibcInternalInventory_043_nid_no_patch() {
+ }
+ APS5_EXPORT("EYZJsnX58DE", libSceLibcInternalInventory_043_nid_no_patch);
+ 
+-int APS5_VABI libSceLibcInternalInventory_044_nid_no_patch() {
+-    NotImplemented_nid_no_patch(__func__);
+-}
+-APS5_EXPORT("OypvNf3Uq3c", libSceLibcInternalInventory_044_nid_no_patch);
+-
+ int APS5_VABI libSceLibcInternalInventory_045_nid_no_patch() {
+     NotImplemented_nid_no_patch(__func__);
+ }
+@@ -259,11 +249,6 @@ int APS5_VABI libSceLibcInternalInventory_050_nid_no_patch() {
+ }
+ APS5_EXPORT("olsoiZsezkk", libSceLibcInternalInventory_050_nid_no_patch);
+ 
+-int APS5_VABI libSceLibcInternalInventory_051_nid_no_patch() {
+-    NotImplemented_nid_no_patch(__func__);
+-}
+-APS5_EXPORT("xiqd+QkuYXc", libSceLibcInternalInventory_051_nid_no_patch);
+-
+ int APS5_VABI libSceLibcInternalInventory_052_nid_no_patch() {
+     NotImplemented_nid_no_patch(__func__);
+ }
+diff --git a/core/libs/prx/libSceLibcInternal/include/Api.hpp b/core/libs/prx/libSceLibcInternal/include/Api.hpp
+index a995513d96..37c8f9dd1f 100644
+--- a/core/libs/prx/libSceLibcInternal/include/Api.hpp
++++ b/core/libs/prx/libSceLibcInternal/include/Api.hpp
+@@ -108,6 +108,9 @@ int APS5_VABI _Mtxunlock_nid_postfix(PthreadMutex* mutex);
+ int APS5_VABI _Mtxdst_nid_postfix(PthreadMutex* mutex);
+ void* APS5_VABI sceLibcInternalAlignedArrayNewNothrow_nid_no_patch(std::size_t size, std::size_t alignment, const void* tag) noexcept;
+ void APS5_VABI sceLibcInternalAlignedArrayDelete_nid_no_patch(void* pointer, std::size_t alignment);
++void APS5_VABI sceLibcInternalFutureErrorBaseDestructor_nid_no_patch(void* self);
++void APS5_VABI sceLibcInternalOverflowErrorBaseDestructor_nid_no_patch(void* self);
++void APS5_VABI sceLibcInternalUnderflowErrorBaseDestructor_nid_no_patch(void* self);
+ 
+ int APS5_VABI sceLibcMspaceSetMallocCallback();
+ int APS5_VABI sceLibcPafMspaceReportMemoryBlocks();
+diff --git a/core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp b/core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+index f513e0d264..33f65c57e7 100644
+--- a/core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
++++ b/core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+@@ -22,7 +22,6 @@ int APS5_VABI libSceLibcInternalInventory_014_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_015_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_016_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch();
+-int APS5_VABI libSceLibcInternalInventory_018_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_020_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_021_nid_no_patch();
+@@ -48,14 +47,12 @@ int APS5_VABI libSceLibcInternalInventory_040_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_041_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_042_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_043_nid_no_patch();
+-int APS5_VABI libSceLibcInternalInventory_044_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_045_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_046_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_047_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_048_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_049_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_050_nid_no_patch();
+-int APS5_VABI libSceLibcInternalInventory_051_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_052_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_053_nid_no_patch();
+ int APS5_VABI libSceLibcInternalInventory_054_nid_no_patch();
+diff --git a/core/libs/tests/GuestLibcInternalExceptionDestructors.cpp b/core/libs/tests/GuestLibcInternalExceptionDestructors.cpp
+new file mode 100644
+index 0000000000..c8ddb4aadd
+--- /dev/null
++++ b/core/libs/tests/GuestLibcInternalExceptionDestructors.cpp
+@@ -0,0 +1,94 @@
++#include "prx/libSceLibcInternal/include/Api.hpp"
++#include "prx/libc/include/Api.hpp"
++#include "prx/libc/include/ApplicationHeap.hpp"
++#include "prx/libc/include/general/VabiMacros.hpp"
++#include <array>
++#include <cstddef>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++
++namespace {
++
++unsigned releases = 0;
++void* lastReleased = nullptr;
++
++void Require(bool condition, const char* message) {
++    if (condition) return;
++    std::fprintf(stderr, "libc internal exception destructors: %s\n", message);
++    std::abort();
++}
++
++void* APS5_VABI TestAllocate(std::size_t size) { return std::malloc(size); }
++void APS5_VABI TestFree(void* pointer) {
++    ++releases;
++    lastReleased = pointer;
++    std::free(pointer);
++}
++void* APS5_VABI TestCalloc(std::size_t count, std::size_t size) { return std::calloc(count, size); }
++void* APS5_VABI TestReallocate(void* pointer, std::size_t size) { return std::realloc(pointer, size); }
++void* APS5_VABI TestAlign(std::size_t, std::size_t size) { return std::malloc(size); }
++void* APS5_VABI TestRealign(void* pointer, std::size_t size, std::size_t) { return std::realloc(pointer, size); }
++int APS5_VABI TestPosixAlign(void** pointer, std::size_t, std::size_t size) {
++    *pointer = std::malloc(size);
++    return *pointer ? 0 : 12;
++}
++
++using Destructor = void (APS5_VABI*)(void*);
++
++void CheckMessageDestructor(Destructor destructor, const char* text) {
++    LibcException::ExceptionObject object{};
++    _ZNSt13runtime_errorC1EPKc_nid_postfix(&object, text);
++    Require(object.message != nullptr && std::strcmp(object.message, text) == 0, "runtime_error keeps its message");
++    destructor(&object);
++    Require(object.message == nullptr, "the base-object destructor releases the message");
++    destructor(&object);
++    Require(object.message == nullptr, "a second destruction leaves the message released");
++}
++
++void CheckFutureError() {
++    LibcException::FutureErrorObject inline_{};
++    inline_.message.capacity = 15;
++    inline_.message.size = 3;
++    std::memcpy(inline_.message.buffer, "abc", 4);
++    releases = 0;
++    sceLibcInternalFutureErrorBaseDestructor_nid_no_patch(&inline_);
++    Require(inline_.message.reserved == 0 && inline_.message.size == 0 && inline_.message.capacity == 15, "an inline message is reset");
++    Require(inline_.message.buffer[0] == 0 && releases == 0, "an inline message is not released");
++
++    LibcException::FutureErrorObject heap{};
++    heap.message.capacity = 24;
++    heap.message.size = 24;
++    heap.message.pointer = static_cast<char*>(_Znwm_nid_postfix(25));
++    std::memcpy(heap.message.pointer, "future already retrieved", 25);
++    char* storage = heap.message.pointer;
++    releases = 0;
++    sceLibcInternalFutureErrorBaseDestructor_nid_no_patch(&heap);
++    Require(releases == 1 && lastReleased == storage, "a heap message is released");
++    Require(heap.message.size == 0 && heap.message.capacity == 15 && heap.message.buffer[0] == 0, "a heap message is reset to the inline buffer");
++
++    LibcException::FutureErrorObject expected{};
++    expected.message.capacity = 15;
++    LibcException::FutureErrorObject actual = expected;
++    _ZNSt12future_errorD1Ev_nid_postfix(&expected);
++    sceLibcInternalFutureErrorBaseDestructor_nid_no_patch(&actual);
++    Require(std::memcmp(&expected, &actual, sizeof(expected)) == 0, "D2 leaves the object as D1 does");
++}
++
++}
++
++int main() {
++    const std::array<void*, 10> api{
++        reinterpret_cast<void*>(&TestAllocate), reinterpret_cast<void*>(&TestFree),
++        reinterpret_cast<void*>(&TestCalloc), reinterpret_cast<void*>(&TestReallocate),
++        reinterpret_cast<void*>(&TestAlign), reinterpret_cast<void*>(&TestRealign),
++        reinterpret_cast<void*>(&TestPosixAlign), nullptr, nullptr, nullptr};
++    ApplicationHeapRegister_nid_no_patch(api.data());
++
++    CheckMessageDestructor(&sceLibcInternalOverflowErrorBaseDestructor_nid_no_patch, "value too large");
++    CheckMessageDestructor(&sceLibcInternalUnderflowErrorBaseDestructor_nid_no_patch, "value too small");
++    CheckFutureError();
++
++    std::puts("libc internal exception base-object destructor checks passed");
++    return 0;
++}
+diff --git a/docs/dev/debt/libSceLibcInternal.md b/docs/dev/debt/libSceLibcInternal.md
+index 82d71328ac..44d3552365 100644
+--- a/docs/dev/debt/libSceLibcInternal.md
++++ b/docs/dev/debt/libSceLibcInternal.md
+@@ -28,7 +28,6 @@ The named entries below use provider-specific NID aliases to avoid interposing h
+ | `_ZNSt10moneypunctIwLb1EED1Ev` | `OM0FnA7Tldk` |
+ | `_ZNSt10moneypunctIwLb1EED2Ev` | `uVOxy7dQTFc` |
+ | `_ZNSt12future_errorD0Ev` | `rNYLEsL7M0k` |
+-| `_ZNSt12future_errorD2Ev` | `XFh0C66aEms` |
+ | `_ZNSt12system_errorC2ESt10error_codePKc` | `oly3wSwEJ2A` |
+ | `_ZNSt13bad_exceptionD0Ev` | `lX9M5u0e48k` |
+ | `_ZNSt13bad_exceptionD1Ev` | `t6egllDqQ2M` |
+@@ -54,14 +53,12 @@ The named entries below use provider-specific NID aliases to avoid interposing h
+ | `_ZNSt13basic_ostreamIwSt11char_traitsIwEE6sentryD2Ev` | `MB1VCygerRU` |
+ | `_ZNSt13basic_ostreamIwSt11char_traitsIwEED0Ev` | `7VRfkz22vPk` |
+ | `_ZNSt13basic_ostreamIwSt11char_traitsIwEED1Ev` | `EYZJsnX58DE` |
+-| `_ZNSt14overflow_errorD2Ev` | `OypvNf3Uq3c` |
+ | `_ZNSt15basic_streambufIcSt11char_traitsIcEE6xsgetnEPci` | `VpwymQiS4ck` |
+ | `_ZNSt15basic_streambufIcSt11char_traitsIcEE6xsputnEPKci` | `sXaxl1QGorg` |
+ | `_ZNSt15basic_streambufIcSt11char_traitsIcEE9showmanycEv` | `IAEl1Ta7yVU` |
+ | `_ZNSt15basic_streambufIwSt11char_traitsIwEE6xsgetnEPwi` | `lZVehk7yFok` |
+ | `_ZNSt15basic_streambufIwSt11char_traitsIwEE6xsputnEPKwi` | `041c37QfoUc` |
+ | `_ZNSt15basic_streambufIwSt11char_traitsIwEE9showmanycEv` | `olsoiZsezkk` |
+-| `_ZNSt15underflow_errorD2Ev` | `xiqd+QkuYXc` |
+ | `_ZNSt16nested_exceptionD1Ev` | `+qKS53qzWdA` |
+ | `_ZNSt16nested_exceptionD2Ev` | `8R00hgzXQDY` |
+ | `_ZNSt22_Future_error_categoryD0Ev` | `WDKzMM-uuLE` |
+@@ -345,6 +342,7 @@ The named entries below use provider-specific NID aliases to avoid interposing h
+ - [inet_aton, inet_addr, inet_ntoa and inet_ntoa_r](../../../core/libs/prx/libSceLibcInternal/Inet.cpp) (libSceLibcInternal) follow the FreeBSD code in the console's `libSceLibcInternal.sprx` (SDK 4.5x build of `J03950001`, 0x8ADE0 to 0x8B3D0) and matched it on a PS5 (firmware 13.60) for 20 `inet_aton` inputs; a null text, which the console dereferences, throws. `inet_ntoa_r` formats through libkernel's `__inet_ntop`, so a null buffer with room for the text throws and a null buffer that is too small sets `ENOSPC`, as `__inet_ntop` does for a null destination; the console's `inet_ntoa_r` was not measured with a null buffer
+ - [__inet_ntoa_r](../../../core/libs/prx/libSceLibcInternal/Inet.cpp) (libSceLibcInternal) was not measured on the console: it runs `inet_ntoa_r`, as FreeBSD 11.4 names the function `__inet_ntoa_r` ([arpa/inet.h](https://github.com/freebsd/freebsd-src/blob/8c639945a44588f6cfdddfb057bb5aad88735da0/include/arpa/inet.h#L129)) and makes `inet_ntoa_r` a weak alias of it ([inet_ntoa.c](https://github.com/freebsd/freebsd-src/blob/8c639945a44588f6cfdddfb057bb5aad88735da0/lib/libc/inet/inet_ntoa.c#L62-L76))
+ - [_ZnamSt11align_val_tRKSt9nothrow_t and _ZdaPvSt11align_val_t](../../../core/libs/prx/libSceLibcInternal/AlignedNew.cpp) (libSceLibcInternal, NIDs `s2eGsgUF9vk` and `v09ZcAhZzSc`) take the standard C++17 signatures their mangled names give, the aligned `nothrow` array `operator new` and the aligned array `operator delete`, and run the same code as the `libc` exports of those names, on the same application heap and new handler. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether it allocates from the same heap as `libc.prx` is unverified
++- [_ZNSt12future_errorD2Ev, _ZNSt14overflow_errorD2Ev and _ZNSt15underflow_errorD2Ev](../../../core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp) (libSceLibcInternal, NIDs `XFh0C66aEms`, `OypvNf3Uq3c` and `xiqd+QkuYXc`) are the base-object destructors of classes without virtual bases, which the [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html#definitions) makes do the same work as the complete-object `D1` destructors, so they run the `libc` exports of those `D1` names. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether it frees the message from the same heap as `libc.prx` is unverified
+ - [_Mtxinit, _Mtxlock, _Mtxunlock, _Mtxdst](../../../core/libs/prx/libSceLibcInternal/Mutex.cpp) (libSceLibcInternal) follow the PS4 code of [shadPS4](https://github.com/shadps4-emu/shadPS4/blob/860d73b7e99559106a3ffa3d3d69f0f9237e115e/src/core/libraries/libc_internal/libc_internal_threads.cpp#L10-L62) and [fpPS4](https://github.com/red-prig/fpPS4/blob/04cefd43e6fddd1ab033e7980cd356d14c964905/src/libcinternal/ps4_mtx_internal.pas#L47-L99): the argument points to a pointer-sized libkernel mutex handle, `_Mtxinit` creates it recursive, a zeroed handle becomes an error-checking mutex on its first lock as with the POSIX calls, and each returns 0 on success and 1 on any failure. A null handle pointer throws in libkernel. The `SceLibcI_` name goes to `scePthreadMutexInit`, which drops it. For PS5 only the names are known (NID hashes, ps5sdk stubs); layout, signatures, mutex type and results are not verified on a PS5
+ 
+ ### Additional PS5 3.20 imports (xdCloudy #9498)
+== trig branch stat
+ core/libs/prx/libSceFreeTypeOt/CMakeLists.txt      |  17 ++
+ core/libs/prx/libSceFreeTypeOt/Export.cpp          |  35 ---
+ .../prx/libSceFreeTypeOt/include/Trigonometry.hpp  |  21 ++
+ .../libs/prx/libSceFreeTypeOt/libSceFreeTypeOt.hpp |   1 +
+ .../libs/prx/libSceFreeTypeOt/src/Trigonometry.cpp | 332 +++++++++++++++++++++
+ core/libs/tests/GuestFreeTypeOtTrigonometry.cpp    | 252 ++++++++++++++++
+ docs/dev/debt/libSceFreeTypeOt.md                  |   6 +-
+ 7 files changed, 627 insertions(+), 37 deletions(-)
