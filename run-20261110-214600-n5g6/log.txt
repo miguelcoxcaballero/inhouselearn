@@ -1,0 +1,146 @@
++ git config user.email a@b; git config user.name a
+git fetch --unshallow origin || true
+git remote add up https://github.com/boykopovar/AnyPS5.git
+git fetch up main
+git merge --no-edit up/main || true
+echo "=== CONFLICTS"; git diff --name-only --diff-filter=U
+for f in $(git diff --name-only --diff-filter=U); do echo "##### $f"; grep -n -A12 -B3 '^<<<<<<<' "$f" | head -120; done
+From https://github.com/miguelcoxcaballero/AnyPS5
+ * [new branch]            ci/handoff-analysis -> origin/ci/handoff-analysis
+ * [new branch]            ci/trig-check       -> origin/ci/trig-check
+ * [new branch]            ci/trig-check2      -> origin/ci/trig-check2
+ * [new branch]            codex/rand48-synchronize -> origin/codex/rand48-synchronize
+ * [new branch]            feat/freetypeot-trigonometry -> origin/feat/freetypeot-trigonometry
+ * [new branch]            feat/libc-internal-aligned-array-new -> origin/feat/libc-internal-aligned-array-new
+ * [new branch]            feat/libc-internal-exception-base-destructors -> origin/feat/libc-internal-exception-base-destructors
+ * [new branch]            feat/libc-internal-ios-base-deleting-destructor -> origin/feat/libc-internal-ios-base-deleting-destructor
+ * [new branch]            feat/libc-internal-ios-base-destructor -> origin/feat/libc-internal-ios-base-destructor
+ * [new branch]            feat/libc-internal-locale-base-objects -> origin/feat/libc-internal-locale-base-objects
+ * [new branch]            feat/libc-internal-pad-destructor -> origin/feat/libc-internal-pad-destructor
+ * [new branch]            feat/libc-internal-placement-delete -> origin/feat/libc-internal-placement-delete
+ * [new branch]            fix/shader-scan-fallthrough-cases -> origin/fix/shader-scan-fallthrough-cases
+ * [new branch]            main                -> origin/main
+From https://github.com/boykopovar/AnyPS5
+ * branch                  main       -> FETCH_HEAD
+ * [new branch]            main       -> up/main
+Auto-merging core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp
+CONFLICT (content): Merge conflict in core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp
+Auto-merging core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+CONFLICT (content): Merge conflict in core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+Auto-merging core/libs/prx/libSceLibcInternal/InventoryExports6.cpp
+Auto-merging core/libs/prx/libSceLibcInternal/include/Api.hpp
+CONFLICT (content): Merge conflict in core/libs/prx/libSceLibcInternal/include/Api.hpp
+Auto-merging core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+CONFLICT (content): Merge conflict in core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+Auto-merging core/libs/tests/GuestLibcInternalExceptionDestructors.cpp
+Auto-merging docs/dev/debt/libSceLibcInternal.md
+CONFLICT (content): Merge conflict in docs/dev/debt/libSceLibcInternal.md
+Automatic merge failed; fix conflicts and then commit the result.
+=== CONFLICTS
+core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp
+core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+core/libs/prx/libSceLibcInternal/include/Api.hpp
+core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+docs/dev/debt/libSceLibcInternal.md
+##### core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp
+20-}
+21-APS5_EXPORT("xiqd+QkuYXc", sceLibcInternalUnderflowErrorBaseDestructor_nid_no_patch);
+22-
+23:<<<<<<< HEAD
+24-void APS5_VABI sceLibcInternalFutureErrorDeletingDestructor_nid_no_patch(void* self) {
+25-    _ZNSt12future_errorD1Ev_nid_postfix(static_cast<LibcException::FutureErrorObject*>(self));
+26-    _ZdlPv_nid_postfix(self);
+27-}
+28-APS5_EXPORT("rNYLEsL7M0k", sceLibcInternalFutureErrorDeletingDestructor_nid_no_patch);
+29-
+30-void APS5_VABI sceLibcInternalOverflowErrorDeletingDestructor_nid_no_patch(void* self) {
+31-    _ZNSt14overflow_errorD1Ev_nid_postfix(static_cast<LibcException::ExceptionObject*>(self));
+32-    _ZdlPv_nid_postfix(self);
+33-}
+34-APS5_EXPORT("y1dYQsc67ys", sceLibcInternalOverflowErrorDeletingDestructor_nid_no_patch);
+35-
+##### core/libs/prx/libSceLibcInternal/InventoryExports.cpp
+86-}
+87-APS5_EXPORT("uVOxy7dQTFc", libSceLibcInternalInventory_016_nid_no_patch);
+88-
+89:<<<<<<< HEAD
+90-int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch() {
+91-    NotImplemented_nid_no_patch(__func__);
+92-=======
+93-int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch() {
+94-    NotImplemented_nid_no_patch(__func__);
+95-}
+96-APS5_EXPORT("rNYLEsL7M0k", libSceLibcInternalInventory_017_nid_no_patch);
+97-
+98-void APS5_VABI libSceLibcInternalInventory_019_nid_no_patch(LibcException::SystemErrorObject* self, LibcException::ErrorCode code, const char* message) {
+99-    LibcExceptionConstructSystemError_nid_no_patch(self, code, message);
+100->>>>>>> up/main
+101-}
+##### core/libs/prx/libSceLibcInternal/include/Api.hpp
+163-void APS5_VABI sceLibcInternalFutureErrorBaseDestructor_nid_no_patch(void* self);
+164-void APS5_VABI sceLibcInternalOverflowErrorBaseDestructor_nid_no_patch(void* self);
+165-void APS5_VABI sceLibcInternalUnderflowErrorBaseDestructor_nid_no_patch(void* self);
+166:<<<<<<< HEAD
+167-void APS5_VABI sceLibcInternalFutureErrorDeletingDestructor_nid_no_patch(void* self);
+168-void APS5_VABI sceLibcInternalOverflowErrorDeletingDestructor_nid_no_patch(void* self);
+169-void APS5_VABI sceLibcInternalUnderflowErrorDeletingDestructor_nid_no_patch(void* self);
+170-=======
+171-void APS5_VABI sceLibcInternalFutureErrorCategoryDeletingDestructor_nid_no_patch(void* self);
+172-void APS5_VABI sceLibcInternalSystemErrorCategoryDeletingDestructor_nid_no_patch(void* self);
+173-void APS5_VABI sceLibcInternalSystemErrorCategoryDestructor_nid_no_patch(void* self);
+174-void APS5_VABI sceLibcInternalGenericErrorCategoryDestructor_nid_no_patch(void* self);
+175-[[noreturn]] void APS5_VABI sceLibcInternalXoverflowError_nid_no_patch(const char* message);
+176-[[noreturn]] void APS5_VABI _ZNKSs5_XranEv_nid_postfix(const GuestLocale::String* self);
+177-[[noreturn]] void APS5_VABI _ZNKSs5_XlenEv_nid_postfix(const GuestLocale::String* self);
+178-GuestLocale::String* APS5_VABI _ZNSs5eraseEmm_nid_postfix(GuestLocale::String* self, std::size_t position, std::size_t count);
+##### core/libs/prx/libSceLibcInternal/include/InventoryExports.hpp
+27-int APS5_VABI libSceLibcInternalInventory_014_nid_no_patch();
+28-int APS5_VABI libSceLibcInternalInventory_015_nid_no_patch();
+29-int APS5_VABI libSceLibcInternalInventory_016_nid_no_patch();
+30:<<<<<<< HEAD
+31-int APS5_VABI libSceLibcInternalInventory_019_nid_no_patch();
+32-=======
+33-int APS5_VABI libSceLibcInternalInventory_017_nid_no_patch();
+34-void APS5_VABI libSceLibcInternalInventory_019_nid_no_patch(LibcException::SystemErrorObject* self, LibcException::ErrorCode code, const char* message);
+35->>>>>>> up/main
+36-int APS5_VABI libSceLibcInternalInventory_020_nid_no_patch();
+37-void APS5_VABI libSceLibcInternalInventory_021_nid_no_patch(void* self);
+38-void APS5_VABI libSceLibcInternalInventory_022_nid_no_patch(void* self);
+39-int APS5_VABI libSceLibcInternalInventory_023_nid_no_patch();
+40-int APS5_VABI libSceLibcInternalInventory_024_nid_no_patch();
+41-int APS5_VABI libSceLibcInternalInventory_025_nid_no_patch();
+42-int APS5_VABI libSceLibcInternalInventory_026_nid_no_patch();
+##### docs/dev/debt/libSceLibcInternal.md
+30-| `_ZNSt10moneypunctIwLb1EEC2Em` | `sTaUDDnGOpE` |
+31-| `_ZNSt10moneypunctIwLb1EED1Ev` | `OM0FnA7Tldk` |
+32-| `_ZNSt10moneypunctIwLb1EED2Ev` | `uVOxy7dQTFc` |
+33:<<<<<<< HEAD
+34-| `_ZNSt12system_errorC2ESt10error_codePKc` | `oly3wSwEJ2A` |
+35-=======
+36-| `_ZNSt12future_errorD0Ev` | `rNYLEsL7M0k` |
+37->>>>>>> up/main
+38-| `_ZNSt13bad_exceptionD0Ev` | `lX9M5u0e48k` |
+39-| `_ZNSt13bad_exceptionD1Ev` | `t6egllDqQ2M` |
+40-| `_ZNSt13bad_exceptionD2Ev` | `iWNC2tkDgxw` |
+41-| `_ZNSt13basic_filebufIcSt11char_traitsIcEE4syncEv` | `VNaqectsZNs` |
+42-| `_ZNSt13basic_filebufIcSt11char_traitsIcEE5_LockEv` | `9biiDDejX3Q` |
+43-| `_ZNSt13basic_filebufIcSt11char_traitsIcEE5uflowEv` | `jfr41GGp2jA` |
+44-| `_ZNSt13basic_filebufIcSt11char_traitsIcEE6setbufEPci` | `SYFNsz9K2rs` |
+45-| `_ZNSt13basic_filebufIcSt11char_traitsIcEE7seekoffElNSt5_IosbIiE8_SeekdirENS4_9_OpenmodeE` | `7oio2Gs1GNk` |
+--
+515-- [_ZnamSt11align_val_tRKSt9nothrow_t and _ZdaPvSt11align_val_t](../../../core/libs/prx/libSceLibcInternal/AlignedNew.cpp) (libSceLibcInternal, NIDs `s2eGsgUF9vk` and `v09ZcAhZzSc`) take the standard C++17 signatures their mangled names give, the aligned `nothrow` array `operator new` and the aligned array `operator delete`, and run the same code as the `libc` exports of those names, on the same application heap and new handler. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether it allocates from the same heap as `libc.prx` is unverified
+516-- [error category names and codecvt_base queries](../../../core/libs/prx/libSceLibcInternal/ConstantMembers.cpp) (libSceLibcInternal, NIDs `dXy+lFOiaQA`, `xvVR0CBPFAM`, `sb2vivqtLS0`, `Q0VsWTapQ4M`, `FOsY+JAyXow` and `MwAySqTo+-M`) were not compared with the console's `libSceLibcInternal.sprx` and no title was seen calling them, so whether the console returns the same string pointers as `libc.prx` is unverified. They return the strings ISO C++ gives `name()` of the system, generic, iostream and future categories and the 1 that `codecvt_base::do_max_length` and `do_encoding` return in the Dinkumware `<xlocale>` and in libc's codecvt facet, without reading their object
+517-- [_ZNSt12future_errorD2Ev, _ZNSt14overflow_errorD2Ev and _ZNSt15underflow_errorD2Ev](../../../core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp) (libSceLibcInternal, NIDs `XFh0C66aEms`, `OypvNf3Uq3c` and `xiqd+QkuYXc`) are the base-object destructors of classes without virtual bases, which the [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html#definitions) makes do the same work as the complete-object `D1` destructors, so they run the `libc` exports of those `D1` names. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether it frees the message from the same heap as `libc.prx` is unverified
+518:<<<<<<< HEAD
+519-- [_ZNSt12future_errorD0Ev, _ZNSt14overflow_errorD0Ev, _ZNSt15underflow_errorD0Ev](../../../core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp) (libSceLibcInternal, NIDs `rNYLEsL7M0k`, `y1dYQsc67ys`, `iHILAmwYRGY`) are the deleting destructors: the [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html#definitions) defines them as the complete-object destructor followed by the class's `operator delete`, so each runs the `libc` `D1` export of its class and then `operator delete` (`_ZdlPv`, the application heap); none of these classes declares its own `operator delete`. libc's own `D0` exports of the other exception classes free with `std::free`; this entry does not change them. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them
+520-=======
+521-- [_ZNSt22_Future_error_categoryD0Ev, _ZNSt22_System_error_categoryD0Ev, _ZNSt22_System_error_categoryD1Ev and _ZNSt23_Generic_error_categoryD1Ev](../../../core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp) (libSceLibcInternal, NIDs `WDKzMM-uuLE`, `Dc4ZMWmPMl8`, `hVQgfGhJz3U` and `MAalgQhejPc`): the console's `libSceLibcInternal.sprx` was not read and no title was seen calling them. The [system_error](https://github.com/microsoft/STL/blob/54d74d7a58e828857a73f979eccc2ba1c02e256d/stl/inc/system_error#L91) gives `error_category` a defaulted virtual destructor and the derived categories none, so `D1` runs the `libc` export `_ZNSt14error_categoryD2Ev`, which frees nothing, and `D0` runs it and then `_ZdlPv`, as the [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html#definitions) deleting destructor does. The category objects `libc` returns are static, so their own vtable delete slots still throw, and an exported `D0` on one of them is undefined
+522-- [_ZSt16_Xoverflow_errorPKc](../../../core/libs/prx/libSceLibcInternal/ExceptionDestructors.cpp) (libSceLibcInternal, NID `saSUnPWLq9E`) throws `std::overflow_error` with the message, as [xthrow.cpp](https://github.com/microsoft/STL/blob/54d74d7a58e828857a73f979eccc2ba1c02e256d/stl/src/xthrow.cpp#L26-L28) does, through the `libc` helper that `libc`'s other unversioned `_X` throwers use, so a guest handler for `std::overflow_error`, `std::runtime_error` or `std::exception` catches it and one for the `__sce_v2` type does not. A null message gives an empty `what()`, as `libc`'s other `_X` throwers do
+523-- [`__cxxabiv1` type_info D0, D1 and D2](../../../core/libs/prx/libSceLibcInternal/TypeInfoDestructors.cpp) (libSceLibcInternal, the 30 destructors of `__fundamental_type_info`, `__array_type_info`, `__function_type_info`, `__enum_type_info`, `__class_type_info`, `__si_class_type_info`, `__vmi_class_type_info`, `__pbase_type_info`, `__pointer_type_info` and `__pointer_to_member_type_info`): the console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether its `D0` frees through the same heap as `libc.prx` or calls the sized `operator delete` is unverified. `D1` and `D2` leave the object untouched, as the empty destructors in [libc++abi](https://github.com/llvm/llvm-project/blob/llvmorg-18.1.8/libcxxabi/src/private_typeinfo.cpp#L330-L386) do, and `D0` then frees it through `libc` `operator delete(void*)`, unlike the deleting slot of `libc`'s own RTTI vtables, which throws because its static records are never on the heap
+524-- [numpunct<char> decimal_point, thousands_sep, grouping, falsename and truename and their do_ members](../../../core/libs/prx/libSceLibcInternal/Numpunct.cpp) (libSceLibcInternal, NIDs `klWxQ2nKAHY`, `QGSIlqfIU2c`, `JWplGh2O0Rs`, `3+VwUA8-QPI`, `fXUuZEw7C24`, `JXzQGOtumdM`, `zv1EMhI7R1c`, `cnNz2ftNwEU`, `ozLi0i4r6ds` and `nRf0VQ++OEw`) run the `libc` exports of the same names: the public members call the facet's vtable slot, as the C++ standard ([locale.numpunct.members]) requires, and the `do_` members read the fields of the 0x30-byte facet that `libc`'s `_Getcat` builds. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them, so whether its `do_` members read the same layout for a facet a title constructs itself is unverified
+525-- [num_put<char>::put and time_put<char>::put](../../../core/libs/prx/libSceLibcInternal/FacetPut.cpp) (libSceLibcInternal) follow the Dinkumware code of the first microsoft/STL commit ([xlocnum](https://github.com/microsoft/STL/blob/219514876ea86491de191ceaa88632616bbc0f19/stl/inc/xlocnum#L1189-L1227), [xloctime](https://github.com/microsoft/STL/blob/219514876ea86491de191ceaa88632616bbc0f19/stl/inc/xloctime#L646-L683)): each `put` returns `do_put` through the facet's vtable. The pattern overload narrows with the stream's `ctype<char>`, by identity when the locale has none, as the classic facet `use_facet` would create does, and leaves out the later microsoft/STL checks that write `?`. The console's `libSceLibcInternal.sprx` was not read and no title was seen calling them
+526->>>>>>> up/main
+527-- [_Mtxinit, _Mtxlock, _Mtxunlock, _Mtxdst](../../../core/libs/prx/libSceLibcInternal/Mutex.cpp) (libSceLibcInternal) follow the PS4 code of [shadPS4](https://github.com/shadps4-emu/shadPS4/blob/860d73b7e99559106a3ffa3d3d69f0f9237e115e/src/core/libraries/libc_internal/libc_internal_threads.cpp#L10-L62) and [fpPS4](https://github.com/red-prig/fpPS4/blob/04cefd43e6fddd1ab033e7980cd356d14c964905/src/libcinternal/ps4_mtx_internal.pas#L47-L99): the argument points to a pointer-sized libkernel mutex handle, `_Mtxinit` creates it recursive, a zeroed handle becomes an error-checking mutex on its first lock as with the POSIX calls, and each returns 0 on success and 1 on any failure. A null handle pointer throws in libkernel. The `SceLibcI_` name goes to `scePthreadMutexInit`, which drops it. For PS5 only the names are known (NID hashes, ps5sdk stubs); layout, signatures, mutex type and results are not verified on a PS5
+528-- [_ZNSt3pmr19new_delete_resourceEv, _ZNSt3pmr20get_default_resourceEv, _ZNSt3pmr20null_memory_resourceEv and _ZNSt3pmr20set_default_resourceEPNS_15memory_resourceE](../../../core/libs/prx/libSceLibcInternal/MemoryResource.cpp) (libSceLibcInternal, NIDs `9G32u5RRYxE`, `d2u38zs4Pe8`, `eWMGI7B7Lyc`, `TKYsv0jdvRw`) - `libSceLibcInternal.sprx` was not read or measured on a console: whether it keeps a separate `std::pmr` family or maps onto another, its RTTI names (`NSt3pmr...` vs `NSt8__sce_v23pmr...`), and whether its new-delete resource serves alignments above 32 bytes via aligned `operator new`/`delete` (as here) or throws `bad_alloc` like `_Unaligned_new_delete_resource` are unverified. Following `PPSA21564`'s `libc.prx` disassembly (`0xb8d40` returning `0x19b8d8`, null `0x19b8e8`, default `0x19b8f8`), these keep their own singletons and default slot separate from `libc`'s `_Aligned_*`/`_Unaligned_*`/`null_memory_resource` (`0x18f870`, `0x18f8f0`, `0x18f948`, slot `0x19b908`)
+529-
+530-- [__fflush](../../../core/libs/prx/libSceLibcInternal/Stream.cpp) (libSceLibcInternal, NID `E1iwBYkG3CM`) reuses the public `fflush` implementation (`fflush_nid_postfix`) rather than FreeBSD 11.4 libc's unlocked helper ([fflush.c](https://github.com/freebsd/freebsd-src/blob/8c639945a44588f6cfdddfb057bb5aad88735da0/lib/libc/stdio/fflush.c)): it acquires stream locks. A closed stream returns 0 without setting `errno`, as FreeBSD does for a stream with 0 flags, instead of the public `fflush` result of -1 with `EBADF`. Passing null flushes all open streams and returns 0 when all writes succeed or EOF on write error. Console behavior is unverified.
